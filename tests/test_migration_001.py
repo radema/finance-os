@@ -117,18 +117,14 @@ def test_row1_primary_all_null_is_legal(seeded: duckdb.DuckDBPyConnection) -> No
 def test_row2_cash_leg_only_is_legal(seeded: duckdb.DuckDBPyConnection) -> None:
     insert_operation(seeded, "op1", "BUY", 10)
     # cash leg: carries parent's type (BUY), exempt from sign check, negative qty
-    insert_operation(
-        seeded, "op1-leg", "BUY", -1000, asset_id="cash", cash_leg_of="op1", price=1
-    )
+    insert_operation(seeded, "op1-leg", "BUY", -1000, asset_id="cash", cash_leg_of="op1", price=1)
 
 
 def test_row3_transfer_pair_side_only_is_legal(seeded: duckdb.DuckDBPyConnection) -> None:
     insert_operation(
         seeded, "out1", "TRANSFER_OUT", -5, account_id="acc1", transfer_pair_id="pair1"
     )
-    insert_operation(
-        seeded, "in1", "TRANSFER_IN", 5, account_id="acc2", transfer_pair_id="pair1"
-    )
+    insert_operation(seeded, "in1", "TRANSFER_IN", 5, account_id="acc2", transfer_pair_id="pair1")
 
 
 def test_row4_pair_id_with_cash_leg_of_is_illegal(seeded: duckdb.DuckDBPyConnection) -> None:
@@ -156,9 +152,7 @@ def test_row6_correction_cash_side_is_legal_and_mandatory_shape(
     seeded: duckdb.DuckDBPyConnection,
 ) -> None:
     insert_operation(seeded, "op1", "BUY", 100)
-    insert_operation(
-        seeded, "op1-leg", "BUY", -1000, asset_id="cash", cash_leg_of="op1", price=1
-    )
+    insert_operation(seeded, "op1-leg", "BUY", -1000, asset_id="cash", cash_leg_of="op1", price=1)
     insert_operation(seeded, "corr1", "CORRECTION", -10, corrects_id="op1")
     # cash side of the correction: corrects_id -> original leg, cash_leg_of -> sibling correction
     insert_operation(
@@ -229,9 +223,7 @@ def test_type_domain_accepts_all_seven_values(seeded: duckdb.DuckDBPyConnection)
     insert_operation(seeded, "div1", "DIVIDEND", 0)
     insert_operation(seeded, "cpn1", "COUPON", 0)
     insert_operation(seeded, "out1", "TRANSFER_OUT", -1, transfer_pair_id="pairA")
-    insert_operation(
-        seeded, "in1", "TRANSFER_IN", 1, account_id="acc2", transfer_pair_id="pairA"
-    )
+    insert_operation(seeded, "in1", "TRANSFER_IN", 1, account_id="acc2", transfer_pair_id="pairA")
     insert_operation(seeded, "corr1", "CORRECTION", -1, corrects_id="buy1")
 
 
@@ -243,9 +235,7 @@ def test_type_domain_accepts_all_seven_values(seeded: duckdb.DuckDBPyConnection)
 def test_buy_negative_cash_leg_inserts(seeded: duckdb.DuckDBPyConnection) -> None:
     insert_operation(seeded, "op1", "BUY", 10)
     # exempt: cash leg of a BUY is negative
-    insert_operation(
-        seeded, "op1-leg", "BUY", -1000, asset_id="cash", cash_leg_of="op1", price=1
-    )
+    insert_operation(seeded, "op1-leg", "BUY", -1000, asset_id="cash", cash_leg_of="op1", price=1)
 
 
 def test_buy_primary_with_negative_quantity_is_rejected(
@@ -278,9 +268,7 @@ def test_mv_holding_includes_dividend_cash_leg(seeded: duckdb.DuckDBPyConnection
 
 
 def test_mv_finding_selectable(seeded: duckdb.DuckDBPyConnection) -> None:
-    seeded.execute(
-        "INSERT INTO strategy VALUES ('s1', 'Strategy 1', NULL, NULL)"
-    )
+    seeded.execute("INSERT INTO strategy VALUES ('s1', 'Strategy 1', NULL, NULL)")
     seeded.execute(
         """
         INSERT INTO strategy_version

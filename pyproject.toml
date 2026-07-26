@@ -44,6 +44,9 @@ packages = ["src/financeos"]
 target-version = "py312"
 line-length = 100
 src = ["src", "tests"]
+# docs/ holds the frozen RFC corpus; ruff format rewrites Python blocks inside
+# that markdown, which would edit documents the corpus requires stay unchanged.
+extend-exclude = ["docs/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
