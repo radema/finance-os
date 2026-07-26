@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="it" data-scheme="light" data-world="a-calcolatrice">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Calcolatrice · proposta di mondo visivo · Finance OS</title>
+<style>
+@font-face{font-family:"Archivo";font-style:normal;font-weight:100 700;font-display:swap;src:url("../../../src/financeos/web/static/fonts/archivo-var-400-700.woff2") format("woff2");}
+@font-face{font-family:"Martian Mono";font-style:normal;font-weight:400 500;font-display:swap;src:url("../../../src/financeos/web/static/fonts/martian-mono-400.woff2") format("woff2");}
+@font-face{font-family:"Faustina";font-style:normal;font-weight:400 600;font-display:swap;src:url("../../../src/financeos/web/static/fonts/faustina-400-600.woff2") format("woff2");}
+
+[data-scheme="light"] {
+  color-scheme: light;
+  --ground:#efece5; --sheet:#fbfaf7; --sunken:#e8e4db;
+  --ink:#1b1913; --ink-2:#544f46; --ink-3:#6b655b;
+  --rule:#d6d1c6; --rule-2:#bdb7a9; --control:#7e7768;
+  --alarm:#c1330f; --alarm-tint:#f9e9e3;
+  --band:#e2ddd0; --band-edge:#a9a08c;
+  --s1:#4f6eb7; --s2:#32a67d; --s3:#94436d;
+  --s4:#1292c0; --s5:#9f7100; --void:#8b8477;
+}
+[data-scheme="dark"] {
+  color-scheme: dark;
+  --ground:#14130f; --sheet:#1c1a16; --sunken:#24211c;
+  --ink:#efece3; --ink-2:#b0a99c; --ink-3:#8c8578;
+  --rule:#332f28; --rule-2:#474137; --control:#6d6659;
+  --alarm:#f0714a; --alarm-tint:#2a1710;
+  --band:#2b2721; --band-edge:#5c5548;
+  --s1:#5474be; --s2:#3aac83; --s3:#9a4873;
+  --s4:#1f99c7; --s5:#a57710; --void:#756f63;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:var(--face-system);font-size:14px;line-height:1.5;
+ -webkit-font-smoothing:antialiased}
+:root{
+ --face-system:"Archivo",system-ui,sans-serif;
+ --face-value:"Martian Mono",ui-monospace,monospace;
+ --face-declared:"Faustina",Georgia,serif;
+ --sp:4px;
+}
+h1,h2,h3,p,dl,dd{margin:0}
+.value{font-family:var(--face-value);font-variant-numeric:tabular-nums;
+ font-feature-settings:"tnum" 1,"zero" 1;letter-spacing:-.01em}
+.declared{font-family:var(--face-declared);font-size:16px;line-height:1.6}
+.ident{font-family:var(--face-value);font-size:11px;color:var(--ink-2);overflow-wrap:anywhere}
+:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- proof scaffolding ---- */
+.masthead{background:var(--ground);color:var(--ink);padding:28px 32px 24px;
+ border-bottom:1px solid var(--rule-2)}
+.masthead h1{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.masthead .sub{font-family:var(--face-value);font-size:11px;color:var(--ink-3);
+ letter-spacing:.08em;text-transform:uppercase;margin-top:6px}
+.masthead .lede{max-width:74ch;margin-top:14px;color:var(--ink-2);font-size:14px}
+.masthead .lede b{color:var(--ink)}
+.pane{background:var(--ground);color:var(--ink);padding:24px 32px 40px}
+.pane__tag{font-family:var(--face-value);font-size:10px;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--ink-3);padding-bottom:8px;margin-bottom:20px;
+ border-bottom:1px solid var(--rule-2)}
+.block{margin-bottom:28px}
+.block>h3{font-family:var(--face-value);font-size:10px;font-weight:500;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--ink-3);margin-bottom:10px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.card{background:var(--sheet);border:1px solid var(--rule-2);padding:16px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.note{font-size:12px;color:var(--ink-3);max-width:66ch;margin-top:8px}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
+.sw>div{border:1px solid var(--rule-2)}
+.sw i{display:block;height:34px}
+.sw span{display:block;padding:3px 6px;background:var(--sheet);font-family:var(--face-value);
+ font-size:10px;color:var(--ink-2)}
+
+/* ============ CONTRACT: tolerance rail (geometry per world, maths fixed) ==== */
+.rail{min-width:150px}
+.rail__s{position:relative;height:22px}
+.rail__base{position:absolute;inset-inline:0;bottom:4px;height:1px;background:var(--rule-2)}
+.rail__band{position:absolute;inset-inline:33.3333%;bottom:4px;height:12px;
+ background:var(--band);border-inline:1px solid var(--band-edge)}
+.rail__t{position:absolute;left:var(--at);bottom:0;width:1px;height:4px;background:var(--ink-3)}
+.rail__t--b{bottom:4px;height:12px;background:var(--band-edge)}
+.rail__t--g{bottom:4px;height:19px;background:var(--ink);width:1px}
+.rail__i{position:absolute;left:var(--at);bottom:1px;width:3px;height:18px;
+ margin-inline-start:-1px;
+ background:var(--ink);box-shadow:0 0 0 1px var(--sheet)}
+.rail__i::before{content:"";position:absolute;left:50%;top:-6px;transform:translateX(-50%);
+ border-inline:4px solid transparent;border-top:6px solid var(--ink)}
+.rail--brk .rail__i{background:var(--alarm)}
+.rail--brk .rail__i::before{border-top-color:var(--alarm)}
+.rail__c{position:absolute;bottom:0;width:0;height:0;border-block:4px solid transparent;
+ inset-inline-start:0;border-inline-end:5px solid var(--alarm)}
+.rail__k{display:flex;justify-content:space-between;margin-top:4px;
+ font-family:var(--face-value);font-size:10px;color:var(--ink-3)}
+.sev{font-family:var(--face-value);font-variant-numeric:tabular-nums;font-size:28px;
+ font-weight:500;line-height:1.05;letter-spacing:-.02em}
+.sev--brk{color:var(--alarm)}
+.sev__l{font-family:var(--face-system);font-size:10px;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--ink-3)}
+
+/* ============ CONTRACT: outcome chips — texture carries the distinction ==== */
+.oc{font-family:var(--face-value);font-size:10px;letter-spacing:.05em;padding:2px 7px;
+ border:1px solid;white-space:nowrap}
+.oc--f{color:var(--sheet);background:var(--alarm);border-color:var(--alarm)}
+.oc--n{color:var(--ink-2);background:transparent;border-color:var(--control)}
+.oc--s{color:var(--alarm);background:var(--alarm-tint);border-color:var(--alarm);
+ border-style:dashed}
+.oc--e{color:var(--alarm);border-color:var(--alarm);background:
+ repeating-linear-gradient(-45deg,transparent 0 4px,
+ color-mix(in srgb,var(--alarm) 24%,transparent) 4px 5px),var(--alarm-tint)}
+
+/* ============ CONTRACT: trace ladder — ordered data, stored strings ======== */
+.lad{font-family:var(--face-value);font-variant-numeric:tabular-nums;font-size:12.5px;
+ line-height:1.7}
+.lad__r{display:grid;grid-template-columns:24px 96px minmax(0,1fr) 150px;gap:10px;
+ padding:3px 0;border-bottom:1px dotted var(--rule)}
+.lad__h{font-family:var(--face-system);font-size:10px;letter-spacing:.12em;
+ text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--rule-2)}
+.lad__i{color:var(--ink-3);text-align:right}
+.lad__o{color:var(--s1);font-weight:500}
+.lad__x{color:var(--ink-2)}
+.lad__v{text-align:right;font-weight:500}
+.lad__r--held{background:var(--sunken);border-bottom:0;border-top:1px solid var(--rule-2);
+ margin-inline:-8px;padding-inline:8px}
+.lad__r--held .lad__v{color:var(--alarm)}
+
+/* ============ chart ======================================================= */
+.chart{width:100%;height:250px}
+.leg{display:flex;flex-wrap:wrap;gap:8px 16px;padding:0;margin:12px 0 0;list-style:none;
+ font-size:12px}
+.leg li{display:flex;align-items:baseline;gap:6px;color:var(--ink-2)}
+.leg i{width:10px;height:10px;flex:none;box-shadow:0 0 0 1px var(--sheet)}
+.leg b{font-family:var(--face-value);font-weight:400;color:var(--ink)}
+.leg .void{background:var(--void);background-image:repeating-linear-gradient(45deg,
+ transparent 0 3px,color-mix(in srgb,var(--ink) 34%,transparent) 3px 4px)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px}
+th{font-family:var(--face-system);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+ color:var(--ink-3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule-2)}
+td{padding:5px 8px;border-bottom:1px solid var(--rule)}
+td.n,th.n{text-align:right;font-family:var(--face-value);font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <h1>La Calcolatrice</h1>
+  <p class="sub">Olivetti · Pintori · la macchina da calcolo italiana</p>
+  <p class="lede">The interface as a well-made Italian calculating machine: Olivetti's design programme, which existed to make computation legible and humane. Flat poster inks on warm near-white, hard-edged marks, no gradients, generous air, geometric grotesque set tight. One vermilion warning lamp and nothing else that shouts.</p>
+  <p class="lede"><b>Perché questo prodotto.</b> The only cultural world where Italian design and computation are already the same subject. It gives the product an idiom for being precise without being cold, and for treating a number as something a machine produced and a person must read. In-tolerance is NEUTRAL here, not green: the machine reports, it does not congratulate — which is the Manifest's refusal to reassure, rendered as palette.</p>
+  <p class="lede"><b>Grafici.</b> Flat poster blocks with hard edges. The target is a heavy ink rule crossing the bar, so "where you are" and "where you said you'd be" are one glance and one axis. Category labels in wide mono.</p>
+  <p class="lede"><b>Elevazione.</b> none — hairlines and flat colour only. <b>Allarme riservato:</b>
+     <span class="value">#c1330f</span> chiaro / <span class="value">#f0714a</span> scuro,
+     mai usato come colore di serie.</p>
+</header>
+
+
+<section class="pane" data-scheme="light">
+  <p class="pane__tag">chiaro · la scrivania di giorno</p>
+
+  <div class="block">
+    <h3>Tavolozza · serie convalidate + allarme riservato</h3>
+    <div class="sw">
+      <div><i style="background:#4f6eb7"></i><span>s1 EQ/DEV</span></div><div><i style="background:#32a67d"></i><span>s2 EQ/EMG</span></div><div><i style="background:#94436d"></i><span>s3 GOV/EUR</span></div><div><i style="background:#1292c0"></i><span>s4 CORP/IG</span></div><div><i style="background:#9f7100"></i><span>s5 CASH</span></div><div><i style="background:#c1330f"></i><span>allarme</span></div><div><i style="background:#8b8477"></i><span>vuoto</span></div><div><i style="background:#1b1913"></i><span>inchiostro</span></div><div><i style="background:#fbfaf7"></i><span>foglio</span></div>
+    </div>
+    <p class="note">Le cinque tinte di serie superano ogni controllo del validatore
+    (banda di luminosità, croma, separazione per daltonismo, visione normale, contrasto)
+    su <em>entrambe</em> le superfici. L'allarme è escluso dall'insieme delle serie: così
+    un colore di stato non può mai impersonare un dato.</p>
+  </div>
+
+  <div class="block">
+    <h3>Guida di tolleranza · fuori e dentro tolleranza</h3>
+    <div class="cols">
+      <div class="card">
+        <p class="ident" style="margin-bottom:10px">EQ/DEV · Pension · ±2,00pp ABSOLUTE</p>
+        <div class="row" style="align-items:flex-end;gap:24px">
+          <div style="flex:1;min-width:160px">
+            <div class="rail rail--brk" role="img"
+                 aria-label="3 ampiezze di banda sotto l'obiettivo: fuori tolleranza">
+              <div class="rail__s">
+                <span class="rail__base"></span><span class="rail__band"></span>
+                <span class="rail__t" style="--at:0.0000%"></span><span class="rail__t" style="--at:16.6667%"></span><span class="rail__t rail__t--b" style="--at:33.3333%"></span><span class="rail__t rail__t--g" style="--at:50.0000%"></span><span class="rail__t rail__t--b" style="--at:66.6667%"></span><span class="rail__t" style="--at:83.3333%"></span><span class="rail__t" style="--at:100.0000%"></span>
+                <span class="rail__i" style="--at:3%"></span>
+                <span class="rail__c"></span>
+              </div>
+              <div class="rail__k"><span>−3</span><span>obiettivo 40,00%</span><span>+3</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="sev__l">Severità</div>
+            <div class="sev sev--brk">3,00</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <p class="ident" style="margin-bottom:10px">EQ/EMG · Pension · RELATIVE 0,25</p>
+        <div class="row" style="align-items:flex-end;gap:24px">
+          <div style="flex:1;min-width:160px">
+            <div class="rail" role="img"
+                 aria-label="0,42 ampiezze di banda sotto l'obiettivo: entro tolleranza">
+              <div class="rail__s">
+                <span class="rail__base"></span><span class="rail__band"></span>
+                <span class="rail__t" style="--at:0.0000%"></span><span class="rail__t" style="--at:16.6667%"></span><span class="rail__t rail__t--b" style="--at:33.3333%"></span><span class="rail__t rail__t--g" style="--at:50.0000%"></span><span class="rail__t rail__t--b" style="--at:66.6667%"></span><span class="rail__t" style="--at:83.3333%"></span><span class="rail__t" style="--at:100.0000%"></span>
+                <span class="rail__i" style="--at:43%"></span>
+              </div>
+              <div class="rail__k"><span>−3</span><span>obiettivo 10,00%</span><span>+3</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="sev__l">Severità</div>
+            <div class="sev">0,42</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Entro tolleranza è <strong>neutro</strong>, non verde: il sistema riporta,
+    non si congratula. Solo lo scostamento prende colore.</p>
+  </div>
+
+  <div class="block">
+    <h3>Chip di esito · la texture porta la distinzione, non la tinta</h3>
+    <div class="row">
+      <span class="oc oc--f">RILEVATO</span>
+      <span class="oc oc--n">NON RILEVATO</span>
+      <span class="oc oc--s">NON VALUTATO</span>
+      <span class="ident">zero_portfolio_value</span>
+      <span class="oc oc--e">ERRORE</span>
+      <span class="ident">currency_mismatch</span>
+    </div>
+    <p class="note">Pieno · filo · tratteggiato · tratteggio incrociato. Un solo colore
+    riservato, quattro texture: restano inconfondibili in scala di grigi e per chi non
+    distingue rosso e verde. <em>NON VALUTATO</em> ed <em>ERRORE</em> non sono mai rassicuranti.</p>
+  </div>
+
+  <div class="block">
+    <h3>Scala di derivazione · dati ordinati, decimali come memorizzati</h3>
+    <div class="card">
+      <div class="lad">
+        <div class="lad__r lad__h"><span class="lad__i">#</span><span>Operazione</span>
+          <span>Operandi</span><span class="lad__v">Risultato</span></div>
+        <div class="lad__r"><span class="lad__i">3</span><span class="lad__o">subtract</span><span class="lad__x">current_weight − effective_target</span><span class="lad__v">drift = −0.0600</span></div><div class="lad__r"><span class="lad__i">4</span><span class="lad__o">abs</span><span class="lad__x">drift</span><span class="lad__v">abs_drift = 0.0600</span></div><div class="lad__r"><span class="lad__i">5</span><span class="lad__o">divide_safe</span><span class="lad__x">abs_drift ÷ effective_band</span><span class="lad__v">severity = 3.0000</span></div><div class="lad__r lad__r--held"><span class="lad__i">6</span><span class="lad__o">abs_gt</span><span class="lad__x">drift, effective_band</span><span class="lad__v">FIRED</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="block">
+    <h3>Allocazione contro obiettivo · le cinque classi del fixture</h3>
+    <div class="card">
+      <script type="application/json" id="opt-a-calcolatrice-light">{"grid": {"left": 6, "right": 30, "top": 10, "bottom": 6, "containLabel": true}, "tooltip": {"trigger": "item"}, "xAxis": {"type": "value", "max": 45, "axisLabel": {"formatter": "{value}%"}}, "yAxis": {"type": "category", "inverse": true, "data": ["EQ/DEV", "EQ/EMG", "GOV/EUR", "CORP/IG", "CASH"], "splitLine": {"show": false}}, "series": [{"type": "bar", "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0], "barWidth": 17, "markPoint": {"symbol": "rect", "silent": true, "label": {"show": false}, "data": [{"coord": [40.0, 0]}, {"coord": [10.0, 1]}, {"coord": [30.0, 2]}, {"coord": [10.0, 3]}, {"coord": [10.0, 4]}], "symbolSize": [4, 30], "itemStyle": {"color": "token:--ink"}}}]}</script>
+      <div class="chart" data-chart="opt-a-calcolatrice-light" role="img"
+           aria-label="Allocazione attuale contro obiettivo per cinque classi di attivo"></div>
+      <ul class="leg">
+        <li><i style="background:#4f6eb7"></i><span>EQ/DEV</span> <b>34,00%</b></li><li><i style="background:#32a67d"></i><span>EQ/EMG</span> <b>9,50%</b></li><li><i style="background:#94436d"></i><span>GOV/EUR</span> <b>27,90%</b></li><li><i style="background:#1292c0"></i><span>CORP/IG</span> <b>8,00%</b></li><li><i style="background:#9f7100"></i><span>CASH</span> <b>12,00%</b></li>
+        <li><i class="void"></i><span>non targettizzato</span> <b>12,16%</b></li>
+      </ul>
+      <table>
+        <thead><tr><th>Classe</th><th class="n">Attuale</th><th class="n">Obiettivo</th>
+          <th class="n">Scostamento</th></tr></thead>
+        <tbody><tr><td>EQ/DEV</td><td class="n">34,00%</td><td class="n">40,00%</td><td class="n">-6,00pp</td></tr><tr><td>EQ/EMG</td><td class="n">9,50%</td><td class="n">10,00%</td><td class="n">-0,50pp</td></tr><tr><td>GOV/EUR</td><td class="n">27,90%</td><td class="n">30,00%</td><td class="n">-2,10pp</td></tr><tr><td>CORP/IG</td><td class="n">8,00%</td><td class="n">10,00%</td><td class="n">-2,00pp</td></tr><tr><td>CASH</td><td class="n">12,00%</td><td class="n">10,00%</td><td class="n">+2,00pp</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note">Flat poster blocks with hard edges. The target is a heavy ink rule crossing the bar, so "where you are" and "where you said you'd be" are one glance and one axis. Category labels in wide mono. Il capitale non targettizzato non ha tinta: è vuoto, e si
+    legge con il tratteggio. Patrimonio netto <span class="value">€107.586,33</span>.</p>
+  </div>
+
+  <div class="block">
+    <h3>Le tre voci</h3>
+    <div class="card">
+      <p>Equity/Developed è <span class="value" style="color:var(--alarm)">6,00pp</span> sotto
+      il tuo obiettivo del <span class="value">40,00%</span> (tolleranza
+      <span class="value">±2,00pp</span>). Attuale <span class="value">34,00%</span>,
+      <span class="value" style="color:var(--alarm)">−€3.240,00</span>.</p>
+      <p class="declared" style="margin-top:12px;padding-inline:20px">«Ho ridotto la quota dei
+      mercati emergenti dal 30% al 20% dell'azionario: non è una visione sui mercati, mi sono
+      accorto che ribilanciavo per disagio e non per piano.»</p>
+      <p class="note">Sistema in Archivo · valori in Martian Mono ·
+        le tue parole in Faustina.</p>
+    </div>
+  </div>
+</section>
+
+
+<section class="pane" data-scheme="dark">
+  <p class="pane__tag">scuro · la sera, una lampada</p>
+
+  <div class="block">
+    <h3>Tavolozza · serie convalidate + allarme riservato</h3>
+    <div class="sw">
+      <div><i style="background:#5474be"></i><span>s1 EQ/DEV</span></div><div><i style="background:#3aac83"></i><span>s2 EQ/EMG</span></div><div><i style="background:#9a4873"></i><span>s3 GOV/EUR</span></div><div><i style="background:#1f99c7"></i><span>s4 CORP/IG</span></div><div><i style="background:#a57710"></i><span>s5 CASH</span></div><div><i style="background:#f0714a"></i><span>allarme</span></div><div><i style="background:#756f63"></i><span>vuoto</span></div><div><i style="background:#efece3"></i><span>inchiostro</span></div><div><i style="background:#1c1a16"></i><span>foglio</span></div>
+    </div>
+    <p class="note">Le cinque tinte di serie superano ogni controllo del validatore
+    (banda di luminosità, croma, separazione per daltonismo, visione normale, contrasto)
+    su <em>entrambe</em> le superfici. L'allarme è escluso dall'insieme delle serie: così
+    un colore di stato non può mai impersonare un dato.</p>
+  </div>
+
+  <div class="block">
+    <h3>Guida di tolleranza · fuori e dentro tolleranza</h3>
+    <div class="cols">
+      <div class="card">
+        <p class="ident" style="margin-bottom:10px">EQ/DEV · Pension · ±2,00pp ABSOLUTE</p>
+        <div class="row" style="align-items:flex-end;gap:24px">
+          <div style="flex:1;min-width:160px">
+            <div class="rail rail--brk" role="img"
+                 aria-label="3 ampiezze di banda sotto l'obiettivo: fuori tolleranza">
+              <div class="rail__s">
+                <span class="rail__base"></span><span class="rail__band"></span>
+                <span class="rail__t" style="--at:0.0000%"></span><span class="rail__t" style="--at:16.6667%"></span><span class="rail__t rail__t--b" style="--at:33.3333%"></span><span class="rail__t rail__t--g" style="--at:50.0000%"></span><span class="rail__t rail__t--b" style="--at:66.6667%"></span><span class="rail__t" style="--at:83.3333%"></span><span class="rail__t" style="--at:100.0000%"></span>
+                <span class="rail__i" style="--at:3%"></span>
+                <span class="rail__c"></span>
+              </div>
+              <div class="rail__k"><span>−3</span><span>obiettivo 40,00%</span><span>+3</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="sev__l">Severità</div>
+            <div class="sev sev--brk">3,00</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <p class="ident" style="margin-bottom:10px">EQ/EMG · Pension · RELATIVE 0,25</p>
+        <div class="row" style="align-items:flex-end;gap:24px">
+          <div style="flex:1;min-width:160px">
+            <div class="rail" role="img"
+                 aria-label="0,42 ampiezze di banda sotto l'obiettivo: entro tolleranza">
+              <div class="rail__s">
+                <span class="rail__base"></span><span class="rail__band"></span>
+                <span class="rail__t" style="--at:0.0000%"></span><span class="rail__t" style="--at:16.6667%"></span><span class="rail__t rail__t--b" style="--at:33.3333%"></span><span class="rail__t rail__t--g" style="--at:50.0000%"></span><span class="rail__t rail__t--b" style="--at:66.6667%"></span><span class="rail__t" style="--at:83.3333%"></span><span class="rail__t" style="--at:100.0000%"></span>
+                <span class="rail__i" style="--at:43%"></span>
+              </div>
+              <div class="rail__k"><span>−3</span><span>obiettivo 10,00%</span><span>+3</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="sev__l">Severità</div>
+            <div class="sev">0,42</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Entro tolleranza è <strong>neutro</strong>, non verde: il sistema riporta,
+    non si congratula. Solo lo scostamento prende colore.</p>
+  </div>
+
+  <div class="block">
+    <h3>Chip di esito · la texture porta la distinzione, non la tinta</h3>
+    <div class="row">
+      <span class="oc oc--f">RILEVATO</span>
+      <span class="oc oc--n">NON RILEVATO</span>
+      <span class="oc oc--s">NON VALUTATO</span>
+      <span class="ident">zero_portfolio_value</span>
+      <span class="oc oc--e">ERRORE</span>
+      <span class="ident">currency_mismatch</span>
+    </div>
+    <p class="note">Pieno · filo · tratteggiato · tratteggio incrociato. Un solo colore
+    riservato, quattro texture: restano inconfondibili in scala di grigi e per chi non
+    distingue rosso e verde. <em>NON VALUTATO</em> ed <em>ERRORE</em> non sono mai rassicuranti.</p>
+  </div>
+
+  <div class="block">
+    <h3>Scala di derivazione · dati ordinati, decimali come memorizzati</h3>
+    <div class="card">
+      <div class="lad">
+        <div class="lad__r lad__h"><span class="lad__i">#</span><span>Operazione</span>
+          <span>Operandi</span><span class="lad__v">Risultato</span></div>
+        <div class="lad__r"><span class="lad__i">3</span><span class="lad__o">subtract</span><span class="lad__x">current_weight − effective_target</span><span class="lad__v">drift = −0.0600</span></div><div class="lad__r"><span class="lad__i">4</span><span class="lad__o">abs</span><span class="lad__x">drift</span><span class="lad__v">abs_drift = 0.0600</span></div><div class="lad__r"><span class="lad__i">5</span><span class="lad__o">divide_safe</span><span class="lad__x">abs_drift ÷ effective_band</span><span class="lad__v">severity = 3.0000</span></div><div class="lad__r lad__r--held"><span class="lad__i">6</span><span class="lad__o">abs_gt</span><span class="lad__x">drift, effective_band</span><span class="lad__v">FIRED</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="block">
+    <h3>Allocazione contro obiettivo · le cinque classi del fixture</h3>
+    <div class="card">
+      <script type="application/json" id="opt-a-calcolatrice-dark">{"grid": {"left": 6, "right": 30, "top": 10, "bottom": 6, "containLabel": true}, "tooltip": {"trigger": "item"}, "xAxis": {"type": "value", "max": 45, "axisLabel": {"formatter": "{value}%"}}, "yAxis": {"type": "category", "inverse": true, "data": ["EQ/DEV", "EQ/EMG", "GOV/EUR", "CORP/IG", "CASH"], "splitLine": {"show": false}}, "series": [{"type": "bar", "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0], "barWidth": 17, "markPoint": {"symbol": "rect", "silent": true, "label": {"show": false}, "data": [{"coord": [40.0, 0]}, {"coord": [10.0, 1]}, {"coord": [30.0, 2]}, {"coord": [10.0, 3]}, {"coord": [10.0, 4]}], "symbolSize": [4, 30], "itemStyle": {"color": "token:--ink"}}}]}</script>
+      <div class="chart" data-chart="opt-a-calcolatrice-dark" role="img"
+           aria-label="Allocazione attuale contro obiettivo per cinque classi di attivo"></div>
+      <ul class="leg">
+        <li><i style="background:#5474be"></i><span>EQ/DEV</span> <b>34,00%</b></li><li><i style="background:#3aac83"></i><span>EQ/EMG</span> <b>9,50%</b></li><li><i style="background:#9a4873"></i><span>GOV/EUR</span> <b>27,90%</b></li><li><i style="background:#1f99c7"></i><span>CORP/IG</span> <b>8,00%</b></li><li><i style="background:#a57710"></i><span>CASH</span> <b>12,00%</b></li>
+        <li><i class="void"></i><span>non targettizzato</span> <b>12,16%</b></li>
+      </ul>
+      <table>
+        <thead><tr><th>Classe</th><th class="n">Attuale</th><th class="n">Obiettivo</th>
+          <th class="n">Scostamento</th></tr></thead>
+        <tbody><tr><td>EQ/DEV</td><td class="n">34,00%</td><td class="n">40,00%</td><td class="n">-6,00pp</td></tr><tr><td>EQ/EMG</td><td class="n">9,50%</td><td class="n">10,00%</td><td class="n">-0,50pp</td></tr><tr><td>GOV/EUR</td><td class="n">27,90%</td><td class="n">30,00%</td><td class="n">-2,10pp</td></tr><tr><td>CORP/IG</td><td class="n">8,00%</td><td class="n">10,00%</td><td class="n">-2,00pp</td></tr><tr><td>CASH</td><td class="n">12,00%</td><td class="n">10,00%</td><td class="n">+2,00pp</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note">Flat poster blocks with hard edges. The target is a heavy ink rule crossing the bar, so "where you are" and "where you said you'd be" are one glance and one axis. Category labels in wide mono. Il capitale non targettizzato non ha tinta: è vuoto, e si
+    legge con il tratteggio. Patrimonio netto <span class="value">€107.586,33</span>.</p>
+  </div>
+
+  <div class="block">
+    <h3>Le tre voci</h3>
+    <div class="card">
+      <p>Equity/Developed è <span class="value" style="color:var(--alarm)">6,00pp</span> sotto
+      il tuo obiettivo del <span class="value">40,00%</span> (tolleranza
+      <span class="value">±2,00pp</span>). Attuale <span class="value">34,00%</span>,
+      <span class="value" style="color:var(--alarm)">−€3.240,00</span>.</p>
+      <p class="declared" style="margin-top:12px;padding-inline:20px">«Ho ridotto la quota dei
+      mercati emergenti dal 30% al 20% dell'azionario: non è una visione sui mercati, mi sono
+      accorto che ribilanciavo per disagio e non per piano.»</p>
+      <p class="note">Sistema in Archivo · valori in Martian Mono ·
+        le tue parole in Faustina.</p>
+    </div>
+  </div>
+</section>
+
+
+<script src="../../../src/financeos/web/static/vendor/echarts/echarts.min.js"></script>
+<script>
+/* The reusable pattern, in miniature: the theme is built from the tokens in
+   scope on the chart element, so a chart is correct inside any themed pane and
+   cannot drift from the interface. Role colours arrive as "token:--name" and
+   are resolved here, so the option carries no colour literals at all. */
+(function(){
+  if (typeof echarts === "undefined") return;
+  var nf = new Intl.NumberFormat("it-IT", {maximumFractionDigits: 2});
+  function tok(el, n, f){
+    var v = getComputedStyle(el).getPropertyValue(n);
+    return (v||"").trim() || f;
+  }
+  function resolve(node, el){
+    if (typeof node === "string")
+      return node.indexOf("token:")===0 ? tok(el,node.slice(6),"") : node;
+    if (Array.isArray(node)) return node.map(function(n){return resolve(n,el);});
+    if (node && typeof node === "object") {
+      for (var k in node)
+        if (Object.prototype.hasOwnProperty.call(node,k))
+          node[k]=resolve(node[k],el);
+    }
+    return node;
+  }
+  function theme(el){
+    var ink=tok(el,"--ink",""), ink2=tok(el,"--ink-2",""), ink3=tok(el,"--ink-3","");
+    var grid=tok(el,"--rule",""), axis=tok(el,"--rule-2",""), surf=tok(el,"--sheet","");
+    var ax={axisLine:{show:true,lineStyle:{color:axis,width:1}},axisTick:{show:false},
+      splitLine:{show:true,lineStyle:{color:grid,width:1}},
+      axisLabel:{color:ink3,fontFamily:tok(el,"--face-value","monospace"),fontSize:11}};
+    return {
+      color:[tok(el,"--s1",""),tok(el,"--s2",""),tok(el,"--s3",""),
+             tok(el,"--s4",""),tok(el,"--s5","")],
+      backgroundColor:"transparent",
+      textStyle:{fontFamily:tok(el,"--face-system","sans-serif"),fontSize:12,color:ink2},
+      legend:{show:false},
+      categoryAxis:ax, valueAxis:ax, logAxis:ax, timeAxis:ax,
+      tooltip:{backgroundColor:surf,borderColor:axis,borderWidth:1,
+        extraCssText:"border-radius:0",
+        textStyle:{color:ink,fontFamily:tok(el,"--face-value","monospace"),fontSize:12}},
+      bar:{itemStyle:{borderColor:surf,borderWidth:2}}
+    };
+  }
+  document.querySelectorAll("[data-chart]").forEach(function(el){
+    var raw = document.getElementById(el.getAttribute("data-chart")).textContent;
+    var opt = resolve(JSON.parse(raw), el);
+    if (opt.tooltip) opt.tooltip.valueFormatter = function(v){
+      return typeof v === "number" ? nf.format(v)+"%" : v;
+    };
+    var c = echarts.init(el, theme(el), {renderer:"canvas"});
+    c.setOption(opt);
+    new ResizeObserver(function(){c.resize();}).observe(el);
+  });
+})();
+</script>
+</body>
+</html>
