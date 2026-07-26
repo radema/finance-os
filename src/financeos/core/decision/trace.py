@@ -96,6 +96,20 @@ class ConditionRef(DomainModel):
     params: Mapping[str, str] = Field(default_factory=dict)
 
 
+class FactUnavailable(DomainModel):
+    """A fact the evaluation needed but could not use, and why.
+
+    Generalizes RFC-0006 §5's "the trace lists which" to *lists which, and why*: a keyed fact
+    that is simply absent reads `missing_fact`, while a whole family that could not be
+    computed carries the reason the producing engine gave — `zero_portfolio_value` for an
+    empty scope, `missing_fact` for an incomplete valuation. Recording the reason next to the
+    name is what lets a replay reconstruct the skip instead of guessing at it.
+    """
+
+    name: str
+    reason: SkipReason
+
+
 class StaleFactNote(DomainModel):
     """Why a fact was too old to evaluate against (RFC-0006 §5: the trace records the age)."""
 
@@ -114,7 +128,7 @@ class EvaluationTrace(DomainModel):
     steps: tuple[Step, ...] = ()
     outcome: Outcome
     skip_reason: SkipReason | None = None
-    missing_facts: tuple[str, ...] = ()
+    unavailable_facts: tuple[FactUnavailable, ...] = ()
     stale_facts: tuple[StaleFactNote, ...] = ()
     error: str | None = None
     message_bindings: Mapping[str, str] = Field(default_factory=dict)

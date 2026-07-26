@@ -1,0 +1,161 @@
+"""Registry completeness (RFC-0006 §11–§12, RFC-0007 §3.1, ERR-10).
+
+> A kind cannot be registered without params model, evaluator, explanation template,
+> `required_facts`, and a `severity` declaration (a formula or an explicit `null`). Fails the
+> build otherwise.
+
+This is the mechanical guard that stops the catalog from decaying. It is the only thing
+preventing a kind from shipping with a working evaluator and no explanation — which is
+precisely how a P3 system quietly stops being explainable.
+"""
+
+from datetime import timedelta
+from string import Formatter
+from typing import Any
+
+import pytest
+from pydantic import BaseModel, ValidationError
+
+from financeos.core.decision import ConditionRef
+from financeos.core.engines.rule_engine import (
+    REGISTRY,
+    ConditionKindSpec,
+    ConditionRegistry,
+    ConditionResult,
+    DriftOutsideToleranceParams,
+    FactSet,
+    SeverityDeclaration,
+    TraceRecorder,
+    evaluate,
+    evaluate_drift_outside_tolerance,
+)
+from financeos.core.shared import Outcome
+from financeos.core.shared.errors import RegistryError, UnknownConditionKindError
+from tests import factories as f
+from tests.test_rule_engine import BREACHED, facts_for
+
+#: The complete registration of a well-formed kind, used as the baseline every "missing
+#: component" case is derived from.
+COMPLETE: dict[str, Any] = {
+    "kind": "drift_outside_tolerance",
+    "kind_version": 1,
+    "params_model": DriftOutsideToleranceParams,
+    "required_facts": frozenset({"drift"}),
+    "default_max_staleness": timedelta(days=7),
+    "severity": SeverityDeclaration(formula="|drift| / effective_band"),
+    "explanation_template": "{asset_class_label} è fuori target.",
+    "evaluate": evaluate_drift_outside_tolerance,
+}
+
+#: Every component whose omission must fail the build.
+MANDATORY = (
+    "kind",
+    "kind_version",
+    "params_model",
+    "required_facts",
+    "default_max_staleness",
+    "severity",
+    "explanation_template",
+    "evaluate",
+)
+
+
+def test_the_baseline_registration_is_accepted() -> None:
+    spec = ConditionKindSpec(**COMPLETE)
+    assert spec.kind == "drift_outside_tolerance"
+
+
+@pytest.mark.parametrize("omitted", MANDATORY)
+def test_omitting_any_mandatory_component_fails_the_build(omitted: str) -> None:
+    partial = {name: value for name, value in COMPLETE.items() if name != omitted}
+    with pytest.raises(ValidationError):
+        ConditionKindSpec(**partial)
+
+
+def test_an_empty_explanation_template_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        ConditionKindSpec(**{**COMPLETE, "explanation_template": ""})
+
+
+def test_a_kind_must_declare_the_facts_it_consumes() -> None:
+    with pytest.raises(ValidationError):
+        ConditionKindSpec(**{**COMPLETE, "required_facts": frozenset()})
+
+
+def test_a_severity_declaration_must_be_explicit() -> None:
+    with pytest.raises(ValidationError):
+        SeverityDeclaration()  # type: ignore[call-arg]
+    assert SeverityDeclaration(formula=None).formula is None
+
+
+def test_a_kind_may_not_be_registered_twice() -> None:
+    registry = ConditionRegistry()
+    registry.register(ConditionKindSpec(**COMPLETE))
+    with pytest.raises(RegistryError):
+        registry.register(ConditionKindSpec(**COMPLETE))
+
+
+def test_an_unregistered_kind_cannot_be_looked_up() -> None:
+    with pytest.raises(UnknownConditionKindError):
+        ConditionRegistry().get("drift_outside_tolerance", 1)
+
+
+def test_a_new_kind_version_is_a_new_registration() -> None:
+    """A kind's semantics never change; a new meaning is a new version (RFC-0006 §8)."""
+    registry = ConditionRegistry()
+    registry.register(ConditionKindSpec(**COMPLETE))
+    registry.register(ConditionKindSpec(**{**COMPLETE, "kind_version": 2}))
+    assert [spec.kind_version for spec in registry.all_kinds()] == [1, 2]
+
+
+class TestTheShippedCatalog:
+    """Every kind actually in the catalog is complete and coherent."""
+
+    def test_the_skeleton_ships_exactly_one_kind(self) -> None:
+        assert [(spec.kind, spec.kind_version) for spec in REGISTRY.all_kinds()] == [
+            ("drift_outside_tolerance", 1)
+        ]
+
+    @pytest.mark.parametrize("spec", REGISTRY.all_kinds(), ids=lambda spec: spec.kind)
+    def test_every_registered_kind_declares_all_components(
+        self, spec: ConditionKindSpec[Any]
+    ) -> None:
+        assert spec.kind
+        assert spec.kind_version >= 1
+        assert issubclass(spec.params_model, BaseModel)
+        assert spec.required_facts
+        assert isinstance(spec.severity, SeverityDeclaration)
+        assert spec.explanation_template.strip()
+        assert callable(spec.evaluate)
+
+    @pytest.mark.parametrize("spec", REGISTRY.all_kinds(), ids=lambda spec: spec.kind)
+    def test_every_explanation_renders_from_the_bindings_the_kind_emits(
+        self, spec: ConditionKindSpec[Any]
+    ) -> None:
+        """A template referencing a binding the evaluator never captures is not an
+        explanation — it is a runtime error waiting for its first firing."""
+        (firing,) = evaluate((f.drift_rule(1),), facts_for(*BREACHED))
+        referenced = {
+            name for _, name, _, _ in Formatter().parse(spec.explanation_template) if name
+        }
+        assert referenced <= set(firing.trace.message_bindings)
+        assert spec.render_explanation(firing.trace.message_bindings)
+
+    def test_the_drift_kind_declares_the_rfc0007_severity_formula(self) -> None:
+        spec = REGISTRY.get("drift_outside_tolerance", 1)
+        assert spec.severity.formula == "|drift| / effective_band"
+
+    def test_an_evaluator_is_a_pure_function_of_params_facts_and_recorder(self) -> None:
+        facts: FactSet = facts_for(*BREACHED)
+        recorder = TraceRecorder(
+            condition=ConditionRef(kind="drift_outside_tolerance", kind_version=1),
+            as_of=f.AS_OF,
+        )
+        result = evaluate_drift_outside_tolerance(
+            DriftOutsideToleranceParams(asset_class="EQUITY_DEVELOPED", scope=f.BUCKET_SCOPE.ref),
+            facts,
+            recorder,
+        )
+        assert isinstance(result, ConditionResult)
+        assert result.fired is True
+        assert recorder.trace(Outcome.FIRED).steps

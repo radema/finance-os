@@ -30,6 +30,7 @@ from financeos.core.decision import (
     Binding,
     ConditionRef,
     EvaluationTrace,
+    FactUnavailable,
     RuleFiring,
     StaleFactNote,
     Step,
@@ -56,12 +57,7 @@ from financeos.core.shared.errors import (
     ReplayMismatchError,
     UnknownConditionKindError,
 )
-from financeos.core.shared.numbers import (
-    ROUNDING,
-    SEVERITY_PRECISION,
-    SEVERITY_SCALE,
-    quantize,
-)
+from financeos.core.shared.numbers import ROUNDING
 from financeos.core.strategy import DriftLine, Rule
 
 ENGINE_VERSION: Final = "1.0.0"
@@ -70,9 +66,9 @@ ENGINE_NAME: Final = "rule"
 #: The name of the drift fact family (RFC-0006 §4).
 FACT_DRIFT: Final = "drift"
 
-#: Every division in the algebra is computed here and quantized to this scale, so a ratio has
-#: one representation regardless of the ambient decimal context.
-_ALGEBRA_CONTEXT: Final = Context(prec=SEVERITY_PRECISION + SEVERITY_SCALE, rounding=ROUNDING)
+#: The algebra runs under a fixed decimal context, so neither the ambient context of a caller
+#: nor the machine a replay happens on can change a recorded value.
+_ALGEBRA_CONTEXT: Final = Context(prec=28, rounding=ROUNDING)
 
 
 # --------------------------------------------------------------------------------------
@@ -146,11 +142,14 @@ def _ratio(numerator: Decimal, denominator: Decimal) -> Decimal | None:
     """Division that returns the skip marker on a zero denominator (RFC-0006 §4.1).
 
     A zero-value portfolio is a legitimate state during onboarding, not an error, so this
-    never raises.
+    never raises. The quotient is left at the algebra context's precision rather than
+    quantized to a storage scale: the algebra must be *total*, and clamping a ratio to
+    `DECIMAL(19,8)` would make a large one raise exactly where a kind is most urgent.
+    Determinism comes from the fixed context, not from quantization.
     """
     if denominator == 0:
         return None
-    return quantize(numerator / denominator, precision=SEVERITY_PRECISION, scale=SEVERITY_SCALE)
+    return numerator / denominator
 
 
 def apply_op(op: StepOp, operands: Sequence[TraceValue]) -> TraceValue | None:
@@ -239,19 +238,24 @@ def resolve(environment: Mapping[str, TraceValue], name: str) -> TraceValue:
 # --------------------------------------------------------------------------------------
 
 
-class _Skip(Exception):  # noqa: N818 - control flow, not an error condition
-    """Raised inside an evaluator when a fact makes the rule unevaluable."""
+class SkipSignal(Exception):  # noqa: N818 - control flow, not an error condition
+    """Raised by the recorder when a fact or a divisor makes the rule unevaluable.
+
+    Control flow, not a defect: `evaluate` catches it and records `SKIPPED` with the reason.
+    An evaluator must never swallow it — doing so would turn an unevaluable rule into a
+    reassuring `NOT_FIRED`, which is the inverted failure ADR-0016 exists to prevent.
+    """
 
     def __init__(
         self,
         reason: SkipReason,
         *,
-        missing: Sequence[str] = (),
+        unavailable: Sequence[FactUnavailable] = (),
         stale: Sequence[StaleFactNote] = (),
     ) -> None:
         super().__init__(reason.value)
         self.reason = reason
-        self.missing = tuple(missing)
+        self.unavailable = tuple(unavailable)
         self.stale = tuple(stale)
 
 
@@ -309,13 +313,16 @@ class TraceRecorder:
         """Open a required fact for reading.
 
         Raises:
-            _Skip: With `missing_fact` when the fact is absent, or `stale_fact` when it is
+            SkipSignal: With `missing_fact` when the fact is absent, or `stale_fact` when it is
                 older than the condition's `max_staleness`. Both are recorded in the trace,
                 so the resulting `Alert` says *why* it could not be evaluated rather than
                 reporting a reassuring `NOT_FIRED`.
         """
         if fact is None:
-            raise _Skip(SkipReason.MISSING_FACT, missing=(name,))
+            raise SkipSignal(
+                SkipReason.MISSING_FACT,
+                unavailable=(FactUnavailable(name=name, reason=SkipReason.MISSING_FACT),),
+            )
         age = fact.age(self._as_of)
         if (
             self._max_staleness is not None
@@ -323,7 +330,7 @@ class TraceRecorder:
             and fact.observed_at is not None
             and age > self._max_staleness
         ):
-            raise _Skip(
+            raise SkipSignal(
                 SkipReason.STALE_FACT,
                 stale=(
                     StaleFactNote(
@@ -429,7 +436,7 @@ class TraceRecorder:
         outcome: Outcome,
         *,
         skip_reason: SkipReason | None = None,
-        missing_facts: Sequence[str] = (),
+        unavailable_facts: Sequence[FactUnavailable] = (),
         stale_facts: Sequence[StaleFactNote] = (),
         error: str | None = None,
     ) -> EvaluationTrace:
@@ -440,7 +447,7 @@ class TraceRecorder:
             steps=tuple(self._steps),
             outcome=outcome,
             skip_reason=skip_reason,
-            missing_facts=tuple(missing_facts),
+            unavailable_facts=tuple(unavailable_facts),
             stale_facts=tuple(stale_facts),
             error=error,
             message_bindings=dict(self._message_bindings),
@@ -453,7 +460,7 @@ class TraceRecorder:
         result = apply_op(op, operands)
         self._steps.append(Step(op=op, inputs=tuple(names), out=out, value=result))
         if result is None:
-            raise _Skip(SkipReason.ZERO_DENOMINATOR)
+            raise SkipSignal(SkipReason.ZERO_DENOMINATOR)
         self._environment[out] = result
         return result
 
@@ -693,7 +700,12 @@ def _evaluate_rule(rule: Rule, facts: FactSet, registry: ConditionRegistry) -> R
     for family in sorted(spec.required_facts):
         reason = facts.unavailable_reason(family)
         if reason is not None:
-            return _skipped(rule, reference, reason, missing_facts=(family,))
+            return _skipped(
+                rule,
+                reference,
+                reason,
+                unavailable_facts=(FactUnavailable(name=family, reason=reason),),
+            )
 
     recorder = TraceRecorder(
         condition=reference,
@@ -702,7 +714,7 @@ def _evaluate_rule(rule: Rule, facts: FactSet, registry: ConditionRegistry) -> R
     )
     try:
         result = spec.evaluate(params, facts, recorder)
-    except _Skip as skip:
+    except SkipSignal as skip:
         return RuleFiring(
             rule_id=rule.id,
             priority=rule.priority,
@@ -711,7 +723,7 @@ def _evaluate_rule(rule: Rule, facts: FactSet, registry: ConditionRegistry) -> R
             trace=recorder.trace(
                 Outcome.SKIPPED,
                 skip_reason=skip.reason,
-                missing_facts=skip.missing,
+                unavailable_facts=skip.unavailable,
                 stale_facts=skip.stale,
             ),
         )
@@ -740,7 +752,7 @@ def _skipped(
     reference: ConditionRef,
     reason: SkipReason,
     *,
-    missing_facts: Sequence[str] = (),
+    unavailable_facts: Sequence[FactUnavailable] = (),
 ) -> RuleFiring:
     return RuleFiring(
         rule_id=rule.id,
@@ -751,7 +763,7 @@ def _skipped(
             condition=reference,
             outcome=Outcome.SKIPPED,
             skip_reason=reason,
-            missing_facts=tuple(missing_facts),
+            unavailable_facts=tuple(unavailable_facts),
         ),
     )
 
@@ -811,8 +823,8 @@ def replay_trace(trace: EvaluationTrace) -> ReplayResult | None:
 
     if skipped_on_zero:
         return ReplayResult(outcome=Outcome.SKIPPED, skip_reason=SkipReason.ZERO_DENOMINATOR)
-    if trace.missing_facts:
-        return ReplayResult(outcome=Outcome.SKIPPED, skip_reason=SkipReason.MISSING_FACT)
+    if trace.unavailable_facts:
+        return ReplayResult(outcome=Outcome.SKIPPED, skip_reason=trace.unavailable_facts[0].reason)
     if trace.stale_facts:
         return ReplayResult(outcome=Outcome.SKIPPED, skip_reason=SkipReason.STALE_FACT)
     if not trace.steps:
