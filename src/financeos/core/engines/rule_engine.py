@@ -20,7 +20,7 @@ output, so no port is held (I-7 / contract C2) and a re-run is byte-reproducible
 """
 
 from collections.abc import Callable, Mapping, Sequence
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Context, Decimal, localcontext
 from typing import Any, Final
 
@@ -349,7 +349,7 @@ class TraceRecorder:
         value: Decimal | bool | Mapping[str, str],
         *,
         source: SourceRef,
-        observed_at: Any = None,
+        observed_at: datetime | None = None,
     ) -> TraceValue:
         """Record a named binding and make it available to subsequent steps."""
         canonical = _canonical(value)
@@ -455,7 +455,12 @@ class TraceRecorder:
 
     # -- internals -----------------------------------------------------------------
 
-    def _step(self, op: StepOp, out: str, names: Sequence[str]) -> TraceValue | None:
+    def _step(self, op: StepOp, out: str, names: Sequence[str]) -> TraceValue:
+        """Execute one operation, record it, and return its value.
+
+        The step is appended *before* the zero-denominator check, so the null-valued step
+        survives in the trace and a replay can read the skip from the evidence.
+        """
         operands = [resolve(self._environment, name) for name in names]
         result = apply_op(op, operands)
         self._steps.append(Step(op=op, inputs=tuple(names), out=out, value=result))
@@ -465,12 +470,10 @@ class TraceRecorder:
         return result
 
     def _decimal_step(self, op: StepOp, out: str, names: Sequence[str]) -> Decimal:
-        result = self._step(op, out, names)
-        return _as_decimal(result) if result is not None else Decimal(0)
+        return _as_decimal(self._step(op, out, names))
 
     def _bool_step(self, op: StepOp, out: str, names: Sequence[str]) -> bool:
-        result = self._step(op, out, names)
-        return _as_bool(result) if result is not None else False
+        return _as_bool(self._step(op, out, names))
 
 
 # --------------------------------------------------------------------------------------
