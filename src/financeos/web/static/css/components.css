@@ -1,0 +1,697 @@
+/* ==========================================================================
+   FINANCE OS — COMPONENT LAYER
+
+   Contains the five component contracts of UX-0001 §4. Their geometry is
+   mine; their contract is not. Each one exists because an invariant made it
+   necessary, and the reason is written above it. Change the look freely;
+   breaking the stated contract breaks the domain guarantee behind it.
+   ========================================================================== */
+
+/* ==========================================================================
+   THE RECORD — the system's one container.
+   A sheet with a ruled annotation margin down its left edge. Ordinals,
+   outcome marks and marginal references live in that margin; the body never
+   moves. This replaces the card: cards nest and drift, a ruled sheet does
+   not, and the margin is load-bearing because a correction in this product
+   is an annotation beside the original, never an edit to it (ADR-0012).
+   ========================================================================== */
+
+.record {
+  display: grid;
+  grid-template-columns: var(--margin-col) minmax(0, 1fr);
+  background: var(--sheet);
+  border: var(--bw) solid var(--rule-strong);
+}
+.record__margin {
+  border-inline-end: 3px double var(--rule-strong);
+  padding: var(--sp-3) var(--sp-2) var(--sp-3) 0;
+  text-align: end;
+  font-family: var(--face-value);
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+}
+.record__body { min-width: 0; padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.record__body--flush { padding: 0; }
+
+.record__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2) var(--sp-3);
+  padding-bottom: var(--sp-2);
+  margin-bottom: var(--sp-3);
+  border-bottom: var(--bw) solid var(--rule);
+}
+.record__body--flush .record__head { padding: var(--sp-3) var(--sp-4) var(--sp-2); margin-bottom: 0; }
+.record__designation {
+  font-size: var(--fs-l);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tr-title);
+}
+.record__designation--minor {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tr-register);
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.record__ref { font-family: var(--face-value); font-size: var(--fs-micro); color: var(--ink-3); }
+
+/* A record whose subject is a breach carries the seal in its margin. */
+.record--breach { border-color: var(--seal); }
+.record--breach .record__margin { border-inline-end-color: var(--seal); color: var(--seal); }
+
+/* ==========================================================================
+   CONTRACT 1 — THE TOLERANCE RAIL                          (UX-0001 §4.1)
+
+   A calibrated scale spanning −3…+3 band-widths. Target at the centre tick,
+   in-tolerance zone shaded between the ±1 ticks, current position as an
+   index marker, overflow beyond ±3 pinned against a hard stop with a caret.
+
+       signed_severity = drift / effective_band
+       position%       = clamp(3, 97, 50 + (signed_severity / 6) × 100)
+
+   WHY IT WORKS AT ALL: severity is dimensionless (RFC-0007 §3.1), so ONE
+   gauge is legible across every asset class and both tolerance kinds. A
+   gauge keyed to raw drift would not have this property and would quietly
+   discard the severity contract.
+
+   MY ADDITION TO THE MOCK: graduations at every whole band-width. Without
+   them the reader can see "outside" but cannot COUNT band-widths, which is
+   the only quantity the gauge actually encodes. The mock had a band and a
+   marker and no scale, so its central claim was unreadable off the picture.
+
+   INVARIANT: reused unchanged on findings, explanation, allocation and
+   strategy. Three geometries in three places means the contract is lost.
+   ========================================================================== */
+
+.rail-gauge { min-width: 148px; }
+
+.rail-gauge__scale { position: relative; height: 22px; }
+
+.rail-gauge__baseline {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 4px;
+  height: var(--bw);
+  background: var(--rule-strong);
+}
+
+/* The in-tolerance zone: |severity| ≤ 1, i.e. the middle third of −3…+3.
+   This shading is the single most consequential region in the product — it is
+   the answer to "am I still following my strategy" — so it is a filled field
+   with hard edges, not a wash. It must be plainly visible in both themes. */
+.rail-gauge__band {
+  position: absolute;
+  inset-inline: 33.3333%;
+  bottom: 4px;
+  height: 12px;
+  background: color-mix(in srgb, var(--verdigris) 22%, var(--sheet));
+  border-inline: var(--bw) solid var(--verdigris);
+}
+
+.rail-gauge__tick {
+  position: absolute;
+  left: var(--at);
+  bottom: 0;
+  width: var(--bw);
+  height: 4px;
+  background: var(--ink-3);
+}
+/* Band edges are boundaries, so they read as rules, not as pointers: they stop
+   at the band's own height and stay hairline. Only the index marker is solid. */
+.rail-gauge__tick--band  { bottom: 4px; height: 12px; background: var(--verdigris); }
+.rail-gauge__tick--target { bottom: 4px; height: 19px; background: var(--ink); }
+.rail-gauge__tick--stop  { bottom: 0;  height: 20px; background: var(--rule-strong); }
+
+/* The index marker: a vernier pointer — stem plus caret, ringed in the surface
+   colour so it never merges with a band edge it happens to sit on. */
+.rail-gauge__index {
+  position: absolute;
+  left: var(--at);
+  bottom: 1px;
+  width: 3px;
+  height: 18px;
+  margin-inline-start: -1px;
+  background: var(--verdigris);
+  box-shadow: 0 0 0 1px var(--sheet);
+}
+.rail-gauge__index::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  transform: translateX(-50%);
+  border-inline: 4px solid transparent;
+  border-top: 6px solid var(--verdigris);
+}
+.rail-gauge--breach .rail-gauge__index { background: var(--seal); }
+.rail-gauge--breach .rail-gauge__index::before { border-top-color: var(--seal); }
+
+/* Overflow past ±3: a visible mechanical stop, drawn in CSS — the caret glyph
+   is outside the vendored latin subset and must never be typed.
+   Drawn in the graduation row BELOW the baseline, so it never collides with
+   the index stem pinned at 3% / 97% directly above it: the marker reads as
+   held against a stop, and the caret reads as "the scale continues past here". */
+.rail-gauge__clamp {
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-block: 4px solid transparent;
+}
+.rail-gauge__clamp--start {
+  inset-inline-start: 0;
+  border-inline-end: 5px solid var(--seal);
+}
+.rail-gauge__clamp--end {
+  inset-inline-end: 0;
+  border-inline-start: 5px solid var(--seal);
+}
+
+/* severity is legitimately null for some condition kinds (RFC-0008 §3 sorts
+   NULLS LAST deliberately). The absence must be VISIBLE, not ambiguous
+   (UX-0001 §6.3): same geometry, band struck out, no index. */
+.rail-gauge--unbanded .rail-gauge__band {
+  background: repeating-linear-gradient(-45deg, transparent 0 3px, var(--hatch-ink) 3px 4px);
+  border-inline-color: var(--rule-strong);
+}
+
+.rail-gauge__key {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+  font-family: var(--face-value);
+  font-size: var(--fs-micro);
+  color: var(--ink-3);
+}
+.rail-gauge__key > :nth-child(2) { color: var(--ink-2); }
+
+/* the severity readout: the ONE number in this product allowed to be large.
+   Not net worth — P1 says the decisions are the product, so the figure that
+   gets the scale is the system's judgment, not the user's wealth. */
+.severity { display: flex; flex-direction: column; gap: 2px; }
+.severity__label {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tr-register);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.severity__value {
+  font-family: var(--face-value);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-medium);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.severity__value--breach { color: var(--seal); }
+.severity__value--none   { color: var(--ink-3); }
+.severity__formula { font-family: var(--face-value); font-size: var(--fs-micro); color: var(--ink-3); }
+
+/* ==========================================================================
+   CONTRACT 2 — THE TRACE LADDER                            (UX-0001 §4.2)
+
+   Bindings and steps as an ordered derivation in monospace. NEVER prose.
+   Follows RFC-0009 §4.1: the trace is DATA with ordered steps, precisely so
+   the explanation is mechanical rather than interpretive.
+
+   TWO RULES THE TEMPLATE MUST HONOUR:
+   1. Every binding's `source` is a link wherever it resolves. The chain
+      Recommendation → trace → Rule → StrategyVersion → your own change_note
+      must be walkable by clicking. That chain IS P7.
+   2. Decimals render exactly as stored, AS STRINGS. Never format through a
+      float, and never apply a numeric filter to a trace value.
+
+   STAGING — the held moment: the derivation is frozen at the step where the
+   condition became true. That terminal step is emphasised as the held step;
+   everything above it reads as an already-established premise. Nothing on
+   this surface advances or decays while it is held.
+   ========================================================================== */
+
+.ladder {
+  font-family: var(--face-value);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-s);
+  line-height: var(--lh-ladder);
+}
+
+.ladder__head {
+  font-family: var(--face-system);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tr-register);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: var(--bw) solid var(--rule-strong);
+}
+
+.ladder__binding {
+  display: grid;
+  grid-template-columns: minmax(120px, 168px) minmax(96px, 124px) minmax(0, 1fr);
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-1) 0;
+  border-bottom: var(--bw) dotted var(--rule);
+}
+.ladder__step {
+  display: grid;
+  grid-template-columns: 26px minmax(84px, 104px) minmax(0, 1fr) minmax(120px, 168px);
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-1) 0;
+  border-bottom: var(--bw) dotted var(--rule);
+}
+.ladder > :last-child { border-bottom: 0; }
+
+.ladder__name    { color: var(--ink); }
+.ladder__amount  { text-align: end; font-weight: var(--fw-medium); }
+.ladder__source  { font-size: var(--fs-xs); color: var(--ink-3); overflow-wrap: anywhere; }
+.ladder__source a { font-size: var(--fs-xs); }
+/* a binding the engine derived rather than read has no link to offer */
+.ladder__source--derived { font-style: normal; }
+
+.ladder__ord     { color: var(--ink-3); text-align: end; }
+.ladder__op      { color: var(--annot); font-weight: var(--fw-medium); }
+.ladder__operands { color: var(--ink-2); overflow-wrap: anywhere; }
+.ladder__result  { text-align: end; font-weight: var(--fw-medium); }
+
+/* the held step — where the condition became true */
+.ladder__step--held {
+  background: var(--sheet-sunken);
+  border-bottom: 0;
+  border-top: var(--bw) solid var(--rule-strong);
+  padding-inline: var(--sp-2);
+  margin-inline: calc(var(--sp-2) * -1);
+}
+.ladder__step--held .ladder__result { color: var(--seal); }
+.ladder__step--held .ladder__ord { color: var(--ink); font-weight: var(--fw-medium); }
+
+@media (max-width: 780px) {
+  .ladder__binding, .ladder__step { grid-template-columns: minmax(0, 1fr); gap: 0; padding-block: var(--sp-2); }
+  .ladder__amount, .ladder__result { text-align: start; }
+  .ladder__ord { text-align: start; }
+  .ladder__head { display: none; }
+}
+
+/* ==========================================================================
+   CONTRACT 3 — THE PROVENANCE BAR                          (UX-0001 §4.3)
+
+   Sticky, always visible: portfolio · as_of · run_id · mode · input_digest.
+
+   Under the correction model (ADR-0012) the same question has different true
+   answers depending on which run you are reading; allocation charts read the
+   as-recorded series while the Reconcile block reads a recomputation. A user
+   who cannot see which they are looking at will eventually be misled. In this
+   product, WHEN you are looking is part of what you are looking at.
+   ========================================================================== */
+
+.provenance {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-5);
+  padding: var(--sp-2) var(--sp-6);
+  background: var(--sheet);
+  border-bottom: 3px double var(--rule-strong);
+}
+.provenance__field { display: flex; align-items: baseline; gap: var(--sp-2); margin: 0; }
+.provenance__field dt {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tr-register);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.provenance__field dd {
+  font-family: var(--face-value);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+/* mode is authenticity, not decoration: an ACTUAL run is an authentic act;
+   a HYPOTHETICAL run produces zero recommendations (RFC-0008 §8) and must
+   never be mistaken for one, so it is struck with the annotation hatch. */
+.mode {
+  font-family: var(--face-value);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  padding: 1px var(--sp-2);
+  border: var(--bw) solid var(--ink);
+  background: var(--ink);
+  color: var(--sheet);
+}
+.mode--hypothetical {
+  border-color: var(--annot);
+  color: var(--annot);
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 3px, var(--hatch-ink) 3px 4px),
+    var(--annot-tint);
+}
+
+@media (max-width: 950px) {
+  .provenance { padding-inline: var(--sp-3); gap: var(--sp-1) var(--sp-4); }
+  /* portfolio and digest are the two the user can reconstruct from elsewhere */
+  .provenance__field--secondary { display: none; }
+}
+
+/* ==========================================================================
+   CONTRACT 4 — OUTCOME CHIPS AND THE SKIPPED DISCIPLINE    (UX-0001 §4.4)
+
+   Four outcomes, four distinct treatments. SKIPPED and ERROR are NEVER
+   styled as reassurance.
+
+   ADR-0016 identifies silent false reassurance as the failure mode most
+   likely to mislead. A UI rendering "0 findings" over 20 skipped rules
+   re-introduces it at the presentation layer, after the domain went to
+   trouble to prevent it.
+
+   TEXTURE, NOT HUE, carries the distinction — solid / hairline / dashed /
+   hatched. The four stay unmistakable in greyscale and to a red-green
+   colour-blind reader, which matters here because the two most consequential
+   states in the product are conventionally coded red and green. Colour only
+   reinforces. The hatch is the register's own cancellation mark: unusable
+   space in an official form is struck through so nothing can be added later.
+   ========================================================================== */
+
+.outcome {
+  display: inline-block;
+  font-family: var(--face-value);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.05em;
+  padding: 1px var(--sp-2);
+  border: var(--bw) solid;
+  white-space: nowrap;
+}
+/* FIRED — the finding is real. Heaviest ink on the page. */
+.outcome--fired {
+  color: var(--sheet);
+  background: var(--seal);
+  border-color: var(--seal);
+}
+/* NOT_FIRED — the condition was false. The only outcome allowed to be quiet. */
+.outcome--not-fired {
+  color: var(--ink-2);
+  background: transparent;
+  border-color: var(--rule-control);
+}
+/* SKIPPED — could not be evaluated. Dashed: the record is incomplete. */
+.outcome--skipped {
+  color: var(--bollo);
+  background: var(--bollo-tint);
+  border-color: var(--bollo);
+  border-style: dashed;
+}
+/* ERROR — the evaluation broke; the system does not know. Hatched: void.
+   The hatch is softened here relative to a full-size hatched field: at chip
+   size it sits directly behind 11px text, and a dense hatch would trade the
+   label's legibility for the texture that exists to reinforce it. */
+.outcome--error {
+  color: var(--seal);
+  border-color: var(--seal);
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 4px,
+      color-mix(in srgb, var(--seal) 26%, transparent) 4px 5px),
+    var(--seal-tint);
+}
+
+/* priority band — authored by the user, and it dominates severity in the
+   ordering contract, so it is set in the system voice, not as a colour pip */
+.priority {
+  font-family: var(--face-value);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+}
+.priority--critical, .priority--high { color: var(--seal); font-weight: var(--fw-medium); }
+
+/* suggestion_class — a closed enum (E7). Never an instrument, action or size. */
+.suggestion {
+  font-family: var(--face-value);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.03em;
+  padding: 1px var(--sp-2);
+  border: var(--bw) solid var(--rule-control);
+  color: var(--ink-2);
+}
+
+/* ---- the persistent skip notice ---------------------------------------
+   Shown whenever the last run skipped anything. Its copy must say, in
+   Italian and in words, that skipping is not compliance (ADR-L03 §5.3:
+   authored, never translated — a limp rendering would undo the discipline
+   it exists to enforce). Styled as a record with a hatched margin, so it
+   reads as part of the register rather than as a dismissible toast. */
+
+.notice {
+  display: grid;
+  grid-template-columns: var(--margin-col) minmax(0, 1fr);
+  border: var(--bw) solid var(--bollo);
+  background: var(--bollo-tint);
+}
+.notice__margin {
+  border-inline-end: var(--bw) solid var(--bollo);
+  background: repeating-linear-gradient(-45deg, transparent 0 3px, var(--hatch-ink) 3px 4px);
+}
+.notice__body { padding: var(--sp-3) var(--sp-4); font-size: var(--fs-s); }
+.notice__lead {
+  font-weight: var(--fw-semi);
+  font-size: var(--fs-base);
+  margin-bottom: var(--sp-1);
+}
+.notice__body p { max-width: var(--measure-prose); }
+.notice__body p + p { margin-top: var(--sp-2); }
+.notice--breach { border-color: var(--seal); background: var(--seal-tint); }
+.notice--breach .notice__margin { border-inline-end-color: var(--seal); }
+.notice--reference { border-color: var(--annot); background: var(--annot-tint); }
+.notice--reference .notice__margin { border-inline-end-color: var(--annot); }
+
+/* ==========================================================================
+   TABULATED DATA — the ruled register page.
+   Dense by design (Operate permits density where the user needs it).
+   ========================================================================== */
+
+.ledger { width: 100%; font-size: var(--fs-s); }
+.ledger th {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: var(--bw) solid var(--rule-strong);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tr-register);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: start;
+  white-space: nowrap;
+}
+.ledger td {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: var(--bw) solid var(--rule);
+  vertical-align: top;
+}
+.ledger tbody tr:last-child td { border-bottom: 0; }
+.ledger th.numeric, .ledger td.numeric { text-align: end; }
+.ledger tbody tr:hover { background: var(--sheet-sunken); }
+.ledger__ord { color: var(--ink-3); font-family: var(--face-value); font-size: var(--fs-micro); }
+.ledger tr.ledger__total td {
+  border-top: var(--bw) solid var(--rule-strong);
+  border-bottom: 3px double var(--rule-strong);
+  font-weight: var(--fw-medium);
+  background: var(--sheet-sunken);
+}
+/* a legal-but-alarming row: a negative UNASSIGNED residual is a deficit and
+   is permitted (ADR-0025). It is marked, never hidden and never absolutised. */
+.ledger tr.ledger__residual td { color: var(--ink-2); background: var(--bollo-tint); }
+
+/* ==========================================================================
+   CONTROLS
+   ========================================================================== */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-s);
+  font-weight: var(--fw-medium);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--sheet);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.button:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.button:active { background: var(--ink); }
+.button[aria-disabled="true"], .button:disabled {
+  background: transparent;
+  color: var(--ink-3);
+  border-color: var(--rule-control);
+  cursor: not-allowed;
+}
+.button--ghost { background: transparent; color: var(--ink); border-color: var(--rule-control); }
+.button--ghost:hover { background: var(--sheet-sunken); border-color: var(--ink); color: var(--ink); }
+
+.field {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-s);
+  color: var(--ink);
+  background: var(--sheet);
+  border: var(--bw) solid var(--rule-control);
+  border-radius: var(--radius);
+}
+.field:hover { border-color: var(--ink-2); }
+.field[aria-invalid="true"] { border-color: var(--seal); background: var(--seal-tint); }
+.field:disabled { color: var(--ink-3); background: var(--sheet-sunken); cursor: not-allowed; }
+.field--declared { font-family: var(--face-declared); font-size: var(--fs-m); line-height: var(--lh-prose); }
+.field__label {
+  display: block;
+  margin-bottom: var(--sp-1);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tr-register);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.field__error { margin-top: var(--sp-1); font-size: var(--fs-xs); color: var(--seal); }
+
+/* a whole region the user may not act on yet. Not opacity-dimmed prose —
+   the text stays readable, only the controls read as unavailable. */
+.deferred { border: var(--bw) dashed var(--rule-control); padding: var(--sp-3); }
+.deferred [disabled], .deferred .button[aria-disabled="true"] { pointer-events: none; }
+
+/* ==========================================================================
+   STATES — empty, loading, error.
+   The empty state must teach the interface and must not reassure: absence of
+   a finding is not evidence of compliance (see the skip notice above).
+   ========================================================================== */
+
+.state { padding: var(--sp-8) var(--sp-4); text-align: center; }
+.state__lead { font-size: var(--fs-m); font-weight: var(--fw-medium); }
+.state__body { margin: var(--sp-2) auto 0; max-width: 56ch; color: var(--ink-2); font-size: var(--fs-s); }
+
+/* skeleton for an HTMX fragment in flight — a ruled placeholder, not a
+   spinner in the middle of content (Operate). Only animates when motion is
+   welcome; otherwise it is a static ruled block. */
+.loading { display: grid; gap: var(--sp-2); padding: var(--sp-3) 0; }
+.loading__line {
+  height: 10px;
+  background: var(--sheet-sunken);
+  border-block: var(--bw) solid var(--rule);
+}
+.loading__line:nth-child(2) { width: 82%; }
+.loading__line:nth-child(3) { width: 64%; }
+@media (prefers-reduced-motion: no-preference) {
+  .loading__line { animation: ledger-pulse 1.4s var(--ease) infinite; }
+  .loading__line:nth-child(2) { animation-delay: 120ms; }
+  .loading__line:nth-child(3) { animation-delay: 240ms; }
+}
+@keyframes ledger-pulse { 50% { background: var(--sheet); } }
+
+/* HTMX: show the indicator only while a request is in flight. */
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: grid; }
+
+/* ==========================================================================
+   CHARTS  (ADR-L03 §4)
+   Charts read the AS-RECORDED series, never a recomputation. JavaScript is
+   load-bearing here and nowhere else, so the tabular equivalent is not a
+   fallback — it is always in the document, one disclosure away.
+   ========================================================================== */
+
+.chart { margin: 0; }
+.chart__canvas { width: 100%; height: var(--chart-h, 260px); }
+/* hidden until the helper initialises it, so JS-off never shows an empty box */
+.chart__canvas:not([data-chart-ready]) { display: none; }
+.chart__caption {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  max-width: var(--measure-prose);
+}
+.chart__data > summary {
+  cursor: pointer;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tr-register);
+  text-transform: uppercase;
+  color: var(--ink-2);
+  padding: var(--sp-2) 0;
+}
+.chart__data[open] > summary { border-bottom: var(--bw) solid var(--rule); margin-bottom: var(--sp-2); }
+/* with JS off the disclosure is open by default via the [open] attribute in
+   the partial; the helper closes it once the chart is live */
+
+/* ---- series identity ---------------------------------------------------
+   A legend is ALWAYS present for two or more series, and series are direct-
+   labelled as well: the worst adjacent pair in the validated palette sits in
+   the 6–8 tritan band, which is legal only with secondary encoding. Identity
+   is therefore never colour alone. Text stays in ink tokens — a value never
+   wears its series colour. */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  font-size: var(--fs-xs);
+}
+.legend__item { display: flex; align-items: baseline; gap: var(--sp-2); color: var(--ink-2); }
+.legend__swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--swatch, var(--series-1));
+  /* a surface ring, so adjacent swatches never touch */
+  box-shadow: 0 0 0 1px var(--sheet);
+}
+.legend__value { font-family: var(--face-value); font-variant-numeric: tabular-nums; color: var(--ink); }
+
+.swatch-1 { --swatch: var(--series-1); }
+.swatch-2 { --swatch: var(--series-2); }
+.swatch-3 { --swatch: var(--series-3); }
+.swatch-4 { --swatch: var(--series-4); }
+.swatch-5 { --swatch: var(--series-5); }
+/* untargeted capital: neutral plus the cancellation hatch, never a hue */
+.swatch-void {
+  --swatch: var(--series-void);
+  background-image: var(--series-void-texture);
+}
+
+/* ---- CLASS B RESERVATION (RFC-0010 §6.4) ------------------------------
+   Unused in V1 — nothing here is Class B. Declared so the distinction exists
+   before the first projection ships, because RFC-0010 §6.4 makes an
+   indistinguishable Class B finding a KILL criterion. A projection is not an
+   authenticated measurement: dashed frame, hatched series fill, a mandatory
+   inline assumption, and a severity that never shares a sorted column with
+   Class A. Do not delete this because it is currently unreferenced. */
+.record--projection { border-style: dashed; border-color: var(--projection); }
+.record--projection .record__margin { border-inline-end-color: var(--projection); color: var(--projection); }
+.outcome--projection {
+  color: var(--projection);
+  border-color: var(--projection);
+  border-style: dashed;
+  background: var(--projection-tint);
+}
+.assumption {
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-inline-start: var(--bw) solid var(--projection);
+  background: var(--projection-tint);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+
+/* ==========================================================================
+   THE VOICES LEGEND — a real component, not preview scaffolding. It appears
+   in the rail foot, because a reader who has not been told what the three
+   faces mean cannot use the distinction they encode.
+   ========================================================================== */
+
+.voices { display: grid; gap: var(--sp-1); font-size: var(--fs-micro); }
+.voices__row { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-2); align-items: baseline; }
+.voices__row > :last-child { color: var(--ink-3); }

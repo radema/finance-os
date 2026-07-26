@@ -1,0 +1,238 @@
+/* ==========================================================================
+   FINANCE OS — DESIGN TOKENS
+
+   Declared artifact. The narrative for every value is in /DESIGN.md, which
+   also marks which decisions are the designer's and which are corpus-mandated
+   invariants a future reader must not "improve".
+
+   THESIS: Il Repertorio — a notary's register, rendered as a modern
+   instrument. Numbered, dated, authenticated acts; nothing is ever erased; a
+   correction arrives as a marginal annotation beside the original; the party's
+   own words are quoted verbatim and set apart. It refuses the fintech
+   dashboard (hero net-worth number, donut, green/red delta pills, rounded
+   cards) AND the muted-paper broadsheet the reference mock reached for.
+
+   OWN-WORLD: cool protocol-paper greys, never cream. Iron-gall ink. Four
+   status inks with fixed jobs — carmine seal = breach, olive bollo = not
+   evaluated, verdigris = inside tolerance, aniline violet = a reference to
+   another act. Over that, a validated five-hue categorical palette that makes
+   charts a primary way of reading the data rather than a decoration. Zero
+   radius everywhere. Double vertical rules define a margin column on every
+   record; that margin is where annotations and ordinals live.
+
+   Do not add a token here to silence a linter. Every neutral and ink is
+   WCAG-verified against both surfaces; every series hue is validated by
+   dataviz/scripts/validate_palette.js in BOTH modes.
+   ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- type: three voices, three faces (UX-0001 §4.5, load-bearing per ADR-L03 §6) */
+  --face-system:   "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --face-value:    "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --face-declared: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+
+  /* fixed rem scale, ratio ~1.125 (Operate: never fluid, users are at one DPI) */
+  --fs-micro: 0.6875rem;  /* 11px — margin ordinals, register labels, ids   */
+  --fs-xs:    0.75rem;    /* 12px — notes, binding sources, chip text       */
+  --fs-s:     0.8125rem;  /* 13px — table cells, dense tabulated data       */
+  --fs-base:  0.875rem;   /* 14px — body, observations                      */
+  --fs-m:     1rem;       /* 16px — the observation lead, declared voice     */
+  --fs-l:     1.125rem;   /* 18px — record designation (h2)                 */
+  --fs-xl:    1.375rem;   /* 22px — page title (h1)                        */
+  --fs-2xl:   1.75rem;    /* 28px — severity readout, the ONE large number  */
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semi:    600;
+
+  --lh-tight:  1.25;
+  --lh-base:   1.5;
+  --lh-prose:  1.65;   /* declared voice: the user's own words breathe      */
+  --lh-ladder: 1.7;    /* trace ladder: a derivation, read line by line     */
+
+  --tr-register: 0.11em;  /* small tracked caps: register labels only        */
+  --tr-value:   -0.01em;  /* mono at small sizes tightens slightly           */
+  --tr-title:   -0.015em;
+
+  /* ---- spacing: 4px base, no half-steps */
+  --sp-1:  4px;   --sp-2:  8px;   --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 20px;   --sp-6: 24px;   --sp-8: 32px;  --sp-10: 40px;  --sp-12: 48px;
+
+  /* ---- form language: a register has no rounded corners */
+  --radius: 0;
+  --bw: 1px;              /* every hairline is exactly one pixel            */
+  --margin-col: 34px;     /* the annotation margin on every record          */
+  --rail-w: 212px;
+  --measure-prose: 68ch;  /* 65–75ch, prose only; tables run denser         */
+  --measure-page: 1180px;
+
+  /* ---- motion: state only, never decoration (Operate: 150–250ms) */
+  --dur-fast: 90ms;
+  --dur-base: 160ms;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- LIGHT: protocol paper, read at a desk in daylight ---------------- */
+  --ground:        #e4e8ec;  /* the stack of paper the record sits on        */
+  --sheet:         #f7f8fa;  /* the record sheet itself                     */
+  --sheet-sunken:  #eef0f4;  /* ruled inset: totals, the held step          */
+
+  --ink:    #14181d;         /* iron-gall, cool         16.8:1 on sheet     */
+  --ink-2:  #464e57;         /* secondary                7.9:1 on sheet     */
+  --ink-3:  #5a636d;         /* register labels          5.7:1 / 5.0:1      */
+
+  --rule:         #cfd5dc;   /* table dividers (decorative)                 */
+  --rule-strong:  #b6bec7;   /* record frames, the double margin rule       */
+  --rule-control: #7b8590;   /* input/button edges — 3.5:1, non-text AA     */
+
+  --seal:       #963029;     /* BREACH · FIRED · negative      7.2:1        */
+  --seal-tint:  #f7ecea;
+  --bollo:      #6f5a12;     /* NOT EVALUATED · soft warning   6.3:1        */
+  --bollo-tint: #f5f0dd;
+  --verdigris:      #26624f; /* INSIDE TOLERANCE · positive    6.7:1        */
+  --verdigris-tint: #e7efeb;
+  --annot:      #5a3aa8;     /* REFERENCE to another act · links  7.6:1     */
+  --annot-tint: #eeeaf8;
+
+  --hatch-ink: rgba(20, 24, 29, 0.30);  /* cancellation hatching            */
+  --focus: var(--annot);
+
+  /* ---- CLASS B RESERVATION  (RFC-0010 §6.4 — a kill criterion) ----------
+     "A Class B finding is not visually distinguishable from a Class A finding
+     → Do not ship Class B." Class A = observation (arithmetic over recorded
+     values). Class B = projection (VaR, forecasts). Nothing in V1 is Class B,
+     so this channel is RESERVED and unused — declared now so the distinction
+     is not retrofitted onto a system with no room for it. Class B is carried
+     by TEXTURE plus a mandatory inline assumption, never by hue alone, and
+     `severity` must never sort across classes.                              */
+  --projection: #6b4d8f;
+  --projection-tint: #f0ecf6;
+  --projection-texture: repeating-linear-gradient(
+    45deg, transparent 0 4px, var(--hatch-ink) 4px 5px);
+
+  /* ==== CHART LAYER =====================================================
+     Categorical slots are assigned to ENTITIES, in the declared order of the
+     strategy tree, and never cycled or re-assigned when a filter changes the
+     series count. Validated with dataviz/scripts/validate_palette.js against
+     --sheet in both modes: all five checks PASS. Worst adjacent CVD ΔE 8.3
+     protan / 6.0 tritan — tritan sits in the 6–8 band, so SECONDARY ENCODING
+     IS MANDATORY: a legend is always present, series are direct-labelled, and
+     stacked segments carry a 2px surface gap. Never colour alone.           */
+  --series-1: #0e6ea6;  /* EQUITY_DEVELOPED — azure                          */
+  --series-2: #0b8f68;  /* EQUITY_EMERGING  — teal                           */
+  --series-3: #c07408;  /* BOND_GOV_EUR     — amber                          */
+  --series-4: #c33f7d;  /* BOND_CORP_IG     — magenta                        */
+  --series-5: #3f5cc4;  /* CASH             — indigo                         */
+
+  /* Untargeted / UNASSIGNED capital gets NO hue. It is capital with no
+     target that nonetheless stays in the denominator (RFC-0007 §4.1), so it
+     reads as void: neutral plus the register's cancellation hatch. This is
+     also the texture channel dataviz requires for CVD / print / forced-colors. */
+  --series-void: #7b8590;
+  --series-void-texture: repeating-linear-gradient(
+    45deg, transparent 0 3px, var(--hatch-ink) 3px 4px);
+
+  /* sequential — magnitude (severity over runs). One hue, light to dark. */
+  --seq-100: #b2ecff; --seq-200: #92d2ff; --seq-300: #6eb6ec; --seq-400: #489ad4;
+  --seq-500: #2980b9; --seq-600: #00669e; --seq-700: #004c7f;
+
+  /* diverging — signed drift around target. Warm/cool poles, NEUTRAL GREY
+     midpoint (never a hue at the midpoint). Under-target reads carmine
+     because falling short of a declared target is the product's core finding. */
+  --div-under-3: #89231e; --div-under-2: #9f4d44; --div-under-1: #b9827b;
+  --div-mid:     #dcdfe3;
+  --div-over-1:  #7297b4; --div-over-2:  #306f9b; --div-over-3:  #005288;
+
+  /* chart chrome — recessive by construction */
+  --chart-surface: var(--sheet);
+  --chart-grid:    #e0e4e9;
+  --chart-axis:    #b6bec7;
+  --chart-ink:     var(--ink);
+  --chart-ink-2:   var(--ink-2);
+  --chart-ink-3:   var(--ink-3);
+}
+
+/* ==========================================================================
+   DARK — the same register on microfilm. NOT "dark cards", and not an
+   automatic flip: every ink and every series step was re-selected for the
+   dark surface and re-validated against it.
+   The scene that forces it: the same person, same desk, evening, one lamp.
+
+   Declared twice by design (the pattern dataviz specifies): the media query
+   follows the OS, the [data-theme] scope follows an explicit stamp, and the
+   stamp must win both ways. The :not([data-theme="light"]) guard lets a light
+   stamp beat OS-dark; :where() keeps the media block's specificity at zero so
+   the stamp below always overrides it.
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --ground: #10141a; --sheet: #171c23; --sheet-sunken: #1d232b;
+    --ink: #e3e7ea;            /* 13.8:1 on sheet */
+    --ink-2: #a3adb8;          /*  7.5:1 */
+    --ink-3: #808b96;          /*  4.9:1 */
+    --rule: #2b333c; --rule-strong: #3d474f;
+    --rule-control: #62707d;   /*  3.4:1 non-text AA */
+    --seal: #f0857a;      --seal-tint: #2b1a1c;       /* 6.8:1 */
+    --bollo: #d9b356;     --bollo-tint: #272013;      /* 8.6:1 */
+    --verdigris: #64c4a0; --verdigris-tint: #14261f;  /* 8.1:1 */
+    --annot: #b39af5;     --annot-tint: #211a33;      /* 7.2:1 */
+    --hatch-ink: rgba(227, 231, 234, 0.26);
+    --projection: #a98cf0; --projection-tint: #201a2e;
+    --series-1: #1e77b0; --series-2: #209871; --series-3: #ca7d1c;
+    --series-4: #cd4986; --series-5: #4765ce;
+    --series-void: #62707d;
+    --seq-100: #004c7f; --seq-200: #00669e; --seq-300: #2980b9; --seq-400: #489ad4;
+    --seq-500: #6eb6ec; --seq-600: #92d2ff; --seq-700: #b2ecff;
+    --div-under-3: #f0857a; --div-under-2: #cf6a62; --div-under-1: #a1544f;
+    --div-mid: #333b45;
+    --div-over-1: #4a6f8c; --div-over-2: #3f8cbf; --div-over-3: #5aa9e0;
+    --chart-grid: #232b34; --chart-axis: #3d474f;
+  }
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --ground: #e4e8ec; --sheet: #f7f8fa; --sheet-sunken: #eef0f4;
+  --ink: #14181d; --ink-2: #464e57; --ink-3: #5a636d;
+  --rule: #cfd5dc; --rule-strong: #b6bec7; --rule-control: #7b8590;
+  --seal: #963029;      --seal-tint: #f7ecea;
+  --bollo: #6f5a12;     --bollo-tint: #f5f0dd;
+  --verdigris: #26624f; --verdigris-tint: #e7efeb;
+  --annot: #5a3aa8;     --annot-tint: #eeeaf8;
+  --hatch-ink: rgba(20, 24, 29, 0.30);
+  --projection: #6b4d8f; --projection-tint: #f0ecf6;
+  --series-1: #0e6ea6; --series-2: #0b8f68; --series-3: #c07408;
+  --series-4: #c33f7d; --series-5: #3f5cc4;
+  --series-void: #7b8590;
+  --seq-100: #b2ecff; --seq-200: #92d2ff; --seq-300: #6eb6ec; --seq-400: #489ad4;
+  --seq-500: #2980b9; --seq-600: #00669e; --seq-700: #004c7f;
+  --div-under-3: #89231e; --div-under-2: #9f4d44; --div-under-1: #b9827b;
+  --div-mid: #dcdfe3;
+  --div-over-1: #7297b4; --div-over-2: #306f9b; --div-over-3: #005288;
+  --chart-grid: #e0e4e9; --chart-axis: #b6bec7;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #10141a; --sheet: #171c23; --sheet-sunken: #1d232b;
+  --ink: #e3e7ea; --ink-2: #a3adb8; --ink-3: #808b96;
+  --rule: #2b333c; --rule-strong: #3d474f; --rule-control: #62707d;
+  --seal: #f0857a;      --seal-tint: #2b1a1c;
+  --bollo: #d9b356;     --bollo-tint: #272013;
+  --verdigris: #64c4a0; --verdigris-tint: #14261f;
+  --annot: #b39af5;     --annot-tint: #211a33;
+  --hatch-ink: rgba(227, 231, 234, 0.26);
+  --projection: #a98cf0; --projection-tint: #201a2e;
+  --series-1: #1e77b0; --series-2: #209871; --series-3: #ca7d1c;
+  --series-4: #cd4986; --series-5: #4765ce;
+  --series-void: #62707d;
+  --seq-100: #004c7f; --seq-200: #00669e; --seq-300: #2980b9; --seq-400: #489ad4;
+  --seq-500: #6eb6ec; --seq-600: #92d2ff; --seq-700: #b2ecff;
+  --div-under-3: #f0857a; --div-under-2: #cf6a62; --div-under-1: #a1544f;
+  --div-mid: #333b45;
+  --div-over-1: #4a6f8c; --div-over-2: #3f8cbf; --div-over-3: #5aa9e0;
+  --chart-grid: #232b34; --chart-axis: #3d474f;
+}

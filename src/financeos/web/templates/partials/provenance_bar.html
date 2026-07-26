@@ -1,0 +1,94 @@
+{#
+  ===========================================================================
+  CONTRACT 3 — THE PROVENANCE BAR                            (UX-0001 §4.3)
+  ===========================================================================
+  Sticky, always visible: portfolio · as_of · run_id · mode · input_digest.
+
+  JUSTIFICATION: under the correction model (ADR-0012) the same question has
+  different true answers depending on which run you are reading. The
+  allocation charts read the AS-RECORDED series while the Reconcile block
+  reads a RECOMPUTATION. A user who cannot see which they are looking at will
+  eventually be misled — the exact failure RFC-0009 §2.2 warns about. In this
+  product, *when* you are looking is part of what you are looking at.
+
+  A page with no run behind it must pass provenance=None and get the explicit
+  "nessuna valutazione" strip below. Omitting the bar is not an option: a
+  silent absence is indistinguishable from a run whose fields failed to load.
+  ---------------------------------------------------------------------------
+  INTERFACE — provenance dict, or None
+  ---------------------------------------------------------------------------
+  portfolio     str   display name of the Portfolio
+  as_of         str   the valuation date, formatted it-IT (dd/mm/yyyy)
+  run_id        str   e.g. "run:0f31a9c4"
+  run_url       str|None  permalink to the run health page for this run
+  mode          str   "ACTUAL" | "HYPOTHETICAL" — as stored, uppercase
+  input_digest  str   full digest, e.g. "sha256:9f2c…41ab"
+  evaluated_at  str|None  optional, shown in the title attribute
+#}
+
+{% if provenance %}
+<dl class="provenance" aria-label="Provenienza di questa lettura">
+
+  <div class="provenance__field provenance__field--secondary">
+    <dt>Portafoglio</dt>
+    <dd>{{ provenance.portfolio }}</dd>
+  </div>
+
+  <div class="provenance__field">
+    <dt>as_of</dt>
+    <dd>{{ provenance.as_of }}</dd>
+  </div>
+
+  <div class="provenance__field">
+    <dt>Valutazione</dt>
+    <dd>
+      {%- if provenance.run_url -%}
+        <a href="{{ provenance.run_url }}">{{ provenance.run_id }}</a>
+      {%- else -%}
+        {{ provenance.run_id }}
+      {%- endif -%}
+    </dd>
+  </div>
+
+  <div class="provenance__field">
+    <dt>Modo</dt>
+    <dd>
+      {# HYPOTHETICAL is struck with the annotation hatch: a hypothetical run
+         produces zero recommendations (RFC-0008 §8) and must never be
+         mistaken for an authentic one. #}
+      <span class="mode{% if provenance.mode != 'ACTUAL' %} mode--hypothetical{% endif %}">
+        {{- provenance.mode -}}
+      </span>
+    </dd>
+  </div>
+
+  <div class="provenance__field provenance__field--secondary">
+    <dt>input_digest</dt>
+    <dd><span class="ident" title="{{ provenance.input_digest }}">{{ provenance.input_digest }}</span></dd>
+  </div>
+
+  {% if provenance.evaluated_at %}
+  <div class="provenance__field provenance__field--secondary">
+    <dt>Eseguita</dt>
+    <dd>{{ provenance.evaluated_at }}</dd>
+  </div>
+  {% endif %}
+
+  {% block provenance_actions %}{% endblock %}
+</dl>
+
+{% else %}
+{# No run behind this page. Said in words, because an empty bar would read as
+   a loading failure and a missing bar would read as "live". #}
+<div class="provenance" aria-label="Provenienza di questa lettura">
+  <div class="provenance__field">
+    <dt>Valutazione</dt>
+    <dd>nessuna</dd>
+  </div>
+  <p class="note" style="margin:0">
+    Questa pagina non è ancora legata a una valutazione: i numeri non hanno una
+    data di riferimento. Esegui <span class="value">financeos evaluate</span> per
+    produrne una.
+  </p>
+</div>
+{% endif %}

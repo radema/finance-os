@@ -1,0 +1,51 @@
+{#
+  ===========================================================================
+  CONTRACT 4a — OUTCOME CHIPS                                (UX-0001 §4.4)
+  ===========================================================================
+  Four outcomes, four distinct treatments. SKIPPED and ERROR are NEVER styled
+  as reassurance.
+
+  ADR-0016 identifies silent false reassurance as the failure mode most likely
+  to mislead the user. A UI that renders "0 rilievi" over 20 skipped rules
+  re-introduces it at the presentation layer, after the domain went to trouble
+  to prevent it.
+
+  TEXTURE, NOT HUE, carries the distinction — solid / hairline / dashed /
+  hatched. The four stay unmistakable in greyscale, in forced-colors, and to a
+  red-green colour-blind reader. That matters more than usual here because the
+  two most consequential states in this product are conventionally coded red
+  and green. Colour only reinforces; the label always states the outcome.
+  ---------------------------------------------------------------------------
+  INTERFACE
+  ---------------------------------------------------------------------------
+  outcome  str   "FIRED" | "NOT_FIRED" | "SKIPPED" | "ERROR"
+                 (the stored enum member, English, uppercase)
+  reason   str|None  REQUIRED whenever outcome is SKIPPED or ERROR — the skip
+                 reason or error kind, e.g. "zero_portfolio_value",
+                 "heterogeneous_strategies", "currency_mismatch". A SKIPPED
+                 chip with no reason is a bug: "not evaluated, cause unknown"
+                 is exactly the false reassurance ADR-0016 forbids.
+#}
+
+{%- set labels = {
+  'FIRED':     'RILEVATO',
+  'NOT_FIRED': 'NON RILEVATO',
+  'SKIPPED':   'NON VALUTATO',
+  'ERROR':     'ERRORE',
+} -%}
+{%- set classes = {
+  'FIRED':     'outcome--fired',
+  'NOT_FIRED': 'outcome--not-fired',
+  'SKIPPED':   'outcome--skipped',
+  'ERROR':     'outcome--error',
+} -%}
+{%- set titles = {
+  'FIRED':     'La condizione si è verificata: esiste un rilievo.',
+  'NOT_FIRED': 'La condizione è stata valutata ed è risultata falsa.',
+  'SKIPPED':   'La regola non ha potuto essere valutata. Non valutato non significa conforme.',
+  'ERROR':     'La valutazione si è interrotta con un errore: il sistema non sa.',
+} -%}
+
+<span class="outcome {{ classes.get(outcome, 'outcome--error') }}"
+      title="{{ titles.get(outcome, '') }}">{{ labels.get(outcome, outcome) }}</span>
+{%- if reason %} <span class="ident">{{ reason }}</span>{% endif -%}

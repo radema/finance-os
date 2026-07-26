@@ -1,0 +1,446 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-26T21:35:54.580833Z",
+  "title": "Design System: Finance OS",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Protocol Paper",
+        "canonical": "#e4e8ec",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#222426",
+          "#3d4043",
+          "#5b5e61",
+          "#7a7e81",
+          "#9b9fa2",
+          "#c1c4c7",
+          "#e5e8eb"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "canonical": "#f7f8fa",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#232425",
+          "#3f4041",
+          "#5d5e5f",
+          "#7c7d7f",
+          "#9d9ea0",
+          "#c3c4c5",
+          "#e7e8e9"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Iron-gall Ink",
+        "canonical": "#14181d",
+        "tonalRamp": [
+          "#090b0e",
+          "#212428",
+          "#3c4045",
+          "#595e64",
+          "#797e84",
+          "#9a9fa5",
+          "#c0c4ca",
+          "#e4e8ed"
+        ]
+      },
+      "annot": {
+        "role": "primary",
+        "displayName": "Aniline Violet",
+        "canonical": "#5a3aa8",
+        "tonalRamp": [
+          "#110035",
+          "#290b5b",
+          "#442983",
+          "#6246ae",
+          "#8167d4",
+          "#a18cf2",
+          "#c5b4ff",
+          "#e8daff"
+        ]
+      },
+      "seal": {
+        "role": "tertiary",
+        "displayName": "Seal Carmine",
+        "canonical": "#963029",
+        "tonalRamp": [
+          "#270000",
+          "#4b0102",
+          "#711e19",
+          "#993a32",
+          "#c05a4f",
+          "#e07f74",
+          "#ffa99d",
+          "#ffd0c5"
+        ]
+      },
+      "bollo": {
+        "role": "tertiary",
+        "displayName": "Bollo Olive",
+        "canonical": "#6f5a12",
+        "tonalRamp": [
+          "#140900",
+          "#302200",
+          "#4f3e00",
+          "#6f5b1c",
+          "#907b3c",
+          "#b09d64",
+          "#d5c390",
+          "#f7e7b9"
+        ]
+      },
+      "verdigris": {
+        "role": "tertiary",
+        "displayName": "Verdigris",
+        "canonical": "#26624f",
+        "tonalRamp": [
+          "#001108",
+          "#002c20",
+          "#184a3a",
+          "#336a57",
+          "#528b77",
+          "#78ab98",
+          "#a2d0be",
+          "#c9f3e3"
+        ]
+      },
+      "projection": {
+        "role": "tertiary",
+        "displayName": "Projection Violet",
+        "canonical": "#6b4d8f",
+        "tonalRamp": [
+          "#120123",
+          "#2d1744",
+          "#4a3267",
+          "#6a4e8c",
+          "#8a6db0",
+          "#ab90cf",
+          "#cfb7f1",
+          "#f2dcff"
+        ]
+      },
+      "series-1": {
+        "role": "secondary",
+        "displayName": "Azure",
+        "canonical": "#0e6ea6",
+        "tonalRamp": [
+          "#000a29",
+          "#00264b",
+          "#004470",
+          "#076397",
+          "#3384bc",
+          "#60a6da",
+          "#8eccfc",
+          "#b8efff"
+        ]
+      },
+      "series-2": {
+        "role": "secondary",
+        "displayName": "Teal",
+        "canonical": "#0b8f68",
+        "tonalRamp": [
+          "#001404",
+          "#003019",
+          "#005032",
+          "#00714e",
+          "#1f926c",
+          "#57b38f",
+          "#88d8b6",
+          "#b4fadb"
+        ]
+      },
+      "series-3": {
+        "role": "secondary",
+        "displayName": "Amber",
+        "canonical": "#c07408",
+        "tonalRamp": [
+          "#220000",
+          "#441200",
+          "#682d00",
+          "#8e4a00",
+          "#b26a00",
+          "#d28e44",
+          "#f4b677",
+          "#ffdba4"
+        ]
+      },
+      "series-4": {
+        "role": "secondary",
+        "displayName": "Magenta",
+        "canonical": "#c33f7d",
+        "tonalRamp": [
+          "#29000d",
+          "#4e0027",
+          "#760143",
+          "#a02562",
+          "#c74782",
+          "#e771a3",
+          "#ff9dc8",
+          "#ffc6ec"
+        ]
+      },
+      "series-5": {
+        "role": "secondary",
+        "displayName": "Indigo",
+        "canonical": "#3f5cc4",
+        "tonalRamp": [
+          "#030039",
+          "#0d1860",
+          "#213589",
+          "#3954b4",
+          "#5575dc",
+          "#7899f9",
+          "#a1c0ff",
+          "#c7e5ff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "severity": {
+        "displayName": "Severity",
+        "purpose": "The severity readout. The only number in the product allowed to be large."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Page title, one per page."
+      },
+      "designation": {
+        "displayName": "Designation",
+        "purpose": "A record's designation."
+      },
+      "declared": {
+        "displayName": "Declared",
+        "purpose": "THE USER'S OWN WORDS. Serif, reserved, never used by the system."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Observations, notes, chrome. The system's voice."
+      },
+      "value": {
+        "displayName": "Value",
+        "purpose": "Every number, id and trace row. Tabular figures."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Register labels, column heads, field labels. 11px minimum, never 9.5px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "surface-ring",
+        "value": "0 0 0 1px var(--sheet)",
+        "purpose": "Separation, not elevation: keeps the tolerance-rail index marker and adjacent legend swatches from merging with what they overlap. The only box-shadow on any surface."
+      },
+      {
+        "name": "tooltip",
+        "value": "0 2px 8px rgba(0,0,0,.14)",
+        "purpose": "Chart tooltips only — the sole element that genuinely floats above its plot."
+      }
+    ],
+    "motion": [
+      {
+        "name": "dur-fast",
+        "value": "90ms",
+        "purpose": "Link underline and hover state."
+      },
+      {
+        "name": "dur-base",
+        "value": "160ms",
+        "purpose": "Default state transition. Operate range 150-250ms."
+      },
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "The only easing. Motion conveys state, never decoration; there is no page-load choreography."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "ladder",
+        "value": "780px"
+      },
+      {
+        "name": "shell",
+        "value": "950px"
+      }
+    ],
+    "rules": [
+      {
+        "name": "double-rule",
+        "value": "3px double var(--rule-strong)",
+        "purpose": "Structural boundary only: the record annotation margin, page head, provenance bar, rail edge."
+      },
+      {
+        "name": "hatch-void",
+        "value": "repeating-linear-gradient(45deg, transparent 0 3px, var(--hatch-ink) 3px 4px)",
+        "purpose": "Void: untargeted capital, an unbanded rail, the skip notice margin, the Class B channel."
+      },
+      {
+        "name": "hatch-cancelled",
+        "value": "repeating-linear-gradient(-45deg, transparent 0 4px, var(--hatch-ink) 4px 5px)",
+        "purpose": "Cancelled/unusable: the ERROR chip, mode=HYPOTHETICAL."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Record",
+      "kind": "card",
+      "refersTo": "record",
+      "description": "The system's one container: a ruled sheet with an annotation margin. Replaces the card entirely.",
+      "html": "<div class=\"ds-record\"><div class=\"ds-record__margin\">01</div><div class=\"ds-record__body\">Equity/Developed è <span class=\"ds-value\">6,00pp</span> sotto il tuo obiettivo del <span class=\"ds-value\">40,00%</span>.</div></div>",
+      "css": ".ds-record{display:grid;grid-template-columns:34px minmax(0,1fr);background:var(--sheet,#f7f8fa);border:1px solid var(--rule-strong,#b6bec7);border-radius:0;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--ink,#14181d)}.ds-record__margin{border-right:3px double var(--rule-strong,#b6bec7);padding:12px 8px 12px 0;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-3,#5a636d)}.ds-record__body{padding:12px 16px 16px}.ds-value{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Outcome chip — FIRED",
+      "kind": "chip",
+      "refersTo": "outcome-fired",
+      "description": "The condition fired: a real finding. Heaviest ink on the page.",
+      "html": "<span class=\"ds-outcome ds-outcome--fired\">RILEVATO</span>",
+      "css": ".ds-outcome{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;padding:1px 8px;border:1px solid;border-radius:0}.ds-outcome--fired{color:var(--sheet,#f7f8fa);background:var(--seal,#963029);border-color:var(--seal,#963029)}"
+    },
+    {
+      "name": "Outcome chip — SKIPPED",
+      "kind": "chip",
+      "refersTo": "outcome-skipped",
+      "description": "Could not be evaluated. Dashed border: the record is incomplete. Never reassuring.",
+      "html": "<span class=\"ds-outcome ds-outcome--skipped\">NON VALUTATO</span>",
+      "css": ".ds-outcome{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;padding:1px 8px;border:1px solid;border-radius:0}.ds-outcome--skipped{color:var(--bollo,#6f5a12);background:var(--bollo-tint,#f5f0dd);border-color:var(--bollo,#6f5a12);border-style:dashed}"
+    },
+    {
+      "name": "Outcome chip — ERROR",
+      "kind": "chip",
+      "refersTo": "outcome-error",
+      "description": "The evaluation broke; the system does not know. Hatched: void.",
+      "html": "<span class=\"ds-outcome ds-outcome--error\">ERRORE</span>",
+      "css": ".ds-outcome{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;padding:1px 8px;border:1px solid;border-radius:0}.ds-outcome--error{color:var(--seal,#963029);border-color:var(--seal,#963029);background:repeating-linear-gradient(-45deg,transparent 0 4px,color-mix(in srgb,var(--seal,#963029) 26%,transparent) 4px 5px),var(--seal-tint,#f7ecea)}"
+    },
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid ink, zero radius. Disabled loses its fill rather than fading.",
+      "html": "<button class=\"ds-btn\">Congela versione</button>",
+      "css": ".ds-btn{font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:500;padding:8px 16px;border:1px solid var(--ink,#14181d);border-radius:0;background:var(--ink,#14181d);color:var(--sheet,#f7f8fa);cursor:pointer;transition:background 90ms cubic-bezier(.4,0,.2,1)}.ds-btn:hover{background:var(--ink-2,#464e57);border-color:var(--ink-2,#464e57)}.ds-btn:focus-visible{outline:2px solid var(--annot,#5a3aa8);outline-offset:2px}"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "3.5:1 control edge. The declared variant uses the serif face, because what goes in it is the user's own words.",
+      "html": "<input class=\"ds-field\" value=\"40,00\">",
+      "css": ".ds-field{font-family:'IBM Plex Sans',sans-serif;font-size:13px;width:100%;padding:8px 12px;color:var(--ink,#14181d);background:var(--sheet,#f7f8fa);border:1px solid var(--rule-control,#7b8590);border-radius:0}.ds-field:hover{border-color:var(--ink-2,#464e57)}.ds-field:focus-visible{outline:2px solid var(--annot,#5a3aa8);outline-offset:2px}"
+    },
+    {
+      "name": "Index rail entry",
+      "kind": "nav",
+      "refersTo": "rail-item",
+      "description": "Numbered, because a repertory is a numbered list. The active mark lives in the margin.",
+      "html": "<a class=\"ds-nav\" href=\"#\" aria-current=\"page\"><span class=\"ds-nav__ord\">01</span><span>Rilievi</span></a>",
+      "css": ".ds-nav{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:baseline;padding:8px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--ink,#14181d);text-decoration:none}.ds-nav:hover{background:var(--sheet,#f7f8fa)}.ds-nav[aria-current=page]{background:var(--sheet,#f7f8fa);font-weight:500}.ds-nav__ord{font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:right;color:var(--ink-3,#5a636d)}.ds-nav[aria-current=page] .ds-nav__ord{color:var(--annot,#5a3aa8);font-weight:500}"
+    },
+    {
+      "name": "Tolerance rail",
+      "kind": "custom",
+      "refersTo": "rail-gauge",
+      "description": "The product's one irreducible picture: a calibrated scale in band-widths, graduated so the reader can count them.",
+      "html": "<div class=\"ds-rail\" role=\"img\" aria-label=\"3 ampiezze di banda sotto l'obiettivo: fuori tolleranza\"><span class=\"ds-rail__base\"></span><span class=\"ds-rail__band\"></span><span class=\"ds-rail__tick\" style=\"left:50%;height:19px;background:var(--ink,#14181d)\"></span><span class=\"ds-rail__idx\"></span></div>",
+      "css": ".ds-rail{position:relative;height:22px;min-width:148px}.ds-rail__base{position:absolute;left:0;right:0;bottom:4px;height:1px;background:var(--rule-strong,#b6bec7)}.ds-rail__band{position:absolute;left:33.3333%;right:33.3333%;bottom:4px;height:12px;background:color-mix(in srgb,var(--verdigris,#26624f) 22%,var(--sheet,#f7f8fa));border-left:1px solid var(--verdigris,#26624f);border-right:1px solid var(--verdigris,#26624f)}.ds-rail__tick{position:absolute;bottom:4px;width:1px}.ds-rail__idx{position:absolute;left:3%;bottom:1px;width:3px;height:18px;margin-left:-1px;background:var(--seal,#963029);box-shadow:0 0 0 1px var(--sheet,#f7f8fa)}.ds-rail__idx::before{content:'';position:absolute;left:50%;top:-6px;transform:translateX(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--seal,#963029)}"
+    },
+    {
+      "name": "Trace ladder step",
+      "kind": "custom",
+      "refersTo": "ladder-step",
+      "description": "An ordered derivation, never prose. The held step is where the condition became true. Decimals are the stored strings.",
+      "html": "<div class=\"ds-ladder\"><div class=\"ds-step\"><span class=\"ds-step__i\">5</span><span class=\"ds-step__op\">divide_safe</span><span>abs_drift ÷ effective_band</span><span class=\"ds-step__r\">severity = 3.0000</span></div><div class=\"ds-step ds-step--held\"><span class=\"ds-step__i\">6</span><span class=\"ds-step__op\">abs_gt</span><span>drift, effective_band</span><span class=\"ds-step__r\">FIRED</span></div></div>",
+      "css": ".ds-ladder{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:13px;line-height:1.7}.ds-step{display:grid;grid-template-columns:26px 100px minmax(0,1fr) 160px;gap:12px;padding:4px 0;border-bottom:1px dotted var(--rule,#cfd5dc)}.ds-step__i{color:var(--ink-3,#5a636d);text-align:right}.ds-step__op{color:var(--annot,#5a3aa8);font-weight:500}.ds-step__r{text-align:right;font-weight:500}.ds-step--held{background:var(--sheet-sunken,#eef0f4);border-bottom:0;border-top:1px solid var(--rule-strong,#b6bec7);padding-left:8px;padding-right:8px}.ds-step--held .ds-step__r{color:var(--seal,#963029)}"
+    },
+    {
+      "name": "Skip notice",
+      "kind": "custom",
+      "refersTo": "notice",
+      "description": "Persistent, not dismissible. Its load-bearing sentence must not be softened.",
+      "html": "<div class=\"ds-notice\"><div class=\"ds-notice__m\"></div><div class=\"ds-notice__b\"><p class=\"ds-notice__lead\">8 regole su 28 non sono state valutate.</p><p><strong>Non valutato non significa conforme.</strong></p></div></div>",
+      "css": ".ds-notice{display:grid;grid-template-columns:34px minmax(0,1fr);border:1px solid var(--bollo,#6f5a12);background:var(--bollo-tint,#f5f0dd);font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--ink,#14181d)}.ds-notice__m{border-right:1px solid var(--bollo,#6f5a12);background:repeating-linear-gradient(-45deg,transparent 0 3px,rgba(20,24,29,.3) 3px 4px)}.ds-notice__b{padding:12px 16px}.ds-notice__b p{margin:0}.ds-notice__lead{font-weight:600;font-size:14px;margin-bottom:4px!important}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Il Repertorio",
+    "overview": "The notary's repertory: a numbered, dated register of authenticated acts in which nothing is ever erased, a correction arrives as an annotation in the margin beside the original, and the party's own words are quoted verbatim and set apart from the notary's formula. The world was chosen because the product's hardest ideas are already native to it: a StrategyVersion is a frozen instrument that supersedes rather than edits; apportionment appends and supersedes but never updates; a reclassification rewrites history so the same question has different true answers depending on which act you read; and a real deed records the acts it could not perform rather than omitting them, which is the SKIPPED discipline arriving for free. Rendered as a modern instrument, not an antique: the register supplies ruled sheets, an annotation margin and three distinguishable hands, while a well-made contemporary data publication supplies the finish — a validated five-hue categorical palette and charts as a primary way of reading rather than decoration. Two worlds are refused by name: the fintech dashboard, because a hero net-worth number contradicts Manifest P1 in the first thing the user sees; and the editorial broadsheet, because it is a recognisable house style rather than a decision, and it is what the reference mock reached for.",
+    "keyCharacteristics": [
+      "Zero radius on every surface, control and chip. A register has no rounded corners.",
+      "A ruled annotation margin down the left of every record, drawn as a 3px double rule, where ordinals and marginal references live.",
+      "Cool protocol-paper neutrals with a faint blue cast. Explicitly not cream, not warm, not textured.",
+      "Four status inks with fixed jobs, plus five validated series hues. Nothing is coloured decoratively.",
+      "Texture, not hue, carries state: solid, hairline, dashed and hatched distinguish the four outcomes.",
+      "Three faces, three voices, and the serif is reserved for the user alone.",
+      "Density is welcome. Tables run long and the trace ladder is dense on purpose."
+    ],
+    "rules": [
+      {
+        "name": "The One Meaning Rule",
+        "body": "Each of the five inks has exactly one job — reference, breach, not-evaluated, in-tolerance, projection — and no ink is ever borrowed for emphasis. If a thing needs emphasis and is not one of those five states, it gets weight or size.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reserved Status Rule",
+        "body": "A status ink is never a series colour and a series hue never signals state. Where the two land in the same hue family, the status always ships with its label and its texture, so hue is never doing the work alone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Cold Paper Rule",
+        "body": "The ground is cool and faintly blue. Cream, ivory, parchment, warm grey and paper texture are out: warmth on a surface full of money reads as reassurance the product has no right to offer.",
+        "section": "colors"
+      },
+      {
+        "name": "The Three Voices Rule",
+        "body": "Sans is the system, Mono is a machine-verifiable value, Serif is the user's own words. The system never speaks in serif and nothing else may borrow the serif face. Once the chrome and the user's prose are both Italian, typography is the only remaining signal separating the system's arithmetic from a restatement of the user's own prior declaration. CORPUS-MANDATED.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Figures Rule",
+        "body": "Every number carries tnum and zero. Columns of digits must align and a transposed digit must be visible.",
+        "section": "typography"
+      },
+      {
+        "name": "The Stored String Rule",
+        "body": "Decimals in a trace render exactly as stored, as strings, never formatted through a float. it-IT display formatting applies to observations and tables and must never touch a trace value. CORPUS-MANDATED.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Lift Rule",
+        "body": "Nothing rises. If an element needs to separate from its neighbour it gets a rule, a tonal step, or a 1px surface ring. A drop shadow on a record would make it a card, and a card is the container this system deliberately does not use.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do include the tolerance rail partial unchanged wherever a band position appears. Extend that one file; never fork the geometry.",
+      "Do pass trace decimals as the stored strings and apply no filter to them.",
+      "Do give every SKIPPED and ERROR its reason, every time.",
+      "Do pair every hue with a label, a texture, or a shape. Assume a greyscale print and a red-green colour-blind reader on every screen.",
+      "Do re-run the palette validator against both surfaces after touching any series hue, and keep all five checks green.",
+      "Do keep the serif face for the user's words alone.",
+      "Do render role=img plus a full-sentence Italian aria-label on every gauge, and keep the numeric value adjacent in mono.",
+      "Do use the 3px double rule only for structural boundaries, and the 1px hairline for ordinary divisions."
+    ],
+    "donts": [
+      "Don't put a net-worth hero number on the landing surface. The decisions are the product; net worth lives one click away. CORPUS.",
+      "Don't style SKIPPED or ERROR as reassurance, and don't render a finding count without the skip notice beside it. CORPUS.",
+      "Don't add a fourth type face, and don't let the system speak in serif. CORPUS.",
+      "Don't reference an off-origin URL from any template, stylesheet or asset. CORPUS, enforced by CI.",
+      "Don't put a hex colour in a server-assembled chart option. Use a token:--name reference.",
+      "Don't build a dual-axis chart, a donut for allocation, or a rainbow ramp.",
+      "Don't re-sort a findings list in the template; the authored priority band dominates severity. CORPUS.",
+      "Don't collapse correlated findings. One cause showing as three findings is correct. CORPUS.",
+      "Don't hide a legal-but-alarming state: a negative UNASSIGNED residual is a signed row in the same table. CORPUS.",
+      "Don't ship a Class B projection finding until it is visually distinguishable from Class A, carries its assumption inline, and its severity is kept out of any column sorted against Class A. This is a kill criterion. CORPUS.",
+      "Don't round a corner, lift a surface with a shadow, or warm the ground toward cream.",
+      "Don't add a token to silence a linter."
+    ]
+  }
+}
