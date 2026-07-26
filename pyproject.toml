@@ -1,0 +1,110 @@
+[project]
+name = "financeos"
+version = "0.1.0"
+description = "Local-first personal finance decision support system."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2",
+  "duckdb",
+  "fastapi",
+  "jinja2",
+  "uvicorn[standard]",
+  "python-multipart",
+  "platformdirs",
+  "pyxirr",
+  "scipy",
+  "click",
+  "pyyaml",
+]
+
+[project.scripts]
+financeos = "financeos.cli:app"
+
+[dependency-groups]
+dev = [
+  "ruff",
+  "mypy",
+  "import-linter",
+  "hypothesis",
+  "pytest",
+  "pytest-cov",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/financeos"]
+
+# --- Linting / formatting -----------------------------------------------
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+# --- Type checking -------------------------------------------------------
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+mypy_path = "src"
+explicit_package_bases = true
+
+# --- Import architecture contracts (RFC-0005 §7) -------------------------
+# C6 (append-only: no UPDATE/DELETE against append-only tables) is a grep
+# contract, not an import-graph contract, and is TODO — not implemented here.
+
+[tool.importlinter]
+root_packages = ["financeos"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "C1 - core purity"
+type = "forbidden"
+source_modules = ["financeos.core"]
+forbidden_modules = [
+  "financeos.adapters",
+  "financeos.web",
+  "financeos.app",
+  "duckdb",
+  "fastapi",
+  "pandas",
+  "polars",
+  "httpx",
+  "requests",
+]
+
+[[tool.importlinter.contracts]]
+name = "C2 - I-7 engines have no ports"
+type = "forbidden"
+source_modules = ["financeos.core.engines"]
+forbidden_modules = ["financeos.ports"]
+
+[[tool.importlinter.contracts]]
+name = "C3 - context isolation"
+type = "independence"
+modules = [
+  "financeos.core.cashflow",
+  "financeos.core.portfolio",
+  "financeos.core.strategy",
+  "financeos.core.market",
+  "financeos.core.decision",
+]
+
+[[tool.importlinter.contracts]]
+name = "C4 - read/write split (queries forbidden from app)"
+type = "forbidden"
+source_modules = ["financeos.app"]
+forbidden_modules = ["financeos.adapters.duckdb.queries"]
+
+[[tool.importlinter.contracts]]
+name = "C5 - no egress in core or app"
+type = "forbidden"
+source_modules = ["financeos.core", "financeos.app"]
+forbidden_modules = ["httpx", "requests"]
