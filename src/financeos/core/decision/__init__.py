@@ -11,6 +11,7 @@ from financeos.core.decision.artifacts import (
     Provenance,
     Recommendation,
 )
+from financeos.core.decision.firing import RuleFiring
 from financeos.core.decision.trace import (
     TRACE_VERSION,
     Binding,
@@ -31,6 +32,7 @@ __all__ = [
     "EvaluationTrace",
     "Provenance",
     "Recommendation",
+    "RuleFiring",
     "StaleFactNote",
     "Step",
     "StepOp",
