@@ -38,10 +38,50 @@ stored trace, byte-for-byte. If that test can't be maintained, the product's cor
    `docs/plans/` on execution start (also kept in the plan-mode file).
 
 Technical build-blockers resolved by the **Opus advisor** (not user) before migration 001 freezes:
-the §8.3 `corrects_id` × `transfer_pair_id` × `cash_leg_of` truth table (new ADR), the **three
-missing `severity` declarations** (`unassigned_residual_above`, `allocation_absent`,
-`bucket_below_target_value` — registry completeness test fails the build without them), and a
-one-line chart-lib/UI-language ADR.
+the §8.3 `corrects_id` × `transfer_pair_id` × `cash_leg_of` truth table (new ADR) — which is itself
+gated on **UX-0001 §7.1**: ADR-0026 never states what `operation.type` an auto-emitted cash leg
+carries, and mirroring the parent's type violates ADR-0028's own sign CHECKs (a BUY's cash leg is
+negative). UX-0001 recommends exempting legs from the sign checks as `CORRECTION` already is,
+keeping the 7-value enum so no new ratification is needed. Plus the **three missing `severity`
+declarations** (`unassigned_residual_above`, `allocation_absent`, `bucket_below_target_value` —
+registry completeness test fails the build without them), and a chart-lib/UI-language ADR.
+
+## UX authority (how the front-end must read the mock)
+
+`UX-0001-ui-reference.md` is **non-normative**; the RFCs win without argument, and if the mock and
+corpus drift the instruction is to *delete the mock*. The FE brief must carry this split:
+
+- **§5.1 — corpus-specified, implement as shown (17 rows):** the nine blocks of screen 2 in that
+  exact order · findings grouped on `finding_key` from `mv_finding`, never raw rows · the literal
+  `ORDER BY priority_rank DESC, severity DESC NULLS LAST, rule_id ASC` · rationale assembled from
+  `StrategyVersion` · closed `suggestion_class`, no instrument/direction/size anywhere · correlated
+  findings never collapsed · untargeted + unassigned capital stays in the denominator · mixed
+  governance → `SKIPPED(heterogeneous_strategies)`, never an average · relative-weight tree ·
+  ABSOLUTE = pp / RELATIVE = proportion · `change_note` required on freeze · charts read the
+  as-recorded series · hypothetical runs → zero recommendations · apportionment warns, never blocks.
+- **§5.2 — invented, no corpus basis, change freely:** screen count and grouping, tolerance-rail
+  geometry, palette, the three-voice typography, sticky provenance bar, increment badges, **all copy
+  and every empty/warning state**, interior-node roll-up display, UNASSIGNED pseudo-row.
+- **§5.3 — deliberately absent:** no net-worth hero number; landing page is the findings list (P1).
+- **§4 — five component contracts worth preserving** because each encodes an invariant: tolerance
+  rail (works only because severity is dimensionless), trace ladder (data, not prose; every source
+  a resolvable link; decimals as stored strings), provenance bar, outcome chips + the "skipping is
+  not compliance" discipline, three voices. Geometry is free; the *contract* is not.
+- **§6 open questions the mock silently answered** — two are now decided by the product owner
+  (UI language → **Italian**, superseding the mock's English; chart lib → **ECharts**, superseding
+  the CSS-bar deferral). §6.6 suppression visibility has confidence **None** and is V1.1 anyway.
+
+## Demo fixture
+
+UX-0001 §8 is a complete reconciling fixture — 9 assets with prices at `as_of = 2026-07-24`,
+apportionment units, derived totals (net worth **€107,586.33** = buckets + UNASSIGNED exactly), two
+strategies (deliberately, so `SKIPPED(heterogeneous_strategies)` is reachable), and a 28-evaluation
+run splitting 10 FIRED / 9 NOT_FIRED / 8 SKIPPED / 1 ERROR. Its ordered findings table exercises
+**all three** ORDER BY clauses (null severity sorting first on band alone; a severity tie broken by
+`rule_id ASC`; a higher severity sorting *below* on band dominance) — a fixture that does not
+exercise all three is not testing the ordering contract. Lift it into `demo/` and `demo/expected/`.
+The skeleton needs only its canonical row: EQ/DEV 34.00% vs 40.00% target, ±2.00pp ABSOLUTE,
+drift −6.00pp, `severity = 3.00`, drift value −€3,240.00.
 
 **First post-approval action:** add `AskUserQuestion` and `ExitPlanMode` to the
 `.claude/agents/orchestrator` agent toolset (per user request).
@@ -56,7 +96,7 @@ one-line chart-lib/UI-language ADR.
 | **Explore** | (own) | Read-only context mining. Already used for planning. |
 | **advisor / Plan** | **Opus** | Design-blockers: §8.3 truth-table ADR, severity formulas, target-tree edge cases. |
 | **back-end implementer** | **Opus** core / Sonnet plumbing | Domain VOs, the 4 engines, `Bound`/`TraceRecorder`/step algebra + replay test (Opus, correctness-critical); ports, app use cases, DuckDB adapters, migration 001, repositories, importers, CLI, fixtures (Sonnet, clear contracts). |
-| **front-end implementer** (`impl-fe`) | Sonnet skeleton / **Opus** design-heavy | Web (FastAPI+Jinja+HTMX), the 7 screens, ECharts, CSS system. Drives the **impeccable** skill (Operate mode) + `impeccable-asset-producer` for vendored assets; `impeccable-finish-reviewer` runs the FE design-finish pass at phase close. |
+| **front-end implementer** (`impl-fe`) | **Opus (always)** | Web (FastAPI+Jinja+HTMX), the 7 screens, ECharts, CSS system. The mock is *illustrative only* — most of its visual language is invented (UX-0001 §5.2) and must be genuinely designed, not transcribed. Drives the **impeccable** skill (Operate mode) + `impeccable-asset-producer` for vendored assets; `impeccable-finish-reviewer` at phase close. **Runs `/impeccable init` then `/impeccable document`** so `PRODUCT.md` + `DESIGN.md` declare the palette, typography and tokens as artifacts rather than ad-hoc choices. |
 | **minion** | Haiku | Scaffolding, config, boilerplate DDL typing, font/lib vendoring, WORKLOG. |
 | **reviewer** (`code-reviewer`) | **Opus** | The single standing review gate — one adversarial correctness+quality review at each phase close (KISS/YAGNI folded in; `code-simplifier` available ad-hoc only, not a standing gate). |
 
@@ -94,7 +134,13 @@ Build order per RFC-0005 §8 (pure Python steps 1–9 first, where the contract 
   repositories (8 aggregates), read queries (`mv_holding`, `mv_finding` as views from day one);
   CSV ops + YAML strategy importers; `seed demo` + `demo/expected/` golden fixtures; CLI
   (`seed`, `import-operations`, `import-strategy`, `evaluate`, `serve`).
-- **1d — web (front-end impl, Sonnet + impeccable):** 3 views — Findings list (via `mv_finding`),
+- **1d0 — design foundation (front-end impl, Opus + impeccable) — NO backend dependency, runs in
+  parallel with 1a–1c:** `/impeccable init` → `PRODUCT.md`; `/impeccable document` → `DESIGN.md`
+  declaring palette, typography scale, spacing, and tokens. Vendor IBM Plex Sans/Mono/Serif and
+  ECharts as static files (no CDN — ADR-0007 no build step, ADR-0008 Local First). Build the Jinja2
+  base layout, the CSS token layer, and the five §4 component contracts as reusable partials
+  (tolerance rail, trace ladder, provenance bar, outcome chips, three voices). Italian copy.
+- **1d — web (front-end impl, Opus + impeccable):** 3 views — Findings list (via `mv_finding`),
   `/recommendations/{id}` 9-block explanation surface (trace ladder, sticky provenance bar,
   outcome chips), `/allocation` (flat, Net Worth, ECharts). Vendor IBM Plex + ECharts. CSS
   design system extracted from the mock (§5.1 hard requirements; §5.2 free to restyle).

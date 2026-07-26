@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/financeos/web/static/css/components.css"
+        ],
+        "createdAt": "2026-07-26T21:13:55.305Z",
+        "reason": "CSS-triangle carets for the tolerance rail's +/-3 band-width clamp (UX-0001 4.1); zero-dimension box with transparent perpendicular borders, not a card side-tab. Glyph is outside the vendored Latin subset and Local First forbids widening the font."
+      },
+      {
+        "rule": "single-font",
+        "value": "*",
+        "files": [
+          "src/financeos/web/templates/design/preview.html"
+        ],
+        "createdAt": "2026-07-26T21:32:34.964Z",
+        "reason": "Standalone preview template; its 3 font faces are declared in static/css/base.css (5 @font-face) and referenced via --face-system/--face-value/serif tokens. Detector cannot resolve CSS custom properties across files. Adding a display font would break the UX-0001 4.5 three-voices contract."
+      }
+    ]
+  }
+}
