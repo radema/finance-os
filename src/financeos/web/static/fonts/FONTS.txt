@@ -40,11 +40,20 @@ WHY THESE THREE (see /DESIGN.md, Typography):
   width is roughly 40% wider than Plex Mono's, and the value voice carries the
   trace ladder, which is the densest text in the product.
 
-FACES REMOVED when World B shipped (they served the rejected identity or a
-candidate proof, and Local First means an unused face is dead weight in the
-repo, not a harmless spare): ibm-plex-sans-var, ibm-plex-serif-400,
-ibm-plex-serif-400-italic, faustina-400-italic, martian-mono-400,
-martian-mono-500.
+STILL VENDORED, DELIBERATELY, AND NOT REFERENCED BY ANY @font-face. The faces
+above are World B's call but the three voices are not signed off yet, so the
+spares stay until they are — deleting a woff2 is irreversible and buys nothing
+today. docs/design/audit_offline.mjs reports them as a NOTE rather than a
+failure for exactly this reason; make it a failure the day the voices settle.
+
+  ibm-plex-sans-var.woff2          the rejected identity's system voice
+  ibm-plex-serif-400.woff2         the rejected identity's declared voice
+  ibm-plex-serif-400-italic.woff2  ditto
+  faustina-400-italic.woff2        candidate B's declared voice (italic cut)
+  martian-mono-400.woff2           candidate A's value voice — the half of the
+  martian-mono-500.woff2           cross-graft that was declined
+
+These six are the deletable set: 130 KB, and nothing in the product names them.
 
 KNOWN GAP, inherited and worth closing: these files carry no integrity pin. The
 vendored ECharts bundle records a sha256 in vendor/echarts/PINNED.txt because a

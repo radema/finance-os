@@ -76,16 +76,20 @@
         <div class="sw__meta">rule-control<br><span style="color: var(--ink-3)">3,4:1 non-testo</span></div>
       </div>
       <div class="sw">
-        <div class="sw__chip" style="background: var(--seal)"></div>
-        <div class="sw__meta">seal<br><span style="color: var(--ink-3)">violazione</span></div>
+        <div class="sw__chip" style="background: var(--alarm)"></div>
+        <div class="sw__meta">alarm<br><span style="color: var(--ink-3)">violazione · riservato</span></div>
       </div>
       <div class="sw">
-        <div class="sw__chip" style="background: var(--bollo)"></div>
-        <div class="sw__meta">bollo<br><span style="color: var(--ink-3)">non valutato</span></div>
+        <div class="sw__chip" style="background: var(--caution)"></div>
+        <div class="sw__meta">caution<br><span style="color: var(--ink-3)">non valutato · riservato</span></div>
       </div>
       <div class="sw">
-        <div class="sw__chip" style="background: var(--verdigris)"></div>
-        <div class="sw__meta">verdigris<br><span style="color: var(--ink-3)">entro tolleranza</span></div>
+        <div class="sw__chip" style="background: var(--band)"></div>
+        <div class="sw__meta">band<br><span style="color: var(--ink-3)">entro tolleranza: neutro</span></div>
+      </div>
+      <div class="sw">
+        <div class="sw__chip" style="background: var(--edge)"></div>
+        <div class="sw__meta">edge<br><span style="color: var(--ink-3)">la sorgente di luce</span></div>
       </div>
       <div class="sw">
         <div class="sw__chip" style="background: var(--annot)"></div>
@@ -101,11 +105,17 @@
   <div class="spec">
     <h3>02 · Serie categoriali (convalidate)</h3>
     <p class="spec__note">Cinque tinte assegnate a entità nell'ordine dell'albero
-    della strategia, mai ciclate. Convalidate su entrambe le superfici: la
-    coppia adiacente peggiore sta nella banda tritan 6–8, quindi la legenda e
-    l'etichetta diretta sono <strong>obbligatorie</strong> — il colore non porta
-    mai da solo l'identità. Il capitale non targettizzato non ha tinta: è vuoto,
-    e si legge con il tratteggio di annullamento.</p>
+    della strategia, mai ciclate. Nessuna è scelta a mano: sono risolte per
+    ricerca contro le soglie del validatore, su <em>entrambe</em> le superfici.
+    La coppia adiacente peggiore sta a ΔE 10,6 protan contro un obiettivo di
+    8,0 — l'avviso protan 7,6 del mondo candidato non c'è più. La separazione
+    tritan resta a 4,8 in chiaro e nessun insieme di cinque tinte può superare
+    il controllo su <em>tutte</em> le coppie, quindi la legenda, l'etichetta
+    diretta, lo stacco di 2px e il tratteggio sono
+    <strong>obbligatori</strong>: il colore non porta mai da solo l'identità.
+    <br><br>La metà calda della ruota è riservata allo stato: un segno caldo,
+    qui, non è mai una misura. Il capitale non targettizzato non ha tinta — è
+    vuoto, e si legge con il tratteggio di annullamento.</p>
     <div class="swatches">
       <div class="sw">
         <div class="sw__chip" style="background: var(--series-1)"></div>
@@ -609,33 +619,39 @@
           </div>
 <figure class="chart" style="--chart-h: 250px">
 
-  <script type="application/json" id="chart-alloc-light-option">{"grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 30, "top": 12}, "series": [{"barWidth": 13, "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0], "markPoint": {"data": [{"coord": [40.0, 0], "name": "obiettivo 40.0%"}, {"coord": [10.0, 1], "name": "obiettivo 10.0%"}, {"coord": [30.0, 2], "name": "obiettivo 30.0%"}, {"coord": [10.0, 3], "name": "obiettivo 10.0%"}, {"coord": [10.0, 4], "name": "obiettivo 10.0%"}], "itemStyle": {"color": "token:--ink-2"}, "label": {"show": false}, "silent": true, "symbol": "rect", "symbolSize": [3, 26]}, "name": "attuale", "type": "bar"}], "tooltip": {"axisPointer": {"type": "shadow"}, "trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}%"}, "max": 45, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"data": ["EQ/DEV", "EQ/EMG", "GOV/EUR", "CORP/IG", "CASH"], "inverse": true, "splitLine": {"show": false}, "type": "category"}}</script>
+  <script type="application/json" id="chart-alloc-light-option">{"caneWidth": 22, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 34, "top": 12}, "series": [{"colorBy": "data", "data": [40.0, 10.0, 30.0, 10.0, 10.0, null], "mark": "casing", "markPoint": {"data": [{"coord": [40.0, 0], "name": "target 40.0%"}, {"coord": [10.0, 1], "name": "target 10.0%"}, {"coord": [30.0, 2], "name": "target 30.0%"}, {"coord": [10.0, 3], "name": "target 10.0%"}, {"coord": [10.0, 4], "name": "target 10.0%"}], "itemStyle": {"color": "token:--ink-2"}, "label": {"show": false}, "silent": true, "symbol": "rect", "symbolSize": [2, 30]}, "name": "target"}, {"colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0, null], "mark": "core", "name": "attuale"}, {"data": [34.0, 9.5, 27.9, 8.0, 12.0, null], "mark": "edge", "name": "attuale"}, {"barGap": "-100%", "data": [null, null, null, null, null, 8.6], "mark": "void", "name": "non targettizzato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}%"}, "max": 45, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"axisLabel": {"lineHeight": 14, "overflow": "break", "width": 168}, "data": ["Azioni dei paesi sviluppati", "Azioni dei paesi emergenti", "Obbligazioni governative EUR", "Obbligazioni corporate investment grade", "Liquidit\u00e0", "Azioni globali"], "inverse": true, "splitLine": {"show": false}, "type": "category"}}</script>
   <div class="chart__canvas" id="chart-alloc-light" data-chart="chart-alloc-light-option"
-       role="img" aria-label="Allocazione attuale contro obiettivo, per classe, alla data del 24/07/2026. Le barre sono la serie come registrata nella valutazione run:0f31a9c4; i traguardi verticali sono gli obiettivi della strategia congelata."></div>
+       role="img" aria-label="Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4."></div>
 
-  <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-1">
+  <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-casing">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>EQ/DEV</span><span class="legend__value">34,00%</span>    </li>    <li class="legend__item swatch-2">
+      <span>target dichiarato (la cassa)</span>    </li>    <li class="legend__item swatch-core">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>EQ/EMG</span><span class="legend__value">9,50%</span>    </li>    <li class="legend__item swatch-3">
+      <span>attuale (il nucleo)</span>    </li>    <li class="legend__item swatch-edge">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>GOV/EUR</span><span class="legend__value">27,90%</span>    </li>    <li class="legend__item swatch-4">
+      <span>valore letto sul bordo di luce</span>    </li>    <li class="legend__item swatch-1">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>CORP/IG</span><span class="legend__value">8,00%</span>    </li>    <li class="legend__item swatch-5">
+      <span>Azioni dei paesi sviluppati</span><span class="legend__value">34,00%</span>    </li>    <li class="legend__item swatch-2">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>CASH</span><span class="legend__value">12,00%</span>    </li>    <li class="legend__item swatch-void">
+      <span>Azioni dei paesi emergenti</span><span class="legend__value">9,50%</span>    </li>    <li class="legend__item swatch-3">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>non targettizzato</span><span class="legend__value">12,16%</span>    </li>  </ul>
+      <span>Obbligazioni governative EUR</span><span class="legend__value">27,90%</span>    </li>    <li class="legend__item swatch-4">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Obbligazioni corporate IG</span><span class="legend__value">8,00%</span>    </li>    <li class="legend__item swatch-5">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Liquidità</span><span class="legend__value">12,00%</span>    </li>    <li class="legend__item swatch-void">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Azioni globali · non targettizzato</span><span class="legend__value">8,60%</span>    </li>  </ul>
 
-<figcaption class="chart__caption">Allocazione attuale contro obiettivo, per classe, alla data del 24/07/2026. Le barre sono la serie come registrata nella valutazione run:0f31a9c4; i traguardi verticali sono gli obiettivi della strategia congelata.</figcaption>
+<figcaption class="chart__caption">Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</figcaption>
   <details class="chart__data" id="chart-alloc-light-data" open>
     <summary>Serie come registrata</summary>
     <table class="ledger">
-      <caption class="visually-hidden">Allocazione attuale contro obiettivo, per classe, alla data del 24/07/2026. Le barre sono la serie come registrata nella valutazione run:0f31a9c4; i traguardi verticali sono gli obiettivi della strategia congelata.</caption>
+      <caption class="visually-hidden">Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</caption>
       <thead>
-        <tr><th>Classe</th><th class="numeric">Attuale</th><th class="numeric">Obiettivo</th><th class="numeric">Scostamento</th></tr>
+        <tr><th>Classe</th><th class="numeric">Attuale</th><th class="numeric">Target</th><th class="numeric">Scostamento</th></tr>
       </thead>
-      <tbody>        <tr><td>EQUITY_DEVELOPED</td><td class="numeric value">34,00%</td><td class="numeric value">40,00%</td><td class="numeric value">-6,00pp</td>        </tr>        <tr><td>EQUITY_EMERGING</td><td class="numeric value">9,50%</td><td class="numeric value">10,00%</td><td class="numeric value">-0,50pp</td>        </tr>        <tr><td>BOND_GOV_EUR</td><td class="numeric value">27,90%</td><td class="numeric value">30,00%</td><td class="numeric value">-2,10pp</td>        </tr>        <tr><td>BOND_CORP_IG</td><td class="numeric value">8,00%</td><td class="numeric value">10,00%</td><td class="numeric value">-2,00pp</td>        </tr>        <tr><td>CASH</td><td class="numeric value">12,00%</td><td class="numeric value">10,00%</td><td class="numeric value">+2,00pp</td>        </tr>      </tbody>
+      <tbody>        <tr><td>Azioni dei paesi sviluppati</td><td class="numeric value">34,00%</td><td class="numeric value">40,00%</td><td class="numeric value">-6,00pp</td>        </tr>        <tr><td>Azioni dei paesi emergenti</td><td class="numeric value">9,50%</td><td class="numeric value">10,00%</td><td class="numeric value">-0,50pp</td>        </tr>        <tr><td>Obbligazioni governative EUR</td><td class="numeric value">27,90%</td><td class="numeric value">30,00%</td><td class="numeric value">-2,10pp</td>        </tr>        <tr><td>Obbligazioni corporate investment grade</td><td class="numeric value">8,00%</td><td class="numeric value">10,00%</td><td class="numeric value">-2,00pp</td>        </tr>        <tr><td>Liquidità</td><td class="numeric value">12,00%</td><td class="numeric value">10,00%</td><td class="numeric value">+2,00pp</td>        </tr>        <tr><td>Azioni globali</td><td class="numeric value">8,60%</td><td class="numeric value">—</td><td class="numeric value">nessun target</td>        </tr>      </tbody>
     </table>
   </details>
 </figure>        </div>
@@ -648,7 +664,7 @@
           </div>
 <figure class="chart" style="--chart-h: 250px">
 
-  <script type="application/json" id="chart-sev-light-option">{"grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 20, "top": 28}, "series": [{"data": [1.1, 1.18, 1.21, 1.34, 1.38, 1.3, 1.44, 1.47, 1.52, 1.55, 1.58, 3.0], "markArea": {"data": [[{"yAxis": 0}, {"yAxis": 1}]], "itemStyle": {"color": "token:--verdigris-tint"}, "label": {"color": "token:--verdigris", "fontSize": 10, "formatter": "entro tolleranza", "position": "insideBottomLeft", "show": true}, "silent": true}, "markLine": {"data": [{"xAxis": "17/07"}], "label": {"align": "right", "color": "token:--annot", "fontSize": 10, "formatter": "riclassificazione 19/07", "offset": [0, -14], "position": "end", "rotate": 0}, "lineStyle": {"color": "token:--annot", "type": "dashed", "width": 1}, "silent": true, "symbol": "none"}, "name": "severit\u00e0", "smooth": false, "type": "line"}], "tooltip": {"trigger": "axis"}, "xAxis": {"boundaryGap": false, "data": ["08/05", "15/05", "22/05", "29/05", "05/06", "12/06", "19/06", "26/06", "03/07", "10/07", "17/07", "24/07"], "splitLine": {"show": false}, "type": "category"}, "yAxis": {"max": 4, "minInterval": 1, "splitNumber": 4, "type": "value"}}</script>
+  <script type="application/json" id="chart-sev-light-option">{"grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 20, "top": 28}, "series": [{"data": [1.1, 1.18, 1.21, 1.34, 1.38, 1.3, 1.44, 1.47, 1.52, 1.55, 1.58, 3.0], "markArea": {"data": [[{"yAxis": 0}, {"yAxis": 1}]], "itemStyle": {"color": "token:--band"}, "label": {"color": "token:--ink-3", "fontSize": 10, "formatter": "entro tolleranza", "position": "insideBottomLeft", "show": true}, "silent": true}, "markLine": {"data": [{"xAxis": "17/07"}], "label": {"align": "right", "color": "token:--annot", "fontSize": 10, "formatter": "riclassificazione 19/07", "offset": [0, -14], "position": "end", "rotate": 0}, "lineStyle": {"color": "token:--annot", "type": "dashed", "width": 1}, "silent": true, "symbol": "none"}, "name": "severit\u00e0", "smooth": false, "type": "line"}], "tooltip": {"trigger": "axis"}, "xAxis": {"boundaryGap": false, "data": ["08/05", "15/05", "22/05", "29/05", "05/06", "12/06", "19/06", "26/06", "03/07", "10/07", "17/07", "24/07"], "splitLine": {"show": false}, "type": "category"}, "yAxis": {"max": 4, "minInterval": 1, "splitNumber": 4, "type": "value"}}</script>
   <div class="chart__canvas" id="chart-sev-light" data-chart="chart-sev-light-option"
        role="img" aria-label="Severità dello stesso rilievo su 12 valutazioni. La banda in basso è la zona entro tolleranza. Il salto del 24/07 non è un movimento di mercato: è la riclassificazione del 19/07, annotata sulla serie."></div>
 
@@ -662,6 +678,108 @@
         <tr><th>Valutazione</th><th class="numeric">Severità</th></tr>
       </thead>
       <tbody>        <tr><td>08/05</td><td class="numeric value">1,10</td>        </tr>        <tr><td>15/05</td><td class="numeric value">1,18</td>        </tr>        <tr><td>22/05</td><td class="numeric value">1,21</td>        </tr>        <tr><td>29/05</td><td class="numeric value">1,34</td>        </tr>        <tr><td>05/06</td><td class="numeric value">1,38</td>        </tr>        <tr><td>12/06</td><td class="numeric value">1,30</td>        </tr>        <tr><td>19/06</td><td class="numeric value">1,44</td>        </tr>        <tr><td>26/06</td><td class="numeric value">1,47</td>        </tr>        <tr><td>03/07</td><td class="numeric value">1,52</td>        </tr>        <tr><td>10/07</td><td class="numeric value">1,55</td>        </tr>        <tr><td>17/07</td><td class="numeric value">1,58</td>        </tr>        <tr><td>24/07</td><td class="numeric value">3,00</td>        </tr>      </tbody>
+    </table>
+  </details>
+</figure>        </div>
+      </div>
+    </div>
+
+    <p class="spec__note" style="margin-top: var(--sp-4)">Il secondo livello
+    della stessa idea: il patrimonio netto <em>è</em> i suoi Bucket più il
+    residuo. Qui la cassa non serve, perché il tutto è la somma delle parti — e
+    la tacca sul totale permette di vedere che chiudono, invece di leggere che
+    chiudono.</p>
+    <div class="record" style="margin-top: var(--sp-3)">
+      <div class="record__margin" aria-hidden="true"></div>
+      <div class="record__body">
+        <div class="record__head">
+          <span class="record__designation record__designation--minor">La canna annidata · composizione del patrimonio</span>
+        </div>
+<figure class="chart" style="--chart-h: 150px">
+
+  <script type="application/json" id="chart-comp-light-option">{"caneWidth": 34, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 40, "top": 8}, "series": [{"data": [54000.0], "itemStyle": {"color": "token:--series-1"}, "mark": "segment", "markLine": {"data": [{"xAxis": 107586.33}], "label": {"color": "token:--ink-2", "fontSize": 10, "formatter": "\u20ac107.586,33", "position": "end"}, "lineStyle": {"color": "token:--ink-2", "width": 1}, "silent": true, "symbol": "none"}, "name": "Pension"}, {"data": [22488.98], "itemStyle": {"color": "token:--series-2"}, "mark": "segment", "name": "Children"}, {"data": [18014.8], "itemStyle": {"color": "token:--series-3"}, "mark": "segment", "name": "Emergency"}, {"data": [0.0], "itemStyle": {"color": "token:--series-4"}, "mark": "segment", "name": "Personal"}, {"data": [13082.55], "mark": "void", "name": "UNASSIGNED \u00b7 residuo non assegnato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}"}, "max": 107586.33, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"data": ["Patrimonio netto"], "splitLine": {"show": false}, "type": "category"}}</script>
+  <div class="chart__canvas" id="chart-comp-light" data-chart="chart-comp-light-option"
+       role="img" aria-label="La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante."></div>
+
+  <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-1">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Pension</span><span class="legend__value">€54.000,00</span>    </li>    <li class="legend__item swatch-2">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Children</span><span class="legend__value">€22.488,98</span>    </li>    <li class="legend__item swatch-3">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Emergency</span><span class="legend__value">€18.014,80</span>    </li>    <li class="legend__item swatch-4">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Personal</span><span class="legend__value">€0,00</span>    </li>    <li class="legend__item swatch-void">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>UNASSIGNED · residuo non assegnato</span><span class="legend__value">€13.082,55</span>    </li>  </ul>
+
+<figcaption class="chart__caption">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</figcaption>
+  <details class="chart__data" id="chart-comp-light-data" open>
+    <summary>Serie come registrata</summary>
+    <table class="ledger">
+      <caption class="visually-hidden">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</caption>
+      <thead>
+        <tr><th>Bucket</th><th class="numeric">Valore</th></tr>
+      </thead>
+      <tbody>        <tr><td>Pension</td><td class="numeric value">€54.000,00</td>        </tr>        <tr><td>Children</td><td class="numeric value">€22.488,98</td>        </tr>        <tr><td>Emergency</td><td class="numeric value">€18.014,80</td>        </tr>        <tr><td>Personal</td><td class="numeric value">€0,00</td>        </tr>        <tr><td>UNASSIGNED · residuo non assegnato</td><td class="numeric value">€13.082,55</td>        </tr>      </tbody>
+    </table>
+  </details>
+</figure>      </div>
+    </div>
+
+    <p class="spec__note" style="margin-top: var(--sp-4)">Due stati che un
+    sistema di grafici deve dichiarare, o li improvviserà una schermata alla
+    volta: <strong>un solo punto</strong> e <strong>nessuna serie</strong>.</p>
+    <div class="grid-2" style="margin-top: var(--sp-3)">
+      <div class="record">
+        <div class="record__margin" aria-hidden="true"></div>
+        <div class="record__body">
+          <div class="record__head">
+            <span class="record__designation record__designation--minor">Una sola valutazione</span>
+          </div>
+<figure class="chart" style="--chart-h: 180px">
+
+  <script type="application/json" id="chart-sev1-light-option">{"grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 24, "top": 28}, "series": [{"data": [3.0], "markArea": {"data": [[{"yAxis": 0}, {"yAxis": 1}]], "itemStyle": {"color": "token:--band"}, "label": {"color": "token:--ink-3", "fontSize": 10, "formatter": "entro tolleranza", "position": "insideBottomLeft", "show": true}, "silent": true}, "name": "severit\u00e0", "type": "line"}], "tooltip": {"trigger": "item"}, "xAxis": {"boundaryGap": true, "data": ["24/07"], "splitLine": {"show": false}, "type": "category"}, "yAxis": {"max": 4, "minInterval": 1, "splitNumber": 4, "type": "value"}}</script>
+  <div class="chart__canvas" id="chart-sev1-light" data-chart="chart-sev1-light-option"
+       role="img" aria-label="Una sola valutazione: un punto, non una linea. Con un solo dato non esiste una tendenza da mostrare, quindi il grafico non ne disegna una — il segno resta un punto etichettato."></div>
+
+
+<figcaption class="chart__caption">Una sola valutazione: un punto, non una linea. Con un solo dato non esiste una tendenza da mostrare, quindi il grafico non ne disegna una — il segno resta un punto etichettato.</figcaption>
+  <details class="chart__data" id="chart-sev1-light-data" open>
+    <summary>Serie come registrata</summary>
+    <table class="ledger">
+      <caption class="visually-hidden">Una sola valutazione: un punto, non una linea. Con un solo dato non esiste una tendenza da mostrare, quindi il grafico non ne disegna una — il segno resta un punto etichettato.</caption>
+      <thead>
+        <tr><th>Valutazione</th><th class="numeric">Severità</th></tr>
+      </thead>
+      <tbody>        <tr><td>24/07</td><td class="numeric value">3,00</td>        </tr>      </tbody>
+    </table>
+  </details>
+</figure>        </div>
+      </div>
+      <div class="record">
+        <div class="record__margin" aria-hidden="true"></div>
+        <div class="record__body">
+          <div class="record__head">
+            <span class="record__designation record__designation--minor">Nessuna serie</span>
+          </div>
+<figure class="chart" style="--chart-h: 180px">
+
+  <div class="state state--chart">
+    <p class="state__lead">Nessuno storico da mostrare.</p>
+    <p class="state__body">Questo rilievo non è mai stato valutato prima del 24/07/2026, quindi non c&#39;è una serie da leggere. Non è uno zero: è l&#39;assenza di una misura, e le due cose non si somigliano.</p>
+  </div>
+
+
+<figcaption class="chart__caption">Severità di questo rilievo nel tempo. Nessuna serie: questo rilievo è comparso per la prima volta nella valutazione corrente.</figcaption>
+  <details class="chart__data" id="chart-empty-light-data" open>
+    <summary>Serie come registrata</summary>
+    <table class="ledger">
+      <caption class="visually-hidden">Severità di questo rilievo nel tempo. Nessuna serie: questo rilievo è comparso per la prima volta nella valutazione corrente.</caption>
+      <thead>
+        <tr><th>Valutazione</th><th class="numeric">Severità</th></tr>
+      </thead>
+      <tbody>      </tbody>
     </table>
   </details>
 </figure>        </div>
@@ -807,16 +925,20 @@
         <div class="sw__meta">rule-control<br><span style="color: var(--ink-3)">3,4:1 non-testo</span></div>
       </div>
       <div class="sw">
-        <div class="sw__chip" style="background: var(--seal)"></div>
-        <div class="sw__meta">seal<br><span style="color: var(--ink-3)">violazione</span></div>
+        <div class="sw__chip" style="background: var(--alarm)"></div>
+        <div class="sw__meta">alarm<br><span style="color: var(--ink-3)">violazione · riservato</span></div>
       </div>
       <div class="sw">
-        <div class="sw__chip" style="background: var(--bollo)"></div>
-        <div class="sw__meta">bollo<br><span style="color: var(--ink-3)">non valutato</span></div>
+        <div class="sw__chip" style="background: var(--caution)"></div>
+        <div class="sw__meta">caution<br><span style="color: var(--ink-3)">non valutato · riservato</span></div>
       </div>
       <div class="sw">
-        <div class="sw__chip" style="background: var(--verdigris)"></div>
-        <div class="sw__meta">verdigris<br><span style="color: var(--ink-3)">entro tolleranza</span></div>
+        <div class="sw__chip" style="background: var(--band)"></div>
+        <div class="sw__meta">band<br><span style="color: var(--ink-3)">entro tolleranza: neutro</span></div>
+      </div>
+      <div class="sw">
+        <div class="sw__chip" style="background: var(--edge)"></div>
+        <div class="sw__meta">edge<br><span style="color: var(--ink-3)">la sorgente di luce</span></div>
       </div>
       <div class="sw">
         <div class="sw__chip" style="background: var(--annot)"></div>
@@ -832,11 +954,17 @@
   <div class="spec">
     <h3>02 · Serie categoriali (convalidate)</h3>
     <p class="spec__note">Cinque tinte assegnate a entità nell'ordine dell'albero
-    della strategia, mai ciclate. Convalidate su entrambe le superfici: la
-    coppia adiacente peggiore sta nella banda tritan 6–8, quindi la legenda e
-    l'etichetta diretta sono <strong>obbligatorie</strong> — il colore non porta
-    mai da solo l'identità. Il capitale non targettizzato non ha tinta: è vuoto,
-    e si legge con il tratteggio di annullamento.</p>
+    della strategia, mai ciclate. Nessuna è scelta a mano: sono risolte per
+    ricerca contro le soglie del validatore, su <em>entrambe</em> le superfici.
+    La coppia adiacente peggiore sta a ΔE 10,6 protan contro un obiettivo di
+    8,0 — l'avviso protan 7,6 del mondo candidato non c'è più. La separazione
+    tritan resta a 4,8 in chiaro e nessun insieme di cinque tinte può superare
+    il controllo su <em>tutte</em> le coppie, quindi la legenda, l'etichetta
+    diretta, lo stacco di 2px e il tratteggio sono
+    <strong>obbligatori</strong>: il colore non porta mai da solo l'identità.
+    <br><br>La metà calda della ruota è riservata allo stato: un segno caldo,
+    qui, non è mai una misura. Il capitale non targettizzato non ha tinta — è
+    vuoto, e si legge con il tratteggio di annullamento.</p>
     <div class="swatches">
       <div class="sw">
         <div class="sw__chip" style="background: var(--series-1)"></div>
@@ -1340,33 +1468,39 @@
           </div>
 <figure class="chart" style="--chart-h: 250px">
 
-  <script type="application/json" id="chart-alloc-dark-option">{"grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 30, "top": 12}, "series": [{"barWidth": 13, "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0], "markPoint": {"data": [{"coord": [40.0, 0], "name": "obiettivo 40.0%"}, {"coord": [10.0, 1], "name": "obiettivo 10.0%"}, {"coord": [30.0, 2], "name": "obiettivo 30.0%"}, {"coord": [10.0, 3], "name": "obiettivo 10.0%"}, {"coord": [10.0, 4], "name": "obiettivo 10.0%"}], "itemStyle": {"color": "token:--ink-2"}, "label": {"show": false}, "silent": true, "symbol": "rect", "symbolSize": [3, 26]}, "name": "attuale", "type": "bar"}], "tooltip": {"axisPointer": {"type": "shadow"}, "trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}%"}, "max": 45, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"data": ["EQ/DEV", "EQ/EMG", "GOV/EUR", "CORP/IG", "CASH"], "inverse": true, "splitLine": {"show": false}, "type": "category"}}</script>
+  <script type="application/json" id="chart-alloc-dark-option">{"caneWidth": 22, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 34, "top": 12}, "series": [{"colorBy": "data", "data": [40.0, 10.0, 30.0, 10.0, 10.0, null], "mark": "casing", "markPoint": {"data": [{"coord": [40.0, 0], "name": "target 40.0%"}, {"coord": [10.0, 1], "name": "target 10.0%"}, {"coord": [30.0, 2], "name": "target 30.0%"}, {"coord": [10.0, 3], "name": "target 10.0%"}, {"coord": [10.0, 4], "name": "target 10.0%"}], "itemStyle": {"color": "token:--ink-2"}, "label": {"show": false}, "silent": true, "symbol": "rect", "symbolSize": [2, 30]}, "name": "target"}, {"colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0, null], "mark": "core", "name": "attuale"}, {"data": [34.0, 9.5, 27.9, 8.0, 12.0, null], "mark": "edge", "name": "attuale"}, {"barGap": "-100%", "data": [null, null, null, null, null, 8.6], "mark": "void", "name": "non targettizzato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}%"}, "max": 45, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"axisLabel": {"lineHeight": 14, "overflow": "break", "width": 168}, "data": ["Azioni dei paesi sviluppati", "Azioni dei paesi emergenti", "Obbligazioni governative EUR", "Obbligazioni corporate investment grade", "Liquidit\u00e0", "Azioni globali"], "inverse": true, "splitLine": {"show": false}, "type": "category"}}</script>
   <div class="chart__canvas" id="chart-alloc-dark" data-chart="chart-alloc-dark-option"
-       role="img" aria-label="Allocazione attuale contro obiettivo, per classe, alla data del 24/07/2026. Le barre sono la serie come registrata nella valutazione run:0f31a9c4; i traguardi verticali sono gli obiettivi della strategia congelata."></div>
+       role="img" aria-label="Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4."></div>
 
-  <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-1">
+  <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-casing">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>EQ/DEV</span><span class="legend__value">34,00%</span>    </li>    <li class="legend__item swatch-2">
+      <span>target dichiarato (la cassa)</span>    </li>    <li class="legend__item swatch-core">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>EQ/EMG</span><span class="legend__value">9,50%</span>    </li>    <li class="legend__item swatch-3">
+      <span>attuale (il nucleo)</span>    </li>    <li class="legend__item swatch-edge">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>GOV/EUR</span><span class="legend__value">27,90%</span>    </li>    <li class="legend__item swatch-4">
+      <span>valore letto sul bordo di luce</span>    </li>    <li class="legend__item swatch-1">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>CORP/IG</span><span class="legend__value">8,00%</span>    </li>    <li class="legend__item swatch-5">
+      <span>Azioni dei paesi sviluppati</span><span class="legend__value">34,00%</span>    </li>    <li class="legend__item swatch-2">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>CASH</span><span class="legend__value">12,00%</span>    </li>    <li class="legend__item swatch-void">
+      <span>Azioni dei paesi emergenti</span><span class="legend__value">9,50%</span>    </li>    <li class="legend__item swatch-3">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>non targettizzato</span><span class="legend__value">12,16%</span>    </li>  </ul>
+      <span>Obbligazioni governative EUR</span><span class="legend__value">27,90%</span>    </li>    <li class="legend__item swatch-4">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Obbligazioni corporate IG</span><span class="legend__value">8,00%</span>    </li>    <li class="legend__item swatch-5">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Liquidità</span><span class="legend__value">12,00%</span>    </li>    <li class="legend__item swatch-void">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Azioni globali · non targettizzato</span><span class="legend__value">8,60%</span>    </li>  </ul>
 
-<figcaption class="chart__caption">Allocazione attuale contro obiettivo, per classe, alla data del 24/07/2026. Le barre sono la serie come registrata nella valutazione run:0f31a9c4; i traguardi verticali sono gli obiettivi della strategia congelata.</figcaption>
+<figcaption class="chart__caption">Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</figcaption>
   <details class="chart__data" id="chart-alloc-dark-data" open>
     <summary>Serie come registrata</summary>
     <table class="ledger">
-      <caption class="visually-hidden">Allocazione attuale contro obiettivo, per classe, alla data del 24/07/2026. Le barre sono la serie come registrata nella valutazione run:0f31a9c4; i traguardi verticali sono gli obiettivi della strategia congelata.</caption>
+      <caption class="visually-hidden">Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</caption>
       <thead>
-        <tr><th>Classe</th><th class="numeric">Attuale</th><th class="numeric">Obiettivo</th><th class="numeric">Scostamento</th></tr>
+        <tr><th>Classe</th><th class="numeric">Attuale</th><th class="numeric">Target</th><th class="numeric">Scostamento</th></tr>
       </thead>
-      <tbody>        <tr><td>EQUITY_DEVELOPED</td><td class="numeric value">34,00%</td><td class="numeric value">40,00%</td><td class="numeric value">-6,00pp</td>        </tr>        <tr><td>EQUITY_EMERGING</td><td class="numeric value">9,50%</td><td class="numeric value">10,00%</td><td class="numeric value">-0,50pp</td>        </tr>        <tr><td>BOND_GOV_EUR</td><td class="numeric value">27,90%</td><td class="numeric value">30,00%</td><td class="numeric value">-2,10pp</td>        </tr>        <tr><td>BOND_CORP_IG</td><td class="numeric value">8,00%</td><td class="numeric value">10,00%</td><td class="numeric value">-2,00pp</td>        </tr>        <tr><td>CASH</td><td class="numeric value">12,00%</td><td class="numeric value">10,00%</td><td class="numeric value">+2,00pp</td>        </tr>      </tbody>
+      <tbody>        <tr><td>Azioni dei paesi sviluppati</td><td class="numeric value">34,00%</td><td class="numeric value">40,00%</td><td class="numeric value">-6,00pp</td>        </tr>        <tr><td>Azioni dei paesi emergenti</td><td class="numeric value">9,50%</td><td class="numeric value">10,00%</td><td class="numeric value">-0,50pp</td>        </tr>        <tr><td>Obbligazioni governative EUR</td><td class="numeric value">27,90%</td><td class="numeric value">30,00%</td><td class="numeric value">-2,10pp</td>        </tr>        <tr><td>Obbligazioni corporate investment grade</td><td class="numeric value">8,00%</td><td class="numeric value">10,00%</td><td class="numeric value">-2,00pp</td>        </tr>        <tr><td>Liquidità</td><td class="numeric value">12,00%</td><td class="numeric value">10,00%</td><td class="numeric value">+2,00pp</td>        </tr>        <tr><td>Azioni globali</td><td class="numeric value">8,60%</td><td class="numeric value">—</td><td class="numeric value">nessun target</td>        </tr>      </tbody>
     </table>
   </details>
 </figure>        </div>
@@ -1379,7 +1513,7 @@
           </div>
 <figure class="chart" style="--chart-h: 250px">
 
-  <script type="application/json" id="chart-sev-dark-option">{"grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 20, "top": 28}, "series": [{"data": [1.1, 1.18, 1.21, 1.34, 1.38, 1.3, 1.44, 1.47, 1.52, 1.55, 1.58, 3.0], "markArea": {"data": [[{"yAxis": 0}, {"yAxis": 1}]], "itemStyle": {"color": "token:--verdigris-tint"}, "label": {"color": "token:--verdigris", "fontSize": 10, "formatter": "entro tolleranza", "position": "insideBottomLeft", "show": true}, "silent": true}, "markLine": {"data": [{"xAxis": "17/07"}], "label": {"align": "right", "color": "token:--annot", "fontSize": 10, "formatter": "riclassificazione 19/07", "offset": [0, -14], "position": "end", "rotate": 0}, "lineStyle": {"color": "token:--annot", "type": "dashed", "width": 1}, "silent": true, "symbol": "none"}, "name": "severit\u00e0", "smooth": false, "type": "line"}], "tooltip": {"trigger": "axis"}, "xAxis": {"boundaryGap": false, "data": ["08/05", "15/05", "22/05", "29/05", "05/06", "12/06", "19/06", "26/06", "03/07", "10/07", "17/07", "24/07"], "splitLine": {"show": false}, "type": "category"}, "yAxis": {"max": 4, "minInterval": 1, "splitNumber": 4, "type": "value"}}</script>
+  <script type="application/json" id="chart-sev-dark-option">{"grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 20, "top": 28}, "series": [{"data": [1.1, 1.18, 1.21, 1.34, 1.38, 1.3, 1.44, 1.47, 1.52, 1.55, 1.58, 3.0], "markArea": {"data": [[{"yAxis": 0}, {"yAxis": 1}]], "itemStyle": {"color": "token:--band"}, "label": {"color": "token:--ink-3", "fontSize": 10, "formatter": "entro tolleranza", "position": "insideBottomLeft", "show": true}, "silent": true}, "markLine": {"data": [{"xAxis": "17/07"}], "label": {"align": "right", "color": "token:--annot", "fontSize": 10, "formatter": "riclassificazione 19/07", "offset": [0, -14], "position": "end", "rotate": 0}, "lineStyle": {"color": "token:--annot", "type": "dashed", "width": 1}, "silent": true, "symbol": "none"}, "name": "severit\u00e0", "smooth": false, "type": "line"}], "tooltip": {"trigger": "axis"}, "xAxis": {"boundaryGap": false, "data": ["08/05", "15/05", "22/05", "29/05", "05/06", "12/06", "19/06", "26/06", "03/07", "10/07", "17/07", "24/07"], "splitLine": {"show": false}, "type": "category"}, "yAxis": {"max": 4, "minInterval": 1, "splitNumber": 4, "type": "value"}}</script>
   <div class="chart__canvas" id="chart-sev-dark" data-chart="chart-sev-dark-option"
        role="img" aria-label="Severità dello stesso rilievo su 12 valutazioni. La banda in basso è la zona entro tolleranza. Il salto del 24/07 non è un movimento di mercato: è la riclassificazione del 19/07, annotata sulla serie."></div>
 
@@ -1393,6 +1527,108 @@
         <tr><th>Valutazione</th><th class="numeric">Severità</th></tr>
       </thead>
       <tbody>        <tr><td>08/05</td><td class="numeric value">1,10</td>        </tr>        <tr><td>15/05</td><td class="numeric value">1,18</td>        </tr>        <tr><td>22/05</td><td class="numeric value">1,21</td>        </tr>        <tr><td>29/05</td><td class="numeric value">1,34</td>        </tr>        <tr><td>05/06</td><td class="numeric value">1,38</td>        </tr>        <tr><td>12/06</td><td class="numeric value">1,30</td>        </tr>        <tr><td>19/06</td><td class="numeric value">1,44</td>        </tr>        <tr><td>26/06</td><td class="numeric value">1,47</td>        </tr>        <tr><td>03/07</td><td class="numeric value">1,52</td>        </tr>        <tr><td>10/07</td><td class="numeric value">1,55</td>        </tr>        <tr><td>17/07</td><td class="numeric value">1,58</td>        </tr>        <tr><td>24/07</td><td class="numeric value">3,00</td>        </tr>      </tbody>
+    </table>
+  </details>
+</figure>        </div>
+      </div>
+    </div>
+
+    <p class="spec__note" style="margin-top: var(--sp-4)">Il secondo livello
+    della stessa idea: il patrimonio netto <em>è</em> i suoi Bucket più il
+    residuo. Qui la cassa non serve, perché il tutto è la somma delle parti — e
+    la tacca sul totale permette di vedere che chiudono, invece di leggere che
+    chiudono.</p>
+    <div class="record" style="margin-top: var(--sp-3)">
+      <div class="record__margin" aria-hidden="true"></div>
+      <div class="record__body">
+        <div class="record__head">
+          <span class="record__designation record__designation--minor">La canna annidata · composizione del patrimonio</span>
+        </div>
+<figure class="chart" style="--chart-h: 150px">
+
+  <script type="application/json" id="chart-comp-dark-option">{"caneWidth": 34, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 40, "top": 8}, "series": [{"data": [54000.0], "itemStyle": {"color": "token:--series-1"}, "mark": "segment", "markLine": {"data": [{"xAxis": 107586.33}], "label": {"color": "token:--ink-2", "fontSize": 10, "formatter": "\u20ac107.586,33", "position": "end"}, "lineStyle": {"color": "token:--ink-2", "width": 1}, "silent": true, "symbol": "none"}, "name": "Pension"}, {"data": [22488.98], "itemStyle": {"color": "token:--series-2"}, "mark": "segment", "name": "Children"}, {"data": [18014.8], "itemStyle": {"color": "token:--series-3"}, "mark": "segment", "name": "Emergency"}, {"data": [0.0], "itemStyle": {"color": "token:--series-4"}, "mark": "segment", "name": "Personal"}, {"data": [13082.55], "mark": "void", "name": "UNASSIGNED \u00b7 residuo non assegnato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}"}, "max": 107586.33, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"data": ["Patrimonio netto"], "splitLine": {"show": false}, "type": "category"}}</script>
+  <div class="chart__canvas" id="chart-comp-dark" data-chart="chart-comp-dark-option"
+       role="img" aria-label="La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante."></div>
+
+  <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-1">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Pension</span><span class="legend__value">€54.000,00</span>    </li>    <li class="legend__item swatch-2">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Children</span><span class="legend__value">€22.488,98</span>    </li>    <li class="legend__item swatch-3">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Emergency</span><span class="legend__value">€18.014,80</span>    </li>    <li class="legend__item swatch-4">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>Personal</span><span class="legend__value">€0,00</span>    </li>    <li class="legend__item swatch-void">
+      <span class="legend__swatch" aria-hidden="true"></span>
+      <span>UNASSIGNED · residuo non assegnato</span><span class="legend__value">€13.082,55</span>    </li>  </ul>
+
+<figcaption class="chart__caption">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</figcaption>
+  <details class="chart__data" id="chart-comp-dark-data" open>
+    <summary>Serie come registrata</summary>
+    <table class="ledger">
+      <caption class="visually-hidden">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</caption>
+      <thead>
+        <tr><th>Bucket</th><th class="numeric">Valore</th></tr>
+      </thead>
+      <tbody>        <tr><td>Pension</td><td class="numeric value">€54.000,00</td>        </tr>        <tr><td>Children</td><td class="numeric value">€22.488,98</td>        </tr>        <tr><td>Emergency</td><td class="numeric value">€18.014,80</td>        </tr>        <tr><td>Personal</td><td class="numeric value">€0,00</td>        </tr>        <tr><td>UNASSIGNED · residuo non assegnato</td><td class="numeric value">€13.082,55</td>        </tr>      </tbody>
+    </table>
+  </details>
+</figure>      </div>
+    </div>
+
+    <p class="spec__note" style="margin-top: var(--sp-4)">Due stati che un
+    sistema di grafici deve dichiarare, o li improvviserà una schermata alla
+    volta: <strong>un solo punto</strong> e <strong>nessuna serie</strong>.</p>
+    <div class="grid-2" style="margin-top: var(--sp-3)">
+      <div class="record">
+        <div class="record__margin" aria-hidden="true"></div>
+        <div class="record__body">
+          <div class="record__head">
+            <span class="record__designation record__designation--minor">Una sola valutazione</span>
+          </div>
+<figure class="chart" style="--chart-h: 180px">
+
+  <script type="application/json" id="chart-sev1-dark-option">{"grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 24, "top": 28}, "series": [{"data": [3.0], "markArea": {"data": [[{"yAxis": 0}, {"yAxis": 1}]], "itemStyle": {"color": "token:--band"}, "label": {"color": "token:--ink-3", "fontSize": 10, "formatter": "entro tolleranza", "position": "insideBottomLeft", "show": true}, "silent": true}, "name": "severit\u00e0", "type": "line"}], "tooltip": {"trigger": "item"}, "xAxis": {"boundaryGap": true, "data": ["24/07"], "splitLine": {"show": false}, "type": "category"}, "yAxis": {"max": 4, "minInterval": 1, "splitNumber": 4, "type": "value"}}</script>
+  <div class="chart__canvas" id="chart-sev1-dark" data-chart="chart-sev1-dark-option"
+       role="img" aria-label="Una sola valutazione: un punto, non una linea. Con un solo dato non esiste una tendenza da mostrare, quindi il grafico non ne disegna una — il segno resta un punto etichettato."></div>
+
+
+<figcaption class="chart__caption">Una sola valutazione: un punto, non una linea. Con un solo dato non esiste una tendenza da mostrare, quindi il grafico non ne disegna una — il segno resta un punto etichettato.</figcaption>
+  <details class="chart__data" id="chart-sev1-dark-data" open>
+    <summary>Serie come registrata</summary>
+    <table class="ledger">
+      <caption class="visually-hidden">Una sola valutazione: un punto, non una linea. Con un solo dato non esiste una tendenza da mostrare, quindi il grafico non ne disegna una — il segno resta un punto etichettato.</caption>
+      <thead>
+        <tr><th>Valutazione</th><th class="numeric">Severità</th></tr>
+      </thead>
+      <tbody>        <tr><td>24/07</td><td class="numeric value">3,00</td>        </tr>      </tbody>
+    </table>
+  </details>
+</figure>        </div>
+      </div>
+      <div class="record">
+        <div class="record__margin" aria-hidden="true"></div>
+        <div class="record__body">
+          <div class="record__head">
+            <span class="record__designation record__designation--minor">Nessuna serie</span>
+          </div>
+<figure class="chart" style="--chart-h: 180px">
+
+  <div class="state state--chart">
+    <p class="state__lead">Nessuno storico da mostrare.</p>
+    <p class="state__body">Questo rilievo non è mai stato valutato prima del 24/07/2026, quindi non c&#39;è una serie da leggere. Non è uno zero: è l&#39;assenza di una misura, e le due cose non si somigliano.</p>
+  </div>
+
+
+<figcaption class="chart__caption">Severità di questo rilievo nel tempo. Nessuna serie: questo rilievo è comparso per la prima volta nella valutazione corrente.</figcaption>
+  <details class="chart__data" id="chart-empty-dark-data" open>
+    <summary>Serie come registrata</summary>
+    <table class="ledger">
+      <caption class="visually-hidden">Severità di questo rilievo nel tempo. Nessuna serie: questo rilievo è comparso per la prima volta nella valutazione corrente.</caption>
+      <thead>
+        <tr><th>Valutazione</th><th class="numeric">Severità</th></tr>
+      </thead>
+      <tbody>      </tbody>
     </table>
   </details>
 </figure>        </div>
