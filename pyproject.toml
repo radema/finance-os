@@ -61,8 +61,10 @@ explicit_package_bases = true
 files = ["src", "tests"]
 
 # --- Import architecture contracts (RFC-0005 §7) -------------------------
-# C6 (append-only: no UPDATE/DELETE against append-only tables) is a grep
-# contract, not an import-graph contract, and is TODO — not implemented here.
+# C6 (append-only: no UPDATE/DELETE against append-only tables) and the positive half of C4
+# ("only financeos.web may import adapters.duckdb.queries") are grep/AST scans, not
+# import-graph contracts import-linter can express — enforced as real tests instead:
+# tests/test_c6_append_only.py, tests/test_c4_read_write_split.py.
 
 [tool.importlinter]
 root_packages = ["financeos"]
