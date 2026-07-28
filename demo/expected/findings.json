@@ -1,0 +1,27 @@
+{
+  "alert_count": 1,
+  "recommendation_count": 1,
+  "findings": [
+    {
+      "rule_id": "8e968a19-7229-5a9c-b2ad-9628229e77ae",
+      "outcome": "FIRED",
+      "priority": "HIGH",
+      "severity": "3.00000000",
+      "suggestion_class": "CONSIDER_REBALANCE",
+      "message_bindings": {
+        "asset_class": "EQUITY_DEVELOPED",
+        "asset_class_label": "Equity/Developed",
+        "scope": "bucket:44940ba1-0bfd-5d7c-ba07-4d80aefdd508",
+        "current_pct": "34.00",
+        "target_pct": "40.00",
+        "drift_pct": "-6.00",
+        "tolerance_pct": "2.00",
+        "current_value": "18360.0000",
+        "target_value": "21600.0000",
+        "drift_value": "-3240.0000",
+        "currency": "EUR",
+        "severity": "3.00000000"
+      }
+    }
+  ]
+}

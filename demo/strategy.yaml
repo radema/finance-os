@@ -1,0 +1,41 @@
+# GENERATED FIXTURE — hand-maintained for the walking-skeleton demo (RFC-0005 §8).
+# Keys are English (ADR-L03 §5); name/objective/principles/change_note are the user's own
+# Italian prose, imported verbatim.
+strategy_id: 237f27fd-8230-53be-8a8c-f30e6d53812c
+name: "Crescita di lungo periodo"
+description: null
+objective: "Preservare e accrescere il capitale su un orizzonte di venti anni."
+horizon:
+  years: 20
+risk:
+  level: BALANCED
+  principles:
+    - "preservare il potere d'acquisto senza fare market timing"
+targets:
+  - key: EQUITY_DEVELOPED
+    weight: "0.40"
+    tolerance:
+      kind: ABSOLUTE
+      band: "0.02"
+  - key: BOND_GOV_EUR
+    weight: "0.60"
+    tolerance:
+      kind: ABSOLUTE
+      band: "0.05"
+rules:
+  - id: 8e968a19-7229-5a9c-b2ad-9628229e77ae
+    name: "Equity/Developed fuori tolleranza — Pensione"
+    enabled: true
+    priority: HIGH
+    suggestion_class: CONSIDER_REBALANCE
+    message: >-
+      {asset_class_label} nel bucket Pensione è al {current_pct}% contro un target del
+      {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di {drift_pct}pp
+      ({drift_value} {currency}).
+    condition:
+      kind: drift_outside_tolerance
+      kind_version: 1
+      params:
+        asset_class: EQUITY_DEVELOPED
+        scope: "bucket:44940ba1-0bfd-5d7c-ba07-4d80aefdd508"
+change_note: "Prima versione importata per la demo."
