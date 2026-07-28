@@ -58,6 +58,7 @@ strict = true
 python_version = "3.12"
 mypy_path = "src"
 explicit_package_bases = true
+files = ["src", "tests"]
 
 # --- Import architecture contracts (RFC-0005 §7) -------------------------
 # C6 (append-only: no UPDATE/DELETE against append-only tables) is a grep

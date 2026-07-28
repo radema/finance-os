@@ -23,6 +23,7 @@ not to decorate it. It therefore does four things:
 
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -159,8 +160,8 @@ def evaluations(draw: st.DrawFn) -> tuple[tuple[Rule, ...], FactSet]:
         )
     unpriced = draw(st.booleans())
     assets = {
-        AssetId(f.UUID(int=100 + index)): f.asset(
-            AssetId(f.UUID(int=100 + index)), asset_class=asset_class
+        AssetId(UUID(int=100 + index)): f.asset(
+            AssetId(UUID(int=100 + index)), asset_class=asset_class
         )
         for index, asset_class in enumerate(CLASSES)
     }

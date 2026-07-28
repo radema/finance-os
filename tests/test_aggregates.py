@@ -20,6 +20,7 @@ from financeos.core.decision import (
 )
 from financeos.core.portfolio import Bucket, Operation, OperationType, Portfolio, VirtualHolding
 from financeos.core.shared import (
+    AlertId,
     Outcome,
     Priority,
     Quantity,
@@ -118,7 +119,7 @@ class TestOperation:
 
     def test_operation_is_immutable(self) -> None:
         with pytest.raises(ValidationError):
-            f.operation(1).quantity = Quantity(amount=Decimal(1))  # type: ignore[misc]
+            f.operation(1).quantity = Quantity(amount=Decimal(1))
 
 
 class TestPortfolioAndBucket:
@@ -374,7 +375,7 @@ class TestStrategyVersion:
 
     def test_version_is_immutable(self) -> None:
         with pytest.raises(ValidationError):
-            f.strategy_version().change_note = "riscritta"  # type: ignore[misc]
+            f.strategy_version().change_note = "riscritta"
 
 
 def _trace(outcome: Outcome, *, bound: bool = True) -> EvaluationTrace:
@@ -407,7 +408,7 @@ class TestAlert:
     def test_i6_an_evaluated_alert_requires_a_bound_stepped_trace(self) -> None:
         with pytest.raises(ValidationError):
             Alert(
-                id=f.RUN,  # any UUID
+                id=AlertId(UUID(int=7)),
                 run_id=f.RUN,
                 rule_id=f.rule_id(1),
                 outcome=Outcome.FIRED,
@@ -418,7 +419,7 @@ class TestAlert:
 
     def test_a_skipped_alert_is_explained_by_its_reason(self) -> None:
         alert = Alert(
-            id=f.RUN,
+            id=AlertId(UUID(int=7)),
             run_id=f.RUN,
             rule_id=f.rule_id(1),
             outcome=Outcome.SKIPPED,
@@ -431,7 +432,7 @@ class TestAlert:
     def test_trace_outcome_must_agree_with_the_alert(self) -> None:
         with pytest.raises(ValidationError):
             Alert(
-                id=f.RUN,
+                id=AlertId(UUID(int=7)),
                 run_id=f.RUN,
                 rule_id=f.rule_id(1),
                 outcome=Outcome.NOT_FIRED,
@@ -443,7 +444,7 @@ class TestAlert:
     def test_err1_severity_is_null_for_skipped_and_error(self) -> None:
         with pytest.raises(ValidationError):
             Alert(
-                id=f.RUN,
+                id=AlertId(UUID(int=7)),
                 run_id=f.RUN,
                 rule_id=f.rule_id(1),
                 outcome=Outcome.SKIPPED,

@@ -94,7 +94,7 @@ class TestMoney:
 
     def test_is_frozen(self) -> None:
         with pytest.raises(ValidationError):
-            money("1").amount = Decimal(2)  # type: ignore[misc]
+            money("1").amount = Decimal(2)
 
 
 class TestQuantity:
