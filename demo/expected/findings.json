@@ -8,9 +8,9 @@
       "priority": "HIGH",
       "severity": "3.00000000",
       "suggestion_class": "CONSIDER_REBALANCE",
+      "_comment": "Only structured/canonical values are pinned here — never observation/rationale prose or asset_class_label, which are Italian surface strings the label registry (L05) is about to change.",
       "message_bindings": {
         "asset_class": "EQUITY_DEVELOPED",
-        "asset_class_label": "Equity/Developed",
         "scope": "bucket:44940ba1-0bfd-5d7c-ba07-4d80aefdd508",
         "current_pct": "34.00",
         "target_pct": "40.00",

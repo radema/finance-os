@@ -84,6 +84,35 @@ def test_priority_dominates_severity(con: duckdb.DuckDBPyConnection) -> None:
     assert [r[0] for r in rows] == ["r-critical", "r-high"]
 
 
+def test_priority_dominates_at_an_arbitrarily_small_severity_margin(
+    con: duckdb.DuckDBPyConnection,
+) -> None:
+    """ADR-L04 §4.6 addition 1: after ADR-L04, the fixture demonstrates priority dominance with
+    a margin of 0.17 (MEDIUM 1.22 over HIGH 1.05), not the old 1.07 gap. The synthetic test must
+    hold for an arbitrarily small margin, not just a comfortable one."""
+    _finding(con, alert_id="a1", rule_id="r-medium", priority="MEDIUM", severity=1.0500001,
+              finding_key="fk-medium")
+    _finding(con, alert_id="a2", rule_id="r-high", priority="HIGH", severity=1.0500000,
+              finding_key="fk-high")
+    rows = con.execute("SELECT rule_id FROM mv_finding").fetchall()
+    assert [r[0] for r in rows] == ["r-high", "r-medium"]
+
+
+def test_null_severity_sorts_below_the_lowest_legal_firing_value(
+    con: duckdb.DuckDBPyConnection,
+) -> None:
+    """ADR-L04 §4.6 addition 2: every V1.0 formula now emits at or above 1.00 on the firing set
+    (ADR-L02, ADR-L04), so `NULLS LAST` must be shown against the tightest case — a null sorting
+    below a bare 1.00 — not just below a large severity."""
+    _finding(con, alert_id="a1", rule_id="r-at-threshold", priority="HIGH", severity=1.00,
+              finding_key="fk-threshold")
+    _finding(con, alert_id="a2", rule_id="r-null", priority="HIGH", severity=None,
+              finding_key="fk-null-tight")
+    rows = con.execute("SELECT rule_id, current_severity FROM mv_finding").fetchall()
+    assert [r[0] for r in rows] == ["r-at-threshold", "r-null"]
+    assert rows[1][1] is None
+
+
 def test_null_severity_sorts_last_within_its_priority_band(con: duckdb.DuckDBPyConnection) -> None:
     """`NULLS LAST`: a kind that cannot express urgency (e.g. `allocation_absent`, ADR-L02)
     must not outrank one that can, within the same `priority` band."""

@@ -59,5 +59,9 @@ def test_seed_demo_and_evaluate_matches_golden_file(tmp_path: Path) -> None:
     assert Decimal(severity) == Decimal(expected["severity"])
     assert suggestion_class == expected["suggestion_class"]
 
+    # Only structured/canonical bindings are pinned — never `asset_class_label` or any other
+    # Italian surface string, which the label registry (L05, W1d) is about to change. A prose
+    # golden file would fail for a reason that has nothing to do with correctness.
     message_bindings = json.loads(trace)["message_bindings"]
-    assert message_bindings == expected["message_bindings"]
+    pinned = {k: v for k, v in message_bindings.items() if k in expected["message_bindings"]}
+    assert pinned == expected["message_bindings"]
