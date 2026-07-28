@@ -31,16 +31,35 @@
   caption      str    Italian. Should say which series this is and, if the
                       chart annotates anything, why.
   legend       list[dict]|None  each {label, swatch, value (str|None)} where
-                      swatch is "1".."5" or "void". Required for ≥2 series.
+                      swatch is "1".."5", "void", or one of the cased-cane
+                      roles "casing" / "core" / "edge" / "target". Required for
+                      ≥2 series, and required for the cased cane at any count,
+                      because three marks in one row need naming.
+  empty_lead   str    optional; shown when `option` is None
+  empty_body   str    optional; ditto. Must not read as a zero.
   table_head   list[str]        column headers for the as-recorded table
   table_rows   list[list[str]]  cell strings, already formatted it-IT
   table_label  str    accessible caption for the table
 #}
 <figure class="chart" style="--chart-h: {{ height | default('260px', true) }}">
 
+  {# THE EMPTY STATE IS A STATE, NOT A BLANK CANVAS. `option = None` means there
+     is no series to draw — no run yet, or a run that evaluated nothing here.
+     An empty plot frame would read as "zero", which is a measurement; this says
+     what is actually true instead, and the table below stays in the document.
+     Handled server-side so it is correct with JavaScript off too. #}
+  {% if option %}
   <script type="application/json" id="{{ chart_id }}-option">{{ option | tojson }}</script>
   <div class="chart__canvas" id="{{ chart_id }}" data-chart="{{ chart_id }}-option"
        role="img" aria-label="{{ caption }}"></div>
+  {% else %}
+  <div class="state state--chart">
+    <p class="state__lead">{{ empty_lead | default("Nessuna serie da mostrare.", true) }}</p>
+    <p class="state__body">{{ empty_body | default(
+      "Non c'è ancora una valutazione da cui leggere questa serie. Questo non è
+       uno zero: è l'assenza di una misura.", true) }}</p>
+  </div>
+  {% endif %}
 
   {% if legend %}
   <ul class="legend" style="margin-top: var(--sp-3)">

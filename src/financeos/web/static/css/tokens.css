@@ -5,33 +5,45 @@
    also marks which decisions are the designer's and which are corpus-mandated
    invariants a future reader must not "improve".
 
-   THESIS: Il Repertorio — a notary's register, rendered as a modern
-   instrument. Numbered, dated, authenticated acts; nothing is ever erased; a
-   correction arrives as a marginal annotation beside the original; the party's
-   own words are quoted verbatim and set apart. It refuses the fintech
-   dashboard (hero net-worth number, donut, green/red delta pills, rounded
-   cards) AND the muted-paper broadsheet the reference mock reached for.
+   THESIS: VETRO SOMMERSO — Murano glass, dark first. A deep ink-blue ground
+   with luminous jewel canes read against it, and every mark built as
+   submerged layers under a single light source. Sommerso is the technique of
+   casing one colour inside another, and that is literally what an apportioned
+   allocation is: a declared shape with an actual quantity sitting inside it.
+   So the chart form and the palette are the same decision here, which is the
+   whole reason this world was chosen over a bar chart with nicer colours.
 
-   OWN-WORLD: cool protocol-paper greys, never cream. Iron-gall ink. Four
-   status inks with fixed jobs — carmine seal = breach, olive bollo = not
-   evaluated, verdigris = inside tolerance, aniline violet = a reference to
-   another act. Over that, a validated five-hue categorical palette that makes
-   charts a primary way of reading the data rather than a decoration. Zero
-   radius everywhere. Double vertical rules define a margin column on every
-   record; that margin is where annotations and ordinals live.
+   NO VALUE IN THIS FILE WAS PICKED BY HAND. Every hex is solved by
+   docs/design/palette_search.py against the gates of
+   dataviz/scripts/validate_palette.js — the OKLCH lightness band, the chroma
+   floor, adjacent CVD separation under Machado-Oliveira-Fernandes 2009, the
+   normal-vision floor, and WCAG contrast — in BOTH schemes, and re-verified on
+   every run of that script. To change a colour, change a gate or a declared
+   parameter and re-run it. Do not edit a hex here.
 
-   Do not add a token here to silence a linter. Every neutral and ink is
-   WCAG-verified against both surfaces; every series hue is validated by
-   dataviz/scripts/validate_palette.js in BOTH modes.
+   THE RULE THE WHOLE PALETTE RESTS ON:
+       THE WARM HALF OF THE WHEEL BELONGS TO STATUS.
+       DATA LIVES IN THE COOL HALF.
+   The two reserved status inks (alarm crimson, caution brass) have their hue
+   windows excluded from the series set outright, not merely separated by a
+   distance metric — a search run that was only distance-gated duly parked a
+   series slot one lightness step off the alarm ink and passed every check.
+   A warm mark in this interface is therefore never a measurement.
+
+   IN-TOLERANCE IS NEUTRAL, NOT GREEN. The system reports; it does not
+   congratulate. Only the departure from a declared target takes colour.
    ========================================================================== */
 
 :root {
-  color-scheme: light dark;
+  /* Dark first, and not as a preference: this world is a deep ground with
+     light coming through it, so dark is the base declaration and light is the
+     override. A reader with no stated preference gets the world as designed. */
+  color-scheme: dark light;
 
   /* ---- type: three voices, three faces (UX-0001 §4.5, load-bearing per ADR-L03 §6) */
-  --face-system:   "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --face-system:   "Archivo", ui-sans-serif, system-ui, sans-serif;
   --face-value:    "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
-  --face-declared: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --face-declared: "Faustina", Georgia, "Times New Roman", serif;
 
   /* fixed rem scale, ratio ~1.125 (Operate: never fluid, users are at one DPI) */
   --fs-micro: 0.6875rem;  /* 11px — margin ordinals, register labels, ids   */
@@ -60,7 +72,7 @@
   --sp-1:  4px;   --sp-2:  8px;   --sp-3: 12px;  --sp-4: 16px;
   --sp-5: 20px;   --sp-6: 24px;   --sp-8: 32px;  --sp-10: 40px;  --sp-12: 48px;
 
-  /* ---- form language: a register has no rounded corners */
+  /* ---- form language: cut glass has hard edges, so nothing is rounded */
   --radius: 0;
   --bw: 1px;              /* every hairline is exactly one pixel            */
   --margin-col: 34px;     /* the annotation margin on every record          */
@@ -73,29 +85,53 @@
   --dur-base: 160ms;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* ---- LIGHT: protocol paper, read at a desk in daylight ---------------- */
-  --ground:        #e4e8ec;  /* the stack of paper the record sits on        */
-  --sheet:         #f7f8fa;  /* the record sheet itself                     */
-  --sheet-sunken:  #eef0f4;  /* ruled inset: totals, the held step          */
+  /* ======================================================================
+     DARK — the world as designed. Evening, one lamp, glass over a dark
+     ground. GENERATED by docs/design/palette_search.py.
+     ====================================================================== */
 
-  --ink:    #14181d;         /* iron-gall, cool         16.8:1 on sheet     */
-  --ink-2:  #464e57;         /* secondary                7.9:1 on sheet     */
-  --ink-3:  #5a636d;         /* register labels          5.7:1 / 5.0:1      */
+  /* grounds — three thicknesses of glass. The deepest layer carries the most
+     colour, because in sommerso the thickest glass does. THIS IS WHERE THE
+     PALETTE WAS PUSHED: a ground owes contrast to TEXT only, never to a
+     series, so it is the one surface with real chromatic headroom. Chroma
+     0.075 at the deepest layer, against 0.028 in the candidate proof. */
+  --ground:       #000223;   /* the page: the bottom of the piece            */
+  --sheet:        #06102c;   /* the record surface                           */
+  --sheet-sunken: #151f38;   /* an inset: totals rows, the held step         */
 
-  --rule:         #cfd5dc;   /* table dividers (decorative)                 */
-  --rule-strong:  #b6bec7;   /* record frames, the double margin rule       */
-  --rule-control: #7b8590;   /* input/button edges — 3.5:1, non-text AA     */
+  /* inks — solved by bisection onto their contrast target against --sheet */
+  --ink:    #d2d7e1;         /* 13.0:1 on sheet                             */
+  --ink-2:  #999faa;         /*  7.1:1                                      */
+  --ink-3:  #777e8c;         /*  4.6:1                                      */
 
-  --seal:       #963029;     /* BREACH · FIRED · negative      7.2:1        */
-  --seal-tint:  #f7ecea;
-  --bollo:      #6f5a12;     /* NOT EVALUATED · soft warning   6.3:1        */
-  --bollo-tint: #f5f0dd;
-  --verdigris:      #26624f; /* INSIDE TOLERANCE · positive    6.7:1        */
-  --verdigris-tint: #e7efeb;
-  --annot:      #5a3aa8;     /* REFERENCE to another act · links  7.6:1     */
-  --annot-tint: #eeeaf8;
+  --rule:         #232b3a;   /* table dividers (decorative)   1.3:1         */
+  --rule-strong:  #3c4454;   /* record frames                 1.9:1         */
+  --rule-control: #5a6271;   /* input/button edges — 3.1:1, non-text AA     */
 
-  --hatch-ink: rgba(20, 24, 29, 0.30);  /* cancellation hatching            */
+  /* reserved status inks — NEVER a series colour, and their hue windows are
+     excluded from the series set. Each ships with its own texture as well, so
+     hue is never doing the work alone. */
+  --alarm:        #ff8178;   /* BREACH · FIRED · out of tolerance   7.8:1   */
+  --alarm-tint:   #241111;
+  --caution:      #d79700;   /* NOT EVALUATED · soft warning        7.4:1   */
+  --caution-tint: #1b160f;
+
+  /* the reference ink IS the light. It is solved at an extreme lightness
+     rather than as a hue, so it separates from every series by lightness
+     (dL >= 0.25) and hands the whole cool half of the wheel back to the data.
+     Links also always carry an underline: never colour alone. */
+  --annot:      #a4eefb;     /* a REFERENCE to another act · links  14.5:1  */
+  --annot-tint: #10191b;
+
+  /* glass — the one named elevation level in this world is a LUMINOUS EDGE.
+     There are no drop shadows on any surface. */
+  --edge:       #c1e0e8;     /* the single light source; 2.2:1 on every cane */
+  --lift-ink:   rgba(193, 224, 232, 0.14);
+  --lift:       inset 0 1px 0 0 var(--lift-ink);
+  --band:       #1e273b;     /* the in-tolerance field: NEUTRAL, not green   */
+  --band-edge:  #526282;     /* its edges                     3.1:1         */
+
+  --hatch-ink: rgba(210, 215, 225, 0.26);  /* cancellation hatching         */
   --focus: var(--annot);
 
   /* ---- CLASS B RESERVATION  (RFC-0010 §6.4 — a kill criterion) ----------
@@ -106,133 +142,154 @@
      is not retrofitted onto a system with no room for it. Class B is carried
      by TEXTURE plus a mandatory inline assumption, never by hue alone, and
      `severity` must never sort across classes.                              */
-  --projection: #6b4d8f;
-  --projection-tint: #f0ecf6;
+  --projection: #cb96fb;
+  --projection-tint: #1e1123;
   --projection-texture: repeating-linear-gradient(
     45deg, transparent 0 4px, var(--hatch-ink) 4px 5px);
 
   /* ==== CHART LAYER =====================================================
      Categorical slots are assigned to ENTITIES, in the declared order of the
      strategy tree, and never cycled or re-assigned when a filter changes the
-     series count. Validated with dataviz/scripts/validate_palette.js against
-     --sheet in both modes: all five checks PASS. Worst adjacent CVD ΔE 8.3
-     protan / 6.0 tritan — tritan sits in the 6–8 band, so SECONDARY ENCODING
-     IS MANDATORY: a legend is always present, series are direct-labelled, and
-     stacked segments carry a 2px surface gap. Never colour alone.           */
-  --series-1: #0e6ea6;  /* EQUITY_DEVELOPED — azure                          */
-  --series-2: #0b8f68;  /* EQUITY_EMERGING  — teal                           */
-  --series-3: #c07408;  /* BOND_GOV_EUR     — amber                          */
-  --series-4: #c33f7d;  /* BOND_CORP_IG     — magenta                        */
-  --series-5: #3f5cc4;  /* CASH             — indigo                         */
+     series count.
 
-  /* Untargeted / UNASSIGNED capital gets NO hue. It is capital with no
-     target that nonetheless stays in the denominator (RFC-0007 §4.1), so it
-     reads as void: neutral plus the register's cancellation hatch. This is
-     also the texture channel dataviz requires for CVD / print / forced-colors. */
-  --series-void: #7b8590;
+     Validated by dataviz/scripts/validate_palette.js against --sheet in both
+     schemes: ALL FIVE CHECKS PASS. Worst adjacent CVD dE 10.6 protan (dark) /
+     10.8 deutan (light) against a target of 8.0 — the candidate world's 7.6
+     protan WARN is gone. Worst adjacent normal-vision dE 24.2 / 21.9.
+
+     TRITAN sits at 4.8 in light, which the validator reports but does not
+     gate. SECONDARY ENCODING IS THEREFORE MANDATORY AND UNCONDITIONAL, and it
+     is also what covers all-pairs CVD (2.8 — no five-hue set wide enough to
+     look varied can pass all-pairs, because a red and a green collapse under
+     protanopia by construction): a legend is always present, classes are
+     direct-labelled on the axis, every fill carries a 2px surface gap, the
+     void cane carries a hatch, and the cased cane's polarity is GEOMETRIC.
+     Never colour alone.
+
+     CONSEQUENCE, recorded because it binds a future screen: a scatter, bubble
+     or choropleth here may carry at most THREE series. Those forms put any two
+     marks side by side, so they need all-pairs separation, and three is what
+     five hues can deliver. Fold to "altro" or facet — never re-hue.          */
+  --series-1: #dd5bbe;  /* EQUITY_DEVELOPED                                  */
+  --series-2: #3056d5;  /* EQUITY_EMERGING                                   */
+  --series-3: #009105;  /* BOND_GOV_EUR                                      */
+  --series-4: #1a9ed1;  /* BOND_CORP_IG                                      */
+  --series-5: #833fc4;  /* CASH                                              */
+
+  /* Untargeted / UNASSIGNED capital gets NO hue. It is capital with no target
+     that nonetheless stays in the denominator (RFC-0007 §4.1), so it reads as
+     void: neutral plus the cancellation hatch. This is also the texture
+     channel dataviz requires for CVD / print / forced-colors. */
+  --series-void: #596273;
   --series-void-texture: repeating-linear-gradient(
     45deg, transparent 0 3px, var(--hatch-ink) 3px 4px);
 
-  /* sequential — magnitude (severity over runs). One hue, light to dark. */
-  --seq-100: #b2ecff; --seq-200: #92d2ff; --seq-300: #6eb6ec; --seq-400: #489ad4;
-  --seq-500: #2980b9; --seq-600: #00669e; --seq-700: #004c7f;
+  /* sequential — magnitude (severity over runs). One hue, monotone lightness;
+     passes the ordinal gates (dL >= 0.06, light end 2.0:1, single hue). */
+  --seq-100: #26438e; --seq-200: #3857a5; --seq-300: #4a6cbc; --seq-400: #5e81d3;
+  --seq-500: #7297ea; --seq-600: #8caef9; --seq-700: #adc6fb;
 
-  /* diverging — signed drift around target. Warm/cool poles, NEUTRAL GREY
-     midpoint (never a hue at the midpoint). Under-target reads carmine
-     because falling short of a declared target is the product's core finding. */
-  --div-under-3: #89231e; --div-under-2: #9f4d44; --div-under-1: #b9827b;
-  --div-mid:     #dcdfe3;
-  --div-over-1:  #7297b4; --div-over-2:  #306f9b; --div-over-3:  #005288;
+  /* diverging — signed drift around a target. Two poles and a NEUTRAL midpoint
+     (never a hue at the middle). Under-target wears the alarm family, because
+     falling short of a declared target is this product's core finding. */
+  --div-under-3: #af3432; --div-under-2: #c24642; --div-under-1: #d55851;
+  --div-mid:     #272a30;
+  --div-over-1:  #1b96a8; --div-over-2:  #178494; --div-over-3:  #127380;
 
   /* chart chrome — recessive by construction */
   --chart-surface: var(--sheet);
-  --chart-grid:    #e0e4e9;
-  --chart-axis:    #b6bec7;
+  --chart-grid:    #202837;
+  --chart-axis:    #3c4454;
   --chart-ink:     var(--ink);
   --chart-ink-2:   var(--ink-2);
   --chart-ink-3:   var(--ink-3);
 }
 
 /* ==========================================================================
-   DARK — the same register on microfilm. NOT "dark cards", and not an
-   automatic flip: every ink and every series step was re-selected for the
-   dark surface and re-validated against it.
-   The scene that forces it: the same person, same desk, evening, one lamp.
+   LIGHT — the same piece on a bright table. NOT an automatic flip: every ink
+   and every series step is its own solved set, gated against the light
+   surface. The scene that forces it: the same person, same desk, daylight.
 
    Declared twice by design (the pattern dataviz specifies): the media query
    follows the OS, the [data-theme] scope follows an explicit stamp, and the
-   stamp must win both ways. The :not([data-theme="light"]) guard lets a light
-   stamp beat OS-dark; :where() keeps the media block's specificity at zero so
+   stamp must win both ways. The :not([data-theme="dark"]) guard lets a dark
+   stamp beat OS-light; :where() keeps the media block's specificity at zero so
    the stamp below always overrides it.
    ========================================================================== */
 
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) {
-    color-scheme: dark;
-    --ground: #10141a; --sheet: #171c23; --sheet-sunken: #1d232b;
-    --ink: #e3e7ea;            /* 13.8:1 on sheet */
-    --ink-2: #a3adb8;          /*  7.5:1 */
-    --ink-3: #808b96;          /*  4.9:1 */
-    --rule: #2b333c; --rule-strong: #3d474f;
-    --rule-control: #62707d;   /*  3.4:1 non-text AA */
-    --seal: #f0857a;      --seal-tint: #2b1a1c;       /* 6.8:1 */
-    --bollo: #d9b356;     --bollo-tint: #272013;      /* 8.6:1 */
-    --verdigris: #64c4a0; --verdigris-tint: #14261f;  /* 8.1:1 */
-    --annot: #b39af5;     --annot-tint: #211a33;      /* 7.2:1 */
-    --hatch-ink: rgba(227, 231, 234, 0.26);
-    --projection: #a98cf0; --projection-tint: #201a2e;
-    --series-1: #1e77b0; --series-2: #209871; --series-3: #ca7d1c;
-    --series-4: #cd4986; --series-5: #4765ce;
-    --series-void: #62707d;
-    --seq-100: #004c7f; --seq-200: #00669e; --seq-300: #2980b9; --seq-400: #489ad4;
-    --seq-500: #6eb6ec; --seq-600: #92d2ff; --seq-700: #b2ecff;
-    --div-under-3: #f0857a; --div-under-2: #cf6a62; --div-under-1: #a1544f;
-    --div-mid: #333b45;
-    --div-over-1: #4a6f8c; --div-over-2: #3f8cbf; --div-over-3: #5aa9e0;
-    --chart-grid: #232b34; --chart-axis: #3d474f;
+@media (prefers-color-scheme: light) {
+  :root:where(:not([data-theme="dark"])) {
+    color-scheme: light;
+    --ground: #cfe2f8; --sheet: #f1f8ff; --sheet-sunken: #bbd2ed;
+    --ink: #272c33;            /* 13.1:1 on sheet */
+    --ink-2: #4e555f;          /*  7.0:1 */
+    --ink-3: #67717d;          /*  4.6:1 */
+    --rule: #cbdaec; --rule-strong: #a8b7c9;
+    --rule-control: #838f9e;   /*  3.1:1 non-text AA */
+    --alarm: #931b1f;     --alarm-tint: #f4eaea;      /* 8.1:1 */
+    --caution: #9b5d00;   --caution-tint: #f4ecde;    /* 5.0:1 */
+    --annot: #004a5f;     --annot-tint: #e1f0f4;      /* 9.1:1 */
+    --edge: #173239;
+    --lift-ink: rgba(23, 50, 57, 0.10);
+    --band: #d0e0f2; --band-edge: #7690af;
+    --hatch-ink: rgba(39, 44, 51, 0.30);
+    --projection: #621e76; --projection-tint: #f1eaf4;
+    --series-1: #ab2890; --series-2: #507dff; --series-3: #1fa31e;
+    --series-4: #0099cc; --series-5: #8c4ace;
+    --series-void: #818fa0;
+    --seq-100: #8caef9; --seq-200: #7297ea; --seq-300: #5e81d2; --seq-400: #4a6cbb;
+    --seq-500: #3757a4; --seq-600: #25438e; --seq-700: #142f78;
+    --div-under-3: #94151c; --div-under-2: #ad3231; --div-under-1: #c74b47;
+    --div-mid: #d1d7de;
+    --div-over-1: #1787a8; --div-over-2: #126f8b; --div-over-3: #0c586f;
+    --chart-grid: #d0dff2; --chart-axis: #a8b7c9;
   }
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --ground: #e4e8ec; --sheet: #f7f8fa; --sheet-sunken: #eef0f4;
-  --ink: #14181d; --ink-2: #464e57; --ink-3: #5a636d;
-  --rule: #cfd5dc; --rule-strong: #b6bec7; --rule-control: #7b8590;
-  --seal: #963029;      --seal-tint: #f7ecea;
-  --bollo: #6f5a12;     --bollo-tint: #f5f0dd;
-  --verdigris: #26624f; --verdigris-tint: #e7efeb;
-  --annot: #5a3aa8;     --annot-tint: #eeeaf8;
-  --hatch-ink: rgba(20, 24, 29, 0.30);
-  --projection: #6b4d8f; --projection-tint: #f0ecf6;
-  --series-1: #0e6ea6; --series-2: #0b8f68; --series-3: #c07408;
-  --series-4: #c33f7d; --series-5: #3f5cc4;
-  --series-void: #7b8590;
-  --seq-100: #b2ecff; --seq-200: #92d2ff; --seq-300: #6eb6ec; --seq-400: #489ad4;
-  --seq-500: #2980b9; --seq-600: #00669e; --seq-700: #004c7f;
-  --div-under-3: #89231e; --div-under-2: #9f4d44; --div-under-1: #b9827b;
-  --div-mid: #dcdfe3;
-  --div-over-1: #7297b4; --div-over-2: #306f9b; --div-over-3: #005288;
-  --chart-grid: #e0e4e9; --chart-axis: #b6bec7;
+  --ground: #cfe2f8; --sheet: #f1f8ff; --sheet-sunken: #bbd2ed;
+  --ink: #272c33; --ink-2: #4e555f; --ink-3: #67717d;
+  --rule: #cbdaec; --rule-strong: #a8b7c9; --rule-control: #838f9e;
+  --alarm: #931b1f;     --alarm-tint: #f4eaea;
+  --caution: #9b5d00;   --caution-tint: #f4ecde;
+  --annot: #004a5f;     --annot-tint: #e1f0f4;
+  --edge: #173239;
+  --lift-ink: rgba(23, 50, 57, 0.10);
+  --band: #d0e0f2; --band-edge: #7690af;
+  --hatch-ink: rgba(39, 44, 51, 0.30);
+  --projection: #621e76; --projection-tint: #f1eaf4;
+  --series-1: #ab2890; --series-2: #507dff; --series-3: #1fa31e;
+  --series-4: #0099cc; --series-5: #8c4ace;
+  --series-void: #818fa0;
+  --seq-100: #8caef9; --seq-200: #7297ea; --seq-300: #5e81d2; --seq-400: #4a6cbb;
+  --seq-500: #3757a4; --seq-600: #25438e; --seq-700: #142f78;
+  --div-under-3: #94151c; --div-under-2: #ad3231; --div-under-1: #c74b47;
+  --div-mid: #d1d7de;
+  --div-over-1: #1787a8; --div-over-2: #126f8b; --div-over-3: #0c586f;
+  --chart-grid: #d0dff2; --chart-axis: #a8b7c9;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --ground: #10141a; --sheet: #171c23; --sheet-sunken: #1d232b;
-  --ink: #e3e7ea; --ink-2: #a3adb8; --ink-3: #808b96;
-  --rule: #2b333c; --rule-strong: #3d474f; --rule-control: #62707d;
-  --seal: #f0857a;      --seal-tint: #2b1a1c;
-  --bollo: #d9b356;     --bollo-tint: #272013;
-  --verdigris: #64c4a0; --verdigris-tint: #14261f;
-  --annot: #b39af5;     --annot-tint: #211a33;
-  --hatch-ink: rgba(227, 231, 234, 0.26);
-  --projection: #a98cf0; --projection-tint: #201a2e;
-  --series-1: #1e77b0; --series-2: #209871; --series-3: #ca7d1c;
-  --series-4: #cd4986; --series-5: #4765ce;
-  --series-void: #62707d;
-  --seq-100: #004c7f; --seq-200: #00669e; --seq-300: #2980b9; --seq-400: #489ad4;
-  --seq-500: #6eb6ec; --seq-600: #92d2ff; --seq-700: #b2ecff;
-  --div-under-3: #f0857a; --div-under-2: #cf6a62; --div-under-1: #a1544f;
-  --div-mid: #333b45;
-  --div-over-1: #4a6f8c; --div-over-2: #3f8cbf; --div-over-3: #5aa9e0;
-  --chart-grid: #232b34; --chart-axis: #3d474f;
+  --ground: #000223; --sheet: #06102c; --sheet-sunken: #151f38;
+  --ink: #d2d7e1; --ink-2: #999faa; --ink-3: #777e8c;
+  --rule: #232b3a; --rule-strong: #3c4454; --rule-control: #5a6271;
+  --alarm: #ff8178;     --alarm-tint: #241111;
+  --caution: #d79700;   --caution-tint: #1b160f;
+  --annot: #a4eefb;     --annot-tint: #10191b;
+  --edge: #c1e0e8;
+  --lift-ink: rgba(193, 224, 232, 0.14);
+  --band: #1e273b; --band-edge: #526282;
+  --hatch-ink: rgba(210, 215, 225, 0.26);
+  --projection: #cb96fb; --projection-tint: #1e1123;
+  --series-1: #dd5bbe; --series-2: #3056d5; --series-3: #009105;
+  --series-4: #1a9ed1; --series-5: #833fc4;
+  --series-void: #596273;
+  --seq-100: #26438e; --seq-200: #3857a5; --seq-300: #4a6cbc; --seq-400: #5e81d3;
+  --seq-500: #7297ea; --seq-600: #8caef9; --seq-700: #adc6fb;
+  --div-under-3: #af3432; --div-under-2: #c24642; --div-under-1: #d55851;
+  --div-mid: #272a30;
+  --div-over-1: #1b96a8; --div-over-2: #178494; --div-over-3: #127380;
+  --chart-grid: #202837; --chart-axis: #3c4454;
 }

@@ -1,0 +1,61 @@
+FINANCE OS — VENDORED TYPEFACES
+===============================
+
+Every face this application ships, and nothing else. ADR-0008 Local First: no
+font is fetched from a network host, ever, so this directory is the complete
+list of type in the product and it must stay that way.
+
+All three families are licensed under the SIL Open Font License, Version 1.1.
+The full licence text is in LICENSE-IBM-Plex.txt in this directory; OFL 1.1 is
+one licence text and it governs all three, so the per-family copyright notices
+and Reserved Font Names it requires are recorded here.
+
+  archivo-var-400-700.woff2      Archivo (variable, weight 100-700)
+                                 THE SYSTEM VOICE — chrome, labels, observations
+                                 Copyright 2011 The Archivo Project Authors
+                                 (https://github.com/Omnibus-Type/Archivo)
+
+  ibm-plex-mono-400.woff2        IBM Plex Mono 400
+  ibm-plex-mono-500.woff2        IBM Plex Mono 500
+                                 THE VALUE VOICE — every number, id, trace row
+                                 Copyright (c) 2017 IBM Corp.
+                                 with Reserved Font Name "Plex"
+
+  faustina-400-600.woff2         Faustina (variable, weight 400-600)
+                                 THE DECLARED VOICE — the user's own words only
+                                 Copyright 2017 The Faustina Project Authors
+                                 (https://github.com/Omnibus-Type/Faustina)
+
+All three are LATIN SUBSETS. They cover Italian accents, the euro sign, the
+middle dot, plus/minus and the true minus, and the single guillemets. A glyph
+outside that range must be DRAWN IN CSS, never typed — widening a subset for one
+character is how a 340 KB font budget becomes a 900 KB one. The tolerance rail's
+clamp caret is drawn as a CSS triangle for exactly this reason.
+
+WHY THESE THREE (see /DESIGN.md, Typography):
+  Three families, not one superfamily. They do not share metrics, so each voice
+  carries its own size and leading step — and in exchange a change of voice is
+  unmistakable, which is what UX-0001 §4.5 and ADR-L03 §6 make load-bearing.
+  Martian Mono was on the table as the value voice and was declined: its advance
+  width is roughly 40% wider than Plex Mono's, and the value voice carries the
+  trace ladder, which is the densest text in the product.
+
+STILL VENDORED, DELIBERATELY, AND NOT REFERENCED BY ANY @font-face. The faces
+above are World B's call but the three voices are not signed off yet, so the
+spares stay until they are — deleting a woff2 is irreversible and buys nothing
+today. docs/design/audit_offline.mjs reports them as a NOTE rather than a
+failure for exactly this reason; make it a failure the day the voices settle.
+
+  ibm-plex-sans-var.woff2          the rejected identity's system voice
+  ibm-plex-serif-400.woff2         the rejected identity's declared voice
+  ibm-plex-serif-400-italic.woff2  ditto
+  faustina-400-italic.woff2        candidate B's declared voice (italic cut)
+  martian-mono-400.woff2           candidate A's value voice — the half of the
+  martian-mono-500.woff2           cross-graft that was declined
+
+These six are the deletable set: 130 KB, and nothing in the product names them.
+
+KNOWN GAP, inherited and worth closing: these files carry no integrity pin. The
+vendored ECharts bundle records a sha256 in vendor/echarts/PINNED.txt because a
+CDN silently resolved a version during vendoring; fonts deserve the same
+treatment, and do not have it yet.

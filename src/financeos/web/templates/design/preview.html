@@ -72,9 +72,10 @@
         ('--ink-2','ink-2','7,5:1'),
         ('--ink-3','ink-3','4,9:1'),
         ('--rule-control','rule-control','3,4:1 non-testo'),
-        ('--seal','seal','violazione'),
-        ('--bollo','bollo','non valutato'),
-        ('--verdigris','verdigris','entro tolleranza'),
+        ('--alarm','alarm','violazione · riservato'),
+        ('--caution','caution','non valutato · riservato'),
+        ('--band','band','entro tolleranza: neutro'),
+        ('--edge','edge','la sorgente di luce'),
         ('--annot','annot','riferimento'),
         ('--projection','projection','Classe B, riservato') ] %}
       <div class="sw">
@@ -89,11 +90,17 @@
   <div class="spec">
     <h3>02 · Serie categoriali (convalidate)</h3>
     <p class="spec__note">Cinque tinte assegnate a entità nell'ordine dell'albero
-    della strategia, mai ciclate. Convalidate su entrambe le superfici: la
-    coppia adiacente peggiore sta nella banda tritan 6–8, quindi la legenda e
-    l'etichetta diretta sono <strong>obbligatorie</strong> — il colore non porta
-    mai da solo l'identità. Il capitale non targettizzato non ha tinta: è vuoto,
-    e si legge con il tratteggio di annullamento.</p>
+    della strategia, mai ciclate. Nessuna è scelta a mano: sono risolte per
+    ricerca contro le soglie del validatore, su <em>entrambe</em> le superfici.
+    La coppia adiacente peggiore sta a ΔE 10,6 protan contro un obiettivo di
+    8,0 — l'avviso protan 7,6 del mondo candidato non c'è più. La separazione
+    tritan resta a 4,8 in chiaro e nessun insieme di cinque tinte può superare
+    il controllo su <em>tutte</em> le coppie, quindi la legenda, l'etichetta
+    diretta, lo stacco di 2px e il tratteggio sono
+    <strong>obbligatori</strong>: il colore non porta mai da solo l'identità.
+    <br><br>La metà calda della ruota è riservata allo stato: un segno caldo,
+    qui, non è mai una misura. Il capitale non targettizzato non ha tinta — è
+    vuoto, e si legge con il tratteggio di annullamento.</p>
     <div class="swatches">
       {% for name, label in [
         ('--series-1','EQUITY_DEVELOPED'), ('--series-2','EQUITY_EMERGING'),
@@ -302,6 +309,64 @@
                   caption = fixture.chart_severity_caption, legend = None,
                   table_head = fixture.chart_severity_head, table_rows = fixture.chart_severity_rows,
                   height = '250px' %}
+            {% include "partials/chart.html" %}
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+
+    <p class="spec__note" style="margin-top: var(--sp-4)">Il secondo livello
+    della stessa idea: il patrimonio netto <em>è</em> i suoi Bucket più il
+    residuo. Qui la cassa non serve, perché il tutto è la somma delle parti — e
+    la tacca sul totale permette di vedere che chiudono, invece di leggere che
+    chiudono.</p>
+    <div class="record" style="margin-top: var(--sp-3)">
+      <div class="record__margin" aria-hidden="true"></div>
+      <div class="record__body">
+        <div class="record__head">
+          <span class="record__designation record__designation--minor">La canna annidata · composizione del patrimonio</span>
+        </div>
+        {% with chart_id = 'chart-comp-' ~ theme, option = fixture.chart_composition,
+                caption = fixture.chart_composition_caption,
+                legend = fixture.chart_composition_legend,
+                table_head = fixture.chart_composition_head,
+                table_rows = fixture.chart_composition_rows,
+                height = '150px' %}
+          {% include "partials/chart.html" %}
+        {% endwith %}
+      </div>
+    </div>
+
+    <p class="spec__note" style="margin-top: var(--sp-4)">Due stati che un
+    sistema di grafici deve dichiarare, o li improvviserà una schermata alla
+    volta: <strong>un solo punto</strong> e <strong>nessuna serie</strong>.</p>
+    <div class="grid-2" style="margin-top: var(--sp-3)">
+      <div class="record">
+        <div class="record__margin" aria-hidden="true"></div>
+        <div class="record__body">
+          <div class="record__head">
+            <span class="record__designation record__designation--minor">Una sola valutazione</span>
+          </div>
+          {% with chart_id = 'chart-sev1-' ~ theme, option = fixture.chart_severity_single,
+                  caption = fixture.chart_severity_single_caption, legend = None,
+                  table_head = fixture.chart_severity_single_head,
+                  table_rows = fixture.chart_severity_single_rows,
+                  height = '180px' %}
+            {% include "partials/chart.html" %}
+          {% endwith %}
+        </div>
+      </div>
+      <div class="record">
+        <div class="record__margin" aria-hidden="true"></div>
+        <div class="record__body">
+          <div class="record__head">
+            <span class="record__designation record__designation--minor">Nessuna serie</span>
+          </div>
+          {% with chart_id = 'chart-empty-' ~ theme, option = None,
+                  caption = fixture.chart_empty_caption, legend = None,
+                  empty_lead = fixture.chart_empty_lead, empty_body = fixture.chart_empty_body,
+                  table_head = fixture.chart_empty_head, table_rows = fixture.chart_empty_rows,
+                  height = '180px' %}
             {% include "partials/chart.html" %}
           {% endwith %}
         </div>

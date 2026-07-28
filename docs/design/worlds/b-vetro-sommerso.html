@@ -3,89 +3,124 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vetro Sommerso · proposta di mondo visivo · Finance OS</title>
+<title>Vetro Sommerso · il mondo visivo deciso · Finance OS</title>
 <style>
-@font-face{font-family:"Archivo";font-style:normal;font-weight:100 700;font-display:swap;src:url("../../../src/financeos/web/static/fonts/archivo-var-400-700.woff2") format("woff2");}
-@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("../../../src/financeos/web/static/fonts/ibm-plex-mono-400.woff2") format("woff2");}
-@font-face{font-family:"Faustina";font-style:italic;font-weight:400;font-display:swap;src:url("../../../src/financeos/web/static/fonts/faustina-400-italic.woff2") format("woff2");}
+@font-face{font-family:"Archivo";font-style:normal;font-weight:100 700;font-display:swap;src:url("../../../src/financeos/web/static/fonts/archivo-var-400-700.woff2") format("woff2-variations"),url("../../../src/financeos/web/static/fonts/archivo-var-400-700.woff2") format("woff2");}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("../../../src/financeos/web/static/fonts/ibm-plex-mono-400.woff2") format("woff2"),url("../../../src/financeos/web/static/fonts/ibm-plex-mono-400.woff2") format("woff2");}
+@font-face{font-family:"Faustina";font-style:normal;font-weight:400 600;font-display:swap;src:url("../../../src/financeos/web/static/fonts/faustina-400-600.woff2") format("woff2-variations"),url("../../../src/financeos/web/static/fonts/faustina-400-600.woff2") format("woff2");}
 
-[data-scheme="light"] {
-  color-scheme: light;
-  --ground:#e9edf4; --sheet:#f7f9fc; --sunken:#dde4ee;
-  --ink:#101726; --ink-2:#45516a; --ink-3:#5c6880;
-  --rule:#cbd4e2; --rule-2:#aab6c9; --control:#74809a;
-  --alarm:#c02249; --alarm-tint:#fbe8ed;
-  --band:#dde7f2; --band-edge:#8aa4c4;
-  --s1:#4d70b2; --s2:#04a3aa; --s3:#14764a;
-  --s4:#af7a31; --s5:#9564a4; --void:#7d8798;
-}
 [data-scheme="dark"] {
   color-scheme: dark;
-  --ground:#0d1220; --sheet:#141b2b; --sunken:#1c2537;
-  --ink:#e9edf6; --ink-2:#a4b0c8; --ink-3:#8493ad;
-  --rule:#26314a; --rule-2:#38455f; --control:#5d6d8a;
-  --alarm:#f2607f; --alarm-tint:#2b1520;
-  --band:#1a2740; --band-edge:#4a6b8f;
-  --s1:#5376b8; --s2:#19a9b0; --s3:#1e7c50;
-  --s4:#b58037; --s5:#9b6aab; --void:#69768e;
+  --ground: #000223;
+  --sheet: #06102c;
+  --sheet-sunken: #151f38;
+  --ink: #d2d7e1;
+  --ink-2: #999faa;
+  --ink-3: #777e8c;
+  --rule: #232b3a;
+  --rule-strong: #3c4454;
+  --rule-control: #5a6271;
+  --alarm: #ff8178;
+  --alarm-tint: #241111;
+  --caution: #d79700;
+  --caution-tint: #1b160f;
+  --annot: #a4eefb;
+  --annot-tint: #10191b;
+  --edge: #c1e0e8;
+  --band: #1e273b;
+  --band-edge: #526282;
+  --series-1: #dd5bbe;
+  --series-2: #3056d5;
+  --series-3: #009105;
+  --series-4: #1a9ed1;
+  --series-5: #833fc4;
+  --series-void: #596273;
+  --projection: #cb96fb;
+  --projection-tint: #1e1123;
+}
+[data-scheme="light"] {
+  color-scheme: light;
+  --ground: #cfe2f8;
+  --sheet: #f1f8ff;
+  --sheet-sunken: #bbd2ed;
+  --ink: #272c33;
+  --ink-2: #4e555f;
+  --ink-3: #67717d;
+  --rule: #cbdaec;
+  --rule-strong: #a8b7c9;
+  --rule-control: #838f9e;
+  --alarm: #931b1f;
+  --alarm-tint: #f4eaea;
+  --caution: #9b5d00;
+  --caution-tint: #f4ecde;
+  --annot: #004a5f;
+  --annot-tint: #e1f0f4;
+  --edge: #173239;
+  --band: #d0e0f2;
+  --band-edge: #7690af;
+  --series-1: #ab2890;
+  --series-2: #507dff;
+  --series-3: #1fa31e;
+  --series-4: #0099cc;
+  --series-5: #8c4ace;
+  --series-void: #818fa0;
+  --projection: #621e76;
+  --projection-tint: #f1eaf4;
 }
 
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;font-family:var(--face-system);font-size:14px;line-height:1.5;
- -webkit-font-smoothing:antialiased}
 :root{
  --face-system:"Archivo",system-ui,sans-serif;
  --face-value:"IBM Plex Mono",ui-monospace,monospace;
  --face-declared:"Faustina",Georgia,serif;
- --sp:4px;
 }
+body{margin:0;font-family:var(--face-system);font-size:14px;line-height:1.5;
+ -webkit-font-smoothing:antialiased}
 h1,h2,h3,p,dl,dd{margin:0}
 .value{font-family:var(--face-value);font-variant-numeric:tabular-nums;
  font-feature-settings:"tnum" 1,"zero" 1;letter-spacing:-.01em}
 .declared{font-family:var(--face-declared);font-size:16px;line-height:1.6}
 .ident{font-family:var(--face-value);font-size:11px;color:var(--ink-2);overflow-wrap:anywhere}
-:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+:focus-visible{outline:2px solid var(--annot);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
-/* ---- proof scaffolding ---- */
-.masthead{background:var(--ground);color:var(--ink);padding:28px 32px 24px;
- border-bottom:1px solid var(--rule-2)}
-.masthead h1{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.masthead{background:var(--ground);color:var(--ink);padding:30px 32px 26px;
+ border-bottom:1px solid var(--rule-strong)}
+.masthead h1{font-size:27px;font-weight:700;letter-spacing:-.02em}
 .masthead .sub{font-family:var(--face-value);font-size:11px;color:var(--ink-3);
  letter-spacing:.08em;text-transform:uppercase;margin-top:6px}
-.masthead .lede{max-width:74ch;margin-top:14px;color:var(--ink-2);font-size:14px}
+.masthead .lede{max-width:76ch;margin-top:14px;color:var(--ink-2);font-size:14px}
 .masthead .lede b{color:var(--ink)}
 .pane{background:var(--ground);color:var(--ink);padding:24px 32px 40px}
 .pane__tag{font-family:var(--face-value);font-size:10px;letter-spacing:.14em;
  text-transform:uppercase;color:var(--ink-3);padding-bottom:8px;margin-bottom:20px;
- border-bottom:1px solid var(--rule-2)}
+ border-bottom:1px solid var(--rule-strong)}
 .block{margin-bottom:28px}
 .block>h3{font-family:var(--face-value);font-size:10px;font-weight:500;letter-spacing:.14em;
  text-transform:uppercase;color:var(--ink-3);margin-bottom:10px}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
-.card{background:var(--sheet);border:1px solid var(--rule-2);padding:16px}
+.card{background:var(--sheet);border:1px solid var(--rule-strong);padding:16px}
 .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-.note{font-size:12px;color:var(--ink-3);max-width:66ch;margin-top:8px}
-.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
-.sw>div{border:1px solid var(--rule-2)}
-.sw i{display:block;height:34px}
+.note{font-size:12px;color:var(--ink-3);max-width:68ch;margin-top:8px}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:6px}
+.sw>div{border:1px solid var(--rule-strong)}
+.sw i{display:block;height:36px}
 .sw span{display:block;padding:3px 6px;background:var(--sheet);font-family:var(--face-value);
  font-size:10px;color:var(--ink-2)}
 
-/* ============ CONTRACT: tolerance rail (geometry per world, maths fixed) ==== */
+/* the tolerance rail — geometry identical to the shipped partial */
 .rail{min-width:150px}
 .rail__s{position:relative;height:22px}
-.rail__base{position:absolute;inset-inline:0;bottom:4px;height:1px;background:var(--rule-2)}
+.rail__base{position:absolute;inset-inline:0;bottom:4px;height:1px;background:var(--rule-strong)}
 .rail__band{position:absolute;inset-inline:33.3333%;bottom:4px;height:12px;
  background:var(--band);border-inline:1px solid var(--band-edge)}
 .rail__t{position:absolute;left:var(--at);bottom:0;width:1px;height:4px;background:var(--ink-3)}
 .rail__t--b{bottom:4px;height:12px;background:var(--band-edge)}
 .rail__t--g{bottom:4px;height:19px;background:var(--ink);width:1px}
 .rail__i{position:absolute;left:var(--at);bottom:1px;width:3px;height:18px;
- margin-inline-start:-1px;
- background:var(--ink);box-shadow:0 0 0 1px var(--sheet)}
+ margin-inline-start:-1px;background:var(--edge);box-shadow:0 0 0 1px var(--sheet)}
 .rail__i::before{content:"";position:absolute;left:50%;top:-6px;transform:translateX(-50%);
- border-inline:4px solid transparent;border-top:6px solid var(--ink)}
+ border-inline:4px solid transparent;border-top:6px solid var(--edge)}
 .rail--brk .rail__i{background:var(--alarm)}
 .rail--brk .rail__i::before{border-top-color:var(--alarm)}
 .rail__c{position:absolute;bottom:0;width:0;height:0;border-block:4px solid transparent;
@@ -98,44 +133,50 @@ h1,h2,h3,p,dl,dd{margin:0}
 .sev__l{font-family:var(--face-system);font-size:10px;letter-spacing:.14em;
  text-transform:uppercase;color:var(--ink-3)}
 
-/* ============ CONTRACT: outcome chips — texture carries the distinction ==== */
+/* outcome chips — texture carries the distinction, not hue */
 .oc{font-family:var(--face-value);font-size:10px;letter-spacing:.05em;padding:2px 7px;
  border:1px solid;white-space:nowrap}
 .oc--f{color:var(--sheet);background:var(--alarm);border-color:var(--alarm)}
-.oc--n{color:var(--ink-2);background:transparent;border-color:var(--control)}
-.oc--s{color:var(--alarm);background:var(--alarm-tint);border-color:var(--alarm);
+.oc--n{color:var(--ink-2);background:transparent;border-color:var(--rule-control)}
+.oc--s{color:var(--caution);background:var(--caution-tint);border-color:var(--caution);
  border-style:dashed}
 .oc--e{color:var(--alarm);border-color:var(--alarm);background:
  repeating-linear-gradient(-45deg,transparent 0 4px,
  color-mix(in srgb,var(--alarm) 24%,transparent) 4px 5px),var(--alarm-tint)}
 
-/* ============ CONTRACT: trace ladder — ordered data, stored strings ======== */
+/* trace ladder */
 .lad{font-family:var(--face-value);font-variant-numeric:tabular-nums;font-size:12.5px;
  line-height:1.7}
 .lad__r{display:grid;grid-template-columns:24px 96px minmax(0,1fr) 150px;gap:10px;
  padding:3px 0;border-bottom:1px dotted var(--rule)}
 .lad__h{font-family:var(--face-system);font-size:10px;letter-spacing:.12em;
- text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--rule-2)}
+ text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--rule-strong)}
 .lad__i{color:var(--ink-3);text-align:right}
-.lad__o{color:var(--s1);font-weight:500}
+.lad__o{color:var(--annot);font-weight:500}
 .lad__x{color:var(--ink-2)}
 .lad__v{text-align:right;font-weight:500}
-.lad__r--held{background:var(--sunken);border-bottom:0;border-top:1px solid var(--rule-2);
- margin-inline:-8px;padding-inline:8px}
+.lad__r--held{background:var(--sheet-sunken);border-bottom:0;
+ border-top:1px solid var(--rule-strong);margin-inline:-8px;padding-inline:8px}
 .lad__r--held .lad__v{color:var(--alarm)}
 
-/* ============ chart ======================================================= */
-.chart{width:100%;height:250px}
-.leg{display:flex;flex-wrap:wrap;gap:8px 16px;padding:0;margin:12px 0 0;list-style:none;
- font-size:12px}
-.leg li{display:flex;align-items:baseline;gap:6px;color:var(--ink-2)}
-.leg i{width:10px;height:10px;flex:none;box-shadow:0 0 0 1px var(--sheet)}
-.leg b{font-family:var(--face-value);font-weight:400;color:var(--ink)}
-.leg .void{background:var(--void);background-image:repeating-linear-gradient(45deg,
+.chart{width:100%;height:300px}
+.leg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));
+ gap:8px 16px;padding:0;margin:12px 0 0;list-style:none;font-size:12px}
+.leg li{display:flex;align-items:baseline;gap:6px;min-width:0;color:var(--ink-2)}
+.leg i{width:10px;height:10px;flex:none;transform:translateY(1px);
+ box-shadow:0 0 0 1px var(--sheet)}
+.leg b{margin-inline-start:auto;padding-inline-start:8px;font-family:var(--face-value);
+ font-weight:400;color:var(--ink)}
+.leg .void{background:var(--series-void);background-image:repeating-linear-gradient(45deg,
  transparent 0 3px,color-mix(in srgb,var(--ink) 34%,transparent) 3px 4px)}
+.leg .casing{background:color-mix(in srgb,var(--ink-3) 30%,transparent);
+ box-shadow:inset 0 0 0 1px var(--rule-control)}
+.leg .core{background:var(--ink-3)}
+.leg .edge{background:transparent;box-shadow:inset -3px 0 0 0 var(--edge),
+ 0 0 0 1px var(--rule-control)}
 table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px}
 th{font-family:var(--face-system);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
- color:var(--ink-3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule-2)}
+ color:var(--ink-3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule-strong)}
 td{padding:5px 8px;border-bottom:1px solid var(--rule)}
 td.n,th.n{text-align:right;font-family:var(--face-value);font-variant-numeric:tabular-nums}
 </style>
@@ -144,77 +185,116 @@ td.n,th.n{text-align:right;font-family:var(--face-value);font-variant-numeric:ta
 
 <header class="masthead">
   <h1>Vetro Sommerso</h1>
-  <p class="sub">Murano · canne di vetro · sommerso a strati</p>
-  <p class="lede">Venetian glass, dark-first. A deep ink-blue ground with luminous jewel canes read against it, and marks built as submerged layers with a single light source. Sommerso — the technique of casing one colour inside another — is what apportionment actually looks like: a whole seen through the layers that compose it.</p>
-  <p class="lede"><b>Perché questo prodotto.</b> The most chart-native of the three: layering IS the data structure, so a stacked or nested chart stops being a convention and becomes the material. It also gives the product genuine visual ambition and reads as valuable without reading as playful. The risk is that glass reads precious; it is held in check by keeping the type plain and the numbers dominant.</p>
-  <p class="lede"><b>Grafici.</b> Horizontal layers submerged in the ground, each cane a translucent field with one bright leading edge where the light catches it. The target is a thin line of light across the layer.</p>
-  <p class="lede"><b>Elevazione.</b> one named level — a luminous edge, tokenised per theme, no drop shadows. <b>Allarme riservato:</b>
-     <span class="value">#c02249</span> chiaro / <span class="value">#f2607f</span> scuro,
-     mai usato come colore di serie.</p>
+  <p class="sub">Murano · canne di vetro · sommerso a strati · il mondo deciso</p>
+  <p class="lede">Vetro veneziano, prima di tutto scuro. Un fondo blu inchiostro
+  profondo con canne luminose lette in trasparenza, e ogni segno costruito come
+  strati sommersi sotto una sola sorgente di luce. <b>Sommerso</b> è la tecnica
+  di incassare un colore dentro un altro: ed è esattamente ciò che è una
+  ripartizione con obiettivi — una forma dichiarata con dentro una quantità
+  reale. Per questo qui la forma del grafico e la tavolozza sono la stessa
+  decisione, e non due.</p>
+  <p class="lede"><b>La tavolozza è stata spinta, e non a mano.</b> Ogni valore è
+  risolto per ricerca contro le soglie del validatore su entrambe le superfici
+  (separazione minima di tinta 34°). Il croma medio delle serie è <span class="value">0,183</span>
+  contro il minimo di <span class="value">0,10</span> su cui stava la proposta
+  precedente; la separazione adiacente peggiore per daltonismo è
+  <span class="value">10,6</span> contro un obiettivo di
+  <span class="value">8,0</span> — l'avviso protan 7,6 non c'è più; e il fondo,
+  che deve contrasto solo al testo e mai a una serie, porta
+  <span class="value">0,074</span> di croma contro
+  <span class="value">0,028</span>.</p>
+  <p class="lede"><b>La regola su cui poggia tutto:</b> la metà calda della ruota
+  è riservata allo stato, i dati vivono nella metà fredda. Un segno caldo, qui,
+  non è mai una misura.</p>
 </header>
 
 
 <section class="pane" data-scheme="dark">
-  <p class="pane__tag">scuro · la sera, una lampada</p>
+  <p class="pane__tag">scuro · la sera, una lampada · il mondo come è pensato</p>
 
   <div class="block">
-    <h3>Tavolozza · serie convalidate + allarme riservato</h3>
-    <div class="sw">
-      <div><i style="background:#5376b8"></i><span>s1 EQ/DEV</span></div><div><i style="background:#19a9b0"></i><span>s2 EQ/EMG</span></div><div><i style="background:#1e7c50"></i><span>s3 GOV/EUR</span></div><div><i style="background:#b58037"></i><span>s4 CORP/IG</span></div><div><i style="background:#9b6aab"></i><span>s5 CASH</span></div><div><i style="background:#f2607f"></i><span>allarme</span></div><div><i style="background:#69768e"></i><span>vuoto</span></div><div><i style="background:#e9edf6"></i><span>inchiostro</span></div><div><i style="background:#141b2b"></i><span>foglio</span></div>
+    <h3>Tavolozza · risolta, non scelta</h3>
+    <div class="sw"><div><i style="background:#dd5bbe"></i><span>serie 1<br>#dd5bbe</span></div><div><i style="background:#3056d5"></i><span>serie 2<br>#3056d5</span></div><div><i style="background:#009105"></i><span>serie 3<br>#009105</span></div><div><i style="background:#1a9ed1"></i><span>serie 4<br>#1a9ed1</span></div><div><i style="background:#833fc4"></i><span>serie 5<br>#833fc4</span></div><div><i style="background:#596273"></i><span>vuoto<br>#596273</span></div><div><i style="background:#ff8178"></i><span>allarme<br>#ff8178</span></div><div><i style="background:#d79700"></i><span>cautela<br>#d79700</span></div><div><i style="background:#a4eefb"></i><span>riferimento<br>#a4eefb</span></div><div><i style="background:#c1e0e8"></i><span>bordo di luce<br>#c1e0e8</span></div><div><i style="background:#000223"></i><span>fondo<br>#000223</span></div><div><i style="background:#06102c"></i><span>foglio<br>#06102c</span></div><div><i style="background:#d2d7e1"></i><span>inchiostro<br>#d2d7e1</span></div></div>
+    <p class="note">Le cinque tinte di serie superano ogni controllo del
+    validatore (banda di luminosità, croma, separazione per daltonismo, visione
+    normale, contrasto) su <em>entrambe</em> le superfici. Allarme e cautela sono
+    esclusi dall'insieme delle serie <em>per finestra di tinta</em>, non solo per
+    distanza misurata: una passata precedente della ricerca aveva parcheggiato
+    una serie a un passo di luminosità dall'allarme superando ogni controllo.</p>
+  </div>
+
+  <div class="block">
+    <h3>La canna incassata · allocazione contro la strategia congelata</h3>
+    <div class="card">
+      <script type="application/json" id="opt-dark">{"caneWidth": 22, "grid": {"left": 6, "right": 34, "top": 10, "bottom": 6, "containLabel": true}, "tooltip": {"trigger": "item"}, "xAxis": {"type": "value", "max": 45, "axisLabel": {"formatter": "{value}%"}}, "yAxis": {"type": "category", "inverse": true, "data": ["Azioni dei paesi sviluppati", "Azioni dei paesi emergenti", "Obbligazioni governative EUR", "Obbligazioni corporate investment grade", "Liquidità", "Azioni globali"], "splitLine": {"show": false}, "axisLabel": {"width": 150, "overflow": "break", "lineHeight": 13}}, "series": [{"mark": "casing", "name": "target", "colorBy": "data", "data": [40.0, 10.0, 30.0, 10.0, 10.0, null], "markPoint": {"symbol": "rect", "symbolSize": [2, 30], "silent": true, "itemStyle": {"color": "token:--ink-2"}, "label": {"show": false}, "data": [{"coord": [40.0, 0]}, {"coord": [10.0, 1]}, {"coord": [30.0, 2]}, {"coord": [10.0, 3]}, {"coord": [10.0, 4]}]}}, {"mark": "core", "name": "attuale", "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0, null]}, {"mark": "edge", "name": "attuale", "data": [34.0, 9.5, 27.9, 8.0, 12.0, null]}, {"mark": "void", "name": "non targettizzato", "barGap": "-100%", "data": [null, null, null, null, null, 8.6]}]}</script>
+      <div class="chart" data-chart="opt-dark" role="img"
+           aria-label="Allocazione attuale contro il target dichiarato, sei classi di attivo"></div>
+      <ul class="leg">
+        <li><i class="casing"></i><span>target dichiarato (la cassa)</span></li>
+        <li><i class="core"></i><span>attuale (il nucleo)</span></li>
+        <li><i class="edge"></i><span>valore sul bordo di luce</span></li>
+        <li><i style="background:#dd5bbe"></i><span>Azioni dei paesi sviluppati</span> <b>34,00%</b></li><li><i style="background:#3056d5"></i><span>Azioni dei paesi emergenti</span> <b>9,50%</b></li><li><i style="background:#009105"></i><span>Obbligazioni governative EUR</span> <b>27,90%</b></li><li><i style="background:#1a9ed1"></i><span>Obbligazioni corporate investment grade</span> <b>8,00%</b></li><li><i style="background:#833fc4"></i><span>Liquidità</span> <b>12,00%</b></li><li><i class="void"></i><span>Azioni globali · non targettizzato</span> <b>8,60%</b></li>
+      </ul>
+      <table>
+        <thead><tr><th>Classe</th><th class="n">Attuale</th><th class="n">Target</th>
+          <th class="n">Scostamento</th></tr></thead>
+        <tbody><tr><td>Azioni dei paesi sviluppati</td><td class="n">34,00%</td><td class="n">40,00%</td><td class="n">-6,00pp</td></tr><tr><td>Azioni dei paesi emergenti</td><td class="n">9,50%</td><td class="n">10,00%</td><td class="n">-0,50pp</td></tr><tr><td>Obbligazioni governative EUR</td><td class="n">27,90%</td><td class="n">30,00%</td><td class="n">-2,10pp</td></tr><tr><td>Obbligazioni corporate investment grade</td><td class="n">8,00%</td><td class="n">10,00%</td><td class="n">-2,00pp</td></tr><tr><td>Liquidità</td><td class="n">12,00%</td><td class="n">10,00%</td><td class="n">+2,00pp</td></tr><tr><td>Azioni globali</td><td class="n">8,60%</td><td class="n">—</td><td class="n">nessun target</td></tr></tbody>
+      </table>
     </div>
-    <p class="note">Le cinque tinte di serie superano ogni controllo del validatore
-    (banda di luminosità, croma, separazione per daltonismo, visione normale, contrasto)
-    su <em>entrambe</em> le superfici. L'allarme è escluso dall'insieme delle serie: così
-    un colore di stato non può mai impersonare un dato.</p>
+    <p class="note">Due fatti sono portati dalla <strong>geometria</strong>, non
+    dalla tinta: se il nucleo resta corto la cassa si vede vuota, se sporge oltre
+    la tacca è oltre il target. La Liquidità è sopra il suo target, e si legge
+    senza guardare un colore. Le Azioni globali non hanno cassa perché per loro
+    non è mai stata dichiarata una forma — capitale non targettizzato, che resta
+    comunque nel denominatore. Il colore porta <em>solo</em> l'identità: è questo
+    che permette di spingere la tavolozza senza renderla portante.</p>
   </div>
 
   <div class="block">
     <h3>Guida di tolleranza · fuori e dentro tolleranza</h3>
     <div class="cols">
       <div class="card">
-        <p class="ident" style="margin-bottom:10px">EQ/DEV · Pension · ±2,00pp ABSOLUTE</p>
+        <p class="ident" style="margin-bottom:10px">Azioni dei paesi sviluppati ·
+        Pension · ±2,00pp ABSOLUTE</p>
         <div class="row" style="align-items:flex-end;gap:24px">
           <div style="flex:1;min-width:160px">
             <div class="rail rail--brk" role="img"
-                 aria-label="3 ampiezze di banda sotto l'obiettivo: fuori tolleranza">
+                 aria-label="3 ampiezze di banda sotto il target: fuori tolleranza">
               <div class="rail__s">
                 <span class="rail__base"></span><span class="rail__band"></span>
                 <span class="rail__t" style="--at:0.0000%"></span><span class="rail__t" style="--at:16.6667%"></span><span class="rail__t rail__t--b" style="--at:33.3333%"></span><span class="rail__t rail__t--g" style="--at:50.0000%"></span><span class="rail__t rail__t--b" style="--at:66.6667%"></span><span class="rail__t" style="--at:83.3333%"></span><span class="rail__t" style="--at:100.0000%"></span>
                 <span class="rail__i" style="--at:3%"></span>
                 <span class="rail__c"></span>
               </div>
-              <div class="rail__k"><span>−3</span><span>obiettivo 40,00%</span><span>+3</span></div>
+              <div class="rail__k"><span>−3</span><span>target 40,00%</span><span>+3</span></div>
             </div>
           </div>
-          <div>
-            <div class="sev__l">Severità</div>
-            <div class="sev sev--brk">3,00</div>
-          </div>
+          <div><div class="sev__l">Severità</div><div class="sev sev--brk">3,00</div></div>
         </div>
       </div>
       <div class="card">
-        <p class="ident" style="margin-bottom:10px">EQ/EMG · Pension · RELATIVE 0,25</p>
+        <p class="ident" style="margin-bottom:10px">Azioni dei paesi emergenti ·
+        Pension · RELATIVE 0,25</p>
         <div class="row" style="align-items:flex-end;gap:24px">
           <div style="flex:1;min-width:160px">
             <div class="rail" role="img"
-                 aria-label="0,42 ampiezze di banda sotto l'obiettivo: entro tolleranza">
+                 aria-label="0,42 ampiezze di banda sotto il target: entro tolleranza">
               <div class="rail__s">
                 <span class="rail__base"></span><span class="rail__band"></span>
                 <span class="rail__t" style="--at:0.0000%"></span><span class="rail__t" style="--at:16.6667%"></span><span class="rail__t rail__t--b" style="--at:33.3333%"></span><span class="rail__t rail__t--g" style="--at:50.0000%"></span><span class="rail__t rail__t--b" style="--at:66.6667%"></span><span class="rail__t" style="--at:83.3333%"></span><span class="rail__t" style="--at:100.0000%"></span>
                 <span class="rail__i" style="--at:43%"></span>
               </div>
-              <div class="rail__k"><span>−3</span><span>obiettivo 10,00%</span><span>+3</span></div>
+              <div class="rail__k"><span>−3</span><span>target 10,00%</span><span>+3</span></div>
             </div>
           </div>
-          <div>
-            <div class="sev__l">Severità</div>
-            <div class="sev">0,42</div>
-          </div>
+          <div><div class="sev__l">Severità</div><div class="sev">0,42</div></div>
         </div>
       </div>
     </div>
-    <p class="note">Entro tolleranza è <strong>neutro</strong>, non verde: il sistema riporta,
-    non si congratula. Solo lo scostamento prende colore.</p>
+    <p class="note">Entro tolleranza è <strong>neutro</strong>, non verde: la
+    banda è la <em>cassa</em>, la stessa idea della canna, e l'indice è disegnato
+    nella sorgente di luce — lo stesso token del bordo luminoso. Il sistema
+    riporta, non si congratula. Solo lo scostamento prende colore.</p>
   </div>
 
   <div class="block">
@@ -227,9 +307,10 @@ td.n,th.n{text-align:right;font-family:var(--face-value);font-variant-numeric:ta
       <span class="oc oc--e">ERRORE</span>
       <span class="ident">currency_mismatch</span>
     </div>
-    <p class="note">Pieno · filo · tratteggiato · tratteggio incrociato. Un solo colore
-    riservato, quattro texture: restano inconfondibili in scala di grigi e per chi non
-    distingue rosso e verde. <em>NON VALUTATO</em> ed <em>ERRORE</em> non sono mai rassicuranti.</p>
+    <p class="note">Pieno · filo · tratteggiato · tratteggio incrociato. Due soli
+    inchiostri riservati e quattro texture: restano inconfondibili in scala di
+    grigi e per chi non distingue rosso e verde. <em>NON VALUTATO</em> ed
+    <em>ERRORE</em> non sono mai rassicuranti.</p>
   </div>
 
   <div class="block">
@@ -244,37 +325,21 @@ td.n,th.n{text-align:right;font-family:var(--face-value);font-variant-numeric:ta
   </div>
 
   <div class="block">
-    <h3>Allocazione contro obiettivo · le cinque classi del fixture</h3>
-    <div class="card">
-      <script type="application/json" id="opt-b-vetro-sommerso-dark">{"grid": {"left": 6, "right": 30, "top": 10, "bottom": 6, "containLabel": true}, "tooltip": {"trigger": "item"}, "xAxis": {"type": "value", "max": 45, "axisLabel": {"formatter": "{value}%"}}, "yAxis": {"type": "category", "inverse": true, "data": ["EQ/DEV", "EQ/EMG", "GOV/EUR", "CORP/IG", "CASH"], "splitLine": {"show": false}}, "series": [{"type": "bar", "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0], "barWidth": 22, "itemStyle": {"opacity": 0.55, "borderWidth": 0}, "markPoint": {"symbol": "rect", "silent": true, "label": {"show": false}, "data": [{"coord": [40.0, 0]}, {"coord": [10.0, 1]}, {"coord": [30.0, 2]}, {"coord": [10.0, 3]}, {"coord": [10.0, 4]}], "symbolSize": [2, 34], "itemStyle": {"color": "token:--ink"}}}, {"type": "pictorialBar", "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0], "symbol": "rect", "symbolSize": [3, 22], "symbolPosition": "end", "barGap": "-100%", "z": 4, "silent": true, "tooltip": {"show": false}}]}</script>
-      <div class="chart" data-chart="opt-b-vetro-sommerso-dark" role="img"
-           aria-label="Allocazione attuale contro obiettivo per cinque classi di attivo"></div>
-      <ul class="leg">
-        <li><i style="background:#5376b8"></i><span>EQ/DEV</span> <b>34,00%</b></li><li><i style="background:#19a9b0"></i><span>EQ/EMG</span> <b>9,50%</b></li><li><i style="background:#1e7c50"></i><span>GOV/EUR</span> <b>27,90%</b></li><li><i style="background:#b58037"></i><span>CORP/IG</span> <b>8,00%</b></li><li><i style="background:#9b6aab"></i><span>CASH</span> <b>12,00%</b></li>
-        <li><i class="void"></i><span>non targettizzato</span> <b>12,16%</b></li>
-      </ul>
-      <table>
-        <thead><tr><th>Classe</th><th class="n">Attuale</th><th class="n">Obiettivo</th>
-          <th class="n">Scostamento</th></tr></thead>
-        <tbody><tr><td>EQ/DEV</td><td class="n">34,00%</td><td class="n">40,00%</td><td class="n">-6,00pp</td></tr><tr><td>EQ/EMG</td><td class="n">9,50%</td><td class="n">10,00%</td><td class="n">-0,50pp</td></tr><tr><td>GOV/EUR</td><td class="n">27,90%</td><td class="n">30,00%</td><td class="n">-2,10pp</td></tr><tr><td>CORP/IG</td><td class="n">8,00%</td><td class="n">10,00%</td><td class="n">-2,00pp</td></tr><tr><td>CASH</td><td class="n">12,00%</td><td class="n">10,00%</td><td class="n">+2,00pp</td></tr></tbody>
-      </table>
-    </div>
-    <p class="note">Horizontal layers submerged in the ground, each cane a translucent field with one bright leading edge where the light catches it. The target is a thin line of light across the layer. Il capitale non targettizzato non ha tinta: è vuoto, e si
-    legge con il tratteggio. Patrimonio netto <span class="value">€107.586,33</span>.</p>
-  </div>
-
-  <div class="block">
     <h3>Le tre voci</h3>
     <div class="card">
-      <p>Equity/Developed è <span class="value" style="color:var(--alarm)">6,00pp</span> sotto
-      il tuo obiettivo del <span class="value">40,00%</span> (tolleranza
-      <span class="value">±2,00pp</span>). Attuale <span class="value">34,00%</span>,
+      <p>Le Azioni dei paesi sviluppati <strong>sono</strong>
+      <span class="value" style="color:var(--alarm)">6,00pp</span> sotto il
+      target del <span class="value">40,00%</span> (tolleranza
+      <span class="value">±2,00pp</span>). Attuale
+      <span class="value">34,00%</span>,
       <span class="value" style="color:var(--alarm)">−€3.240,00</span>.</p>
-      <p class="declared" style="margin-top:12px;padding-inline:20px">«Ho ridotto la quota dei
-      mercati emergenti dal 30% al 20% dell'azionario: non è una visione sui mercati, mi sono
-      accorto che ribilanciavo per disagio e non per piano.»</p>
-      <p class="note">Sistema in Archivo · valori in IBM Plex Mono ·
-        le tue parole in Faustina.</p>
+      <p class="declared" style="margin-top:12px;padding-inline:20px">«Ho ridotto
+      la quota dei mercati emergenti dal 30% al 20% dell'azionario: non è una
+      visione sui mercati, mi sono accorto che ribilanciavo per disagio e non per
+      piano.»</p>
+      <p class="note">Sistema in Archivo · valori in IBM Plex Mono · le parole
+      dell'utente in Faustina. L'accordo grammaticale qui è deliberato:
+      «Azioni» è femminile plurale e vuole <em>sono</em>, non <em>è</em>.</p>
     </div>
   </div>
 </section>
@@ -284,63 +349,88 @@ td.n,th.n{text-align:right;font-family:var(--face-value);font-variant-numeric:ta
   <p class="pane__tag">chiaro · la scrivania di giorno</p>
 
   <div class="block">
-    <h3>Tavolozza · serie convalidate + allarme riservato</h3>
-    <div class="sw">
-      <div><i style="background:#4d70b2"></i><span>s1 EQ/DEV</span></div><div><i style="background:#04a3aa"></i><span>s2 EQ/EMG</span></div><div><i style="background:#14764a"></i><span>s3 GOV/EUR</span></div><div><i style="background:#af7a31"></i><span>s4 CORP/IG</span></div><div><i style="background:#9564a4"></i><span>s5 CASH</span></div><div><i style="background:#c02249"></i><span>allarme</span></div><div><i style="background:#7d8798"></i><span>vuoto</span></div><div><i style="background:#101726"></i><span>inchiostro</span></div><div><i style="background:#f7f9fc"></i><span>foglio</span></div>
+    <h3>Tavolozza · risolta, non scelta</h3>
+    <div class="sw"><div><i style="background:#ab2890"></i><span>serie 1<br>#ab2890</span></div><div><i style="background:#507dff"></i><span>serie 2<br>#507dff</span></div><div><i style="background:#1fa31e"></i><span>serie 3<br>#1fa31e</span></div><div><i style="background:#0099cc"></i><span>serie 4<br>#0099cc</span></div><div><i style="background:#8c4ace"></i><span>serie 5<br>#8c4ace</span></div><div><i style="background:#818fa0"></i><span>vuoto<br>#818fa0</span></div><div><i style="background:#931b1f"></i><span>allarme<br>#931b1f</span></div><div><i style="background:#9b5d00"></i><span>cautela<br>#9b5d00</span></div><div><i style="background:#004a5f"></i><span>riferimento<br>#004a5f</span></div><div><i style="background:#173239"></i><span>bordo di luce<br>#173239</span></div><div><i style="background:#cfe2f8"></i><span>fondo<br>#cfe2f8</span></div><div><i style="background:#f1f8ff"></i><span>foglio<br>#f1f8ff</span></div><div><i style="background:#272c33"></i><span>inchiostro<br>#272c33</span></div></div>
+    <p class="note">Le cinque tinte di serie superano ogni controllo del
+    validatore (banda di luminosità, croma, separazione per daltonismo, visione
+    normale, contrasto) su <em>entrambe</em> le superfici. Allarme e cautela sono
+    esclusi dall'insieme delle serie <em>per finestra di tinta</em>, non solo per
+    distanza misurata: una passata precedente della ricerca aveva parcheggiato
+    una serie a un passo di luminosità dall'allarme superando ogni controllo.</p>
+  </div>
+
+  <div class="block">
+    <h3>La canna incassata · allocazione contro la strategia congelata</h3>
+    <div class="card">
+      <script type="application/json" id="opt-light">{"caneWidth": 22, "grid": {"left": 6, "right": 34, "top": 10, "bottom": 6, "containLabel": true}, "tooltip": {"trigger": "item"}, "xAxis": {"type": "value", "max": 45, "axisLabel": {"formatter": "{value}%"}}, "yAxis": {"type": "category", "inverse": true, "data": ["Azioni dei paesi sviluppati", "Azioni dei paesi emergenti", "Obbligazioni governative EUR", "Obbligazioni corporate investment grade", "Liquidità", "Azioni globali"], "splitLine": {"show": false}, "axisLabel": {"width": 150, "overflow": "break", "lineHeight": 13}}, "series": [{"mark": "casing", "name": "target", "colorBy": "data", "data": [40.0, 10.0, 30.0, 10.0, 10.0, null], "markPoint": {"symbol": "rect", "symbolSize": [2, 30], "silent": true, "itemStyle": {"color": "token:--ink-2"}, "label": {"show": false}, "data": [{"coord": [40.0, 0]}, {"coord": [10.0, 1]}, {"coord": [30.0, 2]}, {"coord": [10.0, 3]}, {"coord": [10.0, 4]}]}}, {"mark": "core", "name": "attuale", "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0, null]}, {"mark": "edge", "name": "attuale", "data": [34.0, 9.5, 27.9, 8.0, 12.0, null]}, {"mark": "void", "name": "non targettizzato", "barGap": "-100%", "data": [null, null, null, null, null, 8.6]}]}</script>
+      <div class="chart" data-chart="opt-light" role="img"
+           aria-label="Allocazione attuale contro il target dichiarato, sei classi di attivo"></div>
+      <ul class="leg">
+        <li><i class="casing"></i><span>target dichiarato (la cassa)</span></li>
+        <li><i class="core"></i><span>attuale (il nucleo)</span></li>
+        <li><i class="edge"></i><span>valore sul bordo di luce</span></li>
+        <li><i style="background:#ab2890"></i><span>Azioni dei paesi sviluppati</span> <b>34,00%</b></li><li><i style="background:#507dff"></i><span>Azioni dei paesi emergenti</span> <b>9,50%</b></li><li><i style="background:#1fa31e"></i><span>Obbligazioni governative EUR</span> <b>27,90%</b></li><li><i style="background:#0099cc"></i><span>Obbligazioni corporate investment grade</span> <b>8,00%</b></li><li><i style="background:#8c4ace"></i><span>Liquidità</span> <b>12,00%</b></li><li><i class="void"></i><span>Azioni globali · non targettizzato</span> <b>8,60%</b></li>
+      </ul>
+      <table>
+        <thead><tr><th>Classe</th><th class="n">Attuale</th><th class="n">Target</th>
+          <th class="n">Scostamento</th></tr></thead>
+        <tbody><tr><td>Azioni dei paesi sviluppati</td><td class="n">34,00%</td><td class="n">40,00%</td><td class="n">-6,00pp</td></tr><tr><td>Azioni dei paesi emergenti</td><td class="n">9,50%</td><td class="n">10,00%</td><td class="n">-0,50pp</td></tr><tr><td>Obbligazioni governative EUR</td><td class="n">27,90%</td><td class="n">30,00%</td><td class="n">-2,10pp</td></tr><tr><td>Obbligazioni corporate investment grade</td><td class="n">8,00%</td><td class="n">10,00%</td><td class="n">-2,00pp</td></tr><tr><td>Liquidità</td><td class="n">12,00%</td><td class="n">10,00%</td><td class="n">+2,00pp</td></tr><tr><td>Azioni globali</td><td class="n">8,60%</td><td class="n">—</td><td class="n">nessun target</td></tr></tbody>
+      </table>
     </div>
-    <p class="note">Le cinque tinte di serie superano ogni controllo del validatore
-    (banda di luminosità, croma, separazione per daltonismo, visione normale, contrasto)
-    su <em>entrambe</em> le superfici. L'allarme è escluso dall'insieme delle serie: così
-    un colore di stato non può mai impersonare un dato.</p>
+    <p class="note">Due fatti sono portati dalla <strong>geometria</strong>, non
+    dalla tinta: se il nucleo resta corto la cassa si vede vuota, se sporge oltre
+    la tacca è oltre il target. La Liquidità è sopra il suo target, e si legge
+    senza guardare un colore. Le Azioni globali non hanno cassa perché per loro
+    non è mai stata dichiarata una forma — capitale non targettizzato, che resta
+    comunque nel denominatore. Il colore porta <em>solo</em> l'identità: è questo
+    che permette di spingere la tavolozza senza renderla portante.</p>
   </div>
 
   <div class="block">
     <h3>Guida di tolleranza · fuori e dentro tolleranza</h3>
     <div class="cols">
       <div class="card">
-        <p class="ident" style="margin-bottom:10px">EQ/DEV · Pension · ±2,00pp ABSOLUTE</p>
+        <p class="ident" style="margin-bottom:10px">Azioni dei paesi sviluppati ·
+        Pension · ±2,00pp ABSOLUTE</p>
         <div class="row" style="align-items:flex-end;gap:24px">
           <div style="flex:1;min-width:160px">
             <div class="rail rail--brk" role="img"
-                 aria-label="3 ampiezze di banda sotto l'obiettivo: fuori tolleranza">
+                 aria-label="3 ampiezze di banda sotto il target: fuori tolleranza">
               <div class="rail__s">
                 <span class="rail__base"></span><span class="rail__band"></span>
                 <span class="rail__t" style="--at:0.0000%"></span><span class="rail__t" style="--at:16.6667%"></span><span class="rail__t rail__t--b" style="--at:33.3333%"></span><span class="rail__t rail__t--g" style="--at:50.0000%"></span><span class="rail__t rail__t--b" style="--at:66.6667%"></span><span class="rail__t" style="--at:83.3333%"></span><span class="rail__t" style="--at:100.0000%"></span>
                 <span class="rail__i" style="--at:3%"></span>
                 <span class="rail__c"></span>
               </div>
-              <div class="rail__k"><span>−3</span><span>obiettivo 40,00%</span><span>+3</span></div>
+              <div class="rail__k"><span>−3</span><span>target 40,00%</span><span>+3</span></div>
             </div>
           </div>
-          <div>
-            <div class="sev__l">Severità</div>
-            <div class="sev sev--brk">3,00</div>
-          </div>
+          <div><div class="sev__l">Severità</div><div class="sev sev--brk">3,00</div></div>
         </div>
       </div>
       <div class="card">
-        <p class="ident" style="margin-bottom:10px">EQ/EMG · Pension · RELATIVE 0,25</p>
+        <p class="ident" style="margin-bottom:10px">Azioni dei paesi emergenti ·
+        Pension · RELATIVE 0,25</p>
         <div class="row" style="align-items:flex-end;gap:24px">
           <div style="flex:1;min-width:160px">
             <div class="rail" role="img"
-                 aria-label="0,42 ampiezze di banda sotto l'obiettivo: entro tolleranza">
+                 aria-label="0,42 ampiezze di banda sotto il target: entro tolleranza">
               <div class="rail__s">
                 <span class="rail__base"></span><span class="rail__band"></span>
                 <span class="rail__t" style="--at:0.0000%"></span><span class="rail__t" style="--at:16.6667%"></span><span class="rail__t rail__t--b" style="--at:33.3333%"></span><span class="rail__t rail__t--g" style="--at:50.0000%"></span><span class="rail__t rail__t--b" style="--at:66.6667%"></span><span class="rail__t" style="--at:83.3333%"></span><span class="rail__t" style="--at:100.0000%"></span>
                 <span class="rail__i" style="--at:43%"></span>
               </div>
-              <div class="rail__k"><span>−3</span><span>obiettivo 10,00%</span><span>+3</span></div>
+              <div class="rail__k"><span>−3</span><span>target 10,00%</span><span>+3</span></div>
             </div>
           </div>
-          <div>
-            <div class="sev__l">Severità</div>
-            <div class="sev">0,42</div>
-          </div>
+          <div><div class="sev__l">Severità</div><div class="sev">0,42</div></div>
         </div>
       </div>
     </div>
-    <p class="note">Entro tolleranza è <strong>neutro</strong>, non verde: il sistema riporta,
-    non si congratula. Solo lo scostamento prende colore.</p>
+    <p class="note">Entro tolleranza è <strong>neutro</strong>, non verde: la
+    banda è la <em>cassa</em>, la stessa idea della canna, e l'indice è disegnato
+    nella sorgente di luce — lo stesso token del bordo luminoso. Il sistema
+    riporta, non si congratula. Solo lo scostamento prende colore.</p>
   </div>
 
   <div class="block">
@@ -353,9 +443,10 @@ td.n,th.n{text-align:right;font-family:var(--face-value);font-variant-numeric:ta
       <span class="oc oc--e">ERRORE</span>
       <span class="ident">currency_mismatch</span>
     </div>
-    <p class="note">Pieno · filo · tratteggiato · tratteggio incrociato. Un solo colore
-    riservato, quattro texture: restano inconfondibili in scala di grigi e per chi non
-    distingue rosso e verde. <em>NON VALUTATO</em> ed <em>ERRORE</em> non sono mai rassicuranti.</p>
+    <p class="note">Pieno · filo · tratteggiato · tratteggio incrociato. Due soli
+    inchiostri riservati e quattro texture: restano inconfondibili in scala di
+    grigi e per chi non distingue rosso e verde. <em>NON VALUTATO</em> ed
+    <em>ERRORE</em> non sono mai rassicuranti.</p>
   </div>
 
   <div class="block">
@@ -370,96 +461,27 @@ td.n,th.n{text-align:right;font-family:var(--face-value);font-variant-numeric:ta
   </div>
 
   <div class="block">
-    <h3>Allocazione contro obiettivo · le cinque classi del fixture</h3>
-    <div class="card">
-      <script type="application/json" id="opt-b-vetro-sommerso-light">{"grid": {"left": 6, "right": 30, "top": 10, "bottom": 6, "containLabel": true}, "tooltip": {"trigger": "item"}, "xAxis": {"type": "value", "max": 45, "axisLabel": {"formatter": "{value}%"}}, "yAxis": {"type": "category", "inverse": true, "data": ["EQ/DEV", "EQ/EMG", "GOV/EUR", "CORP/IG", "CASH"], "splitLine": {"show": false}}, "series": [{"type": "bar", "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0], "barWidth": 22, "itemStyle": {"opacity": 0.55, "borderWidth": 0}, "markPoint": {"symbol": "rect", "silent": true, "label": {"show": false}, "data": [{"coord": [40.0, 0]}, {"coord": [10.0, 1]}, {"coord": [30.0, 2]}, {"coord": [10.0, 3]}, {"coord": [10.0, 4]}], "symbolSize": [2, 34], "itemStyle": {"color": "token:--ink"}}}, {"type": "pictorialBar", "colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0], "symbol": "rect", "symbolSize": [3, 22], "symbolPosition": "end", "barGap": "-100%", "z": 4, "silent": true, "tooltip": {"show": false}}]}</script>
-      <div class="chart" data-chart="opt-b-vetro-sommerso-light" role="img"
-           aria-label="Allocazione attuale contro obiettivo per cinque classi di attivo"></div>
-      <ul class="leg">
-        <li><i style="background:#4d70b2"></i><span>EQ/DEV</span> <b>34,00%</b></li><li><i style="background:#04a3aa"></i><span>EQ/EMG</span> <b>9,50%</b></li><li><i style="background:#14764a"></i><span>GOV/EUR</span> <b>27,90%</b></li><li><i style="background:#af7a31"></i><span>CORP/IG</span> <b>8,00%</b></li><li><i style="background:#9564a4"></i><span>CASH</span> <b>12,00%</b></li>
-        <li><i class="void"></i><span>non targettizzato</span> <b>12,16%</b></li>
-      </ul>
-      <table>
-        <thead><tr><th>Classe</th><th class="n">Attuale</th><th class="n">Obiettivo</th>
-          <th class="n">Scostamento</th></tr></thead>
-        <tbody><tr><td>EQ/DEV</td><td class="n">34,00%</td><td class="n">40,00%</td><td class="n">-6,00pp</td></tr><tr><td>EQ/EMG</td><td class="n">9,50%</td><td class="n">10,00%</td><td class="n">-0,50pp</td></tr><tr><td>GOV/EUR</td><td class="n">27,90%</td><td class="n">30,00%</td><td class="n">-2,10pp</td></tr><tr><td>CORP/IG</td><td class="n">8,00%</td><td class="n">10,00%</td><td class="n">-2,00pp</td></tr><tr><td>CASH</td><td class="n">12,00%</td><td class="n">10,00%</td><td class="n">+2,00pp</td></tr></tbody>
-      </table>
-    </div>
-    <p class="note">Horizontal layers submerged in the ground, each cane a translucent field with one bright leading edge where the light catches it. The target is a thin line of light across the layer. Il capitale non targettizzato non ha tinta: è vuoto, e si
-    legge con il tratteggio. Patrimonio netto <span class="value">€107.586,33</span>.</p>
-  </div>
-
-  <div class="block">
     <h3>Le tre voci</h3>
     <div class="card">
-      <p>Equity/Developed è <span class="value" style="color:var(--alarm)">6,00pp</span> sotto
-      il tuo obiettivo del <span class="value">40,00%</span> (tolleranza
-      <span class="value">±2,00pp</span>). Attuale <span class="value">34,00%</span>,
+      <p>Le Azioni dei paesi sviluppati <strong>sono</strong>
+      <span class="value" style="color:var(--alarm)">6,00pp</span> sotto il
+      target del <span class="value">40,00%</span> (tolleranza
+      <span class="value">±2,00pp</span>). Attuale
+      <span class="value">34,00%</span>,
       <span class="value" style="color:var(--alarm)">−€3.240,00</span>.</p>
-      <p class="declared" style="margin-top:12px;padding-inline:20px">«Ho ridotto la quota dei
-      mercati emergenti dal 30% al 20% dell'azionario: non è una visione sui mercati, mi sono
-      accorto che ribilanciavo per disagio e non per piano.»</p>
-      <p class="note">Sistema in Archivo · valori in IBM Plex Mono ·
-        le tue parole in Faustina.</p>
+      <p class="declared" style="margin-top:12px;padding-inline:20px">«Ho ridotto
+      la quota dei mercati emergenti dal 30% al 20% dell'azionario: non è una
+      visione sui mercati, mi sono accorto che ribilanciavo per disagio e non per
+      piano.»</p>
+      <p class="note">Sistema in Archivo · valori in IBM Plex Mono · le parole
+      dell'utente in Faustina. L'accordo grammaticale qui è deliberato:
+      «Azioni» è femminile plurale e vuole <em>sono</em>, non <em>è</em>.</p>
     </div>
   </div>
 </section>
 
 
 <script src="../../../src/financeos/web/static/vendor/echarts/echarts.min.js"></script>
-<script>
-/* The reusable pattern, in miniature: the theme is built from the tokens in
-   scope on the chart element, so a chart is correct inside any themed pane and
-   cannot drift from the interface. Role colours arrive as "token:--name" and
-   are resolved here, so the option carries no colour literals at all. */
-(function(){
-  if (typeof echarts === "undefined") return;
-  var nf = new Intl.NumberFormat("it-IT", {maximumFractionDigits: 2});
-  function tok(el, n, f){
-    var v = getComputedStyle(el).getPropertyValue(n);
-    return (v||"").trim() || f;
-  }
-  function resolve(node, el){
-    if (typeof node === "string")
-      return node.indexOf("token:")===0 ? tok(el,node.slice(6),"") : node;
-    if (Array.isArray(node)) return node.map(function(n){return resolve(n,el);});
-    if (node && typeof node === "object") {
-      for (var k in node)
-        if (Object.prototype.hasOwnProperty.call(node,k))
-          node[k]=resolve(node[k],el);
-    }
-    return node;
-  }
-  function theme(el){
-    var ink=tok(el,"--ink",""), ink2=tok(el,"--ink-2",""), ink3=tok(el,"--ink-3","");
-    var grid=tok(el,"--rule",""), axis=tok(el,"--rule-2",""), surf=tok(el,"--sheet","");
-    var ax={axisLine:{show:true,lineStyle:{color:axis,width:1}},axisTick:{show:false},
-      splitLine:{show:true,lineStyle:{color:grid,width:1}},
-      axisLabel:{color:ink3,fontFamily:tok(el,"--face-value","monospace"),fontSize:11}};
-    return {
-      color:[tok(el,"--s1",""),tok(el,"--s2",""),tok(el,"--s3",""),
-             tok(el,"--s4",""),tok(el,"--s5","")],
-      backgroundColor:"transparent",
-      textStyle:{fontFamily:tok(el,"--face-system","sans-serif"),fontSize:12,color:ink2},
-      legend:{show:false},
-      categoryAxis:ax, valueAxis:ax, logAxis:ax, timeAxis:ax,
-      tooltip:{backgroundColor:surf,borderColor:axis,borderWidth:1,
-        extraCssText:"border-radius:0",
-        textStyle:{color:ink,fontFamily:tok(el,"--face-value","monospace"),fontSize:12}},
-      bar:{itemStyle:{borderColor:surf,borderWidth:2}}
-    };
-  }
-  document.querySelectorAll("[data-chart]").forEach(function(el){
-    var raw = document.getElementById(el.getAttribute("data-chart")).textContent;
-    var opt = resolve(JSON.parse(raw), el);
-    if (opt.tooltip) opt.tooltip.valueFormatter = function(v){
-      return typeof v === "number" ? nf.format(v)+"%" : v;
-    };
-    var c = echarts.init(el, theme(el), {renderer:"canvas"});
-    c.setOption(opt);
-    new ResizeObserver(function(){c.resize();}).observe(el);
-  });
-})();
-</script>
+<script src="../../../src/financeos/web/static/js/charts.js"></script>
 </body>
 </html>
