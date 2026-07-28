@@ -21,6 +21,11 @@
   grid-template-columns: var(--margin-col) minmax(0, 1fr);
   background: var(--sheet);
   border: var(--bw) solid var(--rule-strong);
+  /* THE ONE ELEVATION LEVEL IN THIS WORLD: a luminous edge along the top, where
+     the light catches the surface. It is an inset hairline, not a drop shadow —
+     nothing here casts a shadow, because a submerged layer does not. This is
+     the same light source as --edge on a cane and on the rail's index. */
+  box-shadow: var(--lift);
 }
 .record__margin {
   border-inline-end: 3px double var(--rule-strong);
@@ -57,9 +62,9 @@
 }
 .record__ref { font-family: var(--face-value); font-size: var(--fs-micro); color: var(--ink-3); }
 
-/* A record whose subject is a breach carries the seal in its margin. */
-.record--breach { border-color: var(--seal); }
-.record--breach .record__margin { border-inline-end-color: var(--seal); color: var(--seal); }
+/* A record whose subject is a breach carries the alarm ink in its margin. */
+.record--breach { border-color: var(--alarm); }
+.record--breach .record__margin { border-inline-end-color: var(--alarm); color: var(--alarm); }
 
 /* ==========================================================================
    CONTRACT 1 — THE TOLERANCE RAIL                          (UX-0001 §4.1)
@@ -100,14 +105,20 @@
 /* The in-tolerance zone: |severity| ≤ 1, i.e. the middle third of −3…+3.
    This shading is the single most consequential region in the product — it is
    the answer to "am I still following my strategy" — so it is a filled field
-   with hard edges, not a wash. It must be plainly visible in both themes. */
+   with hard edges, not a wash. It must be plainly visible in both themes.
+
+   IT IS NEUTRAL, NOT GREEN. Being inside your own band is not an achievement
+   the system has any business congratulating; it is the absence of a finding.
+   So the band is the CASING — the declared shape, in the ground's own glass —
+   and it is exactly the same idea as the casing on an allocation cane. Only
+   the departure from the target takes colour. */
 .rail-gauge__band {
   position: absolute;
   inset-inline: 33.3333%;
   bottom: 4px;
   height: 12px;
-  background: color-mix(in srgb, var(--verdigris) 22%, var(--sheet));
-  border-inline: var(--bw) solid var(--verdigris);
+  background: var(--band);
+  border-inline: var(--bw) solid var(--band-edge);
 }
 
 .rail-gauge__tick {
@@ -120,12 +131,19 @@
 }
 /* Band edges are boundaries, so they read as rules, not as pointers: they stop
    at the band's own height and stay hairline. Only the index marker is solid. */
-.rail-gauge__tick--band  { bottom: 4px; height: 12px; background: var(--verdigris); }
+.rail-gauge__tick--band  { bottom: 4px; height: 12px; background: var(--band-edge); }
 .rail-gauge__tick--target { bottom: 4px; height: 19px; background: var(--ink); }
 .rail-gauge__tick--stop  { bottom: 0;  height: 20px; background: var(--rule-strong); }
 
 /* The index marker: a vernier pointer — stem plus caret, ringed in the surface
-   colour so it never merges with a band edge it happens to sit on. */
+   colour so it never merges with a band edge it happens to sit on.
+
+   Inside tolerance it is drawn in --edge, the world's single light source: the
+   SAME mark as the luminous leading edge on an allocation cane, and for the
+   same reason — it is where you read the exact value. It is not a status
+   colour, so a reader is never congratulated by it. Outside tolerance it takes
+   the alarm ink, and the .rail-gauge--breach modifier is the only thing that
+   changes: one geometry, two states. */
 .rail-gauge__index {
   position: absolute;
   left: var(--at);
@@ -133,7 +151,7 @@
   width: 3px;
   height: 18px;
   margin-inline-start: -1px;
-  background: var(--verdigris);
+  background: var(--edge);
   box-shadow: 0 0 0 1px var(--sheet);
 }
 .rail-gauge__index::before {
@@ -143,10 +161,10 @@
   top: -6px;
   transform: translateX(-50%);
   border-inline: 4px solid transparent;
-  border-top: 6px solid var(--verdigris);
+  border-top: 6px solid var(--edge);
 }
-.rail-gauge--breach .rail-gauge__index { background: var(--seal); }
-.rail-gauge--breach .rail-gauge__index::before { border-top-color: var(--seal); }
+.rail-gauge--breach .rail-gauge__index { background: var(--alarm); }
+.rail-gauge--breach .rail-gauge__index::before { border-top-color: var(--alarm); }
 
 /* Overflow past ±3: a visible mechanical stop, drawn in CSS — the caret glyph
    is outside the vendored latin subset and must never be typed.
@@ -162,11 +180,11 @@
 }
 .rail-gauge__clamp--start {
   inset-inline-start: 0;
-  border-inline-end: 5px solid var(--seal);
+  border-inline-end: 5px solid var(--alarm);
 }
 .rail-gauge__clamp--end {
   inset-inline-end: 0;
-  border-inline-start: 5px solid var(--seal);
+  border-inline-start: 5px solid var(--alarm);
 }
 
 /* severity is legitimately null for some condition kinds (RFC-0008 §3 sorts
@@ -207,7 +225,7 @@
   line-height: 1.05;
   letter-spacing: -0.02em;
 }
-.severity__value--breach { color: var(--seal); }
+.severity__value--breach { color: var(--alarm); }
 .severity__value--none   { color: var(--ink-3); }
 .severity__formula { font-family: var(--face-value); font-size: var(--fs-micro); color: var(--ink-3); }
 
@@ -284,7 +302,7 @@
   padding-inline: var(--sp-2);
   margin-inline: calc(var(--sp-2) * -1);
 }
-.ladder__step--held .ladder__result { color: var(--seal); }
+.ladder__step--held .ladder__result { color: var(--alarm); }
 .ladder__step--held .ladder__ord { color: var(--ink); font-weight: var(--fw-medium); }
 
 @media (max-width: 780px) {
@@ -389,8 +407,8 @@
 /* FIRED — the finding is real. Heaviest ink on the page. */
 .outcome--fired {
   color: var(--sheet);
-  background: var(--seal);
-  border-color: var(--seal);
+  background: var(--alarm);
+  border-color: var(--alarm);
 }
 /* NOT_FIRED — the condition was false. The only outcome allowed to be quiet. */
 .outcome--not-fired {
@@ -400,9 +418,9 @@
 }
 /* SKIPPED — could not be evaluated. Dashed: the record is incomplete. */
 .outcome--skipped {
-  color: var(--bollo);
-  background: var(--bollo-tint);
-  border-color: var(--bollo);
+  color: var(--caution);
+  background: var(--caution-tint);
+  border-color: var(--caution);
   border-style: dashed;
 }
 /* ERROR — the evaluation broke; the system does not know. Hatched: void.
@@ -410,12 +428,12 @@
    size it sits directly behind 11px text, and a dense hatch would trade the
    label's legibility for the texture that exists to reinforce it. */
 .outcome--error {
-  color: var(--seal);
-  border-color: var(--seal);
+  color: var(--alarm);
+  border-color: var(--alarm);
   background:
     repeating-linear-gradient(-45deg, transparent 0 4px,
-      color-mix(in srgb, var(--seal) 26%, transparent) 4px 5px),
-    var(--seal-tint);
+      color-mix(in srgb, var(--alarm) 26%, transparent) 4px 5px),
+    var(--alarm-tint);
 }
 
 /* priority band — authored by the user, and it dominates severity in the
@@ -426,7 +444,7 @@
   letter-spacing: 0.05em;
   color: var(--ink-2);
 }
-.priority--critical, .priority--high { color: var(--seal); font-weight: var(--fw-medium); }
+.priority--critical, .priority--high { color: var(--alarm); font-weight: var(--fw-medium); }
 
 /* suggestion_class — a closed enum (E7). Never an instrument, action or size. */
 .suggestion {
@@ -448,11 +466,11 @@
 .notice {
   display: grid;
   grid-template-columns: var(--margin-col) minmax(0, 1fr);
-  border: var(--bw) solid var(--bollo);
-  background: var(--bollo-tint);
+  border: var(--bw) solid var(--caution);
+  background: var(--caution-tint);
 }
 .notice__margin {
-  border-inline-end: var(--bw) solid var(--bollo);
+  border-inline-end: var(--bw) solid var(--caution);
   background: repeating-linear-gradient(-45deg, transparent 0 3px, var(--hatch-ink) 3px 4px);
 }
 .notice__body { padding: var(--sp-3) var(--sp-4); font-size: var(--fs-s); }
@@ -463,8 +481,8 @@
 }
 .notice__body p { max-width: var(--measure-prose); }
 .notice__body p + p { margin-top: var(--sp-2); }
-.notice--breach { border-color: var(--seal); background: var(--seal-tint); }
-.notice--breach .notice__margin { border-inline-end-color: var(--seal); }
+.notice--breach { border-color: var(--alarm); background: var(--alarm-tint); }
+.notice--breach .notice__margin { border-inline-end-color: var(--alarm); }
 .notice--reference { border-color: var(--annot); background: var(--annot-tint); }
 .notice--reference .notice__margin { border-inline-end-color: var(--annot); }
 
@@ -502,7 +520,7 @@
 }
 /* a legal-but-alarming row: a negative UNASSIGNED residual is a deficit and
    is permitted (ADR-0025). It is marked, never hidden and never absolutised. */
-.ledger tr.ledger__residual td { color: var(--ink-2); background: var(--bollo-tint); }
+.ledger tr.ledger__residual td { color: var(--ink-2); background: var(--caution-tint); }
 
 /* ==========================================================================
    CONTROLS
@@ -543,7 +561,7 @@
   border-radius: var(--radius);
 }
 .field:hover { border-color: var(--ink-2); }
-.field[aria-invalid="true"] { border-color: var(--seal); background: var(--seal-tint); }
+.field[aria-invalid="true"] { border-color: var(--alarm); background: var(--alarm-tint); }
 .field:disabled { color: var(--ink-3); background: var(--sheet-sunken); cursor: not-allowed; }
 .field--declared { font-family: var(--face-declared); font-size: var(--fs-m); line-height: var(--lh-prose); }
 .field__label {
@@ -555,7 +573,7 @@
   text-transform: uppercase;
   color: var(--ink-3);
 }
-.field__error { margin-top: var(--sp-1); font-size: var(--fs-xs); color: var(--seal); }
+.field__error { margin-top: var(--sp-1); font-size: var(--fs-xs); color: var(--alarm); }
 
 /* a whole region the user may not act on yet. Not opacity-dimmed prose —
    the text stays readable, only the controls read as unavailable. */
@@ -631,25 +649,45 @@
    is therefore never colour alone. Text stays in ink tokens — a value never
    wears its series colour. */
 
+/* A GRID, not a flex row, because the label is a full Italian noun phrase:
+   ADR-L03 §5.1's label registry renders EQUITY_DEVELOPED as "le Azioni dei
+   paesi sviluppati", and BOND_CORP_IG is longer still. A flex row would put
+   one 41-character legend entry on its own line and leave a ragged hole; a
+   grid of fixed columns wraps inside the entry and keeps the swatches aligned
+   down the left, which is what makes a legend scannable at all. */
 .legend {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: var(--sp-2) var(--sp-4);
   padding: 0;
   margin: 0;
   list-style: none;
   font-size: var(--fs-xs);
 }
-.legend__item { display: flex; align-items: baseline; gap: var(--sp-2); color: var(--ink-2); }
+.legend__item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+  color: var(--ink-2);
+}
 .legend__swatch {
   flex: none;
   width: 10px;
   height: 10px;
+  /* nudged onto the text baseline: a 10px square hung off `baseline` sits high */
+  transform: translateY(1px);
   background: var(--swatch, var(--series-1));
   /* a surface ring, so adjacent swatches never touch */
   box-shadow: 0 0 0 1px var(--sheet);
 }
-.legend__value { font-family: var(--face-value); font-variant-numeric: tabular-nums; color: var(--ink); }
+.legend__value {
+  margin-inline-start: auto;
+  padding-inline-start: var(--sp-2);
+  font-family: var(--face-value);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
 
 .swatch-1 { --swatch: var(--series-1); }
 .swatch-2 { --swatch: var(--series-2); }
@@ -660,6 +698,26 @@
 .swatch-void {
   --swatch: var(--series-void);
   background-image: var(--series-void-texture);
+}
+/* ---- the cased cane, in the legend --------------------------------------
+   The allocation mark is three marks, and a reader who has not been told which
+   is which cannot use it. These three entries are part of the chart, not
+   decoration: they are what makes the geometry legible instead of decorative. */
+.swatch-casing {
+  --swatch: color-mix(in srgb, var(--ink-3) 30%, transparent);
+  box-shadow: inset 0 0 0 1px var(--rule-control);
+}
+.swatch-core { --swatch: var(--ink-3); }
+.swatch-edge {
+  --swatch: transparent;
+  width: 10px;
+  box-shadow: inset -3px 0 0 0 var(--edge), 0 0 0 1px var(--rule-control);
+}
+/* the target's own tick: drawn in ink, on the same axis, never a second scale */
+.swatch-target {
+  --swatch: transparent;
+  width: 10px;
+  box-shadow: inset -2px 0 0 0 var(--ink-2);
 }
 
 /* ---- CLASS B RESERVATION (RFC-0010 §6.4) ------------------------------
