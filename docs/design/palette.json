@@ -1,0 +1,298 @@
+{
+  "palette": {
+    "dark": {
+      "alarm": "#ff046f",
+      "alarm-tint": "#241111",
+      "annot": "#00ecfe",
+      "annot-tint": "#10191b",
+      "band": "#14254e",
+      "band-edge": "#526282",
+      "caution": "#fe9b00",
+      "caution-tint": "#1b160f",
+      "chart-axis": "#3c4354",
+      "chart-grid": "#202736",
+      "div-mid": "#272a30",
+      "div-over-1": "#1b97a2",
+      "div-over-2": "#17858f",
+      "div-over-3": "#12737c",
+      "div-under-1": "#d35574",
+      "div-under-2": "#bf4464",
+      "div-under-3": "#ad3255",
+      "edge": "#c2e2ea",
+      "ground": "#000125",
+      "ink": "#d2d7e0",
+      "ink-2": "#989eaa",
+      "ink-3": "#777e8b",
+      "projection": "#fa00fe",
+      "projection-tint": "#1e1123",
+      "rule": "#232b3a",
+      "rule-control": "#5a6271",
+      "rule-strong": "#3c4354",
+      "seq-100": "#26438e",
+      "seq-200": "#3857a5",
+      "seq-300": "#4a6cbc",
+      "seq-400": "#5e81d3",
+      "seq-500": "#7297ea",
+      "seq-600": "#8caef9",
+      "seq-700": "#adc6fb",
+      "series-1": "#af2b94",
+      "series-2": "#00a0d1",
+      "series-3": "#2263d7",
+      "series-4": "#00914a",
+      "series-5": "#8749cc",
+      "series-void": "#596273",
+      "sheet": "#020c39",
+      "sheet-sunken": "#091b4e"
+    },
+    "light": {
+      "alarm": "#d70013",
+      "alarm-tint": "#f4eaea",
+      "annot": "#004a5f",
+      "annot-tint": "#e1f0f4",
+      "band": "#d0e0f3",
+      "band-edge": "#7690af",
+      "caution": "#9b5d00",
+      "caution-tint": "#f4ecde",
+      "chart-axis": "#a8b7c9",
+      "chart-grid": "#d0dff2",
+      "div-mid": "#d0d7de",
+      "div-over-1": "#1787a8",
+      "div-over-2": "#126f8b",
+      "div-over-3": "#0c586f",
+      "div-under-1": "#c74c42",
+      "div-under-2": "#ad332c",
+      "div-under-3": "#941616",
+      "edge": "#00141a",
+      "ground": "#d0e2f6",
+      "ink": "#272c33",
+      "ink-2": "#4e555f",
+      "ink-3": "#67717d",
+      "projection": "#a200fd",
+      "projection-tint": "#f1eaf4",
+      "rule": "#cbdaec",
+      "rule-control": "#838f9e",
+      "rule-strong": "#a8b7c9",
+      "seq-100": "#8badf9",
+      "seq-200": "#7196e9",
+      "seq-300": "#5d81d2",
+      "seq-400": "#4a6bbb",
+      "seq-500": "#3757a4",
+      "seq-600": "#25428d",
+      "seq-700": "#142e78",
+      "series-1": "#900078",
+      "series-2": "#0098c7",
+      "series-3": "#1b5dd3",
+      "series-4": "#14a357",
+      "series-5": "#a96cf4",
+      "series-void": "#818fa0",
+      "sheet": "#f5f7f9",
+      "sheet-sunken": "#b7d2f2"
+    }
+  },
+  "report": {
+    "dark": {
+      "edge_vs_series_contrast": 2.21,
+      "ground_chroma": {
+        "band": 0.079,
+        "ground": 0.08,
+        "sheet": 0.088,
+        "sheet-sunken": 0.097
+      },
+      "ink_contrast_vs_sheet": {
+        "band-edge": 3.08,
+        "chart-axis": 1.91,
+        "chart-grid": 1.26,
+        "ink": 13.05,
+        "ink-2": 7.01,
+        "ink-3": 4.61,
+        "rule": 1.33,
+        "rule-control": 3.07,
+        "rule-strong": 1.91,
+        "series-void": 3.07
+      },
+      "reserved_on_tint_contrast": {
+        "alarm": 4.73,
+        "annot": 12.26,
+        "caution": 8.48,
+        "projection": 5.6
+      },
+      "reserved_text_contrast": {
+        "alarm": 4.94,
+        "annot": 12.95,
+        "caution": 8.89,
+        "projection": 5.83
+      },
+      "reserved_vs_series": {
+        "alarm": {
+          "cvd": 8.2,
+          "normal": 17.0
+        },
+        "annot": {
+          "cvd": 20.6,
+          "normal": 20.9
+        },
+        "caution": {
+          "cvd": 12.4,
+          "normal": 29.8
+        },
+        "projection": {
+          "cvd": 6.1,
+          "normal": 20.6
+        }
+      },
+      "sequential_dl": [
+        0.07,
+        0.07,
+        0.07,
+        0.07,
+        0.071,
+        0.071
+      ],
+      "sequential_light_end_contrast": 2.04,
+      "series_chroma": [
+        0.199,
+        0.13,
+        0.19,
+        0.15,
+        0.195
+      ],
+      "series_contrast_vs_sheet": [
+        3.23,
+        6.24,
+        3.44,
+        4.62,
+        3.46
+      ],
+      "series_hue": [
+        337.7,
+        228.9,
+        261.0,
+        152.4,
+        302.0
+      ],
+      "series_lightness": [
+        0.533,
+        0.66,
+        0.529,
+        0.575,
+        0.545
+      ],
+      "series_min_adjacent_cvd": 12.32,
+      "series_min_adjacent_normal": 16.81,
+      "series_min_adjacent_tritan": 6.25,
+      "series_min_allpairs_cvd": 2.84,
+      "series_min_allpairs_normal": 12.15,
+      "series_min_pairwise_hue_deg": 32.1,
+      "violation": 0
+    },
+    "hue_min_separation_deg": 32.0,
+    "light": {
+      "edge_vs_series_contrast": 2.2,
+      "ground_chroma": {
+        "band": 0.031,
+        "ground": 0.034,
+        "sheet": 0.003,
+        "sheet-sunken": 0.053
+      },
+      "ink_contrast_vs_sheet": {
+        "band-edge": 3.07,
+        "chart-axis": 1.9,
+        "chart-grid": 1.26,
+        "ink": 13.09,
+        "ink-2": 7.01,
+        "ink-3": 4.62,
+        "rule": 1.32,
+        "rule-control": 3.06,
+        "rule-strong": 1.9,
+        "series-void": 3.07
+      },
+      "reserved_on_tint_contrast": {
+        "alarm": 4.57,
+        "annot": 8.38,
+        "caution": 4.52,
+        "projection": 4.5
+      },
+      "reserved_text_contrast": {
+        "alarm": 5.02,
+        "annot": 9.12,
+        "caution": 4.94,
+        "projection": 4.94
+      },
+      "reserved_vs_series": {
+        "alarm": {
+          "cvd": 8.0,
+          "normal": 20.9
+        },
+        "annot": {
+          "cvd": 7.1,
+          "normal": 19.4
+        },
+        "caution": {
+          "cvd": 9.8,
+          "normal": 21.3
+        },
+        "projection": {
+          "cvd": 6.2,
+          "normal": 13.2
+        }
+      },
+      "sequential_dl": [
+        0.071,
+        0.068,
+        0.071,
+        0.069,
+        0.072,
+        0.069
+      ],
+      "sequential_light_end_contrast": 2.07,
+      "series_chroma": [
+        0.195,
+        0.125,
+        0.194,
+        0.159,
+        0.198
+      ],
+      "series_contrast_vs_sheet": [
+        7.96,
+        3.1,
+        5.5,
+        3.05,
+        3.19
+      ],
+      "series_hue": [
+        337.8,
+        229.1,
+        261.1,
+        152.6,
+        301.9
+      ],
+      "series_lightness": [
+        0.444,
+        0.636,
+        0.512,
+        0.629,
+        0.657
+      ],
+      "series_min_adjacent_cvd": 15.14,
+      "series_min_adjacent_normal": 16.52,
+      "series_min_adjacent_tritan": 11.63,
+      "series_min_allpairs_cvd": 6.76,
+      "series_min_allpairs_normal": 16.52,
+      "series_min_pairwise_hue_deg": 32.1,
+      "violation": 0
+    },
+    "series_score": [
+      -0.0,
+      0.174,
+      12.3,
+      2.84
+    ]
+  },
+  "series_labels": [
+    "EQUITY_DEVELOPED",
+    "EQUITY_EMERGING",
+    "BOND_GOV_EUR",
+    "BOND_CORP_IG",
+    "CASH"
+  ]
+}
