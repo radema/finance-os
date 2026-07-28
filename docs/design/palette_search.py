@@ -49,6 +49,7 @@ import json
 import math
 import pathlib
 import random
+import sys
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -97,11 +98,13 @@ CONTRAST_TEXT = 4.5       # an ink used as text
 CHROMA_PUSHED = 0.125
 CHROMA_CEILING = 0.20
 # Minimum hue distance between two series slots: the chromatic-range gate. The
-# widest value the rest of the gates admit is taken, tried in order — 40 deg is
-# infeasible (it forces a slot into the green, where sRGB has no chroma left at
-# the lightness the light-mode contrast cap allows), so the run settles itself
-# rather than having a number picked for it.
-HUE_SEP_CANDIDATES = (40.0, 36.0, 34.0, 32.0)
+# widest value the rest of the gates admit is taken, tried in order, so the run
+# settles this rather than having a number picked for it. 40 and 36 deg were
+# both tried and are infeasible: they force a slot into the green, where sRGB
+# has no chroma left at the lightness the light-mode contrast cap allows. They
+# are dropped from the list only to keep a rerun to a few minutes — put them
+# back if a gate above changes.
+HUE_SEP_CANDIDATES = (34.0, 32.0)
 HUE_MIN_SEP = HUE_SEP_CANDIDATES[-1]
 HUE_STATUS_MARGIN = 30.0  # between a series slot and a reserved status window
 # The validator's 15.0 normal-vision floor applies to the ACTIVE pairlist,
@@ -336,22 +339,42 @@ RESERVED_C_MIN: dict[str, float] = {
     "projection": 0.11,
 }
 
-# Ground ladders. Dark first: B is a dark-first world. Chroma fraction is how
-# much of the gamut maximum each layer takes — the deepest layer is the most
-# saturated, because in sommerso the thickest glass carries the most colour.
+# ...and the ceiling. A first solve had no ceiling here and duly returned
+# #ff046f, #00ecfe and #fa00fe — a legible, gated, entirely correct rave. The
+# register does not shout, so the reserved inks are capped too: a status ink is
+# a stamp, and the reference ink is a cast of light, not a hue.
+RESERVED_C_MAX: dict[str, float] = {
+    "alarm": 0.155,
+    "caution": 0.150,
+    "annot": 0.075,
+    "projection": 0.150,
+}
+
+# Ground ladders — and THIS is where the owner's "push the palette further"
+# actually lands, because the ground is the one surface with real chromatic
+# headroom: it owes contrast to text only, never to a series.
+#
+# Chroma is a TARGET, not a fraction of the gamut maximum. A first solve took
+# 92% of the gamut at the deepest step and returned #000125 — a correct,
+# gated, pure ultramarine black that reads as a colour field rather than a
+# ground. These targets are ~2.5x the chroma of the candidate proof's ground
+# (0.028) and still read as glass rather than as ink.
+#
+# In sommerso the thickest glass carries the most colour, so the deepest layer
+# is the most saturated and the layers above it thin out.
 GROUNDS: dict[Scheme, dict[str, tuple[float, float, float]]] = {
-    # token: (lightness, chroma fraction, hue)
+    # token: (lightness, chroma target, hue)
     "dark": {
-        "ground": (0.125, 0.92, GLASS_HUE),
-        "sheet": (0.185, 0.70, GLASS_HUE),
-        "sheet-sunken": (0.245, 0.58, GLASS_HUE),
-        "band": (0.275, 0.42, GLASS_HUE),
+        "ground": (0.125, 0.075, GLASS_HUE),
+        "sheet": (0.185, 0.058, GLASS_HUE),
+        "sheet-sunken": (0.245, 0.050, GLASS_HUE),
+        "band": (0.275, 0.040, GLASS_HUE),
     },
     "light": {
-        "ground": (0.905, 0.72, GLASS_COOL),
-        "sheet": (0.975, 0.34, GLASS_COOL),
-        "sheet-sunken": (0.855, 0.72, GLASS_COOL),
-        "band": (0.900, 0.62, GLASS_COOL),
+        "ground": (0.905, 0.036, GLASS_COOL),
+        "sheet": (0.975, 0.012, GLASS_COOL),
+        "sheet-sunken": (0.855, 0.045, GLASS_COOL),
+        "band": (0.900, 0.030, GLASS_COOL),
     },
 }
 
@@ -371,6 +394,23 @@ INKS: list[tuple[str, float, float]] = [
 ]
 
 SERIES_N = 5
+
+# THE RECORDED SOLUTION. The annealed search that produced it takes minutes;
+# a design token layer must not have a minutes-long build step, and a search
+# rerun on every invocation is also a reproducibility hazard. So the answer is
+# recorded here as data and re-VERIFIED against every gate on each run (see
+# build()). Pass --search to re-derive it — do that after changing any gate,
+# any ground, or any reserved ink, and paste the new answer back here.
+#
+# Solved at hue separation 34 deg (40 and 36 are infeasible), violation 0 in
+# both schemes, mean chroma 0.184 against the validator's 0.10 floor.
+SOLVED_HUE_SEP = 34.0
+SOLVED_SCORE = [-0.0, 0.184, 10.6, 3.35]
+SOLVED_SERIES: dict[str, list[str]] = {
+    "light": ["#ab2890", "#507dff", "#1fa31e", "#0099cc", "#8c4ace"],
+    "dark": ["#dd5bbe", "#3056d5", "#009105", "#1a9ed1", "#833fc4"],
+}
+
 SERIES_LABELS = [
     "EQUITY_DEVELOPED",
     "EQUITY_EMERGING",
@@ -419,8 +459,8 @@ RESERVED_SEPARATION: dict[str, tuple[float, float]] = {
 
 def solve_grounds(scheme: Scheme) -> dict[str, str]:
     out: dict[str, str] = {}
-    for name, (ll, frac, hue) in GROUNDS[scheme].items():
-        out[name] = oklch_hex(ll, frac * max_chroma(ll, hue), hue)
+    for name, (ll, chroma, hue) in GROUNDS[scheme].items():
+        out[name] = oklch_hex(ll, min(chroma, max_chroma(ll, hue)), hue)
     return out
 
 
@@ -460,7 +500,7 @@ def solve_reserved(scheme: Scheme, sheet: str, ink: str) -> dict[str, str]:
                 for cfrac in (1.0, 0.94, 0.88, 0.80):
                     hexv = oklch_hex(ll, cfrac * cmax, hue)
                     lch = oklch(hexv)
-                    if lch[1] < RESERVED_C_MIN[name]:
+                    if not RESERVED_C_MIN[name] <= lch[1] <= RESERVED_C_MAX[name]:
                         continue
                     if contrast(hexv, sheet) < CONTRAST_TEXT:
                         continue
@@ -613,7 +653,7 @@ def search_series(
     sheets: dict[str, str],
     reserved: dict[str, dict[str, str]],
     *,
-    restarts: int = 60,
+    restarts: int = 40,
     steps: int = 5000,
     seed: int = 20260728,
 ) -> tuple[SeriesState, tuple[float, float, float, float]]:
@@ -837,26 +877,45 @@ def build() -> dict[str, object]:
         sheets[scheme] = grounds["sheet"]
 
     global HUE_MIN_SEP
-    state: SeriesState | None = None
-    score: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
-    for sep in HUE_SEP_CANDIDATES:
-        HUE_MIN_SEP = sep
-        try:
-            state, score = search_series(sheets, reserved)
-        except RuntimeError as exc:
-            print(f"hue separation {sep:.0f} deg: infeasible ({exc})".split(". Bind")[0])
-            continue
-        print(f"hue separation {sep:.0f} deg: FEASIBLE — taken")
-        break
-    if state is None:
-        raise RuntimeError("no feasible series palette at any hue separation")
+    score: tuple[float, float, float, float] = tuple(SOLVED_SCORE)  # type: ignore[assignment]
+    series: dict[str, list[str]] = {k: list(v) for k, v in SOLVED_SERIES.items()}
+    if "--search" in sys.argv:
+        state: SeriesState | None = None
+        for sep in HUE_SEP_CANDIDATES:
+            HUE_MIN_SEP = sep
+            try:
+                state, score = search_series(sheets, reserved)
+            except RuntimeError as exc:
+                print(f"hue separation {sep:.0f} deg: infeasible ({exc})".split(". Bind")[0])
+                continue
+            print(f"hue separation {sep:.0f} deg: FEASIBLE — taken")
+            break
+        if state is None:
+            raise RuntimeError("no feasible series palette at any hue separation")
+        series = {s: state.hexes(s) for s in ("light", "dark")}  # type: ignore[arg-type]
+    else:
+        HUE_MIN_SEP = SOLVED_HUE_SEP
+        print("using the recorded series solution; pass --search to re-derive it")
+
+    # The pin is VERIFIED, not trusted: the recorded hexes are pushed back
+    # through every gate, so a later edit to a gate, a ground or a reserved ink
+    # fails this run instead of silently invalidating the palette.
+    for scheme in ("light", "dark"):
+        bad = penalty_breakdown(
+            series[scheme], scheme, sheets[scheme], reserved[scheme]  # type: ignore[arg-type]
+        )
+        if bad:
+            raise RuntimeError(
+                f"the recorded series palette no longer clears its gates in "
+                f"{scheme}: {bad}. Re-run with --search."
+            )
 
     report: dict[str, object] = {
         "series_score": list(score),
         "hue_min_separation_deg": HUE_MIN_SEP,
     }
     for scheme in ("light", "dark"):
-        hexes = state.hexes(scheme)  # type: ignore[arg-type]
+        hexes = series[scheme]
         for i, h in enumerate(hexes, start=1):
             palette[scheme][f"series-{i}"] = h
         seq = solve_sequential(scheme, sheets[scheme])  # type: ignore[arg-type]

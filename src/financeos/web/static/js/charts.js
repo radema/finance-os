@@ -15,14 +15,22 @@
       element, a chart is correct inside any themed container and the design
       preview can show both schemes on one page. Dark is not a flip: its series
       steps are their own validated set in tokens.css.
-   3. HTMX-SAFE LIFECYCLE. Charts init on htmx:load for the swapped fragment
+   3. THE MARK LANGUAGE IS INHERITED, NOT RETYPED. A server-assembled series
+      names the ROLE it plays — "casing", "core", "edge", "void", "segment" —
+      and this file supplies that role's geometry. See THE CASED CANE below. A
+      screen that hand-rolls opacities and offsets has forked the chart
+      language; it should name a role instead.
+   4. HTMX-SAFE LIFECYCLE. Charts init on htmx:load for the swapped fragment
       and dispose on htmx:beforeSwap, so repeated fragment swaps never leak
       instances.
-   4. NO CHART READS THE DOM FOR DATA. The option arrives as JSON in a
+   5. NO CHART READS THE DOM FOR DATA. The option arrives as JSON in a
       <script type="application/json">, assembled server-side.
-   5. THE TABLE IS NOT A FALLBACK. It ships open; we collapse it only after a
+   6. THE TABLE IS NOT A FALLBACK. It ships open; we collapse it only after a
       chart is successfully live, so a JS-off or JS-failed reader keeps every
       number. If echarts is missing we leave the tables open and stop.
+   7. ONE POINT IS NEVER A LINE. A line series with a single datum is forced to
+      a labelled dot, because a one-point line draws a trend the data does not
+      support. Enforced here so that no caller can forget it.
    ========================================================================== */
 
 (function () {
@@ -47,36 +55,60 @@
     return v || fallback;
   }
 
-  /* Build the ECharts theme from the CSS token layer. Typography follows the
-     three voices: numeric axis labels and tooltip values in Mono, series
-     names and titles in Sans (ADR-L03 §4). */
+  function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function isPlain(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
+
+  /* Deep merge in which the CALLER always wins over the preset. */
+  function merge(base, extra) {
+    var out = {}, k;
+    for (k in base) if (has(base, k)) out[k] = base[k];
+    for (k in extra) {
+      if (!has(extra, k)) continue;
+      if (isPlain(out[k]) && isPlain(extra[k])) out[k] = merge(out[k], extra[k]);
+      else out[k] = extra[k];
+    }
+    return out;
+  }
+
+  /* ---- the chart language, as geometry ----------------------------------
+     Every number here is a mark spec, never a colour. Colours arrive from the
+     theme (series identity) or as "token:--name" (role colours). */
+  var GAP = 2;              // surface gap between adjacent fills
+  var RING = 2;             // surface ring on an overlapping mark
+  var CANE = 20;            // the cased cane's casing height, px
+  var EDGE = 3;             // the luminous leading edge, px
+  var CASING_ALPHA = 0.3;   // the casing is glass: you see the ground through it
+
   function buildTheme(el) {
     function t(name, fallback) { return token(el, name, fallback); }
-    var ink = t("--chart-ink", t("--ink", "#14181d"));
-    var ink2 = t("--chart-ink-2", t("--ink-2", "#464e57"));
-    var ink3 = t("--chart-ink-3", t("--ink-3", "#5a636d"));
-    var grid = t("--chart-grid", "#e0e4e9");
-    var axis = t("--chart-axis", "#b6bec7");
-    var surface = t("--sheet", "#f7f8fa");
+    var ink = t("--chart-ink", t("--ink", "#272c33"));
+    var ink2 = t("--chart-ink-2", t("--ink-2", "#4e555f"));
+    var ink3 = t("--chart-ink-3", t("--ink-3", "#67717d"));
+    var grid = t("--chart-grid", "#d0dff2");
+    var axis = t("--chart-axis", "#a8b7c9");
+    var surface = t("--sheet", "#f5f7f9");
 
     var faceValue = t("--face-value", "monospace");
     var faceSystem = t("--face-system", "sans-serif");
 
     // Categorical slots, in fixed order. Assigned to entities by the caller's
-    // series order; never cycled. A 6th series is not a generated hue — it
-    // folds into "altro" or the chart is faceted.
+    // series order; never cycled. A 6th TARGETED class is not a generated hue —
+    // it folds into "altro" or the chart is faceted. Untargeted capital is not
+    // a 6th hue either: it is the void cane, and has no hue at all.
     var series = [
-      t("--series-1", "#0e6ea6"),
-      t("--series-2", "#0b8f68"),
-      t("--series-3", "#c07408"),
-      t("--series-4", "#c33f7d"),
-      t("--series-5", "#3f5cc4")
+      t("--series-1", "#900078"),
+      t("--series-2", "#0098c7"),
+      t("--series-3", "#1b5dd3"),
+      t("--series-4", "#14a357"),
+      t("--series-5", "#a96cf4")
     ];
 
+    /* Axis and grid are recessive by construction: a hairline axis line, no
+       ticks, and split lines on the VALUE axis only — there is nothing to
+       measure between two categories, so a category grid is decoration. */
     var axisCommon = {
       axisLine: { show: true, lineStyle: { color: axis, width: 1 } },
       axisTick: { show: false },
-      splitLine: { show: true, lineStyle: { color: grid, width: 1 } },
       axisLabel: { color: ink3, fontFamily: faceValue, fontSize: 11 }
     };
 
@@ -92,29 +124,153 @@
       // default: two legends for one chart is a defect, not redundancy.
       legend: { show: false },
       grid: { left: 8, right: 12, top: 16, bottom: 8, containLabel: true },
-      categoryAxis: axisCommon,
-      valueAxis: axisCommon,
+      categoryAxis: merge(axisCommon, { splitLine: { show: false } }),
+      valueAxis: merge(axisCommon, {
+        splitLine: { show: true, lineStyle: { color: grid, width: 1 } }
+      }),
       logAxis: axisCommon,
       timeAxis: axisCommon,
       tooltip: {
         backgroundColor: surface,
         borderColor: axis,
         borderWidth: 1,
-        // zero radius: the register has no rounded corners
-        extraCssText: "border-radius:0;box-shadow:0 2px 8px rgba(0,0,0,.14)",
+        // Zero radius: this world has no rounded corners. The tooltip is the
+        // one element allowed a real offset shadow, because it is the one
+        // element that genuinely floats above its plot.
+        extraCssText: "border-radius:0;box-shadow:0 2px 10px rgba(0,0,0,.28)",
         textStyle: { color: ink, fontFamily: faceValue, fontSize: 12 },
         axisPointer: { type: "line", lineStyle: { color: axis, width: 1 } }
       },
-      // 2px surface gap between adjacent fills, and a surface ring on marks
-      bar: { itemStyle: { borderColor: surface, borderWidth: 2 } },
+      bar: { itemStyle: { borderColor: surface, borderWidth: GAP } },
       line: {
         lineStyle: { width: 2 },
         symbolSize: 8,
-        itemStyle: { borderColor: surface, borderWidth: 2 }
+        itemStyle: { borderColor: surface, borderWidth: RING }
       },
-      scatter: { itemStyle: { borderColor: surface, borderWidth: 2 } },
-      pie: { itemStyle: { borderColor: surface, borderWidth: 2 } }
+      scatter: { itemStyle: { borderColor: surface, borderWidth: RING } },
+      pictorialBar: { itemStyle: { borderWidth: 0 } }
     };
+  }
+
+  /* ======================================================================
+     THE CASED CANE — the allocation mark, and the reason this world was
+     chosen. Sommerso is the Murano technique of casing one colour inside
+     another, and that is exactly what an apportioned allocation is: a declared
+     shape with an actual quantity sitting inside it.
+
+       casing    the TARGET extent. Translucent, no border, behind everything:
+                 the shape the frozen strategy declared.
+       core      the CURRENT quantity. Opaque, narrower, with a surface gap.
+       edge      the luminous leading edge at the core's end. ONE light source
+                 for the whole world, so it is one token, not a lighter step
+                 per hue. It also makes the exact current value readable to a
+                 pixel without reading a colour.
+       void      untargeted capital: no hue, plus a hatch decal. It stays in the
+                 denominator (RFC-0007 §4.1) and reads as absence, not as a
+                 sixth category.
+       segment   a stacked part of a nested whole (the composition cane).
+
+     Reading it needs no colour at all:
+       core short of the casing   -> a shortfall: unfilled casing
+       core past the target tick  -> an overshoot: a protrusion
+     Polarity is carried by GEOMETRY; hue only carries identity. That is what
+     lets the palette be pushed hard without colour becoming load-bearing (P9).
+     ====================================================================== */
+  function markPresets(el, caneWidth) {
+    var surface = token(el, "--sheet", "#f5f7f9");
+    var edge = token(el, "--edge", token(el, "--ink", "#00141a"));
+    var voidInk = token(el, "--series-void", "#818fa0");
+    var body = caneWidth || CANE;
+    var core = Math.max(8, Math.round(body * 0.55));
+    return {
+      casing: {
+        type: "bar",
+        barWidth: body,
+        barGap: "-100%",
+        z: 1,
+        itemStyle: { opacity: CASING_ALPHA, borderWidth: 0 }
+      },
+      core: {
+        type: "bar",
+        barWidth: core,
+        barGap: "-100%",
+        z: 3,
+        itemStyle: { borderColor: surface, borderWidth: GAP }
+      },
+      edge: {
+        type: "pictorialBar",
+        symbol: "rect",
+        symbolSize: [EDGE, core],
+        symbolPosition: "end",
+        barGap: "-100%",
+        barWidth: body,
+        z: 5,
+        silent: true,
+        tooltip: { show: false },
+        itemStyle: { color: edge, borderWidth: 0 }
+      },
+      void: {
+        type: "bar",
+        barWidth: body,
+        z: 3,
+        itemStyle: {
+          color: voidInk,
+          borderColor: surface,
+          borderWidth: GAP,
+          // The register's cancellation hatch, inside the canvas: this is the
+          // texture channel dataviz requires for CVD, print and forced-colors.
+          decal: {
+            symbol: "rect",
+            color: "rgba(0,0,0,0.45)",
+            dashArrayX: [1, 0],
+            dashArrayY: [2, 5],
+            rotation: -Math.PI / 4,
+            symbolSize: 1
+          }
+        }
+      },
+      segment: {
+        type: "bar",
+        stack: "insieme",
+        barWidth: body,
+        z: 3,
+        itemStyle: { borderColor: surface, borderWidth: GAP }
+      }
+    };
+  }
+
+  /* A series names its role; this applies that role's geometry underneath it,
+     so anything the caller states explicitly still wins. */
+  function applyMarks(option, el) {
+    if (!option || !option.series) return option;
+    var list = Array.isArray(option.series) ? option.series : [option.series];
+    var presets = markPresets(el, option.caneWidth);
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (!s || !s.mark) continue;
+      var preset = presets[s.mark];
+      delete s.mark;
+      if (preset) list[i] = merge(preset, s);
+    }
+    option.series = Array.isArray(option.series) ? list : list[0];
+    delete option.caneWidth;
+    return option;
+  }
+
+  /* ONE POINT IS NEVER A LINE. A single-datum line series draws a slope out of
+     nothing, and ECharts will render it happily. Force the honest mark. */
+  function guardSinglePoint(option) {
+    if (!option || !option.series) return option;
+    var list = Array.isArray(option.series) ? option.series : [option.series];
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (!s || s.type !== "line" || !s.data || s.data.length > 1) continue;
+      s.showSymbol = true;
+      s.symbolSize = 9;
+      s.lineStyle = merge(s.lineStyle || {}, { width: 0, opacity: 0 });
+      s.label = merge({ show: true, position: "top", fontSize: 11 }, s.label || {});
+    }
+    return option;
   }
 
   function readOption(el) {
@@ -148,9 +304,7 @@
     }
     if (node && typeof node === "object") {
       for (var k in node) {
-        if (Object.prototype.hasOwnProperty.call(node, k)) {
-          node[k] = resolveTokens(node[k], el);
-        }
+        if (has(node, k)) node[k] = resolveTokens(node[k], el);
       }
     }
     return node;
@@ -185,6 +339,14 @@
     return option;
   }
 
+  /* The whole server-option -> ECharts-option pipeline, in one place so the
+     offline audit can run exactly what the browser runs. */
+  function prepare(option, el) {
+    return applyLocaleFormatting(
+      guardSinglePoint(applyMarks(resolveTokens(option, el), el))
+    );
+  }
+
   function initOne(el) {
     if (!el || instances[el.id]) return;
     var option = readOption(el);
@@ -193,7 +355,7 @@
     // A theme OBJECT, built from this element's own tokens — not a globally
     // registered theme name, which would bake one scheme in at first init.
     var chart = echarts.init(el, buildTheme(el), { renderer: "canvas" });
-    option = applyLocaleFormatting(resolveTokens(option, el));
+    option = prepare(option, el);
     if (reduceMotion) option.animation = false;
     chart.setOption(option);
 
@@ -249,14 +411,20 @@
   if (scheme.addEventListener) scheme.addEventListener("change", rethemeAll);
 
   // HTMX fragment lifecycle (ADR-0007: the unit of work is a fragment).
-  document.body.addEventListener("htmx:load", function (e) { initIn(e.target); });
-  document.body.addEventListener("htmx:beforeSwap", function (e) { disposeIn(e.target); });
+  if (document.body) {
+    document.body.addEventListener("htmx:load", function (e) { initIn(e.target); });
+    document.body.addEventListener("htmx:beforeSwap", function (e) { disposeIn(e.target); });
+  }
 
   // Exposed so a theme toggle (and the design preview) can force a re-theme.
+  // `prepare` is exposed for the offline audit, which pushes every shipped
+  // option through it in Node to prove no option carries a hex, that every
+  // token reference resolves, and that ECharts accepts the result.
   window.FinanceOSCharts = {
     init: initIn,
     dispose: disposeIn,
     retheme: rethemeAll,
-    theme: buildTheme
+    theme: buildTheme,
+    prepare: prepare
   };
 })();
