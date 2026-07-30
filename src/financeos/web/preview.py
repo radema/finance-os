@@ -19,6 +19,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from financeos.web.design_fixture import preview_context
+from financeos.web.labels import register_label_filters
 
 WEB_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = WEB_DIR / "templates"
@@ -27,12 +28,14 @@ STATIC_DIR = WEB_DIR / "static"
 
 def build_environment() -> Environment:
     """The Jinja environment the web layer uses. Autoescape on, always."""
-    return Environment(
+    env = Environment(
         loader=FileSystemLoader(TEMPLATES_DIR),
         autoescape=select_autoescape(["html", "xml"]),
         trim_blocks=True,
         lstrip_blocks=True,
     )
+    register_label_filters(env)
+    return env
 
 
 def render(static_url: str) -> str:

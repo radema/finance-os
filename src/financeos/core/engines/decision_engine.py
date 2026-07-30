@@ -33,11 +33,12 @@ from financeos.core.shared import (
     Outcome,
     Percentage,
     RecommendationId,
+    Role,
     RunMode,
     SourceRef,
-    asset_class_label,
     canonical_decimal,
     canonical_json,
+    label,
     priority_rank,
     sha256_hex,
 )
@@ -211,7 +212,7 @@ def assemble_rationale(
         provision = (
             f"prevede un target del "
             f"{render_number(Percentage.from_ratio(leaf.effective_target).value)}% per "
-            f"{asset_class_label(leaf.asset_class)} con {_band_phrase(leaf, render_number)}"
+            f"{label(leaf.asset_class, role=Role.THE)} con {_band_phrase(leaf, render_number)}"
         )
     else:
         provision = "governa questo scopo di valutazione"

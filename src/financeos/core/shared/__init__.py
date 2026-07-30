@@ -51,6 +51,18 @@ from financeos.core.shared.ids import (
     asset_class_label,
     entity_ref,
 )
+from financeos.core.shared.labels import (
+    DOMAIN_LABELS,
+    ArticleForm,
+    Gender,
+    GrammaticalNumber,
+    LabelEntry,
+    Role,
+    TermEntry,
+    agree,
+    copula,
+    label,
+)
 from financeos.core.shared.money import Money, Percentage, Quantity, Weight
 from financeos.core.shared.numbers import (
     MONEY_SCALE,
@@ -71,6 +83,7 @@ from financeos.core.shared.numbers import (
 )
 
 __all__ = [
+    "DOMAIN_LABELS",
     "MONEY_SCALE",
     "PERCENTAGE_SCALE",
     "PRICE_SCALE",
@@ -83,6 +96,7 @@ __all__ = [
     "WEIGHT_SCALE",
     "AccountId",
     "AlertId",
+    "ArticleForm",
     "AssetClass",
     "AssetId",
     "Bound",
@@ -93,8 +107,11 @@ __all__ = [
     "DomainModel",
     "EvaluationRunId",
     "FloatNotAllowedError",
+    "Gender",
+    "GrammaticalNumber",
     "Instant",
     "InvariantViolationError",
+    "LabelEntry",
     "Money",
     "MoneyAmount",
     "OperationId",
@@ -111,6 +128,7 @@ __all__ = [
     "RecommendationId",
     "RegistryError",
     "ReplayMismatchError",
+    "Role",
     "RuleId",
     "RuleNotInVersionError",
     "RunMode",
@@ -123,14 +141,18 @@ __all__ = [
     "StrategyVersionId",
     "SuggestionClass",
     "TemplateRenderError",
+    "TermEntry",
     "UnknownConditionKindError",
     "Weight",
     "WeightAmount",
+    "agree",
     "asset_class_label",
     "canonical_decimal",
     "canonical_json",
     "canonical_value",
+    "copula",
     "entity_ref",
+    "label",
     "priority_rank",
     "quantize",
     "sha256_hex",

@@ -201,7 +201,7 @@ class TestObservation:
     def test_renders_from_the_captured_message_bindings(self) -> None:
         result = run_pipeline((f.drift_rule(1),))
         assert result.recommendations[0].observation == (
-            "Equity/Developed è al 34.00% contro un target del 40.00% "
+            "Azioni dei paesi sviluppati è al 34.00% contro un target del 40.00% "
             "(tolleranza ±2.00pp). Scostamento: -6.00pp."
         )
 
@@ -226,8 +226,8 @@ class TestRationale:
         rationale = assemble_rationale(version, f.drift_rule(1))
         assert rationale == (
             "La tua strategia «Crescita di lungo periodo» (congelata il 01/03/2026) "
-            "prevede un target del 40.00% per Equity/Developed con una banda di ±2.00pp, "
-            "su un orizzonte di 20 anni. "
+            "prevede un target del 40.00% per le Azioni dei paesi sviluppati con una banda "
+            "di ±2.00pp, su un orizzonte di 20 anni. "
             "Principio dichiarato: «preservare il potere d'acquisto senza fare market timing»."
         )
 
@@ -284,8 +284,9 @@ class TestRationale:
         the same frozen version for display passes an it-IT renderer instead."""
         version = f.strategy_version(rules=(f.drift_rule(1),))
         rationale = assemble_rationale(version, f.drift_rule(1), render_number=format_number_it)
-        assert "prevede un target del 40,00% per Equity/Developed con una banda di ±2,00pp" in (
-            rationale
+        assert (
+            "prevede un target del 40,00% per le Azioni dei paesi sviluppati con una banda "
+            "di ±2,00pp" in rationale
         )
         assert "40.00%" not in rationale
 

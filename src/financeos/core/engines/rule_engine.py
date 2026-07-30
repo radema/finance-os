@@ -43,12 +43,14 @@ from financeos.core.shared import (
     DomainModel,
     Outcome,
     Percentage,
+    Role,
     Scope,
     SeverityAmount,
     SkipReason,
     SourceRef,
-    asset_class_label,
     canonical_decimal,
+    copula,
+    label,
     priority_rank,
 )
 from financeos.core.shared.errors import (
@@ -106,8 +108,14 @@ class FactSet(DomainModel):
         return self.unavailable.get(family)
 
     def label_for(self, asset_class: AssetClass) -> str:
-        """The display label of an `AssetClass`."""
-        return self.labels.get(asset_class) or asset_class_label(asset_class)
+        """The display label of an `AssetClass` (L05 §6.2).
+
+        `self.labels`, when the caller supplies an override, wins first; otherwise the L05
+        label registry supplies the noun, which itself degrades to the mechanical
+        `asset_class_label` rendering for a class the registry does not yet know (E12: the
+        taxonomy is open, so this is not a defect in either lookup).
+        """
+        return self.labels.get(asset_class) or label(asset_class)
 
 
 # --------------------------------------------------------------------------------------
@@ -626,6 +634,15 @@ def _drift_message_bindings(
     bindings = {
         "asset_class": params.asset_class,
         "asset_class_label": facts.label_for(params.asset_class),
+        # L05 §4.2's role bindings, append-only: a MessageTemplate is frozen, and `str.format`
+        # ignores surplus keys, so an old template keeps rendering unchanged against these.
+        "asset_class_label_the": label(params.asset_class, role=Role.THE),
+        "asset_class_label_the_cap": label(
+            params.asset_class, role=Role.THE, sentence_initial=True
+        ),
+        "asset_class_label_of": label(params.asset_class, role=Role.OF),
+        "asset_class_label_in": label(params.asset_class, role=Role.IN),
+        "asset_class_copula": copula(params.asset_class),
         "scope": params.scope,
         "currency": line.current_value.currency,
         "current_pct": Percentage.from_ratio(line.current_weight).canonical(),
@@ -649,10 +666,13 @@ DRIFT_OUTSIDE_TOLERANCE: Final = REGISTRY.register(
         required_facts=frozenset({FACT_DRIFT}),
         default_max_staleness=timedelta(days=7),
         severity=SeverityDeclaration(formula="|drift| / effective_band"),
+        # D-L05-5 / L05 §4.3(A): the previous template hardcoded "è", wrong for the four
+        # fixture classes that are feminine plural ("Azioni" wants "sono"). The role bindings
+        # above carry the agreement so one template is grammatical for every class.
         explanation_template=(
-            "{asset_class_label} è al {current_pct}% contro un target del {target_pct}% "
-            "(banda ±{tolerance_pct}pp): scostamento di {drift_pct}pp "
-            "({drift_value} {currency})."
+            "{asset_class_label_the_cap} {asset_class_copula} al {current_pct}% contro un "
+            "target del {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di "
+            "{drift_pct}pp ({drift_value} {currency})."
         ),
         numeric_bindings=frozenset(
             {

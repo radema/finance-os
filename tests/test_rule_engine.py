@@ -266,12 +266,22 @@ class TestTraceShape:
     def test_message_bindings_are_captured_for_later_rendering(self) -> None:
         (firing,) = evaluate((f.drift_rule(1),), facts_for(*BREACHED))
         bindings = firing.trace.message_bindings
-        assert bindings["asset_class_label"] == "Equity/Developed"
+        assert bindings["asset_class_label"] == "Azioni dei paesi sviluppati"
         assert bindings["current_pct"] == "34.00"
         assert bindings["target_pct"] == "40.00"
         assert bindings["drift_pct"] == "-6.00"
         assert bindings["tolerance_pct"] == "2.00"
         assert bindings["drift_value"] == "-600.0000"
+
+    def test_message_bindings_carry_l05_role_forms_for_the_asset_class(self) -> None:
+        """L05 §4.2: pre-resolved into the trace because `str.format` cannot call `label()`."""
+        (firing,) = evaluate((f.drift_rule(1),), facts_for(*BREACHED))
+        bindings = firing.trace.message_bindings
+        assert bindings["asset_class_label_the"] == "le Azioni dei paesi sviluppati"
+        assert bindings["asset_class_label_the_cap"] == "Le Azioni dei paesi sviluppati"
+        assert bindings["asset_class_label_of"] == "delle Azioni dei paesi sviluppati"
+        assert bindings["asset_class_label_in"] == "nelle Azioni dei paesi sviluppati"
+        assert bindings["asset_class_copula"] == "sono"
 
     def test_a_caller_supplied_label_is_used(self) -> None:
         facts = facts_for(*BREACHED, labels={"EQUITY_DEVELOPED": "Azioni/Sviluppati"})
@@ -343,8 +353,15 @@ class TestFactSet:
         assert facts.drift_for("EQUITY_EMERGING") is None
         assert facts.unavailable_reason("drift") is None
 
-    def test_the_default_label_is_derived_from_the_code(self) -> None:
-        assert facts_for(*BREACHED).label_for("EQUITY_DEVELOPED") == "Equity/Developed"
+    def test_the_registry_label_wins_over_the_mechanical_default(self) -> None:
+        """L05: `EQUITY_DEVELOPED` is a labelled key, so `label_for` returns its Italian noun,
+        not the mechanical `asset_class_label` rendering."""
+        assert facts_for(*BREACHED).label_for("EQUITY_DEVELOPED") == "Azioni dei paesi sviluppati"
+
+    def test_an_unlabelled_class_falls_back_to_the_mechanical_rendering(self) -> None:
+        """L05 §6.2: `AssetClass` is open, so a code the registry does not know degrades to
+        today's mechanical rendering rather than failing."""
+        assert facts_for(*BREACHED).label_for("REAL_ESTATE") == "Real/Estate"
 
     def test_facts_are_bound_values_with_provenance(self) -> None:
         fact = facts_for(*BREACHED).drift_for("EQUITY_DEVELOPED")
