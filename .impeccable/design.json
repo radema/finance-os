@@ -1,206 +1,268 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-26T21:35:54.580833Z",
+  "generatedAt": "2026-07-30T00:00:00.000000Z",
   "title": "Design System: Finance OS",
   "extensions": {
     "colorMeta": {
       "ground": {
         "role": "neutral",
-        "displayName": "Protocol Paper",
-        "canonical": "#e4e8ec",
+        "displayName": "Sommerso Ground",
+        "canonical": "#cfe2f8",
         "tonalRamp": [
-          "#0a0b0d",
-          "#222426",
-          "#3d4043",
-          "#5b5e61",
-          "#7a7e81",
-          "#9b9fa2",
-          "#c1c4c7",
-          "#e5e8eb"
+          "#00030c",
+          "#0d1b2b",
+          "#2a394a",
+          "#495a6c",
+          "#6b7c90",
+          "#8fa0b5",
+          "#b4c6dc",
+          "#d8eaff"
         ]
       },
       "sheet": {
         "role": "neutral",
-        "displayName": "Sheet",
-        "canonical": "#f7f8fa",
+        "displayName": "Cased Sheet",
+        "canonical": "#f1f8ff",
         "tonalRamp": [
-          "#0b0b0c",
-          "#232425",
-          "#3f4041",
-          "#5d5e5f",
-          "#7c7d7f",
-          "#9d9ea0",
-          "#c3c4c5",
-          "#e7e8e9"
+          "#020406",
+          "#161b20",
+          "#33393e",
+          "#53595f",
+          "#757b81",
+          "#999fa6",
+          "#bec5cc",
+          "#e2e9f0"
+        ]
+      },
+      "sheet-sunken": {
+        "role": "neutral",
+        "displayName": "Sunken Sheet",
+        "canonical": "#bbd2ed",
+        "tonalRamp": [
+          "#00030c",
+          "#0a1b2f",
+          "#27394f",
+          "#465a71",
+          "#677c95",
+          "#8ba1ba",
+          "#b0c7e1",
+          "#d8eaff"
         ]
       },
       "ink": {
         "role": "neutral",
-        "displayName": "Iron-gall Ink",
-        "canonical": "#14181d",
+        "displayName": "Ink",
+        "canonical": "#272c33",
         "tonalRamp": [
-          "#090b0e",
-          "#212428",
-          "#3c4045",
-          "#595e64",
-          "#797e84",
-          "#9a9fa5",
-          "#c0c4ca",
-          "#e4e8ed"
+          "#020307",
+          "#161b21",
+          "#333840",
+          "#535860",
+          "#757b83",
+          "#999fa8",
+          "#bec5ce",
+          "#e2e8f2"
         ]
       },
       "annot": {
         "role": "primary",
-        "displayName": "Aniline Violet",
-        "canonical": "#5a3aa8",
+        "displayName": "Reference Ink — the Light",
+        "canonical": "#004a5f",
         "tonalRamp": [
-          "#110035",
-          "#290b5b",
-          "#442983",
-          "#6246ae",
-          "#8167d4",
-          "#a18cf2",
-          "#c5b4ff",
-          "#e8daff"
+          "#000407",
+          "#001e29",
+          "#003e51",
+          "#216076",
+          "#47839a",
+          "#6ba8c0",
+          "#91cfe7",
+          "#c9efff"
         ]
       },
-      "seal": {
+      "edge": {
         "role": "tertiary",
-        "displayName": "Seal Carmine",
-        "canonical": "#963029",
+        "displayName": "The Edge — the one light source",
+        "canonical": "#173239",
         "tonalRamp": [
-          "#270000",
-          "#4b0102",
-          "#711e19",
-          "#993a32",
-          "#c05a4f",
-          "#e07f74",
-          "#ffa99d",
-          "#ffd0c5"
+          "#000406",
+          "#031e25",
+          "#223d44",
+          "#415d65",
+          "#638088",
+          "#86a4ad",
+          "#abcad3",
+          "#cfeef7"
         ]
       },
-      "bollo": {
+      "alarm": {
         "role": "tertiary",
-        "displayName": "Bollo Olive",
-        "canonical": "#6f5a12",
+        "displayName": "Alarm Crimson",
+        "canonical": "#931b1f",
         "tonalRamp": [
-          "#140900",
-          "#302200",
-          "#4f3e00",
-          "#6f5b1c",
-          "#907b3c",
-          "#b09d64",
-          "#d5c390",
-          "#f7e7b9"
+          "#0d0000",
+          "#3a0003",
+          "#6e000c",
+          "#9c2627",
+          "#c54d49",
+          "#ef736c",
+          "#ffaba3",
+          "#ffdfdc"
         ]
       },
-      "verdigris": {
+      "caution": {
         "role": "tertiary",
-        "displayName": "Verdigris",
-        "canonical": "#26624f",
+        "displayName": "Caution Brass",
+        "canonical": "#9b5d00",
         "tonalRamp": [
-          "#001108",
-          "#002c20",
-          "#184a3a",
-          "#336a57",
-          "#528b77",
-          "#78ab98",
-          "#a2d0be",
-          "#c9f3e3"
+          "#070200",
+          "#291500",
+          "#522f00",
+          "#7e4a00",
+          "#a96a1a",
+          "#d08e46",
+          "#f8b46c",
+          "#ffe2c6"
+        ]
+      },
+      "band": {
+        "role": "tertiary",
+        "displayName": "In-tolerance Band (neutral)",
+        "canonical": "#d0e0f2",
+        "tonalRamp": [
+          "#00030c",
+          "#101c28",
+          "#2c3947",
+          "#4c5a69",
+          "#6e7c8c",
+          "#91a0b1",
+          "#b6c6d8",
+          "#daeafc"
         ]
       },
       "projection": {
         "role": "tertiary",
-        "displayName": "Projection Violet",
-        "canonical": "#6b4d8f",
+        "displayName": "Projection Channel (reserved)",
+        "canonical": "#621e76",
         "tonalRamp": [
-          "#120123",
-          "#2d1744",
-          "#4a3267",
-          "#6a4e8c",
-          "#8a6db0",
-          "#ab90cf",
-          "#cfb7f1",
-          "#f2dcff"
+          "#08000d",
+          "#2d003a",
+          "#550e69",
+          "#79368e",
+          "#9e5ab4",
+          "#c47edb",
+          "#e9a7ff",
+          "#f6deff"
         ]
       },
       "series-1": {
         "role": "secondary",
-        "displayName": "Azure",
-        "canonical": "#0e6ea6",
+        "displayName": "Cane 1 · Fuchsia",
+        "canonical": "#ab2890",
         "tonalRamp": [
-          "#000a29",
-          "#00264b",
-          "#004470",
-          "#076397",
-          "#3384bc",
-          "#60a6da",
-          "#8eccfc",
-          "#b8efff"
+          "#0b0007",
+          "#34002a",
+          "#630052",
+          "#96087d",
+          "#bf3da2",
+          "#e865c8",
+          "#ff9fe4",
+          "#ffdcf4"
         ]
       },
       "series-2": {
         "role": "secondary",
-        "displayName": "Teal",
-        "canonical": "#0b8f68",
+        "displayName": "Cane 2 · Cobalt",
+        "canonical": "#507dff",
         "tonalRamp": [
-          "#001404",
-          "#003019",
-          "#005032",
-          "#00714e",
-          "#1f926c",
-          "#57b38f",
-          "#88d8b6",
-          "#b4fadb"
+          "#00001a",
+          "#04005e",
+          "#0d1b9c",
+          "#2547c5",
+          "#436eee",
+          "#7199ff",
+          "#a9c3ff",
+          "#dee8ff"
         ]
       },
       "series-3": {
         "role": "secondary",
-        "displayName": "Amber",
-        "canonical": "#c07408",
+        "displayName": "Cane 3 · Verde",
+        "canonical": "#1fa31e",
         "tonalRamp": [
-          "#220000",
-          "#441200",
-          "#682d00",
-          "#8e4a00",
-          "#b26a00",
-          "#d28e44",
-          "#f4b677",
-          "#ffdba4"
+          "#000500",
+          "#002200",
+          "#004601",
+          "#006c02",
+          "#009505",
+          "#41bc3d",
+          "#6ce365",
+          "#b2ffac"
         ]
       },
       "series-4": {
         "role": "secondary",
-        "displayName": "Magenta",
-        "canonical": "#c33f7d",
+        "displayName": "Cane 4 · Aquamarine",
+        "canonical": "#0099cc",
         "tonalRamp": [
-          "#29000d",
-          "#4e0027",
-          "#760143",
-          "#a02562",
-          "#c74782",
-          "#e771a3",
-          "#ff9dc8",
-          "#ffc6ec"
+          "#000408",
+          "#001e2b",
+          "#003e55",
+          "#006082",
+          "#0086b3",
+          "#2dace0",
+          "#72d1ff",
+          "#cdeeff"
         ]
       },
       "series-5": {
         "role": "secondary",
-        "displayName": "Indigo",
-        "canonical": "#3f5cc4",
+        "displayName": "Cane 5 · Amethyst",
+        "canonical": "#8c4ace",
         "tonalRamp": [
-          "#030039",
-          "#0d1860",
-          "#213589",
-          "#3954b4",
-          "#5575dc",
-          "#7899f9",
-          "#a1c0ff",
-          "#c7e5ff"
+          "#060011",
+          "#270044",
+          "#4d0080",
+          "#712aaf",
+          "#9453d7",
+          "#b97aff",
+          "#d3b2ff",
+          "#ede2ff"
+        ]
+      },
+      "series-void": {
+        "role": "secondary",
+        "displayName": "Void Cane (no hue)",
+        "canonical": "#818fa0",
+        "tonalRamp": [
+          "#00030c",
+          "#101b28",
+          "#2d3947",
+          "#4c5969",
+          "#6e7c8c",
+          "#92a0b1",
+          "#b7c6d8",
+          "#daeafc"
         ]
       }
     },
     "typographyMeta": {
+      "faces": {
+        "system": {
+          "family": "Archivo",
+          "axes": "variable 100-700",
+          "purpose": "The system's voice. One variable file serves 400-700, so the whole system voice costs one request."
+        },
+        "value": {
+          "family": "IBM Plex Mono",
+          "axes": "400, 500",
+          "purpose": "Machine-verifiable values. KEPT over Martian Mono on measurement: Martian's advance width is ~40% wider, and the mono voice carries the trace ladder, the densest and most load-bearing text in the product. A wrapped derivation is a worse explanation."
+        },
+        "declared": {
+          "family": "Faustina",
+          "axes": "variable 400-600, UPRIGHT",
+          "purpose": "The user's own words. Upright, not the italic cut the candidate proof used: the declared voice carries a whole authored change_note and fills a textarea the user types into."
+        }
+      },
       "severity": {
         "displayName": "Severity",
         "purpose": "The severity readout. The only number in the product allowed to be large."
@@ -215,15 +277,15 @@
       },
       "declared": {
         "displayName": "Declared",
-        "purpose": "THE USER'S OWN WORDS. Serif, reserved, never used by the system."
+        "purpose": "THE USER'S OWN WORDS. Faustina upright, reserved, never used by the system."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Observations, notes, chrome. The system's voice."
+        "purpose": "Observations, notes, chrome. The system's voice, in Archivo."
       },
       "value": {
         "displayName": "Value",
-        "purpose": "Every number, id and trace row. Tabular figures."
+        "purpose": "Every number, id and trace row. IBM Plex Mono, tabular figures."
       },
       "label": {
         "displayName": "Label",
@@ -232,14 +294,19 @@
     },
     "shadows": [
       {
-        "name": "surface-ring",
-        "value": "0 0 0 1px var(--sheet)",
-        "purpose": "Separation, not elevation: keeps the tolerance-rail index marker and adjacent legend swatches from merging with what they overlap. The only box-shadow on any surface."
+        "name": "lift",
+        "value": "inset 0 1px 0 0 var(--lift-ink)",
+        "purpose": "THE ONE NAMED ELEVATION LEVEL IN THIS WORLD, and it is not a shadow: an inset luminous hairline along the top of a surface, cut from --edge at 10% (light) / 14% (dark). It reads as the top face of a layer of glass catching the single light source. Nothing casts a drop shadow, because a submerged layer does not."
       },
       {
         "name": "tooltip",
-        "value": "0 2px 8px rgba(0,0,0,.14)",
-        "purpose": "Chart tooltips only — the sole element that genuinely floats above its plot."
+        "value": "0 2px 10px rgba(0,0,0,.28)",
+        "purpose": "Chart tooltips only — the sole element that genuinely floats above its plot, and therefore the only real shadow in the system."
+      },
+      {
+        "name": "surface-ring",
+        "value": "0 0 0 1px var(--sheet)",
+        "purpose": "NOT elevation and not an exception: a separation device, used where two marks would otherwise touch and merge — the tolerance-rail index marker against a band edge, adjacent legend swatches, a mark against its own fill."
       }
     ],
     "motion": [
@@ -256,7 +323,7 @@
       {
         "name": "ease",
         "value": "cubic-bezier(0.4, 0, 0.2, 1)",
-        "purpose": "The only easing. Motion conveys state, never decoration; there is no page-load choreography."
+        "purpose": "The only easing. Motion conveys state, never decoration; there is no page-load choreography, and chart animation is off under prefers-reduced-motion."
       }
     ],
     "breakpoints": [
@@ -278,12 +345,34 @@
       {
         "name": "hatch-void",
         "value": "repeating-linear-gradient(45deg, transparent 0 3px, var(--hatch-ink) 3px 4px)",
-        "purpose": "Void: untargeted capital, an unbanded rail, the skip notice margin, the Class B channel."
+        "purpose": "Void: untargeted capital, an unbanded rail, the Class B channel. Also the decal drawn inside the chart canvas on the void cane — the texture channel dataviz requires for CVD, print and forced-colors."
       },
       {
         "name": "hatch-cancelled",
         "value": "repeating-linear-gradient(-45deg, transparent 0 4px, var(--hatch-ink) 4px 5px)",
-        "purpose": "Cancelled/unusable: the ERROR chip, mode=HYPOTHETICAL."
+        "purpose": "Cancelled/unusable: the ERROR chip, mode=HYPOTHETICAL, the skip notice's margin."
+      }
+    ],
+    "markRoles": [
+      {
+        "name": "casing",
+        "purpose": "The TARGET extent: translucent (alpha 0.30), no border, behind everything. The shape the frozen strategy declared."
+      },
+      {
+        "name": "core",
+        "purpose": "The CURRENT quantity: opaque, 55% of the cane's height, 2px surface gap."
+      },
+      {
+        "name": "edge",
+        "purpose": "The luminous leading edge at the core's end: 3px, --edge, one light source for the whole world. It makes the exact current value readable to a pixel without reading a colour."
+      },
+      {
+        "name": "void",
+        "purpose": "Untargeted capital: no hue, a hatch decal, AND NO CASING — there is nothing to case, which is how the mark says 'no target was declared' without a word."
+      },
+      {
+        "name": "segment",
+        "purpose": "A stacked part of a nested whole (the composition cane)."
       }
     ]
   },
@@ -292,25 +381,25 @@
       "name": "Record",
       "kind": "card",
       "refersTo": "record",
-      "description": "The system's one container: a ruled sheet with an annotation margin. Replaces the card entirely.",
-      "html": "<div class=\"ds-record\"><div class=\"ds-record__margin\">01</div><div class=\"ds-record__body\">Equity/Developed è <span class=\"ds-value\">6,00pp</span> sotto il tuo obiettivo del <span class=\"ds-value\">40,00%</span>.</div></div>",
-      "css": ".ds-record{display:grid;grid-template-columns:34px minmax(0,1fr);background:var(--sheet,#f7f8fa);border:1px solid var(--rule-strong,#b6bec7);border-radius:0;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--ink,#14181d)}.ds-record__margin{border-right:3px double var(--rule-strong,#b6bec7);padding:12px 8px 12px 0;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-3,#5a636d)}.ds-record__body{padding:12px 16px 16px}.ds-value{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}"
+      "description": "The system's one container: a ruled sheet with an annotation margin, lifted by the world's single elevation level (an inset luminous hairline, never a drop shadow). Replaces the card entirely.",
+      "html": "<div class=\"ds-record\"><div class=\"ds-record__margin\">01</div><div class=\"ds-record__body\">Le Azioni dei paesi sviluppati sono <span class=\"ds-value\">6,00pp</span> sotto il tuo obiettivo del <span class=\"ds-value\">40,00%</span>.</div></div>",
+      "css": ".ds-record{display:grid;grid-template-columns:34px minmax(0,1fr);background:var(--sheet,#f1f8ff);border:1px solid var(--rule-strong,#a8b7c9);border-radius:0;box-shadow:var(--lift,inset 0 1px 0 0 rgba(23,50,57,.10));font-family:'Archivo',sans-serif;font-size:14px;color:var(--ink,#272c33)}.ds-record__margin{border-right:3px double var(--rule-strong,#a8b7c9);padding:12px 8px 12px 0;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-3,#67717d)}.ds-record__body{padding:12px 16px 16px}.ds-value{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}"
     },
     {
       "name": "Outcome chip — FIRED",
       "kind": "chip",
       "refersTo": "outcome-fired",
-      "description": "The condition fired: a real finding. Heaviest ink on the page.",
+      "description": "The condition fired: a real finding. Solid alarm fill, the heaviest ink on the page.",
       "html": "<span class=\"ds-outcome ds-outcome--fired\">RILEVATO</span>",
-      "css": ".ds-outcome{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;padding:1px 8px;border:1px solid;border-radius:0}.ds-outcome--fired{color:var(--sheet,#f7f8fa);background:var(--seal,#963029);border-color:var(--seal,#963029)}"
+      "css": ".ds-outcome{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;padding:1px 8px;border:1px solid;border-radius:0}.ds-outcome--fired{color:var(--sheet,#f1f8ff);background:var(--alarm,#931b1f);border-color:var(--alarm,#931b1f)}"
     },
     {
       "name": "Outcome chip — SKIPPED",
       "kind": "chip",
       "refersTo": "outcome-skipped",
-      "description": "Could not be evaluated. Dashed border: the record is incomplete. Never reassuring.",
+      "description": "Could not be evaluated. Caution brass, dashed border: the record is incomplete. Never reassuring.",
       "html": "<span class=\"ds-outcome ds-outcome--skipped\">NON VALUTATO</span>",
-      "css": ".ds-outcome{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;padding:1px 8px;border:1px solid;border-radius:0}.ds-outcome--skipped{color:var(--bollo,#6f5a12);background:var(--bollo-tint,#f5f0dd);border-color:var(--bollo,#6f5a12);border-style:dashed}"
+      "css": ".ds-outcome{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;padding:1px 8px;border:1px solid;border-radius:0}.ds-outcome--skipped{color:var(--caution,#9b5d00);background:var(--caution-tint,#f4ecde);border-color:var(--caution,#9b5d00);border-style:dashed}"
     },
     {
       "name": "Outcome chip — ERROR",
@@ -318,88 +407,112 @@
       "refersTo": "outcome-error",
       "description": "The evaluation broke; the system does not know. Hatched: void.",
       "html": "<span class=\"ds-outcome ds-outcome--error\">ERRORE</span>",
-      "css": ".ds-outcome{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;padding:1px 8px;border:1px solid;border-radius:0}.ds-outcome--error{color:var(--seal,#963029);border-color:var(--seal,#963029);background:repeating-linear-gradient(-45deg,transparent 0 4px,color-mix(in srgb,var(--seal,#963029) 26%,transparent) 4px 5px),var(--seal-tint,#f7ecea)}"
+      "css": ".ds-outcome{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;padding:1px 8px;border:1px solid;border-radius:0}.ds-outcome--error{color:var(--alarm,#931b1f);border-color:var(--alarm,#931b1f);background:repeating-linear-gradient(-45deg,transparent 0 4px,color-mix(in srgb,var(--alarm,#931b1f) 26%,transparent) 4px 5px),var(--alarm-tint,#f4eaea)}"
     },
     {
       "name": "Primary button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Solid ink, zero radius. Disabled loses its fill rather than fading.",
+      "description": "Solid ink, zero radius. Disabled loses its fill rather than fading. The focus ring is the reference ink, because a focus ring is a reference to where you are.",
       "html": "<button class=\"ds-btn\">Congela versione</button>",
-      "css": ".ds-btn{font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:500;padding:8px 16px;border:1px solid var(--ink,#14181d);border-radius:0;background:var(--ink,#14181d);color:var(--sheet,#f7f8fa);cursor:pointer;transition:background 90ms cubic-bezier(.4,0,.2,1)}.ds-btn:hover{background:var(--ink-2,#464e57);border-color:var(--ink-2,#464e57)}.ds-btn:focus-visible{outline:2px solid var(--annot,#5a3aa8);outline-offset:2px}"
+      "css": ".ds-btn{font-family:'Archivo',sans-serif;font-size:13px;font-weight:500;padding:8px 16px;border:1px solid var(--ink,#272c33);border-radius:0;background:var(--ink,#272c33);color:var(--sheet,#f1f8ff);cursor:pointer;transition:background 90ms cubic-bezier(.4,0,.2,1)}.ds-btn:hover{background:var(--ink-2,#4e555f);border-color:var(--ink-2,#4e555f)}.ds-btn:focus-visible{outline:2px solid var(--focus,#004a5f);outline-offset:2px}"
     },
     {
       "name": "Field",
       "kind": "input",
       "refersTo": "field",
-      "description": "3.5:1 control edge. The declared variant uses the serif face, because what goes in it is the user's own words.",
+      "description": "3.1:1 control edge, a separate token because a control border is a non-text contrast obligation. The declared variant uses Faustina, because what goes in it is the user's own words.",
       "html": "<input class=\"ds-field\" value=\"40,00\">",
-      "css": ".ds-field{font-family:'IBM Plex Sans',sans-serif;font-size:13px;width:100%;padding:8px 12px;color:var(--ink,#14181d);background:var(--sheet,#f7f8fa);border:1px solid var(--rule-control,#7b8590);border-radius:0}.ds-field:hover{border-color:var(--ink-2,#464e57)}.ds-field:focus-visible{outline:2px solid var(--annot,#5a3aa8);outline-offset:2px}"
+      "css": ".ds-field{font-family:'Archivo',sans-serif;font-size:13px;width:100%;padding:8px 12px;color:var(--ink,#272c33);background:var(--sheet,#f1f8ff);border:1px solid var(--rule-control,#838f9e);border-radius:0}.ds-field--declared{font-family:'Faustina',Georgia,serif;font-size:16px;line-height:1.65}.ds-field:hover{border-color:var(--ink-2,#4e555f)}.ds-field:focus-visible{outline:2px solid var(--focus,#004a5f);outline-offset:2px}"
     },
     {
       "name": "Index rail entry",
       "kind": "nav",
       "refersTo": "rail-item",
-      "description": "Numbered, because a repertory is a numbered list. The active mark lives in the margin.",
+      "description": "Numbered, because an index is a numbered list. The rail is the deepest layer of the piece — it takes the ground against the records' sheet — and the active mark lives in the margin, as an annotation would.",
       "html": "<a class=\"ds-nav\" href=\"#\" aria-current=\"page\"><span class=\"ds-nav__ord\">01</span><span>Rilievi</span></a>",
-      "css": ".ds-nav{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:baseline;padding:8px 16px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--ink,#14181d);text-decoration:none}.ds-nav:hover{background:var(--sheet,#f7f8fa)}.ds-nav[aria-current=page]{background:var(--sheet,#f7f8fa);font-weight:500}.ds-nav__ord{font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:right;color:var(--ink-3,#5a636d)}.ds-nav[aria-current=page] .ds-nav__ord{color:var(--annot,#5a3aa8);font-weight:500}"
+      "css": ".ds-nav{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:baseline;padding:8px 16px;font-family:'Archivo',sans-serif;font-size:13px;color:var(--ink,#272c33);background:var(--ground,#cfe2f8);text-decoration:none}.ds-nav:hover{background:var(--sheet,#f1f8ff)}.ds-nav[aria-current=page]{background:var(--sheet,#f1f8ff);font-weight:500}.ds-nav__ord{font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:right;color:var(--ink-3,#67717d)}.ds-nav[aria-current=page] .ds-nav__ord{color:var(--annot,#004a5f);font-weight:500}"
     },
     {
       "name": "Tolerance rail",
       "kind": "custom",
       "refersTo": "rail-gauge",
-      "description": "The product's one irreducible picture: a calibrated scale in band-widths, graduated so the reader can count them.",
-      "html": "<div class=\"ds-rail\" role=\"img\" aria-label=\"3 ampiezze di banda sotto l'obiettivo: fuori tolleranza\"><span class=\"ds-rail__base\"></span><span class=\"ds-rail__band\"></span><span class=\"ds-rail__tick\" style=\"left:50%;height:19px;background:var(--ink,#14181d)\"></span><span class=\"ds-rail__idx\"></span></div>",
-      "css": ".ds-rail{position:relative;height:22px;min-width:148px}.ds-rail__base{position:absolute;left:0;right:0;bottom:4px;height:1px;background:var(--rule-strong,#b6bec7)}.ds-rail__band{position:absolute;left:33.3333%;right:33.3333%;bottom:4px;height:12px;background:color-mix(in srgb,var(--verdigris,#26624f) 22%,var(--sheet,#f7f8fa));border-left:1px solid var(--verdigris,#26624f);border-right:1px solid var(--verdigris,#26624f)}.ds-rail__tick{position:absolute;bottom:4px;width:1px}.ds-rail__idx{position:absolute;left:3%;bottom:1px;width:3px;height:18px;margin-left:-1px;background:var(--seal,#963029);box-shadow:0 0 0 1px var(--sheet,#f7f8fa)}.ds-rail__idx::before{content:'';position:absolute;left:50%;top:-6px;transform:translateX(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--seal,#963029)}"
+      "description": "The product's one irreducible picture: a calibrated scale in band-widths, graduated so the reader can count them. The in-tolerance zone is the CASING, drawn in the ground's own glass and NEUTRAL — being inside your band is the absence of a finding, not an achievement. The index marker is drawn in --edge, the same token as a cane's luminous edge; the --breach modifier shown here is the only thing that swaps it to --alarm.",
+      "html": "<div class=\"ds-rail ds-rail--breach\" role=\"img\" aria-label=\"3 ampiezze di banda sotto l'obiettivo: fuori tolleranza\"><span class=\"ds-rail__base\"></span><span class=\"ds-rail__band\"></span><span class=\"ds-rail__tick\" style=\"left:50%;height:19px;background:var(--ink,#272c33)\"></span><span class=\"ds-rail__idx\"></span></div>",
+      "css": ".ds-rail{position:relative;height:22px;min-width:148px}.ds-rail__base{position:absolute;left:0;right:0;bottom:4px;height:1px;background:var(--rule-strong,#a8b7c9)}.ds-rail__band{position:absolute;left:33.3333%;right:33.3333%;bottom:4px;height:12px;background:var(--band,#d0e0f2);border-left:1px solid var(--band-edge,#7690af);border-right:1px solid var(--band-edge,#7690af)}.ds-rail__tick{position:absolute;bottom:4px;width:1px}.ds-rail__idx{position:absolute;left:3%;bottom:1px;width:3px;height:18px;margin-left:-1px;background:var(--edge,#173239);box-shadow:0 0 0 1px var(--sheet,#f1f8ff)}.ds-rail__idx::before{content:'';position:absolute;left:50%;top:-6px;transform:translateX(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--edge,#173239)}.ds-rail--breach .ds-rail__idx{background:var(--alarm,#931b1f)}.ds-rail--breach .ds-rail__idx::before{border-top-color:var(--alarm,#931b1f)}"
     },
     {
       "name": "Trace ladder step",
       "kind": "custom",
       "refersTo": "ladder-step",
-      "description": "An ordered derivation, never prose. The held step is where the condition became true. Decimals are the stored strings.",
+      "description": "An ordered derivation, never prose. The held step is where the condition became true. Decimals are the stored strings — it-IT formatting never touches a trace value.",
       "html": "<div class=\"ds-ladder\"><div class=\"ds-step\"><span class=\"ds-step__i\">5</span><span class=\"ds-step__op\">divide_safe</span><span>abs_drift ÷ effective_band</span><span class=\"ds-step__r\">severity = 3.0000</span></div><div class=\"ds-step ds-step--held\"><span class=\"ds-step__i\">6</span><span class=\"ds-step__op\">abs_gt</span><span>drift, effective_band</span><span class=\"ds-step__r\">FIRED</span></div></div>",
-      "css": ".ds-ladder{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:13px;line-height:1.7}.ds-step{display:grid;grid-template-columns:26px 100px minmax(0,1fr) 160px;gap:12px;padding:4px 0;border-bottom:1px dotted var(--rule,#cfd5dc)}.ds-step__i{color:var(--ink-3,#5a636d);text-align:right}.ds-step__op{color:var(--annot,#5a3aa8);font-weight:500}.ds-step__r{text-align:right;font-weight:500}.ds-step--held{background:var(--sheet-sunken,#eef0f4);border-bottom:0;border-top:1px solid var(--rule-strong,#b6bec7);padding-left:8px;padding-right:8px}.ds-step--held .ds-step__r{color:var(--seal,#963029)}"
+      "css": ".ds-ladder{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:13px;line-height:1.7}.ds-step{display:grid;grid-template-columns:26px 100px minmax(0,1fr) 160px;gap:12px;padding:4px 0;border-bottom:1px dotted var(--rule,#cbdaec)}.ds-step__i{color:var(--ink-3,#67717d);text-align:right}.ds-step__op{color:var(--annot,#004a5f);font-weight:500}.ds-step__r{text-align:right;font-weight:500}.ds-step--held{background:var(--sheet-sunken,#bbd2ed);border-bottom:0;border-top:1px solid var(--rule-strong,#a8b7c9);padding-left:8px;padding-right:8px}.ds-step--held .ds-step__r{color:var(--alarm,#931b1f)}"
     },
     {
       "name": "Skip notice",
       "kind": "custom",
       "refersTo": "notice",
-      "description": "Persistent, not dismissible. Its load-bearing sentence must not be softened.",
+      "description": "Persistent, not dismissible. Its load-bearing sentence must not be softened, moved below the reasons, or replaced with a neutral count.",
       "html": "<div class=\"ds-notice\"><div class=\"ds-notice__m\"></div><div class=\"ds-notice__b\"><p class=\"ds-notice__lead\">8 regole su 28 non sono state valutate.</p><p><strong>Non valutato non significa conforme.</strong></p></div></div>",
-      "css": ".ds-notice{display:grid;grid-template-columns:34px minmax(0,1fr);border:1px solid var(--bollo,#6f5a12);background:var(--bollo-tint,#f5f0dd);font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--ink,#14181d)}.ds-notice__m{border-right:1px solid var(--bollo,#6f5a12);background:repeating-linear-gradient(-45deg,transparent 0 3px,rgba(20,24,29,.3) 3px 4px)}.ds-notice__b{padding:12px 16px}.ds-notice__b p{margin:0}.ds-notice__lead{font-weight:600;font-size:14px;margin-bottom:4px!important}"
+      "css": ".ds-notice{display:grid;grid-template-columns:34px minmax(0,1fr);border:1px solid var(--caution,#9b5d00);background:var(--caution-tint,#f4ecde);font-family:'Archivo',sans-serif;font-size:13px;color:var(--ink,#272c33)}.ds-notice__m{border-right:1px solid var(--caution,#9b5d00);background:repeating-linear-gradient(-45deg,transparent 0 3px,var(--hatch-ink,rgba(39,44,51,.30)) 3px 4px)}.ds-notice__b{padding:12px 16px}.ds-notice__b p{margin:0}.ds-notice__lead{font-weight:600;font-size:14px;margin-bottom:4px!important}"
     }
   ],
   "narrative": {
-    "northStar": "Il Repertorio",
-    "overview": "The notary's repertory: a numbered, dated register of authenticated acts in which nothing is ever erased, a correction arrives as an annotation in the margin beside the original, and the party's own words are quoted verbatim and set apart from the notary's formula. The world was chosen because the product's hardest ideas are already native to it: a StrategyVersion is a frozen instrument that supersedes rather than edits; apportionment appends and supersedes but never updates; a reclassification rewrites history so the same question has different true answers depending on which act you read; and a real deed records the acts it could not perform rather than omitting them, which is the SKIPPED discipline arriving for free. Rendered as a modern instrument, not an antique: the register supplies ruled sheets, an annotation margin and three distinguishable hands, while a well-made contemporary data publication supplies the finish — a validated five-hue categorical palette and charts as a primary way of reading rather than decoration. Two worlds are refused by name: the fintech dashboard, because a hero net-worth number contradicts Manifest P1 in the first thing the user sees; and the editorial broadsheet, because it is a recognisable house style rather than a decision, and it is what the reference mock reached for.",
+    "northStar": "Vetro Sommerso",
+    "overview": "Murano sommerso: a piece built as submerged layers of glass, a deep coloured ground with luminous canes read against it, one light source, and hard cut edges. The world was not chosen as a mood. Sommerso is the technique of casing one colour inside another, and that is literally what an apportioned allocation is: a declared shape (the frozen strategy's target) with an actual quantity sitting inside it. So the palette question and the chart-form question stop being two decisions and become one — the mark that carries an allocation is a cased cane, and the ground it is read against is the same glass. That identity, not the hues, is why this world beat 'a bar chart with nicer colours'. Dark is the base declaration rather than a preference: :root carries the dark scheme and light is the override, because this world is a deep ground with light coming through it. Neither scheme is a flip of the other; every ink and every series step is separately solved against its own surface. Three worlds are refused by name. The fintech dashboard — hero net-worth number, allocation donut, green/red delta pills, rounded cards — is refused because its opening move contradicts Manifest P1 in the first thing the user sees; UX-0001 5.3 already withholds the net-worth hero, and the landing surface is the findings list. The editorial broadsheet is refused because it is a recognisable house style rather than a decision, and it is what the reference mock reached for. And the archival register is now ANTI-REFERENCE, not a reference: the first identity built here was a coherent Italian archival document — sealing wax, revenue-stamp ochre, verdigris, annotation violet, paper grounds — whose chart ramp reverted to the stock BI categorical palette, so the chrome committed to an identity and the charts abandoned it. The owner's verdict was 'generic, no identity' and the resolution chosen was replace, not polish. What survives from that build is STRUCTURE, not identity: the record with its annotation margin, the numbered index rail, the four outcome treatments, the trace ladder, the provenance bar, the skip notice. Those are corpus shapes and they were never the problem.",
     "keyCharacteristics": [
-      "Zero radius on every surface, control and chip. A register has no rounded corners.",
-      "A ruled annotation margin down the left of every record, drawn as a 3px double rule, where ordinals and marginal references live.",
-      "Cool protocol-paper neutrals with a faint blue cast. Explicitly not cream, not warm, not textured.",
-      "Four status inks with fixed jobs, plus five validated series hues. Nothing is coloured decoratively.",
+      "Zero radius on every surface, control and chip. Cut glass has hard edges.",
+      "One light source for the whole world. --edge is it: the cane's luminous leading edge, the rail's index marker, the field's focus edge. Depth is --lift, an inset luminous hairline — never a drop shadow.",
+      "Grounds carry real chroma, and the deepest layer carries the most, because in sommerso the thickest glass does. Cool cobalt glass at hue 265 degrees, never cream and never neutral grey.",
+      "The warm half of the wheel belongs to status; data lives in the cool half. A warm mark in this interface is never a measurement.",
+      "Two reserved status inks with fixed jobs (alarm, caution), a reference ink that IS the light (--annot), and five solved series canes. Nothing is coloured decoratively.",
+      "In-tolerance is neutral, not green. The system reports; it does not congratulate.",
+      "Geometry, not hue, carries polarity: a shortfall is unfilled casing, an overshoot is a protrusion. The chart reads with no colour at all.",
       "Texture, not hue, carries state: solid, hairline, dashed and hatched distinguish the four outcomes.",
-      "Three faces, three voices, and the serif is reserved for the user alone.",
+      "Three faces, three voices — Archivo, IBM Plex Mono, Faustina upright — and the serif is reserved for the user alone.",
+      "No hex was picked by hand. Every colour is solved by docs/design/palette_search.py against the dataviz validator's gates, in both schemes, and re-verified on every run.",
       "Density is welcome. Tables run long and the trace ladder is dense on purpose."
     ],
     "rules": [
       {
+        "name": "The Warm Half Rule",
+        "body": "THE WARM HALF OF THE WHEEL BELONGS TO STATUS; DATA LIVES IN THE COOL HALF. The two reserved status hue windows — alarm 8-34 degrees, caution 66-96 degrees — are excluded from the series set OUTRIGHT, not merely separated by a distance metric, with a further 30-degree margin. This came out of a failure, not out of taste: a run that was only distance-gated parked a series slot at hue 13.6, one lightness step off the crimson alarm ink, and passed every measured check at exactly the threshold — measurably distinct, and still the alarm colour carrying a datum. A metric that can be satisfied at its own boundary is not a rule.",
+        "section": "colors"
+      },
+      {
+        "name": "The Solved Palette Rule",
+        "body": "No hex is hand-picked. palette_search.py re-implements the maths of dataviz/scripts/validate_palette.js and gates on: the OKLCH lightness band per mode, a chroma floor raised to 0.125 (the validator's is 0.10, and sitting on it is what made three candidate worlds look alike), a chroma ceiling of 0.20 (jewel glass, not neon), adjacent CVD >= 10.0 against a target of 8.0, adjacent normal-vision dE >= 15, all-pairs normal-vision dE >= 12, minimum pairwise hue 34 degrees, contrast >= 3.05:1 against the scheme's own sheet, and a minimum separation from every reserved ink. The solution is recorded as data and RE-VERIFIED against every gate on each run, so changing a gate fails the run instead of silently invalidating the palette.",
+        "section": "colors"
+      },
+      {
+        "name": "The Secondary Encoding Rule",
+        "body": "Worst adjacent CVD is 10.6 protan (dark) / 10.8 deutan (light) — the candidate world's 7.6 protan WARN is gone. Two numbers are covered unconditionally rather than by a promise: tritan 4.8 in light, which the validator reports and does not gate; and all-pairs CVD 3.4, which cannot be fixed and must not be chased, because any five-hue set wide enough to look varied contains a red/green pair that collapses under protanopia by construction — optimising for all-pairs pushes the answer straight back to the blues-and-violets set the owner rejected. So: a legend is always present, every class is also direct-labelled on the axis (wrapped, never truncated), every fill carries a 2px surface gap, the void cane carries a hatch decal, the leading edge marks the value without colour, and the cased cane's polarity is geometric. NEVER COLOUR ALONE. Consequence that binds a future screen: a scatter, bubble or choropleth may carry at most THREE series, because those forms need all-pairs separation. Fold to 'altro' or facet — never re-hue.",
+        "section": "colors"
+      },
+      {
         "name": "The One Meaning Rule",
-        "body": "Each of the five inks has exactly one job — reference, breach, not-evaluated, in-tolerance, projection — and no ink is ever borrowed for emphasis. If a thing needs emphasis and is not one of those five states, it gets weight or size.",
+        "body": "Each reserved ink has exactly one job — breach, not-evaluated, reference, projection — and no ink is ever borrowed for emphasis. If a thing needs emphasis and is not one of those states, it gets weight or size.",
         "section": "colors"
       },
       {
         "name": "The Reserved Status Rule",
-        "body": "A status ink is never a series colour and a series hue never signals state. Where the two land in the same hue family, the status always ships with its label and its texture, so hue is never doing the work alone.",
+        "body": "A status ink is never a series colour and a series hue never signals state. This is enforced upstream by excluding the status hue windows from the search, not downstream by review.",
         "section": "colors"
       },
       {
-        "name": "The Cold Paper Rule",
-        "body": "The ground is cool and faintly blue. Cream, ivory, parchment, warm grey and paper texture are out: warmth on a surface full of money reads as reassurance the product has no right to offer.",
+        "name": "The Neutral Tolerance Rule",
+        "body": "In-tolerance is neutral, not green. --verdigris is deleted and its role with it. The system reports; it does not congratulate, and being inside your own declared band is the ABSENCE of a finding, not an achievement. Only a departure from a declared target takes colour. The rail's band is the casing, drawn in the ground's own glass, and its index is drawn in --edge — the same token as a cane's luminous edge, because both answer 'where do I read the exact value'.",
+        "section": "colors"
+      },
+      {
+        "name": "The Cold Glass Rule",
+        "body": "The ground is cool cobalt glass. Cream, ivory, parchment, warm grey and paper texture are all out — they are the house style this system was chosen against, and warmth on a surface full of money reads as reassurance the product has no right to offer.",
         "section": "colors"
       },
       {
         "name": "The Three Voices Rule",
-        "body": "Sans is the system, Mono is a machine-verifiable value, Serif is the user's own words. The system never speaks in serif and nothing else may borrow the serif face. Once the chrome and the user's prose are both Italian, typography is the only remaining signal separating the system's arithmetic from a restatement of the user's own prior declaration. CORPUS-MANDATED.",
+        "body": "Sans is the system, Mono is a machine-verifiable value, Serif is the user's own words. The system never speaks in serif and nothing else may borrow the serif face. Once the chrome and the user's prose are both Italian, typography is the only remaining signal separating the system's arithmetic from a restatement of the user's own prior declaration. CORPUS-MANDATED. The FACES are the designer's and replaceable — Archivo / IBM Plex Mono / Faustina upright, the cross-graft taken by half — but the three-voice split is not.",
         "section": "typography"
       },
       {
@@ -409,13 +522,33 @@
       },
       {
         "name": "The Stored String Rule",
-        "body": "Decimals in a trace render exactly as stored, as strings, never formatted through a float. it-IT display formatting applies to observations and tables and must never touch a trace value. CORPUS-MANDATED.",
+        "body": "Decimals in a trace render exactly as stored, as strings, never formatted through a float. it-IT display formatting applies to observations, tables and charts and must never touch a trace value. CORPUS-MANDATED.",
         "section": "typography"
       },
       {
-        "name": "The No-Lift Rule",
-        "body": "Nothing rises. If an element needs to separate from its neighbour it gets a rule, a tonal step, or a 1px surface ring. A drop shadow on a record would make it a card, and a card is the container this system deliberately does not use.",
+        "name": "The One Light Rule",
+        "body": "There is exactly one light source and it is --edge. Every luminous mark in the product — the cane's leading edge, the rail's index, a focus edge, --lift — is cut from it. A second highlight colour, or a per-hue lighter step, breaks the world.",
         "section": "elevation"
+      },
+      {
+        "name": "The No-Shadow Rule",
+        "body": "Nothing rises. There is one named elevation level, --lift, an inset luminous hairline along the top of a surface; nothing casts a drop shadow, because a submerged layer does not. The sole exception is the chart tooltip, which genuinely floats. If an element needs to separate from its neighbour it gets a rule, a tonal step, a 1px surface ring, or --lift. A drop shadow on a record would make it a card, and a card is the container this system deliberately does not use.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Cased Cane Rule",
+        "body": "The allocation mark is a cased cane and its reading needs no colour at all: a core short of its casing is a SHORTFALL (visible unfilled casing); a core past the target tick is an OVERSHOOT (a protrusion). Polarity is carried by GEOMETRY; hue carries identity only. That is what lets the palette be pushed hard without colour becoming load-bearing. A series names its ROLE (casing / core / edge / void / segment) and the helper supplies the geometry, so the mark language is inherited rather than retyped — and the offline audit fails the build if any mark key survives into the final option. The void cane gets no casing, because there is nothing to case: that is how it says 'no target was declared' without a word.",
+        "section": "charts"
+      },
+      {
+        "name": "The Token Reference Rule",
+        "body": "One helper builds an ECharts theme OBJECT from the CSS custom properties in scope on the chart element itself — not a globally registered theme name, which would bake one scheme in at first init — so one option renders correctly in both schemes with no second code path. A server-assembled option must contain NO hex colours: where a mark needs a role a theme cannot express (a target reference tick, the in-tolerance band, the void fill) the option says 'token:--name' and the helper resolves it from the token layer. docs/design/audit_offline.mjs fails the build on a hex in a server option, and on a token reference that does not resolve in BOTH schemes.",
+        "section": "charts"
+      },
+      {
+        "name": "The Honest Mark Rule",
+        "body": "One point is never a line: a line series with a single datum is forced by the helper to a labelled dot, because a one-point line draws a trend the data does not contain — and enforcing it in the helper means no caller can forget. No series is not a zero: an absent series renders server-side as a state block, correct with JavaScript off, because an empty plot frame implies a measured zero and that is a different claim from 'nothing was measured'. And the data table is not a fallback: it ships in the document, OPEN, and the helper collapses it only after a chart is successfully live.",
+        "section": "charts"
       }
     ],
     "dos": [
@@ -423,24 +556,32 @@
       "Do pass trace decimals as the stored strings and apply no filter to them.",
       "Do give every SKIPPED and ERROR its reason, every time.",
       "Do pair every hue with a label, a texture, or a shape. Assume a greyscale print and a red-green colour-blind reader on every screen.",
-      "Do re-run the palette validator against both surfaces after touching any series hue, and keep all five checks green.",
+      "Do change a GATE and re-run docs/design/palette_search.py when a colour must move — never edit a hex. Then re-run dataviz/scripts/validate_palette.js against both surfaces and keep every check green.",
+      "Do run node docs/design/audit_offline.mjs after touching a template, a token or a chart option. It is the only browser-free proof that the pages are offline-clean and every option still renders.",
       "Do keep the serif face for the user's words alone.",
       "Do render role=img plus a full-sentence Italian aria-label on every gauge, and keep the numeric value adjacent in mono.",
-      "Do use the 3px double rule only for structural boundaries, and the 1px hairline for ordinary divisions."
+      "Do use the 3px double rule only for structural boundaries, and the 1px hairline for ordinary divisions.",
+      "Do name a ROLE (casing / core / edge / void / segment) on a chart series and let the helper supply the geometry."
     ],
     "donts": [
       "Don't put a net-worth hero number on the landing surface. The decisions are the product; net worth lives one click away. CORPUS.",
       "Don't style SKIPPED or ERROR as reassurance, and don't render a finding count without the skip notice beside it. CORPUS.",
       "Don't add a fourth type face, and don't let the system speak in serif. CORPUS.",
-      "Don't reference an off-origin URL from any template, stylesheet or asset. CORPUS, enforced by CI.",
-      "Don't put a hex colour in a server-assembled chart option. Use a token:--name reference.",
+      "Don't reference an off-origin URL from any template, stylesheet or asset. CORPUS, enforced by CI and by audit_offline.mjs.",
+      "Don't put a hex colour in a chart option. Use a token:--name reference; the offline audit fails the build on one.",
+      "Don't let a warm hue carry a datum. A series slot inside or within 30 degrees of the alarm (8-34) or caution (66-96) hue window is not 'close enough'; it is the alarm colour carrying a measurement.",
+      "Don't draw a line through one point. A single datum is a labelled dot.",
+      "Don't render an empty plot frame for an absent series. An empty frame implies a measured zero; render the server-side state block instead.",
+      "Don't truncate a class label. Wrap it. A truncated class name is not an identity, and identity may never rest on hue alone.",
       "Don't build a dual-axis chart, a donut for allocation, or a rainbow ramp.",
+      "Don't put more than THREE series in a scatter, bubble or choropleth. Those forms need all-pairs CVD separation, which five hues cannot deliver. Fold to 'altro' or facet.",
       "Don't re-sort a findings list in the template; the authored priority band dominates severity. CORPUS.",
       "Don't collapse correlated findings. One cause showing as three findings is correct. CORPUS.",
       "Don't hide a legal-but-alarming state: a negative UNASSIGNED residual is a signed row in the same table. CORPUS.",
-      "Don't ship a Class B projection finding until it is visually distinguishable from Class A, carries its assumption inline, and its severity is kept out of any column sorted against Class A. This is a kill criterion. CORPUS.",
-      "Don't round a corner, lift a surface with a shadow, or warm the ground toward cream.",
-      "Don't add a token to silence a linter."
+      "Don't ship a Class B projection finding until it is visually distinguishable from Class A, carries its assumption inline, and its severity is kept out of any column sorted against Class A. This is a kill criterion. CORPUS. Note before that day: the projection hue window (300-330) is NOT excluded from the series set and --series-5 sits at 304 inside it, so Class B must be carried by texture plus its inline assumption — exactly as the kill criterion already requires — or the window must move and the palette be re-solved.",
+      "Don't round a corner, cast a shadow on any surface but a tooltip, or warm the ground toward cream.",
+      "Don't reintroduce a rejected identity: sealing wax, revenue-stamp ochre, verdigris, an in-tolerance green, paper texture, or a cream ground. Each one is a named rejection, not an unexplored option.",
+      "Don't add a token to silence a linter. Every colour here is solved and contrast-verified; a value earns its place by legibility and by the world, never by silencing a check."
     ]
   }
 }

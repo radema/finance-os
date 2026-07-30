@@ -19,7 +19,7 @@
           "src/financeos/web/templates/design/preview.html"
         ],
         "createdAt": "2026-07-26T21:32:34.964Z",
-        "reason": "Standalone preview template; its 3 font faces are declared in static/css/base.css (5 @font-face) and referenced via --face-system/--face-value/serif tokens. Detector cannot resolve CSS custom properties across files. Adding a display font would break the UX-0001 4.5 three-voices contract."
+        "reason": "Standalone preview template; its 3 font faces are Archivo (system voice), IBM Plex Mono (values) and Faustina upright (the user's own words), declared in static/css/base.css (4 @font-face rules) and referenced via the --face-system/--face-value/--face-declared tokens. Detector cannot resolve CSS custom properties across files. Adding a display font would break the UX-0001 4.5 three-voices contract."
       }
     ]
   }
