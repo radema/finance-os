@@ -187,6 +187,7 @@ class TestOutcomes:
                 default_max_staleness=None,
                 severity=rule_engine.SeverityDeclaration(formula=None),
                 explanation_template="esplode",
+                numeric_bindings=frozenset(),
                 evaluate=explode,  # type: ignore[arg-type]
             )
         )
