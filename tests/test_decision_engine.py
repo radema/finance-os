@@ -11,6 +11,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from financeos.adapters.duckdb.queries.it_locale import format_number_it
 from financeos.core.engines.decision_engine import (
     MaterializationResult,
     assemble_rationale,
@@ -277,6 +278,16 @@ class TestRationale:
         rationale = assemble_rationale(version, f.drift_rule(1))
         assert f.asset().name not in rationale
         assert str(f.EQUITY) not in rationale
+
+    def test_an_injected_number_renderer_is_used_for_every_percentage(self) -> None:
+        """L05 §7.3: the write path passes canonical (the default); a read path re-assembling
+        the same frozen version for display passes an it-IT renderer instead."""
+        version = f.strategy_version(rules=(f.drift_rule(1),))
+        rationale = assemble_rationale(version, f.drift_rule(1), render_number=format_number_it)
+        assert "prevede un target del 40,00% per Equity/Developed con una banda di ±2,00pp" in (
+            rationale
+        )
+        assert "40.00%" not in rationale
 
 
 class TestProvenance:

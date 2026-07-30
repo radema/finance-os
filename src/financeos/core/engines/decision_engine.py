@@ -36,6 +36,7 @@ from financeos.core.shared import (
     RunMode,
     SourceRef,
     asset_class_label,
+    canonical_decimal,
     canonical_json,
     priority_rank,
     sha256_hex,
@@ -180,7 +181,12 @@ def render_observation(rule: Rule, message_bindings: Mapping[str, str]) -> str:
     return rule.message.format(**message_bindings)
 
 
-def assemble_rationale(version: StrategyVersion, rule: Rule) -> str:
+def assemble_rationale(
+    version: StrategyVersion,
+    rule: Rule,
+    *,
+    render_number: Callable[[Decimal], str] = canonical_decimal,
+) -> str:
     """Assemble why a finding matters by citing the frozen `StrategyVersion` (ADR-0023).
 
     The only inputs are the user's own declarations: the strategy's name and freeze date, the
@@ -191,14 +197,21 @@ def assemble_rationale(version: StrategyVersion, rule: Rule) -> str:
 
     Italian is the user-facing language (ADR-L03), while the Ubiquitous Language terms and
     every identifier stay as they are.
+
+    Args:
+        render_number: How a percentage-point `Decimal` is rendered to text. Defaults to the
+            canonical dot-decimal form, which is what the write path must use — `rationale` is
+            frozen at creation (RFC-0008 §5.1), so the stored string is this default's output.
+            A read path re-assembling the same version for display (L05 §7.3) passes an it-IT
+            renderer instead; `core` gains a parameter, never a locale (ADR-L03 §5.2).
     """
     definition = version.definition
     leaf = _targeted_leaf(version, rule)
     if leaf is not None:
         provision = (
             f"prevede un target del "
-            f"{Percentage.from_ratio(leaf.effective_target).canonical()}% per "
-            f"{asset_class_label(leaf.asset_class)} con {_band_phrase(leaf)}"
+            f"{render_number(Percentage.from_ratio(leaf.effective_target).value)}% per "
+            f"{asset_class_label(leaf.asset_class)} con {_band_phrase(leaf, render_number)}"
         )
     else:
         provision = "governa questo scopo di valutazione"
@@ -222,12 +235,15 @@ def _targeted_leaf(version: StrategyVersion, rule: Rule) -> LeafTarget | None:
     return version.targets.leaves().get(asset_class)
 
 
-def _band_phrase(leaf: LeafTarget) -> str:
+def _band_phrase(leaf: LeafTarget, render_number: Callable[[Decimal], str]) -> str:
     band = Percentage.from_ratio(leaf.tolerance.effective_band(leaf.effective_target))
     if leaf.tolerance.kind is ToleranceKind.ABSOLUTE:
-        return f"una banda di ±{band.canonical()}pp"
+        return f"una banda di ±{render_number(band.value)}pp"
     relative = Percentage.from_ratio(leaf.tolerance.band)
-    return f"una banda relativa del {relative.canonical()}% del target (±{band.canonical()}pp)"
+    return (
+        f"una banda relativa del {render_number(relative.value)}% del target "
+        f"(±{render_number(band.value)}pp)"
+    )
 
 
 def _horizon_phrase(version: StrategyVersion) -> str:

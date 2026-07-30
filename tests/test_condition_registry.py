@@ -44,6 +44,7 @@ COMPLETE: dict[str, Any] = {
     "default_max_staleness": timedelta(days=7),
     "severity": SeverityDeclaration(formula="|drift| / effective_band"),
     "explanation_template": "{asset_class_label} è fuori target.",
+    "numeric_bindings": frozenset(),
     "evaluate": evaluate_drift_outside_tolerance,
 }
 
@@ -56,6 +57,7 @@ MANDATORY = (
     "default_max_staleness",
     "severity",
     "explanation_template",
+    "numeric_bindings",
     "evaluate",
 )
 

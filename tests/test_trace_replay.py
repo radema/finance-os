@@ -434,6 +434,7 @@ def test_a_zero_denominator_skip_replays_as_skipped() -> None:
             default_max_staleness=None,
             severity=SeverityDeclaration(formula=None),
             explanation_template="rapporto non calcolabile",
+            numeric_bindings=frozenset(),
             evaluate=evaluate_ratio,
         )
     )

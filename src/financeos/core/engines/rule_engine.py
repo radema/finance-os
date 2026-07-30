@@ -502,11 +502,18 @@ class SeverityDeclaration(DomainModel):
 class ConditionKindSpec[P: BaseModel](DomainModel):
     """One entry of the condition catalog.
 
-    Every field is required, so omitting any of the six mandatory registration components —
+    Every field is required, so omitting any of the seven mandatory registration components —
     kind and version, params model, `required_facts`, evaluator, severity declaration,
-    explanation template — is a construction failure, which is RFC-0006 §12's completeness
-    test enforced by the type system as well as by a test. `default_max_staleness` is the
-    seventh, added by ERR-10; `None` declares that the kind reads no time-sensitive fact.
+    explanation template, numeric bindings — is a construction failure, which is RFC-0006 §12's
+    completeness test enforced by the type system as well as by a test. `default_max_staleness`
+    is the eighth, added by ERR-10; `None` declares that the kind reads no time-sensitive fact.
+
+    `numeric_bindings` (L05 §7.3, C-L05-3) declares which of this kind's `message_bindings`
+    names carry a locale-formattable `Decimal`. It is declared, never inferred: a naming
+    convention silently misses a future binding, and regexing the stored *value* would happily
+    "localise" an opaque identifier (an ISIN, a scope ref). Every binding not named here — asset
+    class codes, labels, scope refs, currency codes — passes through display re-rendering
+    untouched.
     """
 
     kind: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
@@ -516,6 +523,7 @@ class ConditionKindSpec[P: BaseModel](DomainModel):
     default_max_staleness: timedelta | None
     severity: SeverityDeclaration
     explanation_template: str = Field(min_length=1)
+    numeric_bindings: frozenset[str]
     evaluate: Callable[[P, FactSet, TraceRecorder], ConditionResult]
 
     @model_validator(mode="after")
@@ -645,6 +653,18 @@ DRIFT_OUTSIDE_TOLERANCE: Final = REGISTRY.register(
             "{asset_class_label} è al {current_pct}% contro un target del {target_pct}% "
             "(banda ±{tolerance_pct}pp): scostamento di {drift_pct}pp "
             "({drift_value} {currency})."
+        ),
+        numeric_bindings=frozenset(
+            {
+                "current_pct",
+                "target_pct",
+                "drift_pct",
+                "tolerance_pct",
+                "current_value",
+                "target_value",
+                "drift_value",
+                "severity",
+            }
         ),
         evaluate=evaluate_drift_outside_tolerance,
     )
