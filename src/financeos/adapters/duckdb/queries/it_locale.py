@@ -4,7 +4,7 @@ Read-side only, and orthogonal to `core.shared.labels` (L05 §7.3's own table): 
 knows digits — decimal comma, thousands dot, an optional `€` prefix — and nothing about words,
 gender or articles. It is the counterpart the label registry deliberately does not supply.
 
-Two formatters and one re-render function:
+Four formatters and one re-render function:
 
 * `format_number_it` — punctuation only, never rounding. A canonical decimal string keeps its
   own scale (a `Percentage` stays at two places, a `Money` at four); only the separators change.
@@ -14,6 +14,12 @@ Two formatters and one re-render function:
   prefixed. A general-purpose utility for money values, not applied inside `observation`
   re-rendering unless a condition kind declares a binding for it (none does today; `currency`
   in `drift_outside_tolerance` is a word binding, e.g. ``"EUR"``, and stays untouched).
+* `format_percent_it` — a stored *ratio* (``0.34000000``) as percentage points with the `%`
+  sign (``"34,00%"``). Routed through `Percentage.from_ratio` so the ratio→points conversion
+  and its two-place scale are the domain's, not a second convention invented here.
+* `format_date_it` — ``dd/mm/yyyy`` (ADR-L03 §5.2). A date is locale-shaped exactly like a
+  number is, so it belongs beside the numbers rather than in a template or a view; a
+  `strftime` in either of those places is the ad-hoc formatting L05 §7.3 exists to prevent.
 * `render_observation_it` — re-renders a rule's frozen `message` template over its frozen
   `message_bindings`, formatting only the kind's declared-numeric bindings (C-L05-3). Every
   other binding — asset class codes, labels, scope refs, currency codes — passes through
@@ -27,7 +33,10 @@ Never regex stored prose (L05 §7.3): the substitution happens binding-by-bindin
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
+
+from financeos.core.shared import Percentage
 
 
 def format_number_it(value: Decimal) -> str:
@@ -55,6 +64,30 @@ def format_money_it(value: Decimal) -> str:
     if formatted.startswith("-"):
         return f"-€{formatted[1:]}"
     return f"€{formatted}"
+
+
+def format_percent_it(ratio: Decimal) -> str:
+    """A stored ratio as it-IT percentage points with the sign: ``0.34`` -> ``"34,00%"``.
+
+    The ratio→points conversion is `Percentage.from_ratio`'s, so a weight rendered on a page
+    reads at the same scale as the `current_pct` the same weight produced in a trace binding.
+    """
+    return f"{format_number_it(Percentage.from_ratio(ratio).value)}%"
+
+
+def format_date_it(value: date) -> str:
+    """``dd/mm/yyyy`` (ADR-L03 §5.2). The only place a date's display shape is decided."""
+    return f"{value:%d/%m/%Y}"
+
+
+def format_date_short_it(value: date) -> str:
+    """``dd/mm`` — the compact form for a chart axis tick or a dense cell.
+
+    The same non-syntactic/syntactic split the label registry draws between `short` and the full
+    noun phrase (L05 §3.5): this form is for an axis, a legend or a table cell, and is never
+    composed into a sentence, where a year-less date would be ambiguous.
+    """
+    return f"{value:%d/%m}"
 
 
 def render_observation_it(

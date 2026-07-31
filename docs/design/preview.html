@@ -153,8 +153,8 @@
     <div class="record">
       <div class="record__margin">1</div>
       <div class="record__body">
-        <p>Equity/Developed è <span class="value value--negative">6,00pp</span>
-        sotto il tuo obiettivo del <span class="value">40,00%</span>
+        <p>Le Azioni dei paesi sviluppati sono <span class="value value--negative">6,00pp</span>
+        sotto il target del <span class="value">40,00%</span>
         (tolleranza <span class="value">±2,00pp</span>). Attuale
         <span class="value">34,00%</span> —
         <span class="value value--negative">−€3.240,00</span>.</p>
@@ -316,14 +316,14 @@
     <p class="spec__note">Quattro esiti, quattro trattamenti: pieno, filo,
     tratteggiato, tratteggio incrociato. La <strong>texture</strong> porta la
     distinzione, non la tinta, così i quattro restano inconfondibili in scala di
-    grigi e per chi non distingue rosso e verde. <em>NON VALUTATO</em> ed
+    grigi e per chi non distingue rosso e verde. <em>NON VALUTATA</em> ed
     <em>ERRORE</em> non sono mai rassicuranti.</p>
     <div class="row">
 <span class="outcome outcome--fired"
-      title="La condizione si è verificata: esiste un rilievo.">RILEVATO</span><span class="outcome outcome--not-fired"
-      title="La condizione è stata valutata ed è risultata falsa.">NON RILEVATO</span><span class="outcome outcome--skipped"
-      title="La regola non ha potuto essere valutata. Non valutato non significa conforme.">NON VALUTATO</span> <span class="ident">zero_portfolio_value</span><span class="outcome outcome--error"
-      title="La valutazione si è interrotta con un errore: il sistema non sa.">ERRORE</span> <span class="ident">currency_mismatch</span>      <span class="outcome outcome--projection">PROIEZIONE</span>
+      title="La condizione è risultata vera: esiste un rilievo.">Scattata</span><span class="outcome outcome--not-fired"
+      title="La condizione è stata valutata ed è risultata falsa.">Non scattata</span><span class="outcome outcome--skipped"
+      title="La regola non è stata valutata. Non valutato non significa conforme.">Non valutata</span> <span class="ident">zero_portfolio_value</span><span class="outcome outcome--error"
+      title="La valutazione si è interrotta: il risultato non è né vero né falso.">Errore</span> <span class="ident">currency_mismatch</span>      <span class="outcome outcome--projection">PROIEZIONE</span>
       <span class="ident">Classe B — riservato, RFC-0010 §6.4</span>
     </div>
   </div>
@@ -347,13 +347,13 @@
 
     <ul style="margin-top: var(--sp-2); padding-inline-start: var(--sp-5)">      <li>
         <span class="value">7×</span> <span class="ident">zero_portfolio_value</span>:
-        il Bucket Personal non contiene ancora nulla, quindi le sue sette regole non avevano nulla da misurare.
+        il Bucket Personale non contiene ancora nulla, quindi le sue sette regole non avevano nulla da misurare.
       </li>      <li>
         <span class="value">1×</span> <span class="ident">heterogeneous_strategies</span>:
         lo scostamento a livello di portafoglio non è calcolabile finché i Bucket seguono strategie diverse: una media fra strategie incommensurabili sarebbe un numero inventato.
       </li>      <li>
         <span class="value">1×</span> <span class="ident">currency_mismatch</span>:
-        un Bucket in euro è stato confrontato con un obiettivo in dollari; il sistema solleva un errore invece di convertire in silenzio.
+        un Bucket in euro è stato confrontato con un target in dollari; il sistema solleva un errore invece di convertire in silenzio.
       </li>    </ul>
 
       <p style="margin-top: var(--sp-2)"><a href="#">Vedi i motivi, regola per regola</a></p>
@@ -372,11 +372,11 @@
       <div class="record">
         <div class="record__margin">1</div>
         <div class="record__body">
-          <p class="ident" style="margin-bottom: var(--sp-2)">EQUITY_DEVELOPED · Pension · ±2,00pp ABSOLUTE (la riga canonica)</p>
+          <p class="ident" style="margin-bottom: var(--sp-2)">Sviluppati · Pensione · ±2,00pp ABSOLUTE (la riga canonica)</p>
           <div class="row" style="align-items: flex-end; gap: var(--sp-5)">
             <div style="flex: 1; min-width: 170px">
 <div class="rail-gauge rail-gauge--breach"
-     role="img" aria-label="Equity/Developed al 34,00% contro un obiettivo del 40,00%, tolleranza più o meno 2,00 punti percentuali. Scostamento di 6,00 punti percentuali sotto l&#39;obiettivo, pari a 3 ampiezze di banda: fuori tolleranza, al fondo della scala.">
+     role="img" aria-label="Le Azioni dei paesi sviluppati sono al 34,00% contro un target del 40,00%, tolleranza più o meno 2,00 punti percentuali. Scostamento di 6,00 punti percentuali sotto il target, pari a 3 ampiezze di banda: fuori tolleranza, al fondo della scala.">
   <div class="rail-gauge__scale">
     <span class="rail-gauge__baseline"></span>
     <span class="rail-gauge__band"></span>
@@ -392,7 +392,7 @@
 
   <div class="rail-gauge__key" aria-hidden="true">
     <span>−3</span>
-    <span>obiettivo 40,00%</span>
+    <span>target 40,00%</span>
     <span>+3</span>
   </div>
 </div>            </div>
@@ -407,11 +407,11 @@
       <div class="record">
         <div class="record__margin">2</div>
         <div class="record__body">
-          <p class="ident" style="margin-bottom: var(--sp-2)">BOND_GOV_EUR · Emergency · ±5,00pp ABSOLUTE</p>
+          <p class="ident" style="margin-bottom: var(--sp-2)">Gov. euro · Emergenza · ±5,00pp ABSOLUTE</p>
           <div class="row" style="align-items: flex-end; gap: var(--sp-5)">
             <div style="flex: 1; min-width: 170px">
 <div class="rail-gauge rail-gauge--breach"
-     role="img" aria-label="Bond governativi euro sopra l&#39;obiettivo del 30,00% di 1,79 ampiezze di banda: fuori tolleranza.">
+     role="img" aria-label="Le Obbligazioni governative in euro sopra il target del 30,00% di 1,79 ampiezze di banda: fuori tolleranza.">
   <div class="rail-gauge__scale">
     <span class="rail-gauge__baseline"></span>
     <span class="rail-gauge__band"></span>
@@ -427,7 +427,7 @@
 
   <div class="rail-gauge__key" aria-hidden="true">
     <span>−3</span>
-    <span>obiettivo 30,00%</span>
+    <span>target 30,00%</span>
     <span>+3</span>
   </div>
 </div>            </div>
@@ -442,11 +442,11 @@
       <div class="record">
         <div class="record__margin">3</div>
         <div class="record__body">
-          <p class="ident" style="margin-bottom: var(--sp-2)">EQUITY_EMERGING · Pension · RELATIVE 0,25 → ±2,50pp</p>
+          <p class="ident" style="margin-bottom: var(--sp-2)">Emergenti · Pensione · RELATIVE 0,25 → ±2,50pp</p>
           <div class="row" style="align-items: flex-end; gap: var(--sp-5)">
             <div style="flex: 1; min-width: 170px">
 <div class="rail-gauge"
-     role="img" aria-label="Equity emergenti sotto l&#39;obiettivo del 10,00% di 0,42 ampiezze di banda: entro tolleranza.">
+     role="img" aria-label="Le Azioni dei paesi emergenti sotto il target del 10,00% di 0,42 ampiezze di banda: entro tolleranza.">
   <div class="rail-gauge__scale">
     <span class="rail-gauge__baseline"></span>
     <span class="rail-gauge__band"></span>
@@ -462,7 +462,7 @@
 
   <div class="rail-gauge__key" aria-hidden="true">
     <span>−3</span>
-    <span>obiettivo 10,00%</span>
+    <span>target 10,00%</span>
     <span>+3</span>
   </div>
 </div>            </div>
@@ -477,11 +477,11 @@
       <div class="record">
         <div class="record__margin">4</div>
         <div class="record__body">
-          <p class="ident" style="margin-bottom: var(--sp-2)">bucket_below_target_value · Emergency, nessuna banda definita</p>
+          <p class="ident" style="margin-bottom: var(--sp-2)">bucket_below_target_value · Emergenza, nessuna banda definita</p>
           <div class="row" style="align-items: flex-end; gap: var(--sp-5)">
             <div style="flex: 1; min-width: 170px">
 <div class="rail-gauge rail-gauge--unbanded"
-     role="img" aria-label="Questa condizione non definisce una banda di tolleranza, quindi non ha una severità: la scala è mostrata annullata e senza indice. Emergency detiene 18.014,80 euro contro una soglia di 24.000,00 euro.">
+     role="img" aria-label="Questa condizione non definisce una banda di tolleranza, quindi non ha una severità: la scala è mostrata annullata e senza indice. Emergenza detiene 18.014,80 euro contro una soglia di 24.000,00 euro.">
   <div class="rail-gauge__scale">
     <span class="rail-gauge__baseline"></span>
     <span class="rail-gauge__band"></span>
@@ -615,13 +615,13 @@
         <div class="record__margin" aria-hidden="true"></div>
         <div class="record__body">
           <div class="record__head">
-            <span class="record__designation record__designation--minor">Allocazione contro obiettivo</span>
+            <span class="record__designation record__designation--minor">Allocazione contro target</span>
           </div>
 <figure class="chart" style="--chart-h: 250px">
 
   <script type="application/json" id="chart-alloc-light-option">{"caneWidth": 22, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 34, "top": 12}, "series": [{"colorBy": "data", "data": [40.0, 10.0, 30.0, 10.0, 10.0, null], "mark": "casing", "markPoint": {"data": [{"coord": [40.0, 0], "name": "target 40.0%"}, {"coord": [10.0, 1], "name": "target 10.0%"}, {"coord": [30.0, 2], "name": "target 30.0%"}, {"coord": [10.0, 3], "name": "target 10.0%"}, {"coord": [10.0, 4], "name": "target 10.0%"}], "itemStyle": {"color": "token:--ink-2"}, "label": {"show": false}, "silent": true, "symbol": "rect", "symbolSize": [2, 30]}, "name": "target"}, {"colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0, null], "mark": "core", "name": "attuale"}, {"data": [34.0, 9.5, 27.9, 8.0, 12.0, null], "mark": "edge", "name": "attuale"}, {"barGap": "-100%", "data": [null, null, null, null, null, 8.6], "mark": "void", "name": "non targettizzato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}%"}, "max": 45, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"axisLabel": {"lineHeight": 14, "overflow": "break", "width": 168}, "data": ["Azioni dei paesi sviluppati", "Azioni dei paesi emergenti", "Obbligazioni governative EUR", "Obbligazioni corporate investment grade", "Liquidit\u00e0", "Azioni globali"], "inverse": true, "splitLine": {"show": false}, "type": "category"}}</script>
   <div class="chart__canvas" id="chart-alloc-light" data-chart="chart-alloc-light-option"
-       role="img" aria-label="Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4."></div>
+       role="img" aria-label="Allocazione del Bucket Pensione contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4."></div>
 
   <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-casing">
       <span class="legend__swatch" aria-hidden="true"></span>
@@ -643,11 +643,11 @@
       <span class="legend__swatch" aria-hidden="true"></span>
       <span>Azioni globali · non targettizzato</span><span class="legend__value">8,60%</span>    </li>  </ul>
 
-<figcaption class="chart__caption">Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</figcaption>
+<figcaption class="chart__caption">Allocazione del Bucket Pensione contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</figcaption>
   <details class="chart__data" id="chart-alloc-light-data" open>
     <summary>Serie come registrata</summary>
     <table class="ledger">
-      <caption class="visually-hidden">Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</caption>
+      <caption class="visually-hidden">Allocazione del Bucket Pensione contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</caption>
       <thead>
         <tr><th>Classe</th><th class="numeric">Attuale</th><th class="numeric">Target</th><th class="numeric">Scostamento</th></tr>
       </thead>
@@ -697,31 +697,31 @@
         </div>
 <figure class="chart" style="--chart-h: 150px">
 
-  <script type="application/json" id="chart-comp-light-option">{"caneWidth": 34, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 40, "top": 8}, "series": [{"data": [54000.0], "itemStyle": {"color": "token:--series-1"}, "mark": "segment", "markLine": {"data": [{"xAxis": 107586.33}], "label": {"color": "token:--ink-2", "fontSize": 10, "formatter": "\u20ac107.586,33", "position": "end"}, "lineStyle": {"color": "token:--ink-2", "width": 1}, "silent": true, "symbol": "none"}, "name": "Pension"}, {"data": [22488.98], "itemStyle": {"color": "token:--series-2"}, "mark": "segment", "name": "Children"}, {"data": [18014.8], "itemStyle": {"color": "token:--series-3"}, "mark": "segment", "name": "Emergency"}, {"data": [0.0], "itemStyle": {"color": "token:--series-4"}, "mark": "segment", "name": "Personal"}, {"data": [13082.55], "mark": "void", "name": "UNASSIGNED \u00b7 residuo non assegnato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}"}, "max": 107586.33, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"data": ["Patrimonio netto"], "splitLine": {"show": false}, "type": "category"}}</script>
+  <script type="application/json" id="chart-comp-light-option">{"caneWidth": 34, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 40, "top": 8}, "series": [{"data": [54000.0], "itemStyle": {"color": "token:--series-1"}, "mark": "segment", "markLine": {"data": [{"xAxis": 107586.33}], "label": {"color": "token:--ink-2", "fontSize": 10, "formatter": "\u20ac107.586,33", "position": "end"}, "lineStyle": {"color": "token:--ink-2", "width": 1}, "silent": true, "symbol": "none"}, "name": "Pensione"}, {"data": [22488.98], "itemStyle": {"color": "token:--series-2"}, "mark": "segment", "name": "Figli"}, {"data": [18014.8], "itemStyle": {"color": "token:--series-3"}, "mark": "segment", "name": "Emergenza"}, {"data": [0.0], "itemStyle": {"color": "token:--series-4"}, "mark": "segment", "name": "Personale"}, {"data": [13082.55], "mark": "void", "name": "UNASSIGNED \u00b7 residuo non assegnato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}"}, "max": 107586.33, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"data": ["Patrimonio netto"], "splitLine": {"show": false}, "type": "category"}}</script>
   <div class="chart__canvas" id="chart-comp-light" data-chart="chart-comp-light-option"
-       role="img" aria-label="La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante."></div>
+       role="img" aria-label="La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personale non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante."></div>
 
   <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-1">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>Pension</span><span class="legend__value">€54.000,00</span>    </li>    <li class="legend__item swatch-2">
+      <span>Pensione</span><span class="legend__value">€54.000,00</span>    </li>    <li class="legend__item swatch-2">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>Children</span><span class="legend__value">€22.488,98</span>    </li>    <li class="legend__item swatch-3">
+      <span>Figli</span><span class="legend__value">€22.488,98</span>    </li>    <li class="legend__item swatch-3">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>Emergency</span><span class="legend__value">€18.014,80</span>    </li>    <li class="legend__item swatch-4">
+      <span>Emergenza</span><span class="legend__value">€18.014,80</span>    </li>    <li class="legend__item swatch-4">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>Personal</span><span class="legend__value">€0,00</span>    </li>    <li class="legend__item swatch-void">
+      <span>Personale</span><span class="legend__value">€0,00</span>    </li>    <li class="legend__item swatch-void">
       <span class="legend__swatch" aria-hidden="true"></span>
       <span>UNASSIGNED · residuo non assegnato</span><span class="legend__value">€13.082,55</span>    </li>  </ul>
 
-<figcaption class="chart__caption">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</figcaption>
+<figcaption class="chart__caption">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personale non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</figcaption>
   <details class="chart__data" id="chart-comp-light-data" open>
     <summary>Serie come registrata</summary>
     <table class="ledger">
-      <caption class="visually-hidden">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</caption>
+      <caption class="visually-hidden">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personale non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</caption>
       <thead>
         <tr><th>Bucket</th><th class="numeric">Valore</th></tr>
       </thead>
-      <tbody>        <tr><td>Pension</td><td class="numeric value">€54.000,00</td>        </tr>        <tr><td>Children</td><td class="numeric value">€22.488,98</td>        </tr>        <tr><td>Emergency</td><td class="numeric value">€18.014,80</td>        </tr>        <tr><td>Personal</td><td class="numeric value">€0,00</td>        </tr>        <tr><td>UNASSIGNED · residuo non assegnato</td><td class="numeric value">€13.082,55</td>        </tr>      </tbody>
+      <tbody>        <tr><td>Pensione</td><td class="numeric value">€54.000,00</td>        </tr>        <tr><td>Figli</td><td class="numeric value">€22.488,98</td>        </tr>        <tr><td>Emergenza</td><td class="numeric value">€18.014,80</td>        </tr>        <tr><td>Personale</td><td class="numeric value">€0,00</td>        </tr>        <tr><td>UNASSIGNED · residuo non assegnato</td><td class="numeric value">€13.082,55</td>        </tr>      </tbody>
     </table>
   </details>
 </figure>      </div>
@@ -800,25 +800,25 @@
           <tbody>
             <tr >
               <td class="ledger__ord">01</td>
-              <td>Pension</td>
+              <td>Pensione</td>
               <td class="numeric value ">€54.000,00</td>
               <td class="numeric value">50,19%</td>
             </tr>
             <tr >
               <td class="ledger__ord">02</td>
-              <td>Children</td>
+              <td>Figli</td>
               <td class="numeric value ">€22.488,98</td>
               <td class="numeric value">20,90%</td>
             </tr>
             <tr >
               <td class="ledger__ord">03</td>
-              <td>Emergency</td>
+              <td>Emergenza</td>
               <td class="numeric value ">€18.014,80</td>
               <td class="numeric value">16,75%</td>
             </tr>
             <tr >
               <td class="ledger__ord">04</td>
-              <td>Personal</td>
+              <td>Personale</td>
               <td class="numeric value ">€0,00</td>
               <td class="numeric value">0,00%</td>
             </tr>
@@ -1002,8 +1002,8 @@
     <div class="record">
       <div class="record__margin">1</div>
       <div class="record__body">
-        <p>Equity/Developed è <span class="value value--negative">6,00pp</span>
-        sotto il tuo obiettivo del <span class="value">40,00%</span>
+        <p>Le Azioni dei paesi sviluppati sono <span class="value value--negative">6,00pp</span>
+        sotto il target del <span class="value">40,00%</span>
         (tolleranza <span class="value">±2,00pp</span>). Attuale
         <span class="value">34,00%</span> —
         <span class="value value--negative">−€3.240,00</span>.</p>
@@ -1165,14 +1165,14 @@
     <p class="spec__note">Quattro esiti, quattro trattamenti: pieno, filo,
     tratteggiato, tratteggio incrociato. La <strong>texture</strong> porta la
     distinzione, non la tinta, così i quattro restano inconfondibili in scala di
-    grigi e per chi non distingue rosso e verde. <em>NON VALUTATO</em> ed
+    grigi e per chi non distingue rosso e verde. <em>NON VALUTATA</em> ed
     <em>ERRORE</em> non sono mai rassicuranti.</p>
     <div class="row">
 <span class="outcome outcome--fired"
-      title="La condizione si è verificata: esiste un rilievo.">RILEVATO</span><span class="outcome outcome--not-fired"
-      title="La condizione è stata valutata ed è risultata falsa.">NON RILEVATO</span><span class="outcome outcome--skipped"
-      title="La regola non ha potuto essere valutata. Non valutato non significa conforme.">NON VALUTATO</span> <span class="ident">zero_portfolio_value</span><span class="outcome outcome--error"
-      title="La valutazione si è interrotta con un errore: il sistema non sa.">ERRORE</span> <span class="ident">currency_mismatch</span>      <span class="outcome outcome--projection">PROIEZIONE</span>
+      title="La condizione è risultata vera: esiste un rilievo.">Scattata</span><span class="outcome outcome--not-fired"
+      title="La condizione è stata valutata ed è risultata falsa.">Non scattata</span><span class="outcome outcome--skipped"
+      title="La regola non è stata valutata. Non valutato non significa conforme.">Non valutata</span> <span class="ident">zero_portfolio_value</span><span class="outcome outcome--error"
+      title="La valutazione si è interrotta: il risultato non è né vero né falso.">Errore</span> <span class="ident">currency_mismatch</span>      <span class="outcome outcome--projection">PROIEZIONE</span>
       <span class="ident">Classe B — riservato, RFC-0010 §6.4</span>
     </div>
   </div>
@@ -1196,13 +1196,13 @@
 
     <ul style="margin-top: var(--sp-2); padding-inline-start: var(--sp-5)">      <li>
         <span class="value">7×</span> <span class="ident">zero_portfolio_value</span>:
-        il Bucket Personal non contiene ancora nulla, quindi le sue sette regole non avevano nulla da misurare.
+        il Bucket Personale non contiene ancora nulla, quindi le sue sette regole non avevano nulla da misurare.
       </li>      <li>
         <span class="value">1×</span> <span class="ident">heterogeneous_strategies</span>:
         lo scostamento a livello di portafoglio non è calcolabile finché i Bucket seguono strategie diverse: una media fra strategie incommensurabili sarebbe un numero inventato.
       </li>      <li>
         <span class="value">1×</span> <span class="ident">currency_mismatch</span>:
-        un Bucket in euro è stato confrontato con un obiettivo in dollari; il sistema solleva un errore invece di convertire in silenzio.
+        un Bucket in euro è stato confrontato con un target in dollari; il sistema solleva un errore invece di convertire in silenzio.
       </li>    </ul>
 
       <p style="margin-top: var(--sp-2)"><a href="#">Vedi i motivi, regola per regola</a></p>
@@ -1221,11 +1221,11 @@
       <div class="record">
         <div class="record__margin">1</div>
         <div class="record__body">
-          <p class="ident" style="margin-bottom: var(--sp-2)">EQUITY_DEVELOPED · Pension · ±2,00pp ABSOLUTE (la riga canonica)</p>
+          <p class="ident" style="margin-bottom: var(--sp-2)">Sviluppati · Pensione · ±2,00pp ABSOLUTE (la riga canonica)</p>
           <div class="row" style="align-items: flex-end; gap: var(--sp-5)">
             <div style="flex: 1; min-width: 170px">
 <div class="rail-gauge rail-gauge--breach"
-     role="img" aria-label="Equity/Developed al 34,00% contro un obiettivo del 40,00%, tolleranza più o meno 2,00 punti percentuali. Scostamento di 6,00 punti percentuali sotto l&#39;obiettivo, pari a 3 ampiezze di banda: fuori tolleranza, al fondo della scala.">
+     role="img" aria-label="Le Azioni dei paesi sviluppati sono al 34,00% contro un target del 40,00%, tolleranza più o meno 2,00 punti percentuali. Scostamento di 6,00 punti percentuali sotto il target, pari a 3 ampiezze di banda: fuori tolleranza, al fondo della scala.">
   <div class="rail-gauge__scale">
     <span class="rail-gauge__baseline"></span>
     <span class="rail-gauge__band"></span>
@@ -1241,7 +1241,7 @@
 
   <div class="rail-gauge__key" aria-hidden="true">
     <span>−3</span>
-    <span>obiettivo 40,00%</span>
+    <span>target 40,00%</span>
     <span>+3</span>
   </div>
 </div>            </div>
@@ -1256,11 +1256,11 @@
       <div class="record">
         <div class="record__margin">2</div>
         <div class="record__body">
-          <p class="ident" style="margin-bottom: var(--sp-2)">BOND_GOV_EUR · Emergency · ±5,00pp ABSOLUTE</p>
+          <p class="ident" style="margin-bottom: var(--sp-2)">Gov. euro · Emergenza · ±5,00pp ABSOLUTE</p>
           <div class="row" style="align-items: flex-end; gap: var(--sp-5)">
             <div style="flex: 1; min-width: 170px">
 <div class="rail-gauge rail-gauge--breach"
-     role="img" aria-label="Bond governativi euro sopra l&#39;obiettivo del 30,00% di 1,79 ampiezze di banda: fuori tolleranza.">
+     role="img" aria-label="Le Obbligazioni governative in euro sopra il target del 30,00% di 1,79 ampiezze di banda: fuori tolleranza.">
   <div class="rail-gauge__scale">
     <span class="rail-gauge__baseline"></span>
     <span class="rail-gauge__band"></span>
@@ -1276,7 +1276,7 @@
 
   <div class="rail-gauge__key" aria-hidden="true">
     <span>−3</span>
-    <span>obiettivo 30,00%</span>
+    <span>target 30,00%</span>
     <span>+3</span>
   </div>
 </div>            </div>
@@ -1291,11 +1291,11 @@
       <div class="record">
         <div class="record__margin">3</div>
         <div class="record__body">
-          <p class="ident" style="margin-bottom: var(--sp-2)">EQUITY_EMERGING · Pension · RELATIVE 0,25 → ±2,50pp</p>
+          <p class="ident" style="margin-bottom: var(--sp-2)">Emergenti · Pensione · RELATIVE 0,25 → ±2,50pp</p>
           <div class="row" style="align-items: flex-end; gap: var(--sp-5)">
             <div style="flex: 1; min-width: 170px">
 <div class="rail-gauge"
-     role="img" aria-label="Equity emergenti sotto l&#39;obiettivo del 10,00% di 0,42 ampiezze di banda: entro tolleranza.">
+     role="img" aria-label="Le Azioni dei paesi emergenti sotto il target del 10,00% di 0,42 ampiezze di banda: entro tolleranza.">
   <div class="rail-gauge__scale">
     <span class="rail-gauge__baseline"></span>
     <span class="rail-gauge__band"></span>
@@ -1311,7 +1311,7 @@
 
   <div class="rail-gauge__key" aria-hidden="true">
     <span>−3</span>
-    <span>obiettivo 10,00%</span>
+    <span>target 10,00%</span>
     <span>+3</span>
   </div>
 </div>            </div>
@@ -1326,11 +1326,11 @@
       <div class="record">
         <div class="record__margin">4</div>
         <div class="record__body">
-          <p class="ident" style="margin-bottom: var(--sp-2)">bucket_below_target_value · Emergency, nessuna banda definita</p>
+          <p class="ident" style="margin-bottom: var(--sp-2)">bucket_below_target_value · Emergenza, nessuna banda definita</p>
           <div class="row" style="align-items: flex-end; gap: var(--sp-5)">
             <div style="flex: 1; min-width: 170px">
 <div class="rail-gauge rail-gauge--unbanded"
-     role="img" aria-label="Questa condizione non definisce una banda di tolleranza, quindi non ha una severità: la scala è mostrata annullata e senza indice. Emergency detiene 18.014,80 euro contro una soglia di 24.000,00 euro.">
+     role="img" aria-label="Questa condizione non definisce una banda di tolleranza, quindi non ha una severità: la scala è mostrata annullata e senza indice. Emergenza detiene 18.014,80 euro contro una soglia di 24.000,00 euro.">
   <div class="rail-gauge__scale">
     <span class="rail-gauge__baseline"></span>
     <span class="rail-gauge__band"></span>
@@ -1464,13 +1464,13 @@
         <div class="record__margin" aria-hidden="true"></div>
         <div class="record__body">
           <div class="record__head">
-            <span class="record__designation record__designation--minor">Allocazione contro obiettivo</span>
+            <span class="record__designation record__designation--minor">Allocazione contro target</span>
           </div>
 <figure class="chart" style="--chart-h: 250px">
 
   <script type="application/json" id="chart-alloc-dark-option">{"caneWidth": 22, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 34, "top": 12}, "series": [{"colorBy": "data", "data": [40.0, 10.0, 30.0, 10.0, 10.0, null], "mark": "casing", "markPoint": {"data": [{"coord": [40.0, 0], "name": "target 40.0%"}, {"coord": [10.0, 1], "name": "target 10.0%"}, {"coord": [30.0, 2], "name": "target 30.0%"}, {"coord": [10.0, 3], "name": "target 10.0%"}, {"coord": [10.0, 4], "name": "target 10.0%"}], "itemStyle": {"color": "token:--ink-2"}, "label": {"show": false}, "silent": true, "symbol": "rect", "symbolSize": [2, 30]}, "name": "target"}, {"colorBy": "data", "data": [34.0, 9.5, 27.9, 8.0, 12.0, null], "mark": "core", "name": "attuale"}, {"data": [34.0, 9.5, 27.9, 8.0, 12.0, null], "mark": "edge", "name": "attuale"}, {"barGap": "-100%", "data": [null, null, null, null, null, 8.6], "mark": "void", "name": "non targettizzato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}%"}, "max": 45, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"axisLabel": {"lineHeight": 14, "overflow": "break", "width": 168}, "data": ["Azioni dei paesi sviluppati", "Azioni dei paesi emergenti", "Obbligazioni governative EUR", "Obbligazioni corporate investment grade", "Liquidit\u00e0", "Azioni globali"], "inverse": true, "splitLine": {"show": false}, "type": "category"}}</script>
   <div class="chart__canvas" id="chart-alloc-dark" data-chart="chart-alloc-dark-option"
-       role="img" aria-label="Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4."></div>
+       role="img" aria-label="Allocazione del Bucket Pensione contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4."></div>
 
   <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-casing">
       <span class="legend__swatch" aria-hidden="true"></span>
@@ -1492,11 +1492,11 @@
       <span class="legend__swatch" aria-hidden="true"></span>
       <span>Azioni globali · non targettizzato</span><span class="legend__value">8,60%</span>    </li>  </ul>
 
-<figcaption class="chart__caption">Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</figcaption>
+<figcaption class="chart__caption">Allocazione del Bucket Pensione contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</figcaption>
   <details class="chart__data" id="chart-alloc-dark-data" open>
     <summary>Serie come registrata</summary>
     <table class="ledger">
-      <caption class="visually-hidden">Allocazione del Bucket Pension contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</caption>
+      <caption class="visually-hidden">Allocazione del Bucket Pensione contro la strategia congelata, alla data del 24/07/2026. La cassa translucida è la forma dichiarata — il target — e il nucleo pieno è quello che c&#39;è davvero: se il nucleo resta corto la cassa si vede vuota, se sporge oltre la tacca è oltre il target. Serie come registrata in run:0f31a9c4.</caption>
       <thead>
         <tr><th>Classe</th><th class="numeric">Attuale</th><th class="numeric">Target</th><th class="numeric">Scostamento</th></tr>
       </thead>
@@ -1546,31 +1546,31 @@
         </div>
 <figure class="chart" style="--chart-h: 150px">
 
-  <script type="application/json" id="chart-comp-dark-option">{"caneWidth": 34, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 40, "top": 8}, "series": [{"data": [54000.0], "itemStyle": {"color": "token:--series-1"}, "mark": "segment", "markLine": {"data": [{"xAxis": 107586.33}], "label": {"color": "token:--ink-2", "fontSize": 10, "formatter": "\u20ac107.586,33", "position": "end"}, "lineStyle": {"color": "token:--ink-2", "width": 1}, "silent": true, "symbol": "none"}, "name": "Pension"}, {"data": [22488.98], "itemStyle": {"color": "token:--series-2"}, "mark": "segment", "name": "Children"}, {"data": [18014.8], "itemStyle": {"color": "token:--series-3"}, "mark": "segment", "name": "Emergency"}, {"data": [0.0], "itemStyle": {"color": "token:--series-4"}, "mark": "segment", "name": "Personal"}, {"data": [13082.55], "mark": "void", "name": "UNASSIGNED \u00b7 residuo non assegnato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}"}, "max": 107586.33, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"data": ["Patrimonio netto"], "splitLine": {"show": false}, "type": "category"}}</script>
+  <script type="application/json" id="chart-comp-dark-option">{"caneWidth": 34, "grid": {"bottom": 8, "containLabel": true, "left": 8, "right": 40, "top": 8}, "series": [{"data": [54000.0], "itemStyle": {"color": "token:--series-1"}, "mark": "segment", "markLine": {"data": [{"xAxis": 107586.33}], "label": {"color": "token:--ink-2", "fontSize": 10, "formatter": "\u20ac107.586,33", "position": "end"}, "lineStyle": {"color": "token:--ink-2", "width": 1}, "silent": true, "symbol": "none"}, "name": "Pensione"}, {"data": [22488.98], "itemStyle": {"color": "token:--series-2"}, "mark": "segment", "name": "Figli"}, {"data": [18014.8], "itemStyle": {"color": "token:--series-3"}, "mark": "segment", "name": "Emergenza"}, {"data": [0.0], "itemStyle": {"color": "token:--series-4"}, "mark": "segment", "name": "Personale"}, {"data": [13082.55], "mark": "void", "name": "UNASSIGNED \u00b7 residuo non assegnato"}], "tooltip": {"trigger": "item"}, "xAxis": {"axisLabel": {"formatter": "{value}"}, "max": 107586.33, "splitLine": {"show": true}, "type": "value"}, "yAxis": {"data": ["Patrimonio netto"], "splitLine": {"show": false}, "type": "category"}}</script>
   <div class="chart__canvas" id="chart-comp-dark" data-chart="chart-comp-dark-option"
-       role="img" aria-label="La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante."></div>
+       role="img" aria-label="La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personale non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante."></div>
 
   <ul class="legend" style="margin-top: var(--sp-3)">    <li class="legend__item swatch-1">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>Pension</span><span class="legend__value">€54.000,00</span>    </li>    <li class="legend__item swatch-2">
+      <span>Pensione</span><span class="legend__value">€54.000,00</span>    </li>    <li class="legend__item swatch-2">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>Children</span><span class="legend__value">€22.488,98</span>    </li>    <li class="legend__item swatch-3">
+      <span>Figli</span><span class="legend__value">€22.488,98</span>    </li>    <li class="legend__item swatch-3">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>Emergency</span><span class="legend__value">€18.014,80</span>    </li>    <li class="legend__item swatch-4">
+      <span>Emergenza</span><span class="legend__value">€18.014,80</span>    </li>    <li class="legend__item swatch-4">
       <span class="legend__swatch" aria-hidden="true"></span>
-      <span>Personal</span><span class="legend__value">€0,00</span>    </li>    <li class="legend__item swatch-void">
+      <span>Personale</span><span class="legend__value">€0,00</span>    </li>    <li class="legend__item swatch-void">
       <span class="legend__swatch" aria-hidden="true"></span>
       <span>UNASSIGNED · residuo non assegnato</span><span class="legend__value">€13.082,55</span>    </li>  </ul>
 
-<figcaption class="chart__caption">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</figcaption>
+<figcaption class="chart__caption">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personale non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</figcaption>
   <details class="chart__data" id="chart-comp-dark-data" open>
     <summary>Serie come registrata</summary>
     <table class="ledger">
-      <caption class="visually-hidden">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personal non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</caption>
+      <caption class="visually-hidden">La stessa idea, un livello più su: il patrimonio netto è i suoi Bucket più il residuo non assegnato, e i segmenti chiudono esattamente sulla tacca del totale. Personale non contiene ancora nulla: il suo segmento è larghezza zero, che è un fatto e non un dato mancante.</caption>
       <thead>
         <tr><th>Bucket</th><th class="numeric">Valore</th></tr>
       </thead>
-      <tbody>        <tr><td>Pension</td><td class="numeric value">€54.000,00</td>        </tr>        <tr><td>Children</td><td class="numeric value">€22.488,98</td>        </tr>        <tr><td>Emergency</td><td class="numeric value">€18.014,80</td>        </tr>        <tr><td>Personal</td><td class="numeric value">€0,00</td>        </tr>        <tr><td>UNASSIGNED · residuo non assegnato</td><td class="numeric value">€13.082,55</td>        </tr>      </tbody>
+      <tbody>        <tr><td>Pensione</td><td class="numeric value">€54.000,00</td>        </tr>        <tr><td>Figli</td><td class="numeric value">€22.488,98</td>        </tr>        <tr><td>Emergenza</td><td class="numeric value">€18.014,80</td>        </tr>        <tr><td>Personale</td><td class="numeric value">€0,00</td>        </tr>        <tr><td>UNASSIGNED · residuo non assegnato</td><td class="numeric value">€13.082,55</td>        </tr>      </tbody>
     </table>
   </details>
 </figure>      </div>
@@ -1649,25 +1649,25 @@
           <tbody>
             <tr >
               <td class="ledger__ord">01</td>
-              <td>Pension</td>
+              <td>Pensione</td>
               <td class="numeric value ">€54.000,00</td>
               <td class="numeric value">50,19%</td>
             </tr>
             <tr >
               <td class="ledger__ord">02</td>
-              <td>Children</td>
+              <td>Figli</td>
               <td class="numeric value ">€22.488,98</td>
               <td class="numeric value">20,90%</td>
             </tr>
             <tr >
               <td class="ledger__ord">03</td>
-              <td>Emergency</td>
+              <td>Emergenza</td>
               <td class="numeric value ">€18.014,80</td>
               <td class="numeric value">16,75%</td>
             </tr>
             <tr >
               <td class="ledger__ord">04</td>
-              <td>Personal</td>
+              <td>Personale</td>
               <td class="numeric value ">€0,00</td>
               <td class="numeric value">0,00%</td>
             </tr>

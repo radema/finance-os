@@ -233,19 +233,27 @@ def evaluate(ctx: click.Context, bucket_id: str | None, as_of: str | None, curre
 
 
 @app.command()
+@click.option("--host", default="127.0.0.1", help="Interfaccia di ascolto.")
+@click.option("--port", default=8000, type=int, help="Porta di ascolto.")
 @click.pass_context
-def serve(ctx: click.Context) -> None:
-    """Avvia l'applicazione web FastAPI."""
-    try:
-        from financeos.web.main import create_app  # type: ignore[import-untyped]
-    except ImportError as exc:
-        raise click.ClickException(
-            "l'interfaccia web non è ancora disponibile (in attesa di W1d)."
-        ) from exc
+def serve(ctx: click.Context, host: str, port: int) -> None:
+    """Avvia l'applicazione web FastAPI.
 
+    Ascolta su 127.0.0.1: il negozio è locale e non c'è autenticazione, quindi
+    l'applicazione non si espone in rete se non glielo si chiede (ADR-0008).
+    """
     import uvicorn
 
-    uvicorn.run(create_app(ctx.obj["db_path"]), host="127.0.0.1", port=8000)
+    from financeos.web.main import create_app
+
+    db_path: Path = ctx.obj["db_path"]
+    if not db_path.exists():
+        raise click.ClickException(
+            f"negozio non trovato: {db_path}. Esegui prima «financeos seed demo»."
+        )
+
+    click.echo(f"Finance OS su http://{host}:{port} — negozio {db_path}.")
+    uvicorn.run(create_app(db_path), host=host, port=port)
 
 
 def _read_csv_dicts(path: Path) -> list[dict[str, str]]:

@@ -27,25 +27,15 @@
                  is exactly the false reassurance ADR-0016 forbids.
 #}
 
-{%- set labels = {
-  'FIRED':     'RILEVATO',
-  'NOT_FIRED': 'NON RILEVATO',
-  'SKIPPED':   'NON VALUTATO',
-  'ERROR':     'ERRORE',
-} -%}
+{#- Text and gloss come from CHROME_LABELS (`web/labels.py`'s `_OUTCOME`, W1d-c), never
+   restated here — a second table is how this chip drifts from the registry (as it had). #}
 {%- set classes = {
   'FIRED':     'outcome--fired',
   'NOT_FIRED': 'outcome--not-fired',
   'SKIPPED':   'outcome--skipped',
   'ERROR':     'outcome--error',
 } -%}
-{%- set titles = {
-  'FIRED':     'La condizione si è verificata: esiste un rilievo.',
-  'NOT_FIRED': 'La condizione è stata valutata ed è risultata falsa.',
-  'SKIPPED':   'La regola non ha potuto essere valutata. Non valutato non significa conforme.',
-  'ERROR':     'La valutazione si è interrotta con un errore: il sistema non sa.',
-} -%}
 
 <span class="outcome {{ classes.get(outcome, 'outcome--error') }}"
-      title="{{ titles.get(outcome, '') }}">{{ labels.get(outcome, outcome) }}</span>
+      title="{{ outcome | label_gloss }}">{{ outcome | label }}</span>
 {%- if reason %} <span class="ident">{{ reason }}</span>{% endif -%}

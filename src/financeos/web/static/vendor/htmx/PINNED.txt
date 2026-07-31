@@ -1,0 +1,14 @@
+htmx 2.0.10
+source: npm registry tarball https://registry.npmjs.org/htmx.org/-/htmx.org-2.0.10.tgz
+tarball sha1 (registry-verified): 62442b0e2952a885ae2e50a7654b8b20d0981134
+htmx.min.js sha256: 71ea67185bfa8c98c39d31717c6fce5d852370fcdfd129db4543774d3145c0de
+licence: Zero-Clause BSD (see LICENSE)
+Update by hand only; re-verify sha256. Vendored from the registry tarball and
+never from a CDN URL, for the reason echarts/PINNED.txt records: CDNs resolve
+version specifiers loosely.
+
+Why this is here at all: ADR-0007 ratifies FastAPI + Jinja2 + HTMX, and ADR-0008
+(Local First) requires the app to render with no network, so the library is
+vendored like echarts rather than linked. components.css already styles
+`.htmx-indicator` and static/js/charts.js already binds `htmx:load` /
+`htmx:beforeSwap`; this is the library those two were written against.

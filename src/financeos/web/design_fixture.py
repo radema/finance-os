@@ -20,6 +20,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from financeos.core.shared import Role, copula, label
+from financeos.web.labels import label_short
+
 # --- provenance -------------------------------------------------------------
 
 _PROVENANCE: dict[str, Any] = {
@@ -45,42 +48,45 @@ _PROVENANCE_HYPOTHETICAL: dict[str, Any] = {
 
 _RAIL_CASES: list[dict[str, Any]] = [
     {
-        "caption": "EQUITY_DEVELOPED · Pension · ±2,00pp ABSOLUTE (la riga canonica)",
+        "caption": (
+            f"{label_short('EQUITY_DEVELOPED')} · Pensione · ±2,00pp ABSOLUTE (la riga canonica)"
+        ),
         "signed_severity": -3.0,
-        "target_label": "obiettivo 40,00%",
+        "target_label": "target 40,00%",
         "severity_display": "3,00",
         "severity_class": "severity__value--breach",
         "aria_label": (
-            "Equity/Developed al 34,00% contro un obiettivo del 40,00%, "
+            f"{label('EQUITY_DEVELOPED', role=Role.THE, sentence_initial=True)} "
+            f"{copula('EQUITY_DEVELOPED')} al 34,00% contro un target del 40,00%, "
             "tolleranza più o meno 2,00 punti percentuali. Scostamento di 6,00 "
-            "punti percentuali sotto l'obiettivo, pari a 3 ampiezze di banda: "
+            "punti percentuali sotto il target, pari a 3 ampiezze di banda: "
             "fuori tolleranza, al fondo della scala."
         ),
     },
     {
-        "caption": "BOND_GOV_EUR · Emergency · ±5,00pp ABSOLUTE",
+        "caption": f"{label_short('BOND_GOV_EUR')} · Emergenza · ±5,00pp ABSOLUTE",
         "signed_severity": 1.79,
-        "target_label": "obiettivo 30,00%",
+        "target_label": "target 30,00%",
         "severity_display": "1,79",
         "severity_class": "severity__value--breach",
         "aria_label": (
-            "Bond governativi euro sopra l'obiettivo del 30,00% di 1,79 ampiezze "
-            "di banda: fuori tolleranza."
+            f"{label('BOND_GOV_EUR', role=Role.THE, sentence_initial=True)} sopra il "
+            "target del 30,00% di 1,79 ampiezze di banda: fuori tolleranza."
         ),
     },
     {
-        "caption": "EQUITY_EMERGING · Pension · RELATIVE 0,25 → ±2,50pp",
+        "caption": f"{label_short('EQUITY_EMERGING')} · Pensione · RELATIVE 0,25 → ±2,50pp",
         "signed_severity": -0.42,
-        "target_label": "obiettivo 10,00%",
+        "target_label": "target 10,00%",
         "severity_display": "0,42",
         "severity_class": "",
         "aria_label": (
-            "Equity emergenti sotto l'obiettivo del 10,00% di 0,42 ampiezze di "
-            "banda: entro tolleranza."
+            f"{label('EQUITY_EMERGING', role=Role.THE, sentence_initial=True)} sotto il "
+            "target del 10,00% di 0,42 ampiezze di banda: entro tolleranza."
         ),
     },
     {
-        "caption": "bucket_below_target_value · Emergency, nessuna banda definita",
+        "caption": "bucket_below_target_value · Emergenza, nessuna banda definita",
         "signed_severity": None,
         "target_label": "soglia €24.000,00",
         "severity_display": "—",
@@ -88,7 +94,7 @@ _RAIL_CASES: list[dict[str, Any]] = [
         "aria_label": (
             "Questa condizione non definisce una banda di tolleranza, quindi non "
             "ha una severità: la scala è mostrata annullata e senza indice. "
-            "Emergency detiene 18.014,80 euro contro una soglia di 24.000,00 euro."
+            "Emergenza detiene 18.014,80 euro contro una soglia di 24.000,00 euro."
         ),
     },
 ]
@@ -177,7 +183,7 @@ _SKIP_REASONS: list[dict[str, Any]] = [
         "reason": "zero_portfolio_value",
         "count": 7,
         "explanation": (
-            "il Bucket Personal non contiene ancora nulla, quindi le sue sette "
+            "il Bucket Personale non contiene ancora nulla, quindi le sue sette "
             "regole non avevano nulla da misurare."
         ),
     },
@@ -194,7 +200,7 @@ _SKIP_REASONS: list[dict[str, Any]] = [
         "reason": "currency_mismatch",
         "count": 1,
         "explanation": (
-            "un Bucket in euro è stato confrontato con un obiettivo in dollari; "
+            "un Bucket in euro è stato confrontato con un target in dollari; "
             "il sistema solleva un errore invece di convertire in silenzio."
         ),
     },
@@ -203,10 +209,10 @@ _SKIP_REASONS: list[dict[str, Any]] = [
 # --- buckets --------------------------------------------------------------
 
 _BUCKETS: list[dict[str, Any]] = [
-    {"name": "Pension", "value": "€54.000,00", "share": "50,19%", "cls": "", "residual": False},
-    {"name": "Children", "value": "€22.488,98", "share": "20,90%", "cls": "", "residual": False},
-    {"name": "Emergency", "value": "€18.014,80", "share": "16,75%", "cls": "", "residual": False},
-    {"name": "Personal", "value": "€0,00", "share": "0,00%", "cls": "", "residual": False},
+    {"name": "Pensione", "value": "€54.000,00", "share": "50,19%", "cls": "", "residual": False},
+    {"name": "Figli", "value": "€22.488,98", "share": "20,90%", "cls": "", "residual": False},
+    {"name": "Emergenza", "value": "€18.014,80", "share": "16,75%", "cls": "", "residual": False},
+    {"name": "Personale", "value": "€0,00", "share": "0,00%", "cls": "", "residual": False},
     {
         "name": "UNASSIGNED · residuo non assegnato",
         "value": "€13.082,55",
@@ -227,7 +233,7 @@ _BUCKETS: list[dict[str, Any]] = [
 # static/js/charts.js supplies that role's geometry. A screen that hand-rolls
 # opacities and offsets has forked the chart language.
 
-# The allocation scope is the Pension Bucket, which is where UX-0001 §8's
+# The allocation scope is the Pensione Bucket, which is where UX-0001 §8's
 # canonical row lives: EQUITY_DEVELOPED at 34.00% of 54.000,00 EUR against a
 # 40.00% target, +/-2.00pp ABSOLUTE, drift -6.00pp, severity 3.00.
 #
@@ -354,13 +360,13 @@ _CHART_ALLOCATION: dict[str, Any] = {
 # THE NESTED CANE — the second level of the same idea, and the one place a whole
 # must reconcile: net worth IS its Buckets plus the unassigned residual. The
 # segments are euro, not percentages, because this is the reconciliation and a
-# percentage would hide a rounding gap. Personal holds nothing, so its segment
+# percentage would hide a rounding gap. Personale holds nothing, so its segment
 # is legitimately zero-width — an empty Bucket is a fact, not a missing one.
 _COMPOSITION = [
-    ("Pension", 54000.00, "segment"),
-    ("Children", 22488.98, "segment"),
-    ("Emergency", 18014.80, "segment"),
-    ("Personal", 0.00, "segment"),
+    ("Pensione", 54000.00, "segment"),
+    ("Figli", 22488.98, "segment"),
+    ("Emergenza", 18014.80, "segment"),
+    ("Personale", 0.00, "segment"),
     ("UNASSIGNED · residuo non assegnato", 13082.55, "void"),
 ]
 _NET_WORTH = 107586.33
@@ -533,7 +539,7 @@ def preview_context() -> dict[str, Any]:
         "buckets": _BUCKETS,
         "chart_allocation": _CHART_ALLOCATION,
         "chart_allocation_caption": (
-            "Allocazione del Bucket Pension contro la strategia congelata, alla "
+            "Allocazione del Bucket Pensione contro la strategia congelata, alla "
             "data del 24/07/2026. La cassa translucida è la forma dichiarata "
             "— il target — e il nucleo pieno è quello che c'è davvero: se il "
             "nucleo resta corto la cassa si vede vuota, se sporge oltre la "
@@ -572,7 +578,7 @@ def preview_context() -> dict[str, Any]:
         "chart_composition_caption": (
             "La stessa idea, un livello più su: il patrimonio netto è i suoi "
             "Bucket più il residuo non assegnato, e i segmenti chiudono "
-            "esattamente sulla tacca del totale. Personal non contiene ancora "
+            "esattamente sulla tacca del totale. Personale non contiene ancora "
             "nulla: il suo segmento è larghezza zero, che è un fatto e non un "
             "dato mancante."
         ),

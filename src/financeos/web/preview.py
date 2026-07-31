@@ -20,6 +20,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from financeos.web.design_fixture import preview_context
 from financeos.web.labels import register_label_filters
+from financeos.web.locale import register_locale_filters
 
 WEB_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = WEB_DIR / "templates"
@@ -35,6 +36,7 @@ def build_environment() -> Environment:
         lstrip_blocks=True,
     )
     register_label_filters(env)
+    register_locale_filters(env)
     return env
 
 

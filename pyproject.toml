@@ -29,6 +29,11 @@ dev = [
   "hypothesis",
   "pytest",
   "pytest-cov",
+  # Required by starlette's TestClient, which is how the web routes are verified:
+  # there is no browser in this environment, so "the page renders" is checked by
+  # rendering it. Test-only — C5 still forbids any HTTP client in core or app,
+  # and nothing under src/ imports this.
+  "httpx2",
 ]
 
 [build-system]
