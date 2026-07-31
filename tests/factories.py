@@ -201,6 +201,7 @@ def strategy_version(
     change_note: str = "Prima definizione della strategia.",
     principles: tuple[str, ...] = ("preservare il potere d'acquisto senza fare market timing",),
     horizon_years: int = 20,
+    risk_level: RiskLevel = RiskLevel.BALANCED,
 ) -> StrategyVersion:
     """A frozen `StrategyVersion` carrying targets and embedded rules (ADR-0027)."""
     return StrategyVersion(
@@ -210,7 +211,7 @@ def strategy_version(
             name=name,
             objective="Preservare e accrescere il capitale su vent'anni.",
             horizon=Horizon(years=horizon_years),
-            risk=RiskProfile(level=RiskLevel.BALANCED, principles=principles),
+            risk=RiskProfile(level=risk_level, principles=principles),
             targets=targets or DEMO_TARGETS,
             rules=rules or (drift_rule(),),
         ),
