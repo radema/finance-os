@@ -74,6 +74,10 @@ FACT_DRIFT: Final = "drift"
 #: `AssetClass`, targeted or not — unlike `drift`, which carries only targeted leaves.
 FACT_ALLOCATION: Final = "allocation"
 
+#: The name of the residual fact family (RFC-0006 §4, ADR-0029): the `UNASSIGNED` pseudo-
+#: bucket's weight, relative to total portfolio value. Portfolio-scoped by nature.
+FACT_RESIDUAL: Final = "residual"
+
 #: The algebra runs under a fixed decimal context, so neither the ambient context of a caller
 #: nor the machine a replay happens on can change a recorded value.
 _ALGEBRA_CONTEXT: Final = Context(prec=28, rounding=ROUNDING)
@@ -103,6 +107,7 @@ class FactSet(DomainModel):
     scope: Scope
     drift: Mapping[AssetClass, Bound[DriftLine]] = Field(default_factory=dict)
     allocation: Mapping[AssetClass, Bound[AllocationLine]] = Field(default_factory=dict)
+    residual: Bound[WeightAmount] | None = None
     unavailable: Mapping[str, SkipReason] = Field(default_factory=dict)
     labels: Mapping[AssetClass, str] = Field(default_factory=dict)
 
@@ -802,6 +807,90 @@ UNTARGETED_ALLOCATION: Final = REGISTRY.register(
             {"current_pct", "threshold_pct", "current_value", "severity"}
         ),
         evaluate=evaluate_untargeted_allocation,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
+# unassigned_residual_above v1 (ADR-L02 §4.2, ADR-0029)
+# --------------------------------------------------------------------------------------
+
+
+class UnassignedResidualAboveParams(BaseModel):
+    """Params of `unassigned_residual_above`: only the authored threshold.
+
+    ADR-0029: `threshold_weight` is relative to total portfolio value and the rule is
+    portfolio-scoped by nature, so `scope` is not a param here (it was never meaningful).
+    The params model rejects `threshold_weight <= 0` (ADR-L02 §4.2), the same guard D6 later
+    requires of `untargeted_allocation`.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    threshold_weight: WeightAmount
+
+    @model_validator(mode="after")
+    def _threshold_is_positive(self) -> "UnassignedResidualAboveParams":
+        if self.threshold_weight <= 0:
+            raise InvariantViolationError(
+                "unassigned_residual_above: threshold_weight must be > 0; "
+                f"got {self.threshold_weight}"
+            )
+        return self
+
+
+def evaluate_unassigned_residual_above(
+    params: UnassignedResidualAboveParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when the `UNASSIGNED` residual weight exceeds `threshold_weight`.
+
+    `severity = residual_weight / threshold_weight` (ADR-L02 §4.2), with **no `abs()`** on the
+    numerator: a negative residual is a legal deficit (ADR-0025) and never fires this kind
+    (the comparison is signed), so the deficit case stays owned by `over_apportioned`. The
+    negative severity that can therefore persist on a `NOT_FIRED` row is deliberate — wrapping
+    the numerator in `abs()` would report high urgency under a rule that did not fire.
+    """
+    fact = recorder.open_fact(FACT_RESIDUAL, facts.residual)
+    residual_weight = fact.value
+    fact.bind("residual_weight", residual_weight)
+    recorder.bind(
+        "threshold_weight",
+        params.threshold_weight,
+        source=SourceRef(kind="params", path="threshold_weight"),
+    )
+    severity = recorder.ratio_to("severity", "residual_weight", "threshold_weight")
+    breached = recorder.gt("breached", "residual_weight", "threshold_weight")
+
+    recorder.message_bindings(
+        _unassigned_residual_above_message_bindings(params, residual_weight, severity)
+    )
+    return ConditionResult(fired=breached, severity=severity)
+
+
+def _unassigned_residual_above_message_bindings(
+    params: UnassignedResidualAboveParams, residual_weight: Decimal, severity: Decimal
+) -> dict[str, str]:
+    return {
+        "residual_pct": Percentage.from_ratio(residual_weight).canonical(),
+        "threshold_pct": Percentage.from_ratio(params.threshold_weight).canonical(),
+        "severity": canonical_decimal(severity),
+    }
+
+
+UNASSIGNED_RESIDUAL_ABOVE: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="unassigned_residual_above",
+        kind_version=1,
+        params_model=UnassignedResidualAboveParams,
+        required_facts=frozenset({FACT_RESIDUAL}),
+        default_max_staleness=timedelta(days=7),
+        severity=SeverityDeclaration(formula="residual_weight / threshold_weight"),
+        explanation_template=(
+            "Il capitale non apportionato è al {residual_pct}% del portafoglio, sopra la "
+            "soglia di attenzione del {threshold_pct}%."
+        ),
+        numeric_bindings=frozenset({"residual_pct", "threshold_pct", "severity"}),
+        evaluate=evaluate_unassigned_residual_above,
     )
 )
 
