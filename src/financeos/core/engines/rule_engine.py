@@ -896,6 +896,84 @@ UNASSIGNED_RESIDUAL_ABOVE: Final = REGISTRY.register(
 
 
 # --------------------------------------------------------------------------------------
+# allocation_absent v1 (ADR-L02 §4.3)
+# --------------------------------------------------------------------------------------
+
+
+class AllocationAbsentParams(BaseModel):
+    """Params of `allocation_absent`: which targeted class, in which scope."""
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    asset_class: AssetClass
+    scope: str
+
+
+def evaluate_allocation_absent(
+    params: AllocationAbsentParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when a targeted `AssetClass` is held at zero.
+
+    Reads `drift`, not a separate `targets`/`allocation` pair: `compute_drift` emits a
+    `DriftLine` for every targeted leaf regardless of whether it is held (`current_weight = 0`
+    when unallocated), which is exactly `effective_target` and `current_weight` — the two
+    bindings ADR-L02 §4.1's sketch names. `severity = None` always (ADR-L02 §4.3): there is no
+    magnitude of absence, and the only commensurable denominator (`effective_band`) is optional
+    per ADR-0017, so any formula built from it would be partial.
+
+    The predicate is literal-free (D8's constraint, applied here too): `current_weight == 0`
+    is tested as ``(current_weight + effective_target) == effective_target`` — both operands
+    of the final `eq` are bound facts, never a fabricated zero.
+    """
+    fact = recorder.open_fact(
+        f"{FACT_DRIFT}:{params.asset_class}", facts.drift_for(params.asset_class)
+    )
+    line = fact.value
+    fact.bind("current_weight", line.current_weight)
+    fact.bind("effective_target", line.effective_target)
+
+    recorder.add("current_weight_plus_target", "current_weight", "effective_target")
+    absent = recorder.eq("absent", "current_weight_plus_target", "effective_target")
+
+    recorder.message_bindings(_allocation_absent_message_bindings(params, facts, line))
+    return ConditionResult(fired=absent, severity=None)
+
+
+def _allocation_absent_message_bindings(
+    params: AllocationAbsentParams, facts: FactSet, line: DriftLine
+) -> dict[str, str]:
+    return {
+        "asset_class": params.asset_class,
+        "asset_class_label": facts.label_for(params.asset_class),
+        "asset_class_label_the": label(params.asset_class, role=Role.THE),
+        "asset_class_label_the_cap": label(
+            params.asset_class, role=Role.THE, sentence_initial=True
+        ),
+        "asset_class_copula": copula(params.asset_class),
+        "scope": params.scope,
+        "target_pct": Percentage.from_ratio(line.effective_target).canonical(),
+    }
+
+
+ALLOCATION_ABSENT: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="allocation_absent",
+        kind_version=1,
+        params_model=AllocationAbsentParams,
+        required_facts=frozenset({FACT_DRIFT}),
+        default_max_staleness=timedelta(days=7),
+        severity=SeverityDeclaration(formula=None),
+        explanation_template=(
+            "{asset_class_label_the_cap} {asset_class_copula} completamente assente dal "
+            "portafoglio, contro un target del {target_pct}%."
+        ),
+        numeric_bindings=frozenset({"target_pct"}),
+        evaluate=evaluate_allocation_absent,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
 # Evaluation
 # --------------------------------------------------------------------------------------
 
