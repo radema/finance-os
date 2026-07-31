@@ -20,6 +20,8 @@ from financeos.core.market import PriceView
 from financeos.core.portfolio import (
     AllocationBreakdown,
     AllocationLine,
+    ApportionmentLine,
+    ApportionmentRecord,
     Asset,
     Holding,
     Operation,
@@ -30,10 +32,12 @@ from financeos.core.shared import (
     AccountId,
     AssetClass,
     AssetId,
+    BucketId,
     Currency,
     Money,
     Quantity,
     Scope,
+    ScopeKind,
     Weight,
     entity_ref,
 )
@@ -166,3 +170,70 @@ def _share(value: Money, total: Money) -> Weight:
     return Weight(
         value=quantize(value.amount / total.amount, precision=WEIGHT_PRECISION, scale=WEIGHT_SCALE)
     )
+
+
+def compute_apportionment(
+    apportionments: Sequence[ApportionmentRecord],
+    holdings: Sequence[Holding],
+    *,
+    as_of: date,
+    scope: Scope,
+) -> tuple[ApportionmentLine, ...]:
+    """Resolve every `bucket_apportionment` supersession chain at `as_of` and pair each
+    Asset's Σ apportioned quantity against its Holding (I-9, ADR-0025, ADR-L04 §4.4 D5).
+
+    For `scope.kind is PORTFOLIO`, every Bucket's resolved chain is folded in. For
+    `scope.kind is BUCKET`, only that Bucket's own chain is folded — I-9 itself is a
+    Portfolio-wide invariant, so a Bucket-scoped call is a narrower, bucket-local view of it.
+
+    Args:
+        apportionments: Every `bucket_apportionment` row (superseded included) across the
+            Buckets `scope` covers — the resolution below picks the latest applicable one per
+            `(bucket_id, asset_id)`, exactly as the DuckDB `virtual_holdings` query does.
+        holdings: The Portfolio-wide fold (`compute_holdings`'s output) — I-9 compares Σ
+            apportioned against the Asset's *own* Holding, which is not scope-dependent.
+        as_of: The domain date to resolve the chain up to, inclusive.
+        scope: Restricts which Buckets' chains are folded in.
+
+    Returns:
+        One `ApportionmentLine` per Asset with a non-zero resolved Σ apportioned quantity,
+        ordered by `asset_id` — never a line where `apportioned_quantity == 0`, which is the
+        fact-construction guarantee that keeps `over_apportioned`'s severity denominator safe.
+    """
+    resolved = _resolve_latest(apportionments, as_of=as_of)
+    holding_by_asset = {holding.asset_id: holding.quantity.amount for holding in holdings}
+
+    totals: dict[AssetId, Decimal] = {}
+    for (bucket_id, asset_id), quantity in resolved.items():
+        if scope.kind is ScopeKind.BUCKET and bucket_id != BucketId(scope.id):
+            continue
+        totals[asset_id] = totals.get(asset_id, Decimal(0)) + quantity.amount
+
+    return tuple(
+        ApportionmentLine(
+            asset_id=asset_id,
+            apportioned_quantity=total,
+            holding_quantity=holding_by_asset.get(asset_id, Decimal(0)),
+        )
+        for asset_id, total in sorted(totals.items(), key=lambda item: str(item[0]))
+        if total != 0
+    )
+
+
+def _resolve_latest(
+    apportionments: Sequence[ApportionmentRecord], *, as_of: date
+) -> dict[tuple[BucketId, AssetId], Quantity]:
+    """The latest-applicable row per `(bucket_id, asset_id)`, mirroring the DuckDB
+    `ORDER BY effective_from DESC, recorded_at DESC` supersession resolution."""
+    latest: dict[tuple[BucketId, AssetId], ApportionmentRecord] = {}
+    for record in apportionments:
+        if record.effective_from > as_of:
+            continue
+        key = (record.bucket_id, record.asset_id)
+        current = latest.get(key)
+        if current is None or (record.effective_from, record.recorded_at) > (
+            current.effective_from,
+            current.recorded_at,
+        ):
+            latest[key] = record
+    return {key: record.quantity for key, record in latest.items()}

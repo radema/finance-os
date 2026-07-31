@@ -18,6 +18,7 @@ from financeos.core.engines import (
     FactSet,
     MaterializationResult,
     compute_allocation,
+    compute_apportionment,
     compute_drift,
     compute_holdings,
     decision_engine,
@@ -27,7 +28,10 @@ from financeos.core.engines import (
     rule_engine,
     strategy_engine,
 )
+from financeos.core.portfolio import ApportionmentLine
 from financeos.core.shared import (
+    AssetId,
+    Bound,
     BucketId,
     Currency,
     EvaluationRunId,
@@ -35,6 +39,7 @@ from financeos.core.shared import (
     RunMode,
     Scope,
     ScopeKind,
+    SourceRef,
     StrategyId,
     canonical_json,
     sha256_hex,
@@ -61,6 +66,7 @@ def evaluate_strategy(
     """
     now = clock.now()
 
+    apportionment: dict[AssetId, Bound[ApportionmentLine]] = {}
     if scope.kind is ScopeKind.BUCKET:
         bucket = uow.buckets.get(BucketId(scope.id))
         portfolio_id, resolved_strategy_id = bucket.portfolio_id, bucket.strategy_id
@@ -77,6 +83,20 @@ def evaluate_strategy(
         operations = uow.operations.for_accounts(account_ids, as_of=as_of)
         holdings = compute_holdings(operations, as_of=as_of)
 
+        # `over_apportioned` is only meaningfully authored at Portfolio scope (I-9 is a
+        # Portfolio-wide invariant); a Bucket-scoped run has no portfolio-wide holdings to
+        # compare against, so `facts.apportionment` stays empty there.
+        records = [
+            record
+            for bucket_id in uow.buckets.all_ids()
+            for record in uow.apportionments.full_history(bucket_id)
+        ]
+        lines = compute_apportionment(records, holdings, as_of=as_of, scope=scope)
+        apportionment = {
+            line.asset_id: Bound(value=line, source=SourceRef.derived(engine="portfolio"))
+            for line in lines
+        }
+
     sv = uow.strategies.current_version(resolved_strategy_id)
 
     asset_ids = {h.asset_id for h in holdings}
@@ -92,6 +112,7 @@ def evaluate_strategy(
         as_of=as_of,
         scope=scope,
         drift=comp.lines,
+        apportionment=apportionment,
         unavailable={"drift": comp.unavailable} if comp.unavailable else {},
     )
 
@@ -129,6 +150,10 @@ def _input_digest(facts: FactSet) -> str:
         "drift": {
             asset_class: bound.value.model_dump(mode="json")
             for asset_class, bound in facts.drift.items()
+        },
+        "apportionment": {
+            str(asset_id): bound.value.model_dump(mode="json")
+            for asset_id, bound in facts.apportionment.items()
         },
         "unavailable": {family: reason.value for family, reason in facts.unavailable.items()},
     }

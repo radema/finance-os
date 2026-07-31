@@ -37,10 +37,15 @@ from financeos.core.decision import (
     StepOp,
     TraceValue,
 )
+from financeos.core.portfolio import AllocationLine, ApportionmentLine
 from financeos.core.shared import (
     AssetClass,
+    AssetId,
     Bound,
+    Currency,
     DomainModel,
+    Money,
+    MoneyAmount,
     Outcome,
     Percentage,
     Role,
@@ -48,6 +53,7 @@ from financeos.core.shared import (
     SeverityAmount,
     SkipReason,
     SourceRef,
+    WeightAmount,
     canonical_decimal,
     copula,
     label,
@@ -67,6 +73,24 @@ ENGINE_NAME: Final = "rule"
 
 #: The name of the drift fact family (RFC-0006 §4).
 FACT_DRIFT: Final = "drift"
+
+#: The name of the allocation fact family (RFC-0006 §4): one `AllocationLine` per held
+#: `AssetClass`, targeted or not — unlike `drift`, which carries only targeted leaves.
+FACT_ALLOCATION: Final = "allocation"
+
+#: The name of the residual fact family (RFC-0006 §4, ADR-0029): the `UNASSIGNED` pseudo-
+#: bucket's weight, relative to total portfolio value. Portfolio-scoped by nature.
+FACT_RESIDUAL: Final = "residual"
+
+#: The name of the bucket-value fact family (RFC-0006 §3, ERR-4): a scope's total valued
+#: holdings, for `bucket_below_target_value`. ERR-4 removed the phantom `prices` fact this
+#: kind's catalog row once carried; this is `allocation`'s scope-level total, not a per-class
+#: mapping, so it is named separately from `FACT_ALLOCATION`.
+FACT_BUCKET_VALUE: Final = "bucket_value"
+
+#: The name of the apportionment fact family (ADR-L04 §4.4 D5): one `ApportionmentLine` per
+#: Asset carrying committed units at `as_of`, for `over_apportioned`.
+FACT_APPORTIONMENT: Final = "apportionment"
 
 #: The algebra runs under a fixed decimal context, so neither the ambient context of a caller
 #: nor the machine a replay happens on can change a recorded value.
@@ -96,12 +120,29 @@ class FactSet(DomainModel):
     as_of: date
     scope: Scope
     drift: Mapping[AssetClass, Bound[DriftLine]] = Field(default_factory=dict)
+    allocation: Mapping[AssetClass, Bound[AllocationLine]] = Field(default_factory=dict)
+    residual: Bound[WeightAmount] | None = None
+    bucket_value: Bound[Money] | None = None
+    apportionment: Mapping[AssetId, Bound[ApportionmentLine]] = Field(default_factory=dict)
     unavailable: Mapping[str, SkipReason] = Field(default_factory=dict)
     labels: Mapping[AssetClass, str] = Field(default_factory=dict)
+    asset_labels: Mapping[AssetId, str] = Field(default_factory=dict)
 
     def drift_for(self, asset_class: AssetClass) -> Bound[DriftLine] | None:
         """The drift fact for one class, or `None` if that class is not targeted."""
         return self.drift.get(asset_class)
+
+    def allocation_for(self, asset_class: AssetClass) -> Bound[AllocationLine] | None:
+        """The allocation fact for one held class, or `None` if it is not held at all."""
+        return self.allocation.get(asset_class)
+
+    def asset_label_for(self, asset_id: AssetId) -> str:
+        """The display label of an Asset (name + identifier), caller-supplied.
+
+        Falls back to the bare id: the Rule Engine holds no `Asset` repository (I-7), so it
+        cannot render a mechanical default the way `label_for` does for `AssetClass`.
+        """
+        return self.asset_labels.get(asset_id) or str(asset_id)
 
     def unavailable_reason(self, family: str) -> SkipReason | None:
         """Why `family` could not be computed at all, if it could not."""
@@ -687,6 +728,499 @@ DRIFT_OUTSIDE_TOLERANCE: Final = REGISTRY.register(
             }
         ),
         evaluate=evaluate_drift_outside_tolerance,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
+# untargeted_allocation v1 (RFC-0007 §4.2, ADR-L04 §4.7 D6)
+# --------------------------------------------------------------------------------------
+
+
+class UntargetedAllocationParams(BaseModel):
+    """Params of `untargeted_allocation`: the held-but-untargeted class, its scope, and the
+    weight threshold above which untargeted capital is worth a finding.
+
+    D6 (ADR-L04 §4.7, ratified P30): `threshold_weight <= 0` is rejected here, at construction,
+    rather than left to `SKIPPED(zero_denominator)` — the `divide_safe` skip path — at exactly
+    the state (untargeted capital exists) this kind exists to explain.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    asset_class: AssetClass
+    scope: str
+    threshold_weight: WeightAmount
+
+    @model_validator(mode="after")
+    def _threshold_is_positive(self) -> "UntargetedAllocationParams":
+        if self.threshold_weight <= 0:
+            raise InvariantViolationError(
+                "untargeted_allocation: threshold_weight must be > 0; "
+                f"got {self.threshold_weight}"
+            )
+        return self
+
+
+def evaluate_untargeted_allocation(
+    params: UntargetedAllocationParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when a held `AssetClass` with no target exceeds `threshold_weight` of the scope.
+
+    Reads `allocation`, not `drift`: `compute_drift` iterates only the target tree's leaves
+    (RFC-0007 §4), so an untargeted class never gets a `DriftLine` — `allocation` is the fact
+    family that carries a weight for it at all. `severity = current_weight / threshold_weight`
+    (RFC-0007 §4.2), anchored at `1.0` on the authored threshold.
+    """
+    fact = recorder.open_fact(
+        f"{FACT_ALLOCATION}:{params.asset_class}", facts.allocation_for(params.asset_class)
+    )
+    line = fact.value
+    fact.bind("current_weight", line.weight.value)
+    recorder.bind(
+        "threshold_weight",
+        params.threshold_weight,
+        source=SourceRef(kind="params", path="threshold_weight"),
+    )
+    severity = recorder.ratio_to("severity", "current_weight", "threshold_weight")
+    breached = recorder.gt("breached", "current_weight", "threshold_weight")
+
+    recorder.message_bindings(
+        _untargeted_allocation_message_bindings(params, facts, line, severity)
+    )
+    return ConditionResult(fired=breached, severity=severity)
+
+
+def _untargeted_allocation_message_bindings(
+    params: UntargetedAllocationParams,
+    facts: FactSet,
+    line: AllocationLine,
+    severity: Decimal,
+) -> dict[str, str]:
+    return {
+        "asset_class": params.asset_class,
+        "asset_class_label": facts.label_for(params.asset_class),
+        "asset_class_label_the": label(params.asset_class, role=Role.THE),
+        "asset_class_label_the_cap": label(
+            params.asset_class, role=Role.THE, sentence_initial=True
+        ),
+        "asset_class_label_of": label(params.asset_class, role=Role.OF),
+        "asset_class_copula": copula(params.asset_class),
+        "scope": params.scope,
+        "currency": line.value.currency,
+        "current_pct": Percentage.from_ratio(line.weight.value).canonical(),
+        "threshold_pct": Percentage.from_ratio(params.threshold_weight).canonical(),
+        "current_value": line.value.canonical(),
+        "severity": canonical_decimal(severity),
+    }
+
+
+UNTARGETED_ALLOCATION: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="untargeted_allocation",
+        kind_version=1,
+        params_model=UntargetedAllocationParams,
+        required_facts=frozenset({FACT_ALLOCATION}),
+        default_max_staleness=timedelta(days=7),
+        severity=SeverityDeclaration(formula="current_weight / threshold_weight"),
+        explanation_template=(
+            "{asset_class_label_the_cap} {asset_class_copula} al {current_pct}% del "
+            "portafoglio ({current_value} {currency}), priva di un target nella strategia "
+            "in vigore: soglia di attenzione {threshold_pct}%."
+        ),
+        numeric_bindings=frozenset(
+            {"current_pct", "threshold_pct", "current_value", "severity"}
+        ),
+        evaluate=evaluate_untargeted_allocation,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
+# unassigned_residual_above v1 (ADR-L02 §4.2, ADR-0029)
+# --------------------------------------------------------------------------------------
+
+
+class UnassignedResidualAboveParams(BaseModel):
+    """Params of `unassigned_residual_above`: only the authored threshold.
+
+    ADR-0029: `threshold_weight` is relative to total portfolio value and the rule is
+    portfolio-scoped by nature, so `scope` is not a param here (it was never meaningful).
+    The params model rejects `threshold_weight <= 0` (ADR-L02 §4.2), the same guard D6 later
+    requires of `untargeted_allocation`.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    threshold_weight: WeightAmount
+
+    @model_validator(mode="after")
+    def _threshold_is_positive(self) -> "UnassignedResidualAboveParams":
+        if self.threshold_weight <= 0:
+            raise InvariantViolationError(
+                "unassigned_residual_above: threshold_weight must be > 0; "
+                f"got {self.threshold_weight}"
+            )
+        return self
+
+
+def evaluate_unassigned_residual_above(
+    params: UnassignedResidualAboveParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when the `UNASSIGNED` residual weight exceeds `threshold_weight`.
+
+    `severity = residual_weight / threshold_weight` (ADR-L02 §4.2), with **no `abs()`** on the
+    numerator: a negative residual is a legal deficit (ADR-0025) and never fires this kind
+    (the comparison is signed), so the deficit case stays owned by `over_apportioned`. The
+    negative severity that can therefore persist on a `NOT_FIRED` row is deliberate — wrapping
+    the numerator in `abs()` would report high urgency under a rule that did not fire.
+    """
+    fact = recorder.open_fact(FACT_RESIDUAL, facts.residual)
+    residual_weight = fact.value
+    fact.bind("residual_weight", residual_weight)
+    recorder.bind(
+        "threshold_weight",
+        params.threshold_weight,
+        source=SourceRef(kind="params", path="threshold_weight"),
+    )
+    severity = recorder.ratio_to("severity", "residual_weight", "threshold_weight")
+    breached = recorder.gt("breached", "residual_weight", "threshold_weight")
+
+    recorder.message_bindings(
+        _unassigned_residual_above_message_bindings(params, residual_weight, severity)
+    )
+    return ConditionResult(fired=breached, severity=severity)
+
+
+def _unassigned_residual_above_message_bindings(
+    params: UnassignedResidualAboveParams, residual_weight: Decimal, severity: Decimal
+) -> dict[str, str]:
+    return {
+        "residual_pct": Percentage.from_ratio(residual_weight).canonical(),
+        "threshold_pct": Percentage.from_ratio(params.threshold_weight).canonical(),
+        "severity": canonical_decimal(severity),
+    }
+
+
+UNASSIGNED_RESIDUAL_ABOVE: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="unassigned_residual_above",
+        kind_version=1,
+        params_model=UnassignedResidualAboveParams,
+        required_facts=frozenset({FACT_RESIDUAL}),
+        default_max_staleness=timedelta(days=7),
+        severity=SeverityDeclaration(formula="residual_weight / threshold_weight"),
+        explanation_template=(
+            "Il capitale non apportionato è al {residual_pct}% del portafoglio, sopra la "
+            "soglia di attenzione del {threshold_pct}%."
+        ),
+        numeric_bindings=frozenset({"residual_pct", "threshold_pct", "severity"}),
+        evaluate=evaluate_unassigned_residual_above,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
+# allocation_absent v1 (ADR-L02 §4.3)
+# --------------------------------------------------------------------------------------
+
+
+class AllocationAbsentParams(BaseModel):
+    """Params of `allocation_absent`: which targeted class, in which scope."""
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    asset_class: AssetClass
+    scope: str
+
+
+def evaluate_allocation_absent(
+    params: AllocationAbsentParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when a targeted `AssetClass` is held at zero.
+
+    Reads `drift`, not a separate `targets`/`allocation` pair: `compute_drift` emits a
+    `DriftLine` for every targeted leaf regardless of whether it is held (`current_weight = 0`
+    when unallocated), which is exactly `effective_target` and `current_weight` — the two
+    bindings ADR-L02 §4.1's sketch names. `severity = None` always (ADR-L02 §4.3): there is no
+    magnitude of absence, and the only commensurable denominator (`effective_band`) is optional
+    per ADR-0017, so any formula built from it would be partial.
+
+    The predicate is literal-free (D8's constraint, applied here too): `current_weight == 0`
+    is tested as ``(current_weight + effective_target) == effective_target`` — both operands
+    of the final `eq` are bound facts, never a fabricated zero.
+    """
+    fact = recorder.open_fact(
+        f"{FACT_DRIFT}:{params.asset_class}", facts.drift_for(params.asset_class)
+    )
+    line = fact.value
+    fact.bind("current_weight", line.current_weight)
+    fact.bind("effective_target", line.effective_target)
+
+    recorder.add("current_weight_plus_target", "current_weight", "effective_target")
+    absent = recorder.eq("absent", "current_weight_plus_target", "effective_target")
+
+    recorder.message_bindings(_allocation_absent_message_bindings(params, facts, line))
+    return ConditionResult(fired=absent, severity=None)
+
+
+def _allocation_absent_message_bindings(
+    params: AllocationAbsentParams, facts: FactSet, line: DriftLine
+) -> dict[str, str]:
+    return {
+        "asset_class": params.asset_class,
+        "asset_class_label": facts.label_for(params.asset_class),
+        "asset_class_label_the": label(params.asset_class, role=Role.THE),
+        "asset_class_label_the_cap": label(
+            params.asset_class, role=Role.THE, sentence_initial=True
+        ),
+        "asset_class_copula": copula(params.asset_class),
+        "scope": params.scope,
+        "target_pct": Percentage.from_ratio(line.effective_target).canonical(),
+    }
+
+
+ALLOCATION_ABSENT: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="allocation_absent",
+        kind_version=1,
+        params_model=AllocationAbsentParams,
+        required_facts=frozenset({FACT_DRIFT}),
+        default_max_staleness=timedelta(days=7),
+        severity=SeverityDeclaration(formula=None),
+        explanation_template=(
+            "{asset_class_label_the_cap} {asset_class_copula} completamente assente dal "
+            "portafoglio, contro un target del {target_pct}%."
+        ),
+        numeric_bindings=frozenset({"target_pct"}),
+        evaluate=evaluate_allocation_absent,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
+# bucket_below_target_value v1 (ADR-L02 §4.4, ADR-L04 §4.7 D8)
+# --------------------------------------------------------------------------------------
+
+
+class BucketBelowTargetValueParams(BaseModel):
+    """Params of `bucket_below_target_value`: the bucket, and its authored Money target.
+
+    RFC-0006 catalog states this kind's target as a single `Money`, but `LeafCondition.params`
+    is a flat `Mapping[str, str]` (RFC-0006 §2: params are canonical strings, validated at
+    authoring time) — there is no nested-object slot, so the target is carried as two flat
+    fields, `target_amount`/`target_currency`, rather than a nested `Money`.
+
+    The params model rejects `target_amount <= 0` (ADR-L02 §4.4): the `severity` denominator
+    must never vanish.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    bucket: str
+    target_amount: MoneyAmount
+    target_currency: Currency
+
+    @model_validator(mode="after")
+    def _target_is_positive(self) -> "BucketBelowTargetValueParams":
+        if self.target_amount <= 0:
+            raise InvariantViolationError(
+                f"bucket_below_target_value: target_amount must be > 0; got {self.target_amount}"
+            )
+        return self
+
+
+def evaluate_bucket_below_target_value(
+    params: BucketBelowTargetValueParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when a Bucket's total value falls below its authored `target` (ADR-L02 §4.4).
+
+    `severity = 1 + shortfall_value / target_value` = `2 − coverage`, anchored at `1.0` when
+    the bucket's value equals the target. ADR-L02 §4.4's own registration sketch
+    (``b.add(1, b.ratio_to(...))``) is not expressible: `TraceRecorder.add` takes bound
+    *names*, not values, and a literal `1` has no `SourceRef` (D8). This uses the
+    literal-free form ADR-L04 §4.7 gives instead — `target_doubled = target_value +
+    target_value`, `numerator = target_doubled − current_value`, `severity = numerator /
+    target_value` — which is the same number with no unsourced binding anywhere in the trace.
+    """
+    fact = recorder.open_fact(FACT_BUCKET_VALUE, facts.bucket_value)
+    current_value = fact.value.amount
+    fact.bind("current_value", current_value)
+    target_value = params.target_amount
+    recorder.bind(
+        "target_value", target_value, source=SourceRef(kind="params", path="target_amount")
+    )
+    recorder.subtract("shortfall_value", "target_value", "current_value")
+    recorder.add("target_doubled", "target_value", "target_value")
+    recorder.subtract("numerator", "target_doubled", "current_value")
+    severity = recorder.ratio_to("severity", "numerator", "target_value")
+    below = recorder.lt("below", "current_value", "target_value")
+
+    recorder.message_bindings(
+        _bucket_below_target_value_message_bindings(
+            params, current_value, target_value, severity
+        )
+    )
+    return ConditionResult(fired=below, severity=severity)
+
+
+def _bucket_below_target_value_message_bindings(
+    params: BucketBelowTargetValueParams,
+    current_value: Decimal,
+    target_value: Decimal,
+    severity: Decimal,
+) -> dict[str, str]:
+    coverage_pct = Percentage.from_ratio(current_value / target_value).canonical()
+    return {
+        "bucket": params.bucket,
+        "currency": params.target_currency,
+        "current_value": canonical_decimal(current_value),
+        "target_value": canonical_decimal(target_value),
+        "shortfall_value": canonical_decimal(target_value - current_value),
+        "coverage_pct": coverage_pct,
+        "severity": canonical_decimal(severity),
+    }
+
+
+BUCKET_BELOW_TARGET_VALUE: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="bucket_below_target_value",
+        kind_version=1,
+        params_model=BucketBelowTargetValueParams,
+        required_facts=frozenset({FACT_BUCKET_VALUE}),
+        default_max_staleness=timedelta(days=7),
+        severity=SeverityDeclaration(
+            formula="1 + shortfall_value / target_value  (= 2 - coverage)"
+        ),
+        explanation_template=(
+            "Il capitale accumulato è di {current_value} {currency} contro un target di "
+            "{target_value} {currency} (copertura {coverage_pct}%): mancano {shortfall_value} "
+            "{currency}."
+        ),
+        numeric_bindings=frozenset(
+            {"current_value", "target_value", "shortfall_value", "coverage_pct", "severity"}
+        ),
+        evaluate=evaluate_bucket_below_target_value,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
+# over_apportioned v1 (ADR-L04 §4.1–§4.4, overriding RFC-0011 ADR-0025's severity clause)
+# --------------------------------------------------------------------------------------
+
+
+class OverApportionedParams(BaseModel):
+    """Params of `over_apportioned`: only `scope` (ADR-0025 gives it no `asset`).
+
+    One rule therefore yields exactly one finding per scope per run (`finding_key` hashes
+    `rule_id ‖ scope ‖ params`, ADR-0027), so a scope with several over-apportioned Assets
+    must produce one severity — the aggregation ADR-L04 §4.4/§4.5 works out.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    scope: str
+
+
+def evaluate_over_apportioned(
+    params: OverApportionedParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when any Asset in scope has Σ apportioned quantity > Holding quantity (I-9).
+
+    Follows ADR-L04 §4.4's step sequence verbatim: a per-asset `gt` predicate (phase 1, kept
+    strictly per-asset so a surplus on one Asset never masks a deficit on another — I-9 is a
+    per-Asset invariant); severity aggregated over the affected set `S` only when it is
+    non-empty (phase 2); a final `any` over every asset's per-asset predicate (phase 3), which
+    is always the last, and therefore boolean, step.
+
+    `severity = 1 + Σdeficit / Σapportioned` (`= 2 − coverage`) over `S` — total on the whole
+    firing set because `apportioned_quantity > 0` is guaranteed by the fact family's own
+    construction (ADR-L04 §4.4), so `ΣA > 0` whenever `S` is non-empty and `H = 0` fires at
+    `severity = 2.00000000` rather than skipping on a zero denominator.
+    """
+    asset_ids = sorted(facts.apportionment, key=str)
+    over_names: list[str] = []
+    affected: list[AssetId] = []
+
+    for asset_id in asset_ids:
+        fact = recorder.open_fact(
+            f"{FACT_APPORTIONMENT}:{asset_id}", facts.apportionment.get(asset_id)
+        )
+        line = fact.value
+        apportioned_name, holding_name = f"apportioned:{asset_id}", f"holding:{asset_id}"
+        fact.bind(apportioned_name, line.apportioned_quantity)
+        fact.bind(holding_name, line.holding_quantity)
+        over_name = f"over:{asset_id}"
+        is_over = recorder.gt(over_name, apportioned_name, holding_name)
+        over_names.append(over_name)
+        if is_over:
+            affected.append(asset_id)
+
+    severity: Decimal | None = None
+    committed: Decimal | None = None
+    held: Decimal | None = None
+    deficit: Decimal | None = None
+    if affected:
+        committed = recorder.add(
+            "apportioned_committed", *(f"apportioned:{a}" for a in affected)
+        )
+        held = recorder.add("held_of_committed", *(f"holding:{a}" for a in affected))
+        deficit = recorder.subtract(
+            "deficit_committed", "apportioned_committed", "held_of_committed"
+        )
+        recorder.add("apportioned_doubled", "apportioned_committed", "apportioned_committed")
+        recorder.subtract("severity_numerator", "apportioned_doubled", "held_of_committed")
+        severity = recorder.ratio_to("severity", "severity_numerator", "apportioned_committed")
+
+    fired = recorder.any_of("fired", *over_names)
+
+    recorder.message_bindings(
+        _over_apportioned_message_bindings(facts, affected, committed, held, deficit)
+    )
+    return ConditionResult(fired=fired, severity=severity)
+
+
+def _over_apportioned_message_bindings(
+    facts: FactSet,
+    affected: Sequence[AssetId],
+    committed: Decimal | None,
+    held: Decimal | None,
+    deficit: Decimal | None,
+) -> dict[str, str]:
+    bindings: dict[str, str] = {
+        "instrument_labels": ", ".join(facts.asset_label_for(asset_id) for asset_id in affected),
+    }
+    if committed is not None:
+        bindings["apportioned_committed"] = canonical_decimal(committed)
+    if held is not None:
+        bindings["held_of_committed"] = canonical_decimal(held)
+    if deficit is not None:
+        bindings["deficit_committed"] = canonical_decimal(deficit)
+    return bindings
+
+
+OVER_APPORTIONED: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="over_apportioned",
+        kind_version=1,
+        params_model=OverApportionedParams,
+        required_facts=frozenset({FACT_APPORTIONMENT}),
+        default_max_staleness=None,  # ERR-10: both operands are authored/derived, not observed
+        severity=SeverityDeclaration(
+            formula="1 + Σ deficit_quantity / Σ apportioned_quantity  (= 2 − coverage)"
+        ),
+        # P16: naming the instrument is legal (label + ISIN only, never a direction or a
+        # quantity to trade — ADR-L04 §7 item 1's ratified recommendation).
+        explanation_template=(
+            "Su {instrument_labels} risultano impegnate {apportioned_committed} quote contro "
+            "{held_of_committed} effettivamente possedute: {deficit_committed} quote in eccesso "
+            "di apportionment."
+        ),
+        numeric_bindings=frozenset(
+            {"apportioned_committed", "held_of_committed", "deficit_committed"}
+        ),
+        evaluate=evaluate_over_apportioned,
     )
 )
 

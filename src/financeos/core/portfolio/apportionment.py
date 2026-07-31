@@ -11,7 +11,7 @@ in the first place.
 from datetime import date
 from uuid import UUID
 
-from financeos.core.shared import AssetId, BucketId, DomainModel, Instant, Quantity
+from financeos.core.shared import AssetId, BucketId, DomainModel, Instant, Quantity, QuantityAmount
 
 
 class ApportionmentRecord(DomainModel):
@@ -24,3 +24,21 @@ class ApportionmentRecord(DomainModel):
     effective_from: date
     supersedes_id: UUID | None = None
     recorded_at: Instant
+
+
+class ApportionmentLine(DomainModel):
+    """One Asset's resolved Σ apportionment against its Holding, at `as_of` (ADR-0025,
+    ADR-L04 §4.4 D5).
+
+    A derived read model, distinct from `ApportionmentRecord`: this is one asset's *fold* of
+    the supersession chain across every Bucket, paired against the Portfolio-wide Holding —
+    exactly the two operands `over_apportioned`'s I-9 predicate compares.
+
+    `portfolio_engine.compute_apportionment` emits one line per asset carrying committed
+    units at `as_of` — never a line where `apportioned_quantity == 0` — which is the
+    fact-construction guarantee that keeps `over_apportioned`'s severity denominator safe.
+    """
+
+    asset_id: AssetId
+    apportioned_quantity: QuantityAmount
+    holding_quantity: QuantityAmount
