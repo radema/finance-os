@@ -203,8 +203,11 @@ def assemble_rationale(
         render_number: How a percentage-point `Decimal` is rendered to text. Defaults to the
             canonical dot-decimal form, which is what the write path must use — `rationale` is
             frozen at creation (RFC-0008 §5.1), so the stored string is this default's output.
-            A read path re-assembling the same version for display (L05 §7.3) passes an it-IT
-            renderer instead; `core` gains a parameter, never a locale (ADR-L03 §5.2).
+            An it-IT `render_number` is for a *new* row's write path only: re-invoking this
+            function against an old row's `(version, rule)` would re-derive the sentence under
+            today's code rather than replay what was actually frozen, which is exactly the
+            rewritten-history failure the freeze exists to prevent — see
+            `docs/features-candidates/rationale-locale-freeze.md`.
     """
     definition = version.definition
     leaf = _targeted_leaf(version, rule)
