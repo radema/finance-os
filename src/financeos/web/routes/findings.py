@@ -24,8 +24,9 @@ its decimals read in the canonical dot form (``40.00%``) inside otherwise it-IT 
 `render_observation_it` can replay (L05 §7.3); `assemble_rationale` concatenated its string at
 write time (ADR-0023), so there is no template and no bindings for the read side to re-render.
 Closing it means freezing the rationale's bindings too, which is a write-path change — tracked as
-a known limitation at `docs/features-candidates/rationale-locale-freeze.md` (blocked on the
-migration that fix pass was scoped to leave alone).
+a known limitation at `docs/features-candidates/rationale-locale-freeze.md` (blocked on read-side
+aggregate hydration the flat read model doesn't provide, and on re-derivation risk under a newer
+build than the one that wrote the row — not a migration).
 """
 
 from __future__ import annotations
