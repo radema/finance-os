@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import duckdb
@@ -71,6 +71,18 @@ def con() -> Iterator[duckdb.DuckDBPyConnection]:
         )
     yield connection
     connection.close()
+
+
+def _run(
+    con: duckdb.DuckDBPyConnection, run_id: str, *, as_of: date, evaluated_at: datetime
+) -> None:
+    """An additional run with an `as_of`/`evaluated_at` pair the fixture's runs don't cover."""
+    con.execute(
+        "INSERT INTO evaluation_run (id, portfolio_id, strategy_id, strategy_version_id, "
+        "scope_kind, scope_id, as_of, evaluated_at, mode, engine_versions, input_digest) "
+        "VALUES (?, 'p1', 's1', 'sv1', 'PORTFOLIO', ?, ?, ?, 'ACTUAL', '{}', ?)",
+        [run_id, SCOPE_ID, as_of, evaluated_at, "0" * 64],
+    )
 
 
 def _fired(
@@ -160,3 +172,27 @@ def test_editing_rule_params_does_not_resolve_an_unrelated_finding(
     findings = {f.finding_key for f in list_findings(con)}
     assert findings == {key_a}
     assert key_b not in findings
+
+
+def test_as_of_ordering_beats_evaluated_at_for_the_operative_run(
+    con: duckdb.DuckDBPyConnection,
+) -> None:
+    """The operative run is the latest `as_of`, not the latest wall-clock `evaluated_at`.
+
+    A correction run (`evaluate --as-of <earlier-date>`, ADR-0012) can be evaluated later in
+    wall-clock time than a subsequent normal run with a later `as_of`. Ordering resolution by
+    `evaluated_at` would let that correction's `NOT_FIRED` wrongly hide a finding that a later
+    `as_of` run still finds firing.
+    """
+    params = {"asset_class": "EQUITY"}
+    # The original firing.
+    key = _fired(con, run_id="run1", recorded_at=T1, params=params)
+    # A same-as_of correction, evaluated later in wall-clock time — NOT_FIRED.
+    _run(con, "runB", as_of=date(2026, 1, 1), evaluated_at=T1 + timedelta(days=10))
+    _not_fired(con, run_id="runB", recorded_at=T1 + timedelta(days=10), params=params)
+    # A later as_of, evaluated *earlier* in wall-clock time than runB — still FIRED, and this
+    # is the operative run.
+    _run(con, "runC", as_of=date(2026, 1, 15), evaluated_at=T1 + timedelta(days=3))
+    _fired(con, run_id="runC", recorded_at=T1 + timedelta(days=3), params=params)
+    findings = [f.finding_key for f in list_findings(con)]
+    assert findings == [key]
