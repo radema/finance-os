@@ -13,6 +13,7 @@ from financeos.core.strategy.strategy import (
     Strategy,
     StrategyDefinition,
     StrategyVersion,
+    risk_level_rank,
 )
 from financeos.core.strategy.targets import (
     WEIGHT_SUM_EPSILON,
@@ -40,4 +41,5 @@ __all__ = [
     "TargetNode",
     "Tolerance",
     "ToleranceKind",
+    "risk_level_rank",
 ]
