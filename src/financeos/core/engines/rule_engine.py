@@ -37,6 +37,7 @@ from financeos.core.decision import (
     StepOp,
     TraceValue,
 )
+from financeos.core.portfolio import AllocationLine
 from financeos.core.shared import (
     AssetClass,
     Bound,
@@ -48,6 +49,7 @@ from financeos.core.shared import (
     SeverityAmount,
     SkipReason,
     SourceRef,
+    WeightAmount,
     canonical_decimal,
     copula,
     label,
@@ -67,6 +69,10 @@ ENGINE_NAME: Final = "rule"
 
 #: The name of the drift fact family (RFC-0006 §4).
 FACT_DRIFT: Final = "drift"
+
+#: The name of the allocation fact family (RFC-0006 §4): one `AllocationLine` per held
+#: `AssetClass`, targeted or not — unlike `drift`, which carries only targeted leaves.
+FACT_ALLOCATION: Final = "allocation"
 
 #: The algebra runs under a fixed decimal context, so neither the ambient context of a caller
 #: nor the machine a replay happens on can change a recorded value.
@@ -96,12 +102,17 @@ class FactSet(DomainModel):
     as_of: date
     scope: Scope
     drift: Mapping[AssetClass, Bound[DriftLine]] = Field(default_factory=dict)
+    allocation: Mapping[AssetClass, Bound[AllocationLine]] = Field(default_factory=dict)
     unavailable: Mapping[str, SkipReason] = Field(default_factory=dict)
     labels: Mapping[AssetClass, str] = Field(default_factory=dict)
 
     def drift_for(self, asset_class: AssetClass) -> Bound[DriftLine] | None:
         """The drift fact for one class, or `None` if that class is not targeted."""
         return self.drift.get(asset_class)
+
+    def allocation_for(self, asset_class: AssetClass) -> Bound[AllocationLine] | None:
+        """The allocation fact for one held class, or `None` if it is not held at all."""
+        return self.allocation.get(asset_class)
 
     def unavailable_reason(self, family: str) -> SkipReason | None:
         """Why `family` could not be computed at all, if it could not."""
@@ -687,6 +698,110 @@ DRIFT_OUTSIDE_TOLERANCE: Final = REGISTRY.register(
             }
         ),
         evaluate=evaluate_drift_outside_tolerance,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
+# untargeted_allocation v1 (RFC-0007 §4.2, ADR-L04 §4.7 D6)
+# --------------------------------------------------------------------------------------
+
+
+class UntargetedAllocationParams(BaseModel):
+    """Params of `untargeted_allocation`: the held-but-untargeted class, its scope, and the
+    weight threshold above which untargeted capital is worth a finding.
+
+    D6 (ADR-L04 §4.7, ratified P30): `threshold_weight <= 0` is rejected here, at construction,
+    rather than left to `SKIPPED(zero_denominator)` — the `divide_safe` skip path — at exactly
+    the state (untargeted capital exists) this kind exists to explain.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    asset_class: AssetClass
+    scope: str
+    threshold_weight: WeightAmount
+
+    @model_validator(mode="after")
+    def _threshold_is_positive(self) -> "UntargetedAllocationParams":
+        if self.threshold_weight <= 0:
+            raise InvariantViolationError(
+                "untargeted_allocation: threshold_weight must be > 0; "
+                f"got {self.threshold_weight}"
+            )
+        return self
+
+
+def evaluate_untargeted_allocation(
+    params: UntargetedAllocationParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when a held `AssetClass` with no target exceeds `threshold_weight` of the scope.
+
+    Reads `allocation`, not `drift`: `compute_drift` iterates only the target tree's leaves
+    (RFC-0007 §4), so an untargeted class never gets a `DriftLine` — `allocation` is the fact
+    family that carries a weight for it at all. `severity = current_weight / threshold_weight`
+    (RFC-0007 §4.2), anchored at `1.0` on the authored threshold.
+    """
+    fact = recorder.open_fact(
+        f"{FACT_ALLOCATION}:{params.asset_class}", facts.allocation_for(params.asset_class)
+    )
+    line = fact.value
+    fact.bind("current_weight", line.weight.value)
+    recorder.bind(
+        "threshold_weight",
+        params.threshold_weight,
+        source=SourceRef(kind="params", path="threshold_weight"),
+    )
+    severity = recorder.ratio_to("severity", "current_weight", "threshold_weight")
+    breached = recorder.gt("breached", "current_weight", "threshold_weight")
+
+    recorder.message_bindings(
+        _untargeted_allocation_message_bindings(params, facts, line, severity)
+    )
+    return ConditionResult(fired=breached, severity=severity)
+
+
+def _untargeted_allocation_message_bindings(
+    params: UntargetedAllocationParams,
+    facts: FactSet,
+    line: AllocationLine,
+    severity: Decimal,
+) -> dict[str, str]:
+    return {
+        "asset_class": params.asset_class,
+        "asset_class_label": facts.label_for(params.asset_class),
+        "asset_class_label_the": label(params.asset_class, role=Role.THE),
+        "asset_class_label_the_cap": label(
+            params.asset_class, role=Role.THE, sentence_initial=True
+        ),
+        "asset_class_label_of": label(params.asset_class, role=Role.OF),
+        "asset_class_copula": copula(params.asset_class),
+        "scope": params.scope,
+        "currency": line.value.currency,
+        "current_pct": Percentage.from_ratio(line.weight.value).canonical(),
+        "threshold_pct": Percentage.from_ratio(params.threshold_weight).canonical(),
+        "current_value": line.value.canonical(),
+        "severity": canonical_decimal(severity),
+    }
+
+
+UNTARGETED_ALLOCATION: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="untargeted_allocation",
+        kind_version=1,
+        params_model=UntargetedAllocationParams,
+        required_facts=frozenset({FACT_ALLOCATION}),
+        default_max_staleness=timedelta(days=7),
+        severity=SeverityDeclaration(formula="current_weight / threshold_weight"),
+        explanation_template=(
+            "{asset_class_label_the_cap} {asset_class_copula} al {current_pct}% del "
+            "portafoglio ({current_value} {currency}), priva di un target nella strategia "
+            "in vigore: soglia di attenzione {threshold_pct}%."
+        ),
+        numeric_bindings=frozenset(
+            {"current_pct", "threshold_pct", "current_value", "severity"}
+        ),
+        evaluate=evaluate_untargeted_allocation,
     )
 )
 
