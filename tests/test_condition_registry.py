@@ -10,6 +10,7 @@ precisely how a P3 system quietly stops being explainable.
 """
 
 from datetime import timedelta
+from decimal import Decimal
 from string import Formatter
 from typing import Any
 
@@ -33,6 +34,7 @@ from financeos.core.shared import Outcome
 from financeos.core.shared.errors import RegistryError, UnknownConditionKindError
 from tests import factories as f
 from tests.test_rule_engine import BREACHED, facts_for
+from tests.test_rule_engine_v1_kinds import ANCHOR_FIXTURES, FIRING_FIXTURES
 
 #: The complete registration of a well-formed kind, used as the baseline every "missing
 #: component" case is derived from.
@@ -113,9 +115,14 @@ def test_a_new_kind_version_is_a_new_registration() -> None:
 class TestTheShippedCatalog:
     """Every kind actually in the catalog is complete and coherent."""
 
-    def test_the_skeleton_ships_exactly_one_kind(self) -> None:
+    def test_the_v1_0_catalog_ships_exactly_these_six_kinds(self) -> None:
         assert [(spec.kind, spec.kind_version) for spec in REGISTRY.all_kinds()] == [
-            ("drift_outside_tolerance", 1)
+            ("allocation_absent", 1),
+            ("bucket_below_target_value", 1),
+            ("drift_outside_tolerance", 1),
+            ("over_apportioned", 1),
+            ("unassigned_residual_above", 1),
+            ("untargeted_allocation", 1),
         ]
 
     @pytest.mark.parametrize("spec", REGISTRY.all_kinds(), ids=lambda spec: spec.kind)
@@ -135,8 +142,18 @@ class TestTheShippedCatalog:
         self, spec: ConditionKindSpec[Any]
     ) -> None:
         """A template referencing a binding the evaluator never captures is not an
-        explanation — it is a runtime error waiting for its first firing."""
-        (firing,) = evaluate((f.drift_rule(1),), facts_for(*BREACHED))
+        explanation — it is a runtime error waiting for its first firing.
+
+        Each kind is exercised against a fixture that actually reaches `FIRED` for that
+        kind — `FIRING_FIXTURES` (`tests/test_rule_engine_v1_kinds.py`) for the five V1.0
+        kinds beyond the skeleton, the drift fixture for `drift_outside_tolerance` itself.
+        """
+        if spec.kind == "drift_outside_tolerance":
+            (firing,) = evaluate((f.drift_rule(1),), facts_for(*BREACHED))
+        else:
+            rule, facts = FIRING_FIXTURES[spec.kind]
+            (firing,) = evaluate((rule,), facts)
+        assert firing.outcome is Outcome.FIRED
         referenced = {
             name for _, name, _, _ in Formatter().parse(spec.explanation_template) if name
         }
@@ -146,6 +163,23 @@ class TestTheShippedCatalog:
     def test_the_drift_kind_declares_the_rfc0007_severity_formula(self) -> None:
         spec = REGISTRY.get("drift_outside_tolerance", 1)
         assert spec.severity.formula == "|drift| / effective_band"
+
+    @pytest.mark.parametrize("kind", sorted(ANCHOR_FIXTURES) + ["drift_outside_tolerance"])
+    def test_severity_equals_one_exactly_at_the_kind_s_own_firing_threshold(
+        self, kind: str
+    ) -> None:
+        """The generalized registry property (ADR-L02 §4.6, ADR-L04 §4.5/§4.7): for every
+        kind declaring a `severity` formula, `1.00000000` sits exactly on the boundary — the
+        last `NOT_FIRED` state before the predicate flips."""
+        if kind == "drift_outside_tolerance":
+            (firing,) = evaluate(
+                (f.drift_rule(1),), facts_for((f.EQUITY, "38"), (f.BOND, "62"))
+            )
+        else:
+            rule, facts = ANCHOR_FIXTURES[kind]
+            (firing,) = evaluate((rule,), facts)
+        assert firing.outcome is Outcome.NOT_FIRED
+        assert firing.severity == Decimal("1.00000000")
 
     def test_an_evaluator_is_a_pure_function_of_params_facts_and_recorder(self) -> None:
         facts: FactSet = facts_for(*BREACHED)

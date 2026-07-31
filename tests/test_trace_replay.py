@@ -320,6 +320,41 @@ def test_the_property_covers_every_outcome_the_engine_can_produce() -> None:
             assert replayed == expected
 
 
+def test_the_five_v1_0_kinds_beyond_the_skeleton_replay_to_their_outcome() -> None:
+    """RFC-0006 §11's replay property, extended to `untargeted_allocation`,
+    `unassigned_residual_above`, `allocation_absent`, `bucket_below_target_value` and
+    `over_apportioned` — the same blinded-replay contract the skeleton kind already
+    satisfies, now covering every algebra op these kinds add to the generated coverage
+    (`gt`, `add`, `subtract`, `ratio_to`, `eq`, `any`)."""
+    from financeos.core.shared import Outcome as _Outcome
+    from tests.test_rule_engine_v1_kinds import (
+        ANCHOR_FIXTURES,
+        FIRING_FIXTURES,
+        _apportionment_line,
+        _over_apportioned_facts,
+        _over_apportioned_rule,
+    )
+
+    for rule, facts in FIRING_FIXTURES.values():
+        (firing,) = evaluate((rule,), facts)
+        assert firing.outcome is _Outcome.FIRED
+        assert replay_of(firing) == (firing.outcome, firing.skip_reason)
+
+    for rule, facts in ANCHOR_FIXTURES.values():
+        (firing,) = evaluate((rule,), facts)
+        assert firing.outcome is _Outcome.NOT_FIRED
+        assert replay_of(firing) == (firing.outcome, firing.skip_reason)
+
+    # over_apportioned's own extreme: H = 0 (FIRED, severity == 2.00, not SKIPPED) — distinct
+    # from the generic anchor/firing fixtures above.
+    (h_zero,) = evaluate(
+        (_over_apportioned_rule(),), _over_apportioned_facts(_apportionment_line("53", "0"))
+    )
+    assert h_zero.outcome is _Outcome.FIRED
+    assert h_zero.skip_reason is None
+    assert replay_of(h_zero) == (h_zero.outcome, h_zero.skip_reason)
+
+
 @settings(max_examples=100, deadline=None)
 @given(evaluations())
 def test_evaluation_is_deterministic_to_the_byte(
