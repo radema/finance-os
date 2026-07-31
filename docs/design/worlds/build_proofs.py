@@ -406,8 +406,8 @@ PANE = """
   <div class="block">
     <h3>Chip di esito · la texture porta la distinzione, non la tinta</h3>
     <div class="row">
-      <span class="oc oc--f">RILEVATO</span>
-      <span class="oc oc--n">NON RILEVATO</span>
+      <span class="oc oc--f">Scattata</span>
+      <span class="oc oc--n">NON Scattata</span>
       <span class="oc oc--s">NON VALUTATO</span>
       <span class="ident">zero_portfolio_value</span>
       <span class="oc oc--e">ERRORE</span>

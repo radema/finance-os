@@ -27,13 +27,13 @@
                                         None  => the unbanded state (a legal
                                         null severity, RFC-0008 §3 sorts
                                         NULLS LAST deliberately).
-  target_label     str   e.g. "obiettivo 40,00%". Rendered under the centre
+  target_label     str   e.g. "target 40,00%". Rendered under the centre
                          tick. Already formatted it-IT by the caller.
   aria_label       str   REQUIRED. A full sentence carrying the same fact in
                          words, because the gauge is an image. e.g.
-                         "Equity/Developed a 34,00% contro un obiettivo di
+                         "Equity/Developed a 34,00% contro un target di
                           40,00%, tolleranza ±2,00pp: 3 ampiezze di banda
-                          sotto l'obiettivo."
+                          sotto il target."
   breach           bool  optional; defaults to |signed_severity| > 1.
   ---------------------------------------------------------------------------
   The caller passes signed_severity; this partial does the clamp so the
