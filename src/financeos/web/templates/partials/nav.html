@@ -28,7 +28,10 @@
   {%- set ns = namespace(n=0) -%}
   {%- for group in _nav %}
     <p class="rail__section">{{ group.label }}</p>
-    {%- for item in group.items %}
+    {# group['items'], NOT group.items: Jinja resolves attribute access before
+       subscript, so `group.items` on a dict finds dict.items — the bound method,
+       which is not iterable. The interface above says dict, so index it. #}
+    {%- for item in group['items'] %}
       {%- set ns.n = ns.n + 1 %}
       <a class="rail__item" href="{{ item.url }}"
          {% if item.current %}aria-current="page"{% endif %}>

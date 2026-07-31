@@ -28,10 +28,15 @@ rules:
     enabled: true
     priority: HIGH
     suggestion_class: CONSIDER_REBALANCE
+    # D10 / P25: the previous wording hardcoded "è" and used the bare
+    # {asset_class_label}, which is ungrammatical for every feminine-plural
+    # taxonomy head — "Azioni dei paesi sviluppati ... è". The role bindings
+    # carry the agreement instead (L05 §4.2), so one template is grammatical for
+    # every class, and the head noun keeps its capital mid-sentence per P25.
     message: >-
-      {asset_class_label} nel bucket Pensione è al {current_pct}% contro un target del
-      {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di {drift_pct}pp
-      ({drift_value} {currency}).
+      {asset_class_label_the_cap} nel bucket Pensione {asset_class_copula} al {current_pct}%
+      contro un target del {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di
+      {drift_pct}pp ({drift_value} {currency}).
     condition:
       kind: drift_outside_tolerance
       kind_version: 1
