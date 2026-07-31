@@ -218,7 +218,7 @@ def assemble_rationale(
         provision = "governa questo scopo di valutazione"
 
     rationale = (
-        f"La tua strategia «{definition.name}» "
+        f"La strategia «{definition.name}» "
         f"(congelata il {version.frozen_at:%d/%m/%Y}) {provision}, "
         f"su un orizzonte {_horizon_phrase(version)}."
     )
