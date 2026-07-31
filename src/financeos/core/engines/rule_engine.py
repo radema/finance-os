@@ -41,7 +41,10 @@ from financeos.core.portfolio import AllocationLine
 from financeos.core.shared import (
     AssetClass,
     Bound,
+    Currency,
     DomainModel,
+    Money,
+    MoneyAmount,
     Outcome,
     Percentage,
     Role,
@@ -78,6 +81,12 @@ FACT_ALLOCATION: Final = "allocation"
 #: bucket's weight, relative to total portfolio value. Portfolio-scoped by nature.
 FACT_RESIDUAL: Final = "residual"
 
+#: The name of the bucket-value fact family (RFC-0006 §3, ERR-4): a scope's total valued
+#: holdings, for `bucket_below_target_value`. ERR-4 removed the phantom `prices` fact this
+#: kind's catalog row once carried; this is `allocation`'s scope-level total, not a per-class
+#: mapping, so it is named separately from `FACT_ALLOCATION`.
+FACT_BUCKET_VALUE: Final = "bucket_value"
+
 #: The algebra runs under a fixed decimal context, so neither the ambient context of a caller
 #: nor the machine a replay happens on can change a recorded value.
 _ALGEBRA_CONTEXT: Final = Context(prec=28, rounding=ROUNDING)
@@ -108,6 +117,7 @@ class FactSet(DomainModel):
     drift: Mapping[AssetClass, Bound[DriftLine]] = Field(default_factory=dict)
     allocation: Mapping[AssetClass, Bound[AllocationLine]] = Field(default_factory=dict)
     residual: Bound[WeightAmount] | None = None
+    bucket_value: Bound[Money] | None = None
     unavailable: Mapping[str, SkipReason] = Field(default_factory=dict)
     labels: Mapping[AssetClass, str] = Field(default_factory=dict)
 
@@ -969,6 +979,113 @@ ALLOCATION_ABSENT: Final = REGISTRY.register(
         ),
         numeric_bindings=frozenset({"target_pct"}),
         evaluate=evaluate_allocation_absent,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
+# bucket_below_target_value v1 (ADR-L02 §4.4, ADR-L04 §4.7 D8)
+# --------------------------------------------------------------------------------------
+
+
+class BucketBelowTargetValueParams(BaseModel):
+    """Params of `bucket_below_target_value`: the bucket, and its authored Money target.
+
+    RFC-0006 catalog states this kind's target as a single `Money`, but `LeafCondition.params`
+    is a flat `Mapping[str, str]` (RFC-0006 §2: params are canonical strings, validated at
+    authoring time) — there is no nested-object slot, so the target is carried as two flat
+    fields, `target_amount`/`target_currency`, rather than a nested `Money`.
+
+    The params model rejects `target_amount <= 0` (ADR-L02 §4.4): the `severity` denominator
+    must never vanish.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    bucket: str
+    target_amount: MoneyAmount
+    target_currency: Currency
+
+    @model_validator(mode="after")
+    def _target_is_positive(self) -> "BucketBelowTargetValueParams":
+        if self.target_amount <= 0:
+            raise InvariantViolationError(
+                f"bucket_below_target_value: target_amount must be > 0; got {self.target_amount}"
+            )
+        return self
+
+
+def evaluate_bucket_below_target_value(
+    params: BucketBelowTargetValueParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when a Bucket's total value falls below its authored `target` (ADR-L02 §4.4).
+
+    `severity = 1 + shortfall_value / target_value` = `2 − coverage`, anchored at `1.0` when
+    the bucket's value equals the target. ADR-L02 §4.4's own registration sketch
+    (``b.add(1, b.ratio_to(...))``) is not expressible: `TraceRecorder.add` takes bound
+    *names*, not values, and a literal `1` has no `SourceRef` (D8). This uses the
+    literal-free form ADR-L04 §4.7 gives instead — `target_doubled = target_value +
+    target_value`, `numerator = target_doubled − current_value`, `severity = numerator /
+    target_value` — which is the same number with no unsourced binding anywhere in the trace.
+    """
+    fact = recorder.open_fact(FACT_BUCKET_VALUE, facts.bucket_value)
+    current_value = fact.value.amount
+    fact.bind("current_value", current_value)
+    target_value = params.target_amount
+    recorder.bind(
+        "target_value", target_value, source=SourceRef(kind="params", path="target_amount")
+    )
+    recorder.subtract("shortfall_value", "target_value", "current_value")
+    recorder.add("target_doubled", "target_value", "target_value")
+    recorder.subtract("numerator", "target_doubled", "current_value")
+    severity = recorder.ratio_to("severity", "numerator", "target_value")
+    below = recorder.lt("below", "current_value", "target_value")
+
+    recorder.message_bindings(
+        _bucket_below_target_value_message_bindings(
+            params, current_value, target_value, severity
+        )
+    )
+    return ConditionResult(fired=below, severity=severity)
+
+
+def _bucket_below_target_value_message_bindings(
+    params: BucketBelowTargetValueParams,
+    current_value: Decimal,
+    target_value: Decimal,
+    severity: Decimal,
+) -> dict[str, str]:
+    coverage_pct = Percentage.from_ratio(current_value / target_value).canonical()
+    return {
+        "bucket": params.bucket,
+        "currency": params.target_currency,
+        "current_value": canonical_decimal(current_value),
+        "target_value": canonical_decimal(target_value),
+        "shortfall_value": canonical_decimal(target_value - current_value),
+        "coverage_pct": coverage_pct,
+        "severity": canonical_decimal(severity),
+    }
+
+
+BUCKET_BELOW_TARGET_VALUE: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="bucket_below_target_value",
+        kind_version=1,
+        params_model=BucketBelowTargetValueParams,
+        required_facts=frozenset({FACT_BUCKET_VALUE}),
+        default_max_staleness=timedelta(days=7),
+        severity=SeverityDeclaration(
+            formula="1 + shortfall_value / target_value  (= 2 - coverage)"
+        ),
+        explanation_template=(
+            "Il capitale accumulato è di {current_value} {currency} contro un target di "
+            "{target_value} {currency} (copertura {coverage_pct}%): mancano {shortfall_value} "
+            "{currency}."
+        ),
+        numeric_bindings=frozenset(
+            {"current_value", "target_value", "shortfall_value", "coverage_pct", "severity"}
+        ),
+        evaluate=evaluate_bucket_below_target_value,
     )
 )
 
