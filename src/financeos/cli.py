@@ -18,6 +18,7 @@ from financeos.app import (
     DuckDBUnitOfWork,
     apportion_bucket,
     evaluate_strategy,
+    export_authored,
     import_operations,
     import_strategy,
 )
@@ -161,6 +162,42 @@ def import_strategy_cmd(ctx: click.Context, yaml_path: Path) -> None:
     uow = DuckDBUnitOfWork(con)
     version = import_strategy(uow, UUIDv7IdGen(), SystemClock(), read_yaml(yaml_path))
     click.echo(f"Congelata la versione {version.id} della strategia {version.strategy_id}.")
+
+
+@app.command()
+@click.option(
+    "--authored",
+    is_flag=True,
+    required=True,
+    help=(
+        "Esporta i dati «authored» (RFC-0009 §7.1): apportionment (storia completa, incluse "
+        "le righe superate), Strategy+Rule (ogni versione congelata), asset (righe correnti). "
+        "Decisions e Categories sono esclusi: non hanno implementazione (RFC-0004 §schema "
+        "solo di design; ADR-0024 rinvia Categories a V1.1) — nessun file per loro non è un "
+        "bug. Layout: apportionment/<bucket_id>.yaml, strategies/<slug>/NNN_<version_id>.yaml "
+        "(un file per versione, in ordine di congelamento — reimportabile in sequenza con "
+        "«import-strategy»), assets.yaml (righe correnti, nessuna storia di riclassificazione: "
+        "non esiste un reclassify() che la scriva). Apportionment e asset sono export-only: "
+        "non esiste ancora un importer che li legga."
+    ),
+)
+@click.option(
+    "--out-dir",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Cartella di destinazione (default: export/authored nella radice del repository).",
+)
+@click.pass_context
+def export(ctx: click.Context, authored: bool, out_dir: Path | None) -> None:
+    """Esporta un bundle YAML canonico dei dati authored (RFC-0009 §7.1, l'unico recovery path)."""
+    del authored  # is_flag=True, required=True: presence is the only thing that matters
+    con = connect(ctx.obj["db_path"])
+    uow = DuckDBUnitOfWork(con)
+    result = export_authored(uow, out_dir or (REPO_ROOT / "export" / "authored"))
+    click.echo(
+        f"Esportati {len(result.apportionment_files)} file di apportionment, "
+        f"{len(result.strategy_files)} versioni di strategy, e {result.asset_file}."
+    )
 
 
 @app.command()

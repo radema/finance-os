@@ -20,7 +20,14 @@ from uuid import UUID
 
 from financeos.core.decision import Alert, EvaluationRun, Recommendation
 from financeos.core.market import PriceView
-from financeos.core.portfolio import Asset, Bucket, Operation, Portfolio, VirtualHolding
+from financeos.core.portfolio import (
+    ApportionmentRecord,
+    Asset,
+    Bucket,
+    Operation,
+    Portfolio,
+    VirtualHolding,
+)
 from financeos.core.shared import (
     AccountId,
     AssetId,
@@ -48,6 +55,7 @@ class AssetRepository(Protocol):
     def add(self, asset: Asset) -> None: ...
     def get(self, asset_id: AssetId) -> Asset: ...
     def get_many(self, asset_ids: Collection[AssetId]) -> Mapping[AssetId, Asset]: ...
+    def all(self) -> tuple[Asset, ...]: ...
 
 
 class AccountRepository(Protocol):
@@ -92,6 +100,14 @@ class ApportionmentRepository(Protocol):
     def virtual_holdings(
         self, bucket_id: BucketId, *, as_of: date
     ) -> tuple[VirtualHolding, ...]: ...
+
+    def full_history(self, bucket_id: BucketId) -> tuple[ApportionmentRecord, ...]:
+        """Every `bucket_apportionment` row for `bucket_id`, superseded rows included.
+
+        Ordered so supersession chains are reconstructable (RFC-0009 §7.1) — used by
+        `export --authored`, which is the only recovery path for this fact table.
+        """
+        ...
 
 
 class PriceRepository(Protocol):
@@ -139,6 +155,15 @@ class StrategyRepository(Protocol):
     def freeze_version(self, version: StrategyVersion) -> None: ...
     def current_version(self, strategy_id: StrategyId) -> StrategyVersion: ...
     def get_version(self, version_id: StrategyVersionId) -> StrategyVersion: ...
+    def all_ids(self) -> tuple[StrategyId, ...]: ...
+
+    def all_versions(self, strategy_id: StrategyId) -> tuple[StrategyVersion, ...]:
+        """Every frozen `StrategyVersion` of `strategy_id`, oldest first.
+
+        Each version is itself an authored fact (RFC-0009 §7.1): used by `export --authored`
+        to walk the full lineage, not just `current_version`.
+        """
+        ...
 
 
 class EvaluationRepository(Protocol):

@@ -4,7 +4,9 @@ Temporal append-only, effective-dated supersession. `virtual_holdings` resolves,
 the row with the latest `effective_from` at or before `as_of` — the same "fold to the latest
 applicable fact" shape as `Holding` one level up, and it is deliberately *not* a write-time
 `Σ apportioned <= Holding` check (ADR-0025: that is `over_apportioned`, an evaluation-time
-finding, not a repository invariant).
+finding, not a repository invariant). `full_history` is the export-side counterpart
+(RFC-0009 §7.1): every row, superseded included, since a fold discards exactly the history
+export needs to keep.
 """
 
 from __future__ import annotations
@@ -14,7 +16,8 @@ from uuid import UUID
 
 import duckdb
 
-from financeos.core.portfolio import VirtualHolding
+from financeos.adapters.duckdb._time import parse_instant
+from financeos.core.portfolio import ApportionmentRecord, VirtualHolding
 from financeos.core.shared import REF_APPORTIONMENT, AssetId, BucketId, Quantity, entity_ref
 
 
@@ -73,4 +76,28 @@ class DuckDBApportionmentRepository:
                 input_refs=(entity_ref(REF_APPORTIONMENT, row_id),),
             )
             for row_id, row_asset_id, quantity in rows
+        )
+
+    def full_history(self, bucket_id: BucketId) -> tuple[ApportionmentRecord, ...]:
+        rows = self._con.execute(
+            """
+            SELECT id, asset_id, quantity, effective_from, supersedes_id,
+                   CAST(recorded_at AS VARCHAR)
+            FROM bucket_apportionment
+            WHERE bucket_id = ?
+            ORDER BY effective_from, recorded_at, id
+            """,
+            [str(bucket_id)],
+        ).fetchall()
+        return tuple(
+            ApportionmentRecord(
+                id=UUID(row_id),
+                bucket_id=bucket_id,
+                asset_id=AssetId(UUID(row_asset_id)),
+                quantity=Quantity(amount=quantity),
+                effective_from=effective_from,
+                supersedes_id=UUID(supersedes_id) if supersedes_id else None,
+                recorded_at=parse_instant(recorded_at),
+            )
+            for row_id, row_asset_id, quantity, effective_from, supersedes_id, recorded_at in rows
         )
