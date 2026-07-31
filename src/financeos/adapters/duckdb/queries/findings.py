@@ -11,9 +11,21 @@ query.
 recent `ACTUAL` run in which its rule was evaluated with outcome `NOT_FIRED`." `mv_finding`
 groups `recommendation` rows only — a rule that stops firing writes no new recommendation, so
 the view alone cannot tell "still open" apart from "resolved". `list_findings` closes that gap
-by checking each finding's rule against the latest `alert` for its (`rule_id`, `scope_id`) pair
-in the most recent `ACTUAL` run: a `NOT_FIRED` outcome there excludes the finding from the
-list. Absence because the rule was `SKIPPED` is deliberately *not* resolution (ADR-0016).
+by checking the latest `alert` for the finding's (`rule_id`, `scope_id`) pair, where "latest"
+is ordered by `as_of DESC` first — the same "operative run" ordering the rest of the read
+model uses (e.g. `severity_history`), not `evaluated_at`, which can disagree with it under a
+correction-model `evaluate --as-of <earlier-date>` run (ADR-0012) — and restricted to
+`outcome IN ('FIRED', 'NOT_FIRED')`: a `SKIPPED` run is deliberately excluded from the
+candidate set entirely, so it can never count as "the most recent run's outcome" and resurface
+a finding a prior `NOT_FIRED` run already resolved (ADR-0016).
+
+A `(rule_id, scope_id)` match alone is not enough to say "same finding": editing a Rule's
+`condition.params` keeps `rule_id` and `scope_id` unchanged but changes `finding_key`
+(`sha256(rule_id ‖ scope_id ‖ canonical(params))`, RFC-0008 §4), so the latest alert only
+resolves *this* finding if its own recomputed key — from its trace's frozen
+`condition.params`, hashed the same way the write side computes it — equals the finding's own
+`finding_key`. When it does not match, there is no evidence either way and the finding stays
+open.
 """
 
 from __future__ import annotations
@@ -29,6 +41,7 @@ import duckdb
 
 from financeos.adapters.duckdb.queries.it_locale import format_number_it
 from financeos.adapters.duckdb.queries.traces import observation_it, signed_severity
+from financeos.core.shared import canonical_json, sha256_hex
 
 
 @dataclass(frozen=True)
@@ -62,24 +75,25 @@ def list_findings(con: duckdb.DuckDBPyConnection) -> list[FindingRow]:
                 a.rule_id,
                 run.scope_id,
                 a.outcome,
+                a.trace,
                 ROW_NUMBER() OVER (
                     PARTITION BY a.rule_id, run.scope_id
-                    ORDER BY run.evaluated_at DESC, a.recorded_at DESC
+                    ORDER BY run.as_of DESC, run.evaluated_at DESC, a.recorded_at DESC
                 ) AS rn
             FROM alert a
             JOIN evaluation_run run ON run.id = a.run_id
-            WHERE run.mode = 'ACTUAL'
+            WHERE run.mode = 'ACTUAL' AND a.outcome IN ('FIRED', 'NOT_FIRED')
         )
         SELECT
             f.finding_key, f.rule_id, f.first_recommendation_id, f.latest_recommendation_id,
             f.first_seen, f.last_seen, f.occurrences, f.current_severity, f.current_priority,
-            f.priority_rank, r.observation, r.rationale, r.suggestion_class
+            f.priority_rank, r.observation, r.rationale, r.suggestion_class,
+            fr.scope_id, la.outcome, la.trace
         FROM mv_finding f
         JOIN recommendation r  ON r.id = f.latest_recommendation_id
         JOIN evaluation_run fr ON fr.id = r.run_id
         LEFT JOIN latest_alert la
             ON la.rule_id = f.rule_id AND la.scope_id = fr.scope_id AND la.rn = 1
-        WHERE la.outcome IS NULL OR la.outcome <> 'NOT_FIRED'
         ORDER BY f.priority_rank DESC, f.current_severity DESC NULLS LAST, f.rule_id ASC
         """
     ).fetchall()
@@ -100,7 +114,36 @@ def list_findings(con: duckdb.DuckDBPyConnection) -> list[FindingRow]:
             suggestion_class=row[12],
         )
         for row in rows
+        if not _resolved(
+            finding_key=row[0],
+            rule_id=row[1],
+            scope_id=row[13],
+            latest_alert_outcome=row[14],
+            latest_alert_trace=row[15],
+        )
     ]
+
+
+def _resolved(
+    *,
+    finding_key: str,
+    rule_id: str,
+    scope_id: str,
+    latest_alert_outcome: str | None,
+    latest_alert_trace: str | None,
+) -> bool:
+    """Whether `finding_key` is resolved by the latest determining alert (RFC-0008 §4).
+
+    Only a `NOT_FIRED` latest alert can resolve anything, and only if it is evaluating *this*
+    finding: its own `condition.params`, hashed the same way the write side computes
+    `finding_key`, must reproduce `finding_key` exactly. See the module docstring.
+    """
+    if latest_alert_outcome != "NOT_FIRED" or latest_alert_trace is None:
+        return False
+    trace: dict[str, Any] = json.loads(str(latest_alert_trace))
+    params = (trace.get("condition") or {}).get("params") or {}
+    candidate_key = sha256_hex(rule_id, scope_id, canonical_json(dict(params)))
+    return candidate_key == finding_key
 
 
 @dataclass(frozen=True)

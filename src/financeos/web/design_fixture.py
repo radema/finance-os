@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from financeos.core.shared import Role, copula, label
 from financeos.web.labels import label_short
 
 # --- provenance -------------------------------------------------------------
@@ -55,7 +56,8 @@ _RAIL_CASES: list[dict[str, Any]] = [
         "severity_display": "3,00",
         "severity_class": "severity__value--breach",
         "aria_label": (
-            "Equity/Developed al 34,00% contro un target del 40,00%, "
+            f"{label('EQUITY_DEVELOPED', role=Role.THE, sentence_initial=True)} "
+            f"{copula('EQUITY_DEVELOPED')} al 34,00% contro un target del 40,00%, "
             "tolleranza più o meno 2,00 punti percentuali. Scostamento di 6,00 "
             "punti percentuali sotto il target, pari a 3 ampiezze di banda: "
             "fuori tolleranza, al fondo della scala."
@@ -68,8 +70,8 @@ _RAIL_CASES: list[dict[str, Any]] = [
         "severity_display": "1,79",
         "severity_class": "severity__value--breach",
         "aria_label": (
-            "Bond governativi euro sopra il target del 30,00% di 1,79 ampiezze "
-            "di banda: fuori tolleranza."
+            f"{label('BOND_GOV_EUR', role=Role.THE, sentence_initial=True)} sopra il "
+            "target del 30,00% di 1,79 ampiezze di banda: fuori tolleranza."
         ),
     },
     {
@@ -79,8 +81,8 @@ _RAIL_CASES: list[dict[str, Any]] = [
         "severity_display": "0,42",
         "severity_class": "",
         "aria_label": (
-            "Equity emergenti sotto il target del 10,00% di 0,42 ampiezze di "
-            "banda: entro tolleranza."
+            f"{label('EQUITY_EMERGING', role=Role.THE, sentence_initial=True)} sotto il "
+            "target del 10,00% di 0,42 ampiezze di banda: entro tolleranza."
         ),
     },
     {
