@@ -196,3 +196,18 @@ def test_as_of_ordering_beats_evaluated_at_for_the_operative_run(
     _fired(con, run_id="runC", recorded_at=T1 + timedelta(days=3), params=params)
     findings = [f.finding_key for f in list_findings(con)]
     assert findings == [key]
+
+
+def test_a_skipped_run_after_resolution_does_not_resurface_the_finding(
+    con: duckdb.DuckDBPyConnection,
+) -> None:
+    """FIRED → NOT_FIRED → SKIPPED must stay resolved: SKIPPED is not a determining run.
+
+    A `SKIPPED` alert must never count as "the most recent run's outcome" for resolution
+    purposes (RFC-0008 §4) — otherwise a finding correctly resolved by a `NOT_FIRED` run
+    resurfaces the moment a later run merely skips the rule.
+    """
+    _fired(con, run_id="run1", recorded_at=T1)
+    _not_fired(con, run_id="run2", recorded_at=T2)
+    _skipped(con, run_id="run3", recorded_at=T3)
+    assert list_findings(con) == []

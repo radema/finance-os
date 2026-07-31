@@ -14,8 +14,10 @@ the view alone cannot tell "still open" apart from "resolved". `list_findings` c
 by checking the latest `alert` for the finding's (`rule_id`, `scope_id`) pair, where "latest"
 is ordered by `as_of DESC` first — the same "operative run" ordering the rest of the read
 model uses (e.g. `severity_history`), not `evaluated_at`, which can disagree with it under a
-correction-model `evaluate --as-of <earlier-date>` run (ADR-0012). Absence because the rule
-was `SKIPPED` is deliberately *not* resolution (ADR-0016).
+correction-model `evaluate --as-of <earlier-date>` run (ADR-0012) — and restricted to
+`outcome IN ('FIRED', 'NOT_FIRED')`: a `SKIPPED` run is deliberately excluded from the
+candidate set entirely, so it can never count as "the most recent run's outcome" and resurface
+a finding a prior `NOT_FIRED` run already resolved (ADR-0016).
 
 A `(rule_id, scope_id)` match alone is not enough to say "same finding": editing a Rule's
 `condition.params` keeps `rule_id` and `scope_id` unchanged but changes `finding_key`
@@ -80,7 +82,7 @@ def list_findings(con: duckdb.DuckDBPyConnection) -> list[FindingRow]:
                 ) AS rn
             FROM alert a
             JOIN evaluation_run run ON run.id = a.run_id
-            WHERE run.mode = 'ACTUAL'
+            WHERE run.mode = 'ACTUAL' AND a.outcome IN ('FIRED', 'NOT_FIRED')
         )
         SELECT
             f.finding_key, f.rule_id, f.first_recommendation_id, f.latest_recommendation_id,
