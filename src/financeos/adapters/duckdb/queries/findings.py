@@ -10,11 +10,17 @@ query.
 
 from __future__ import annotations
 
+import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 import duckdb
+
+from financeos.adapters.duckdb.queries.it_locale import format_number_it
+from financeos.adapters.duckdb.queries.traces import observation_it, signed_severity
 
 
 @dataclass(frozen=True)
@@ -67,3 +73,105 @@ def list_findings(con: duckdb.DuckDBPyConnection) -> list[FindingRow]:
         )
         for row in rows
     ]
+
+
+@dataclass(frozen=True)
+class FindingDisplayRow:
+    """One finding with everything the findings list renders, and nothing more.
+
+    `observation_it` is the frozen observation re-rendered with it-IT punctuation (L05 §7.3).
+    `rationale` is **not** re-rendered: it was assembled by concatenation at write time
+    (ADR-0023) rather than frozen as a template plus bindings, so the read side has no
+    mechanism to localise it and the honest thing to show is the string that was frozen. See
+    the module docstring of `financeos.web.routes.findings` for what that costs.
+    """
+
+    finding: FindingRow
+    asset_class: str
+    observation_it: str
+    signed_severity: Decimal | None
+    outcome: str
+    scope_kind: str
+    rule_name: str
+    #: The declared target as it-IT percentage points (``"40,00%"``), for the rail's centre
+    #: tick, or `None` for a kind whose bindings carry no target. Taken from the trace's frozen
+    #: `target_pct` binding, which is already in percentage points — never re-derived.
+    target_pct_it: str | None
+
+
+def list_findings_for_display(con: duckdb.DuckDBPyConnection) -> list[FindingDisplayRow]:
+    """Every finding, display-ready, in `mv_finding`'s order — **never re-sorted here**.
+
+    The order is `list_findings`'s, consumed as it arrives: this function decorates rows and
+    does not touch their sequence, so RFC-0008 §3's contract holds in exactly one place. A
+    `sorted()` anywhere below would silently move the ordering decision out of the view that
+    owns it.
+
+    One extra query per finding resolves the trace and the rule. At n=1 this is irrelevant and
+    at V1.0 scale it stays small; the day it does not, this becomes one join, not a cache.
+    """
+    findings = list_findings(con)
+    return [_decorate(con, finding) for finding in findings]
+
+
+def _decorate(con: duckdb.DuckDBPyConnection, finding: FindingRow) -> FindingDisplayRow:
+    row = con.execute(
+        """
+        SELECT a.trace, a.outcome, run.scope_kind, sv.definition
+        FROM recommendation r
+        JOIN alert a              ON a.id  = r.alert_id
+        JOIN evaluation_run run   ON run.id = r.run_id
+        JOIN strategy_version sv  ON sv.id = r.strategy_version_id
+        WHERE r.id = ?
+        """,
+        [finding.latest_recommendation_id],
+    ).fetchone()
+    if row is None:  # pragma: no cover - mv_finding cannot name a missing recommendation
+        raise LookupError(f"recommendation {finding.latest_recommendation_id} is missing")
+
+    trace: dict[str, Any] = json.loads(str(row[0]))
+    definition: dict[str, Any] = json.loads(str(row[3]))
+    rule = _rule_of(definition, finding.rule_id)
+    condition = trace.get("condition") or {}
+    params = condition.get("params") or {}
+    message_bindings = trace.get("message_bindings") or {}
+
+    return FindingDisplayRow(
+        finding=finding,
+        target_pct_it=_target_pct_it(message_bindings),
+        asset_class=str(params.get("asset_class", "")),
+        observation_it=observation_it(
+            str(rule.get("message", finding.observation)),
+            trace.get("message_bindings") or {},
+            str(condition.get("kind", "")),
+            int(condition.get("kind_version", 0)),
+        ),
+        signed_severity=signed_severity(finding.current_severity, trace.get("steps") or ()),
+        outcome=str(row[1]),
+        scope_kind=str(row[2]),
+        rule_name=str(rule.get("name", "")),
+    )
+
+
+def _target_pct_it(message_bindings: Mapping[str, str]) -> str | None:
+    """The frozen `target_pct` binding as it-IT percentage points, or `None` when absent.
+
+    `target_pct` is already in percentage points (`Percentage.from_ratio(...).canonical()` at
+    write time), so only its punctuation changes — `format_number_it` never rounds and never
+    rescales. A kind that binds no target simply has no centre-tick label.
+    """
+    raw = message_bindings.get("target_pct")
+    return None if raw is None else f"{format_number_it(Decimal(raw))}%"
+
+
+def _rule_of(definition: dict[str, Any], rule_id: str) -> dict[str, Any]:
+    """The rule as frozen in `strategy_version.definition` (ADR-0027: there is no `rule` table).
+
+    Returns an empty mapping rather than raising when the id is absent: `rule_id` carries no FK
+    by design, and a read path is the wrong place to discover that the repository's
+    property-tested invariant has been violated.
+    """
+    for rule in definition.get("rules") or ():
+        if str(rule.get("id")) == rule_id:
+            return dict(rule)
+    return {}
