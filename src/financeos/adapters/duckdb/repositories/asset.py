@@ -37,6 +37,11 @@ class DuckDBAssetRepository:
             raise KeyError(f"no asset {asset_id}")
         return found[asset_id]
 
+    def all(self) -> tuple[Asset, ...]:
+        ids = self._con.execute("SELECT id FROM asset ORDER BY id").fetchall()
+        found = self.get_many([AssetId(UUID(row[0])) for row in ids])
+        return tuple(found[AssetId(UUID(row[0]))] for row in ids)
+
     def get_many(self, asset_ids: Collection[AssetId]) -> Mapping[AssetId, Asset]:
         if not asset_ids:
             return {}
