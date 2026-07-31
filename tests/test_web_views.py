@@ -133,7 +133,7 @@ def test_explanation_surface_renders_all_nine_blocks(
         "Storia del rilievo",
         "Riconciliazione",
         "Cosa detenevi quando è comparso",
-        "La tua decisione",
+        "La decisione",
     ):
         assert designation in body, designation
     # The three blocks with no source in the skeleton report the absence rather than vanishing:
