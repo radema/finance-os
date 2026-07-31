@@ -92,6 +92,9 @@ def test_findings_list_renders_the_one_canonical_finding(client: TestClient) -> 
     assert "contro un target del 40,00%" in body
     # P18: "target", never "obiettivo".
     assert "obiettivo" not in body.lower()
+    # The outcome chip reads from CHROME_LABELS (W1d-c), not its own hardcoded table.
+    assert "Scattata" in body
+    assert "RILEVATO" not in body
 
 
 def test_findings_list_has_no_net_worth_hero(client: TestClient) -> None:
