@@ -6,7 +6,11 @@ imported from here, which is what makes I-7 structural rather than aspirational.
 """
 
 from financeos.core.engines.decision_engine import MaterializationResult, materialize
-from financeos.core.engines.portfolio_engine import compute_allocation, compute_holdings
+from financeos.core.engines.portfolio_engine import (
+    compute_allocation,
+    compute_apportionment,
+    compute_holdings,
+)
 from financeos.core.engines.rule_engine import (
     REGISTRY,
     ConditionKindSpec,
@@ -32,6 +36,7 @@ __all__ = [
     "SeverityDeclaration",
     "TraceRecorder",
     "compute_allocation",
+    "compute_apportionment",
     "compute_drift",
     "compute_holdings",
     "evaluate",

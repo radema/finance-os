@@ -4,7 +4,7 @@
 models (RFC-0005 §4).
 """
 
-from financeos.core.portfolio.apportionment import ApportionmentRecord
+from financeos.core.portfolio.apportionment import ApportionmentLine, ApportionmentRecord
 from financeos.core.portfolio.asset import Asset, AssetIdentifier, IdentifierScheme
 from financeos.core.portfolio.holding import (
     AllocationBreakdown,
@@ -18,6 +18,7 @@ from financeos.core.portfolio.portfolio import Bucket, Portfolio
 __all__ = [
     "AllocationBreakdown",
     "AllocationLine",
+    "ApportionmentLine",
     "ApportionmentRecord",
     "Asset",
     "AssetIdentifier",
