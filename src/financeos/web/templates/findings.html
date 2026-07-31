@@ -1,0 +1,147 @@
+{#
+  ===========================================================================
+  SCREEN 1 — FINDINGS, and the landing page          (UX-0001 §2, RFC-0008 §4)
+  ===========================================================================
+  DELIBERATELY ABSENT: a net-worth hero number (UX-0001 §5.3). Manifest P1 says
+  the decisions are the product, so the first thing a reader sees is the list of
+  findings; net worth lives one click away on /allocation. Do not add a big
+  number to the top of this page — it would contradict P1 in the first thing the
+  product shows.
+
+  The rows arrive in mv_finding's order (RFC-0008 §3) and are rendered in the
+  order given. There is no sort, no groupby and no reverse in this file, and
+  adding one would move the ordering decision out of the view that owns it.
+
+  Correlated findings are shown SEPARATELY and never collapsed (RFC-0008 §4.1):
+  equity under target and bonds over target are the same imbalance seen twice,
+  and suppressing one would be the system deciding which half the reader should
+  think about — a P6 violation dressed as tidiness.
+#}
+{% extends "base.html" %}
+
+{% block content %}
+
+  {# ADR-0016 first, above the list. A count of findings over a run that skipped
+     rules is silent false reassurance, so the notice comes BEFORE the thing it
+     qualifies. The partial renders nothing when nothing was skipped. #}
+  {% if skip %}
+    {% with skipped_count = skip.skipped_count, error_count = skip.error_count,
+            total_count = skip.total_count, reasons = skip.reasons,
+            run_url = skip.run_url %}
+      {% include "partials/skip_notice.html" %}
+    {% endwith %}
+  {% endif %}
+
+  {% if not run %}
+    {# No evaluation at all. Distinct from "an evaluation found nothing", and the
+       two must never render alike. #}
+    <div class="state">
+      <p class="state__lead">Nessuna valutazione registrata.</p>
+      <p class="state__body">Il negozio contiene fatti — operazioni, prezzi, una
+      strategia congelata — ma nessuna valutazione li ha ancora confrontati.
+      Esegui <span class="value">financeos evaluate</span> per produrne una.
+      Questo non è un attestato di conformità: è l'assenza di una misura.</p>
+    </div>
+
+  {% elif not findings %}
+    {# An evaluation ran and fired nothing. Says exactly what it covered, and
+       refuses to read as a compliance certificate. #}
+    <div class="state">
+      <p class="state__lead">Nessun rilievo aperto.</p>
+      <p class="state__body">L'ultima valutazione ha eseguito
+      <span class="value">{{ counts.total }}</span> regole e nessuna ha rilevato
+      uno scostamento fuori tolleranza. Questo non è un attestato di conformità:
+      vale per le regole che hai scritto, alla data
+      <span class="value">{{ run.as_of | date_it }}</span>, e per nient'altro.</p>
+    </div>
+
+  {% else %}
+    <p class="note" style="max-width: var(--measure-prose); margin-bottom: var(--sp-5)">
+      <span class="value">{{ findings | length }}</span>
+      {{ 'rilievo' if findings | length == 1 else 'rilievi' }} su
+      <span class="value">{{ counts.total }}</span>
+      {{ 'regola valutata' if counts.total == 1 else 'regole valutate' }}.
+      L'ordine è quello della priorità dichiarata, poi della severità: il sistema
+      ordina <em>dentro</em> l'importanza che hai assegnato tu, non la
+      riconsidera.
+    </p>
+
+    {% for f in findings %}
+    {% set fr = f.finding %}
+    <article class="record" style="margin-bottom: var(--sp-5)">
+      <div class="record__margin">{{ '%02d' | format(loop.index) }}</div>
+      <div class="record__body">
+
+        <div class="record__head">
+          <span class="record__designation">
+            {{- f.asset_class | label_short -}}
+          </span>
+          {% with outcome = f.outcome, reason = None %}
+            {% include "partials/outcome_chip.html" %}
+          {% endwith %}
+          <span class="record__ref push">
+            priorità {{ fr.current_priority | label }} ·
+            {{ f.scope_kind | label }}
+          </span>
+        </div>
+
+        {# THE OBSERVATION — what is true. Re-rendered it-IT from the frozen
+           template and the frozen bindings (L05 §7.3), never reformatted by a
+           filter here: the read side did the substitution binding-by-binding,
+           which is what keeps an ISIN or a scope ref intact. #}
+        <p style="font-size: var(--fs-m)">
+          <a href="/recommendations/{{ fr.latest_recommendation_id }}">{{ f.observation_it }}</a>
+        </p>
+
+        <div class="row" style="align-items: flex-end; gap: var(--sp-5); margin-top: var(--sp-4)">
+          <div style="flex: 1; min-width: 170px">
+            {# CONTRACT 1 — the tolerance rail, included unchanged. The centre-tick
+               label says "target", never "obiettivo" (P18). #}
+            {% with signed_severity = f.signed_severity,
+                    target_label = 'target ' ~ f.target_pct_it if f.target_pct_it
+                                   else 'nessun target dichiarato',
+                    aria_label = f.observation_it %}
+              {% include "partials/tolerance_rail.html" %}
+            {% endwith %}
+          </div>
+          <div class="severity">
+            <span class="severity__label">Severità</span>
+            <span class="severity__value{{ ' severity__value--breach'
+                  if fr.current_severity and fr.current_severity > 1
+                  else (' severity__value--none' if fr.current_severity is none else '') }}">
+              {{- '—' if fr.current_severity is none else fr.current_severity | num_it -}}
+            </span>
+            <span class="severity__formula">|drift| ÷ effective_band</span>
+          </div>
+        </div>
+
+        {# THE RATIONALE — the user's own words, in the serif voice (UX-0001 §4.5).
+           The system never speaks in serif, so the reader can tell at a glance
+           that this is a restatement of a prior declaration and not an opinion. #}
+        <div class="declaration" style="margin-top: var(--sp-4)">
+          <span class="declaration__label">Dalla tua strategia congelata</span>
+          <p class="declared">{{ fr.rationale }}</p>
+        </div>
+
+        <div class="row" style="margin-top: var(--sp-4)">
+          {% if fr.suggestion_class %}
+          <span class="ident">Classe di deliberazione</span>
+          <span>{{ fr.suggestion_class | label }}</span>
+          {% endif %}
+          <span class="record__ref push">
+            visto {{ fr.occurrences }}×, dal {{ fr.first_seen | date_it }}
+          </span>
+        </div>
+
+        {# I-12 / E7, said once on the page that lists findings: there is no field
+           for an instrument, a direction or a size, so this is not advice. #}
+        <p class="note" style="margin-top: var(--sp-3)">
+          Nessun rilievo nomina uno strumento, una direzione o un importo: la
+          classe di deliberazione è una categoria di riflessione, non un'istruzione.
+        </p>
+      </div>
+    </article>
+    {% endfor %}
+  {% endif %}
+
+{% endblock %}

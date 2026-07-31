@@ -18,7 +18,16 @@ from typing import Final
 
 from jinja2 import Environment
 
-from financeos.core.shared import DOMAIN_LABELS, ArticleForm, LabelEntry, Role, TermEntry, label
+from financeos.core.shared import (
+    DOMAIN_LABELS,
+    ArticleForm,
+    LabelEntry,
+    Role,
+    TermEntry,
+    agree,
+    copula,
+    label,
+)
 from financeos.core.shared.ids import asset_class_label
 
 #: Web-tier frame nouns (L05 §5.4), keyed `noun.<english_name>` — disjoint from every enum
@@ -175,9 +184,14 @@ def _label_cap(key: str, role: str = "bare") -> str:
     return label(key, role=Role(role), sentence_initial=True, registry=ALL_LABELS)
 
 
-def _label_short(key: str) -> str:
+def label_short(key: str) -> str:
     """The non-syntactic compact form (axis, legend, cell, rail) — never composed with an
-    article, a preposition or a verb (L05 §3.5)."""
+    article, a preposition or a verb (L05 §3.5).
+
+    Public because a route assembling a chart option needs the same axis form a template does
+    (P24: Italian short forms on chart axes). A second implementation in a view is how an axis
+    ends up reading differently from the table beneath it.
+    """
     entry = ALL_LABELS.get(key)
     if entry is None:
         return asset_class_label(key)
@@ -192,9 +206,31 @@ def _label_gloss(key: str) -> str:
     return (entry.gloss or "") if entry is not None else ""
 
 
+def _copula(key: str) -> str:
+    """"è" or "sono", agreeing with `key`'s grammatical number (L05 §4.1)."""
+    return copula(key, registry=ALL_LABELS)
+
+
+def _agree(masculine_singular: str, key: str) -> str:
+    """Inflect a regular adjective to agree with `key` (L05 §4.1 note 2).
+
+    Argument order is the adjective first so the filter reads as the agreement it performs:
+    `{{ "assegnato" | agree(line.asset_class) }}`.
+    """
+    return agree(key, masculine_singular, registry=ALL_LABELS)
+
+
 def register_label_filters(env: Environment) -> None:
-    """Register `label`, `label_cap`, `label_short`, `label_gloss` (L05 §4.2)."""
+    """Register `label`, `label_cap`, `label_short`, `label_gloss`, `copula`, `agree`.
+
+    `copula` and `agree` (L05 §4.1) are exposed as filters for the same reason `label` is: a
+    template that hardcodes "è" is wrong for every feminine-plural taxonomy head, which is the
+    defect D10 recorded. The agreement has to be reachable from a template, or a template will
+    guess.
+    """
     env.filters["label"] = _label
     env.filters["label_cap"] = _label_cap
-    env.filters["label_short"] = _label_short
+    env.filters["label_short"] = label_short
     env.filters["label_gloss"] = _label_gloss
+    env.filters["copula"] = _copula
+    env.filters["agree"] = _agree

@@ -1,0 +1,92 @@
+{#
+  ===========================================================================
+  BLOCKS 3 AND 4 — BINDINGS AND COMPUTATION, AS ONE HTMX FRAGMENT
+  ===========================================================================
+  Served by GET /recommendations/{id}/trace and pulled in by
+  hx-trigger="revealed". RFC-0005 §5.4 names this fragment specifically: the
+  trace is the expensive part of the explanation surface and the part most reads
+  never need, and ADR-0007's unit of work is exactly one server-rendered
+  fragment behind one endpoint.
+
+  A FRAGMENT, NOT A PAGE. No layout, no <html>, no provenance bar — HTMX swaps
+  this into the placeholder the parent rendered. It extends nothing on purpose.
+
+  It renders partials/trace_ladder.html, the same partial the design preview
+  uses, so the served derivation cannot drift from the component contract. No
+  number below passes through a locale filter: UX-0001 §4.2 rule 2 requires
+  decimals to render exactly as stored, as strings, and the it-IT formatting of
+  ADR-L03 §5.2 applies to the observation and never to the trace.
+
+  INTERFACE — r: a RecommendationDetail
+#}
+
+<div class="record__head">
+  <span class="record__designation record__designation--minor">Valori in ingresso</span>
+  <span class="record__ref push">
+    trace_version {{ r.trace.trace_version }} ·
+    {{ r.condition_kind }} v{{ r.condition_kind_version }}
+  </span>
+</div>
+
+<p class="note" style="margin-bottom: var(--sp-3)">
+  Ogni valore è quello che la valutazione ha letto, non quello che leggerebbe
+  oggi: i decimali compaiono esattamente come sono memorizzati. Dati la
+  condizione e questi valori, rieseguire i passaggi qui sotto riproduce l'esito.
+</p>
+
+{% with bindings = r.bindings, show_steps = False %}
+  {% include "partials/trace_ladder.html" %}
+{% endwith %}
+
+<div style="height: var(--sp-5)"></div>
+
+<div class="record__head">
+  <span class="record__designation record__designation--minor">Calcolo</span>
+  <span class="record__ref push">riproducibile · RFC-0009 §4.1</span>
+</div>
+
+{% with steps = r.steps, show_bindings = False %}
+  {% include "partials/trace_ladder.html" %}
+{% endwith %}
+
+{% if r.trace.unavailable_facts %}
+<div class="notice" role="note" style="margin-top: var(--sp-4)">
+  <div class="notice__margin" aria-hidden="true"></div>
+  <div class="notice__body">
+    <p class="notice__lead">Fatti non disponibili alla valutazione</p>
+    <ul style="padding-inline-start: var(--sp-5)">
+      {%- for fact in r.trace.unavailable_facts %}
+      <li><span class="ident">{{ fact.name }}</span> — {{ fact.reason | label }}</li>
+      {%- endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+{% if r.trace.stale_facts %}
+<div class="notice" role="note" style="margin-top: var(--sp-4)">
+  <div class="notice__margin" aria-hidden="true"></div>
+  <div class="notice__body">
+    <p class="notice__lead">Fatti troppo vecchi per essere valutati</p>
+    <ul style="padding-inline-start: var(--sp-5)">
+      {%- for fact in r.trace.stale_facts %}
+      <li><span class="ident">{{ fact.name }}</span> —
+        <span class="value">{{ fact.age_days }}</span> giorni contro un massimo di
+        <span class="value">{{ fact.max_staleness_days }}</span></li>
+      {%- endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+{% if r.trace.error %}
+<div class="notice" role="note" style="margin-top: var(--sp-4)">
+  <div class="notice__margin" aria-hidden="true"></div>
+  <div class="notice__body">
+    <p class="notice__lead">La valutazione si è interrotta</p>
+    <p><span class="ident">{{ r.trace.error }}</span></p>
+    <p>Un errore non è né vero né falso: questa regola non dice nulla sul
+    rispetto della tua strategia.</p>
+  </div>
+</div>
+{% endif %}
