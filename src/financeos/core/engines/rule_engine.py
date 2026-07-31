@@ -37,9 +37,10 @@ from financeos.core.decision import (
     StepOp,
     TraceValue,
 )
-from financeos.core.portfolio import AllocationLine
+from financeos.core.portfolio import AllocationLine, ApportionmentLine
 from financeos.core.shared import (
     AssetClass,
+    AssetId,
     Bound,
     Currency,
     DomainModel,
@@ -87,6 +88,10 @@ FACT_RESIDUAL: Final = "residual"
 #: mapping, so it is named separately from `FACT_ALLOCATION`.
 FACT_BUCKET_VALUE: Final = "bucket_value"
 
+#: The name of the apportionment fact family (ADR-L04 §4.4 D5): one `ApportionmentLine` per
+#: Asset carrying committed units at `as_of`, for `over_apportioned`.
+FACT_APPORTIONMENT: Final = "apportionment"
+
 #: The algebra runs under a fixed decimal context, so neither the ambient context of a caller
 #: nor the machine a replay happens on can change a recorded value.
 _ALGEBRA_CONTEXT: Final = Context(prec=28, rounding=ROUNDING)
@@ -118,8 +123,10 @@ class FactSet(DomainModel):
     allocation: Mapping[AssetClass, Bound[AllocationLine]] = Field(default_factory=dict)
     residual: Bound[WeightAmount] | None = None
     bucket_value: Bound[Money] | None = None
+    apportionment: Mapping[AssetId, Bound[ApportionmentLine]] = Field(default_factory=dict)
     unavailable: Mapping[str, SkipReason] = Field(default_factory=dict)
     labels: Mapping[AssetClass, str] = Field(default_factory=dict)
+    asset_labels: Mapping[AssetId, str] = Field(default_factory=dict)
 
     def drift_for(self, asset_class: AssetClass) -> Bound[DriftLine] | None:
         """The drift fact for one class, or `None` if that class is not targeted."""
@@ -128,6 +135,14 @@ class FactSet(DomainModel):
     def allocation_for(self, asset_class: AssetClass) -> Bound[AllocationLine] | None:
         """The allocation fact for one held class, or `None` if it is not held at all."""
         return self.allocation.get(asset_class)
+
+    def asset_label_for(self, asset_id: AssetId) -> str:
+        """The display label of an Asset (name + identifier), caller-supplied.
+
+        Falls back to the bare id: the Rule Engine holds no `Asset` repository (I-7), so it
+        cannot render a mechanical default the way `label_for` does for `AssetClass`.
+        """
+        return self.asset_labels.get(asset_id) or str(asset_id)
 
     def unavailable_reason(self, family: str) -> SkipReason | None:
         """Why `family` could not be computed at all, if it could not."""
@@ -1086,6 +1101,126 @@ BUCKET_BELOW_TARGET_VALUE: Final = REGISTRY.register(
             {"current_value", "target_value", "shortfall_value", "coverage_pct", "severity"}
         ),
         evaluate=evaluate_bucket_below_target_value,
+    )
+)
+
+
+# --------------------------------------------------------------------------------------
+# over_apportioned v1 (ADR-L04 §4.1–§4.4, overriding RFC-0011 ADR-0025's severity clause)
+# --------------------------------------------------------------------------------------
+
+
+class OverApportionedParams(BaseModel):
+    """Params of `over_apportioned`: only `scope` (ADR-0025 gives it no `asset`).
+
+    One rule therefore yields exactly one finding per scope per run (`finding_key` hashes
+    `rule_id ‖ scope ‖ params`, ADR-0027), so a scope with several over-apportioned Assets
+    must produce one severity — the aggregation ADR-L04 §4.4/§4.5 works out.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    scope: str
+
+
+def evaluate_over_apportioned(
+    params: OverApportionedParams, facts: FactSet, recorder: TraceRecorder
+) -> ConditionResult:
+    """Fire when any Asset in scope has Σ apportioned quantity > Holding quantity (I-9).
+
+    Follows ADR-L04 §4.4's step sequence verbatim: a per-asset `gt` predicate (phase 1, kept
+    strictly per-asset so a surplus on one Asset never masks a deficit on another — I-9 is a
+    per-Asset invariant); severity aggregated over the affected set `S` only when it is
+    non-empty (phase 2); a final `any` over every asset's per-asset predicate (phase 3), which
+    is always the last, and therefore boolean, step.
+
+    `severity = 1 + Σdeficit / Σapportioned` (`= 2 − coverage`) over `S` — total on the whole
+    firing set because `apportioned_quantity > 0` is guaranteed by the fact family's own
+    construction (ADR-L04 §4.4), so `ΣA > 0` whenever `S` is non-empty and `H = 0` fires at
+    `severity = 2.00000000` rather than skipping on a zero denominator.
+    """
+    asset_ids = sorted(facts.apportionment, key=str)
+    over_names: list[str] = []
+    affected: list[AssetId] = []
+
+    for asset_id in asset_ids:
+        fact = recorder.open_fact(
+            f"{FACT_APPORTIONMENT}:{asset_id}", facts.apportionment.get(asset_id)
+        )
+        line = fact.value
+        apportioned_name, holding_name = f"apportioned:{asset_id}", f"holding:{asset_id}"
+        fact.bind(apportioned_name, line.apportioned_quantity)
+        fact.bind(holding_name, line.holding_quantity)
+        over_name = f"over:{asset_id}"
+        is_over = recorder.gt(over_name, apportioned_name, holding_name)
+        over_names.append(over_name)
+        if is_over:
+            affected.append(asset_id)
+
+    severity: Decimal | None = None
+    committed: Decimal | None = None
+    held: Decimal | None = None
+    deficit: Decimal | None = None
+    if affected:
+        committed = recorder.add(
+            "apportioned_committed", *(f"apportioned:{a}" for a in affected)
+        )
+        held = recorder.add("held_of_committed", *(f"holding:{a}" for a in affected))
+        deficit = recorder.subtract(
+            "deficit_committed", "apportioned_committed", "held_of_committed"
+        )
+        recorder.add("apportioned_doubled", "apportioned_committed", "apportioned_committed")
+        recorder.subtract("severity_numerator", "apportioned_doubled", "held_of_committed")
+        severity = recorder.ratio_to("severity", "severity_numerator", "apportioned_committed")
+
+    fired = recorder.any_of("fired", *over_names)
+
+    recorder.message_bindings(
+        _over_apportioned_message_bindings(facts, affected, committed, held, deficit)
+    )
+    return ConditionResult(fired=fired, severity=severity)
+
+
+def _over_apportioned_message_bindings(
+    facts: FactSet,
+    affected: Sequence[AssetId],
+    committed: Decimal | None,
+    held: Decimal | None,
+    deficit: Decimal | None,
+) -> dict[str, str]:
+    bindings: dict[str, str] = {
+        "instrument_labels": ", ".join(facts.asset_label_for(asset_id) for asset_id in affected),
+    }
+    if committed is not None:
+        bindings["apportioned_committed"] = canonical_decimal(committed)
+    if held is not None:
+        bindings["held_of_committed"] = canonical_decimal(held)
+    if deficit is not None:
+        bindings["deficit_committed"] = canonical_decimal(deficit)
+    return bindings
+
+
+OVER_APPORTIONED: Final = REGISTRY.register(
+    ConditionKindSpec(
+        kind="over_apportioned",
+        kind_version=1,
+        params_model=OverApportionedParams,
+        required_facts=frozenset({FACT_APPORTIONMENT}),
+        default_max_staleness=None,  # ERR-10: both operands are authored/derived, not observed
+        severity=SeverityDeclaration(
+            formula="1 + Σ deficit_quantity / Σ apportioned_quantity  (= 2 − coverage)"
+        ),
+        # P16: naming the instrument is legal (label + ISIN only, never a direction or a
+        # quantity to trade — ADR-L04 §7 item 1's ratified recommendation).
+        explanation_template=(
+            "Su {instrument_labels} risultano impegnate {apportioned_committed} quote contro "
+            "{held_of_committed} effettivamente possedute: {deficit_committed} quote in eccesso "
+            "di apportionment."
+        ),
+        numeric_bindings=frozenset(
+            {"apportioned_committed", "held_of_committed", "deficit_committed"}
+        ),
+        evaluate=evaluate_over_apportioned,
     )
 )
 
