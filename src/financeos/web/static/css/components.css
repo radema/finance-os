@@ -399,6 +399,7 @@
   display: inline-block;
   font-family: var(--face-value);
   font-size: var(--fs-micro);
+  text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 1px var(--sp-2);
   border: var(--bw) solid;
