@@ -9,6 +9,7 @@ frozen copy lives in `StrategyVersion.definition` (ERR-8, ADR-0027).
 
 from datetime import date
 from enum import StrEnum
+from typing import Final
 
 from pydantic import Field, model_validator
 
@@ -38,13 +39,36 @@ class Horizon(DomainModel):
 
 
 class RiskLevel(StrEnum):
-    """Ordinal risk appetite (RFC-0004 §2.1: an ordinal enum plus free-text principles)."""
+    """The seven-step UCITS KIID/PRIIPs KID synthetic risk indicator scale (P31/P32).
 
+    An owner-declared value merely expressed on the regulatory 1-7 scale; this codebase does
+    not compute SRRI/SRI from volatility or market/credit risk bands. `StrEnum` alone cannot
+    carry the ordinal, so `risk_level_rank()` below supplies it (mirrors `priority_rank()`).
+    """
+
+    VERY_CONSERVATIVE = "VERY_CONSERVATIVE"
     CONSERVATIVE = "CONSERVATIVE"
     MODERATE = "MODERATE"
     BALANCED = "BALANCED"
     GROWTH = "GROWTH"
+    HIGH_GROWTH = "HIGH_GROWTH"
     AGGRESSIVE = "AGGRESSIVE"
+
+
+_RISK_LEVEL_RANK: Final[dict[RiskLevel, int]] = {
+    RiskLevel.VERY_CONSERVATIVE: 1,
+    RiskLevel.CONSERVATIVE: 2,
+    RiskLevel.MODERATE: 3,
+    RiskLevel.BALANCED: 4,
+    RiskLevel.GROWTH: 5,
+    RiskLevel.HIGH_GROWTH: 6,
+    RiskLevel.AGGRESSIVE: 7,
+}
+
+
+def risk_level_rank(level: RiskLevel) -> int:
+    """The 1-7 SRRI/SRI position of a declared `RiskLevel` (P31/P32)."""
+    return _RISK_LEVEL_RANK[level]
 
 
 class RiskProfile(DomainModel):
