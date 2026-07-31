@@ -185,6 +185,43 @@ def test_allocation_carries_net_worth_and_reconciles(client: TestClient) -> None
     assert "Capitale non assegnato" in body
 
 
+def test_allocation_targets_use_the_runs_frozen_version_not_current(
+    client: TestClient,
+) -> None:
+    """ADR-0012: audit correctness reads what the run measured against.
+
+    Re-freezing the Strategy after the run must not change what `/allocation` shows: the
+    targets on screen are the run's pinned `strategy_version_id`, never
+    `strategy.current_version_id`.
+    """
+    con: duckdb.DuckDBPyConnection = client.app.state.connection  # type: ignore[attr-defined]
+    cur = con.cursor()
+    row = cur.execute(
+        "SELECT sv.strategy_id, sv.id, sv.definition "
+        "FROM evaluation_run run JOIN strategy_version sv ON sv.id = run.strategy_version_id "
+        "ORDER BY run.evaluated_at DESC LIMIT 1"
+    ).fetchone()
+    assert row is not None
+    strategy_id, version_id, definition = row
+    changed = json.loads(str(definition))
+    for child in changed["targets"]["children"]:
+        if child["key"] == "EQUITY_DEVELOPED":
+            child["weight"]["value"] = "0.99000000"
+    new_version_id = "test-reversion-0001"
+    cur.execute(
+        "INSERT INTO strategy_version (id, strategy_id, parent_version_id, definition, "
+        "change_note, frozen_at) VALUES (?, ?, ?, ?, 'test re-freeze', current_timestamp)",
+        [new_version_id, strategy_id, version_id, json.dumps(changed)],
+    )
+    cur.execute(
+        "UPDATE strategy SET current_version_id = ? WHERE id = ?", [new_version_id, strategy_id]
+    )
+
+    body = client.get("/allocation").text
+    assert "contro un target del 40,00%" in body
+    assert "99,00%" not in body
+
+
 def test_allocation_reports_the_unpriced_position_rather_than_dropping_it(
     client: TestClient,
 ) -> None:
