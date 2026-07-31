@@ -72,6 +72,24 @@ class DuckDBStrategyRepository:
         ).fetchone()
         if row is None:
             raise KeyError(f"no strategy_version {version_id}")
+        return self._version_from_row(row)
+
+    def all_ids(self) -> tuple[StrategyId, ...]:
+        rows = self._con.execute("SELECT id FROM strategy ORDER BY id").fetchall()
+        return tuple(StrategyId(UUID(row[0])) for row in rows)
+
+    def all_versions(self, strategy_id: StrategyId) -> tuple[StrategyVersion, ...]:
+        rows = self._con.execute(
+            "SELECT id, strategy_id, parent_version_id, definition, change_note, "
+            "CAST(frozen_at AS VARCHAR) FROM strategy_version WHERE strategy_id = ? "
+            "ORDER BY frozen_at, id",
+            [str(strategy_id)],
+        ).fetchall()
+        return tuple(self._version_from_row(row) for row in rows)
+
+    def _version_from_row(
+        self, row: tuple[str, str, str | None, str, str, str]
+    ) -> StrategyVersion:
         row_id, strategy_id, parent_id, definition, change_note, frozen_at = row
         return StrategyVersion(
             id=StrategyVersionId(UUID(row_id)),
