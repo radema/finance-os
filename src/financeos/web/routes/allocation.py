@@ -59,7 +59,9 @@ def allocation_view(con: Store) -> HTMLResponse:
             ),
         )
 
-    view = portfolio_allocation(con, run.portfolio_id, as_of=run.as_of)
+    view = portfolio_allocation(
+        con, run.portfolio_id, as_of=run.as_of, strategy_version_id=run.strategy_version_id
+    )
     if view is None:  # pragma: no cover - the run's own FK guarantees the portfolio exists
         raise HTTPException(status_code=404, detail="Portfolio non trovato.")
 

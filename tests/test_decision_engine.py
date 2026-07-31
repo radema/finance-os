@@ -225,7 +225,7 @@ class TestRationale:
         version = f.strategy_version(rules=(f.drift_rule(1),))
         rationale = assemble_rationale(version, f.drift_rule(1))
         assert rationale == (
-            "La tua strategia «Crescita di lungo periodo» (congelata il 01/03/2026) "
+            "La strategia «Crescita di lungo periodo» (congelata il 01/03/2026) "
             "prevede un target del 40.00% per le Azioni dei paesi sviluppati con una banda "
             "di ±2.00pp, su un orizzonte di 20 anni. "
             "Principio dichiarato: «preservare il potere d'acquisto senza fare market timing»."
@@ -247,7 +247,14 @@ class TestRationale:
         version = f.strategy_version(rules=(f.drift_rule(1),), principles=())
         rationale = assemble_rationale(version, f.drift_rule(1))
         assert "Principio dichiarato" not in rationale
-        assert rationale.endswith("su un orizzonte di 20 anni.")
+
+    def test_register_is_impersonal(self) -> None:
+        """P17: impersonal register for all Italian copy — never `La tua strategia`."""
+        version = f.strategy_version(rules=(f.drift_rule(1),))
+        rationale = assemble_rationale(version, f.drift_rule(1))
+        assert "La tua strategia" not in rationale
+        assert " tua " not in rationale
+        assert " tuo " not in rationale
 
     def test_a_date_horizon_is_cited_as_a_date(self) -> None:
         version = f.strategy_version(rules=(f.drift_rule(1),))

@@ -152,12 +152,17 @@ def portfolio_allocation(
     portfolio_id: str,
     *,
     as_of: date,
+    strategy_version_id: str,
     currency: str = "EUR",
 ) -> AllocationView | None:
     """Value one Portfolio's holdings at `as_of` and group them by `AssetClass` and by Bucket.
 
     Returns `None` when `portfolio_id` does not resolve. A Portfolio that holds nothing is not
     `None`: it is a legitimate zero, and the view renders it as one.
+
+    `strategy_version_id` must be the frozen version the caller's `EvaluationRun` measured
+    against (ADR-0012): what a run found is audited against what was declared *at that time*,
+    not against whatever the Strategy has since been edited to say.
     """
     name_row = con.execute("SELECT name FROM portfolio WHERE id = ?", [portfolio_id]).fetchone()
     if name_row is None:
@@ -197,7 +202,7 @@ def portfolio_allocation(
         values[str(asset_class)] = values.get(str(asset_class), Decimal(0)) + value
         net_worth += value
 
-    targets, targets_unavailable = _targets_for(con, portfolio_id)
+    targets, targets_unavailable = _targets_for(con, portfolio_id, strategy_version_id)
 
     lines = tuple(
         _class_line(asset_class, value, net_worth, targets.get(asset_class))
@@ -296,7 +301,7 @@ def _buckets(
 
 
 def _targets_for(
-    con: duckdb.DuckDBPyConnection, portfolio_id: str
+    con: duckdb.DuckDBPyConnection, portfolio_id: str, strategy_version_id: str
 ) -> tuple[dict[str, TargetSpec], str | None]:
     """The flat declared targets governing `portfolio_id`, or a reason there are none.
 
@@ -304,24 +309,27 @@ def _targets_for(
     anything. Where several do, this returns `TARGETS_HETEROGENEOUS` and no targets: RFC-0007 §5
     requires a skip, never an average, and averaging two incommensurable target trees would
     produce a number nobody declared.
+
+    Reads `strategy_version_id` — the caller's frozen version, per ADR-0012 — never
+    `strategy.current_version_id`: the targets shown here must be what the evaluation run
+    actually measured against, not whatever the Strategy has since been re-frozen to say.
     """
-    version_rows = con.execute(
-        """
-        SELECT DISTINCT sv.definition
-        FROM bucket b
-        JOIN strategy s          ON s.id  = b.strategy_id
-        JOIN strategy_version sv ON sv.id = s.current_version_id
-        WHERE b.portfolio_id = ?
-        """,
-        [portfolio_id],
+    strategy_id_rows = con.execute(
+        "SELECT DISTINCT strategy_id FROM bucket WHERE portfolio_id = ?", [portfolio_id]
     ).fetchall()
 
-    if not version_rows:
+    if not strategy_id_rows:
         return {}, TARGETS_HETEROGENEOUS if _has_buckets(con, portfolio_id) else None
-    if len(version_rows) > 1:
+    if len(strategy_id_rows) > 1:
         return {}, TARGETS_HETEROGENEOUS
 
-    definition: dict[str, Any] = json.loads(str(version_rows[0][0]))
+    version_row = con.execute(
+        "SELECT definition FROM strategy_version WHERE id = ?", [strategy_version_id]
+    ).fetchone()
+    if version_row is None:  # pragma: no cover - the run's own FK guarantees the version exists
+        return {}, TARGETS_HETEROGENEOUS
+
+    definition: dict[str, Any] = json.loads(str(version_row[0]))
     children: Sequence[Mapping[str, Any]] = (definition.get("targets") or {}).get("children") or ()
     if any(child.get("children") for child in children):
         return {}, TARGETS_NESTED

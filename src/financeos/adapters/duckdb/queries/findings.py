@@ -6,6 +6,14 @@ non-negotiable: ``ORDER BY priority_rank DESC, severity DESC NULLS LAST, rule_id
 `mv_finding` already embeds this order; the `ORDER BY` here is restated so the contract holds
 regardless of what the caller does with the connection between the view's definition and this
 query.
+
+**Resolution (RFC-0008 §4).** "A finding is resolved when its key is absent from the most
+recent `ACTUAL` run in which its rule was evaluated with outcome `NOT_FIRED`." `mv_finding`
+groups `recommendation` rows only — a rule that stops firing writes no new recommendation, so
+the view alone cannot tell "still open" apart from "resolved". `list_findings` closes that gap
+by checking each finding's rule against the latest `alert` for its (`rule_id`, `scope_id`) pair
+in the most recent `ACTUAL` run: a `NOT_FIRED` outcome there excludes the finding from the
+list. Absence because the rule was `SKIPPED` is deliberately *not* resolution (ADR-0016).
 """
 
 from __future__ import annotations
@@ -43,15 +51,35 @@ class FindingRow:
 
 
 def list_findings(con: duckdb.DuckDBPyConnection) -> list[FindingRow]:
-    """Every finding, joined to its latest `Recommendation` text, in display order."""
+    """Every *open* finding, joined to its latest `Recommendation` text, in display order.
+
+    A resolved finding (RFC-0008 §4) is excluded: see the module docstring.
+    """
     rows = con.execute(
         """
+        WITH latest_alert AS (
+            SELECT
+                a.rule_id,
+                run.scope_id,
+                a.outcome,
+                ROW_NUMBER() OVER (
+                    PARTITION BY a.rule_id, run.scope_id
+                    ORDER BY run.evaluated_at DESC, a.recorded_at DESC
+                ) AS rn
+            FROM alert a
+            JOIN evaluation_run run ON run.id = a.run_id
+            WHERE run.mode = 'ACTUAL'
+        )
         SELECT
             f.finding_key, f.rule_id, f.first_recommendation_id, f.latest_recommendation_id,
             f.first_seen, f.last_seen, f.occurrences, f.current_severity, f.current_priority,
             f.priority_rank, r.observation, r.rationale, r.suggestion_class
         FROM mv_finding f
-        JOIN recommendation r ON r.id = f.latest_recommendation_id
+        JOIN recommendation r  ON r.id = f.latest_recommendation_id
+        JOIN evaluation_run fr ON fr.id = r.run_id
+        LEFT JOIN latest_alert la
+            ON la.rule_id = f.rule_id AND la.scope_id = fr.scope_id AND la.rn = 1
+        WHERE la.outcome IS NULL OR la.outcome <> 'NOT_FIRED'
         ORDER BY f.priority_rank DESC, f.current_severity DESC NULLS LAST, f.rule_id ASC
         """
     ).fetchall()
