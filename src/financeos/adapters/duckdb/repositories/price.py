@@ -1,9 +1,13 @@
 """`DuckDBPriceRepository` — `price`, bitemporal append-only (ADR-0031).
 
-`as_of` is the one named ASOF accessor this repository exposes (RFC-0009 §9 Consequences:
-"only two query helpers exist... no query module may inline a `price` join"). It resolves,
-per asset, the latest `valid_date` at or before `as_of`, breaking a same-day restatement tie
-on the latest `recorded_at`.
+The two named accessors RFC-0009 §9 requires ("only two query helpers exist... no query
+module may inline a `price` join"):
+
+- `price_latest` — the best current estimate: per asset, the latest `valid_date` at or before
+  `as_of`, breaking a same-day restatement tie on the latest `recorded_at`. What a valuation
+  reads (RFC-0012, "leaning `price_latest()`").
+- `price_as_known_at` — the same resolution, additionally bounded by `recorded_at <= known_at`:
+  what the system believed as of a past instant — RFC-0009 §3.1's "price-as-known-then".
 """
 
 from __future__ import annotations
@@ -40,11 +44,27 @@ class DuckDBPriceRepository:
             [str(id), str(asset_id), valid_date, close, currency, source, recorded_at],
         )
 
-    def as_of(self, asset_ids: Collection[AssetId], *, as_of: date) -> Mapping[AssetId, PriceView]:
+    def price_latest(
+        self, asset_ids: Collection[AssetId], *, as_of: date
+    ) -> Mapping[AssetId, PriceView]:
+        return self._resolve(asset_ids, as_of=as_of, known_at=None)
+
+    def price_as_known_at(
+        self, asset_ids: Collection[AssetId], *, as_of: date, known_at: datetime
+    ) -> Mapping[AssetId, PriceView]:
+        return self._resolve(asset_ids, as_of=as_of, known_at=known_at)
+
+    def _resolve(
+        self, asset_ids: Collection[AssetId], *, as_of: date, known_at: datetime | None
+    ) -> Mapping[AssetId, PriceView]:
         if not asset_ids:
             return {}
         ids = [str(a) for a in asset_ids]
         placeholders = ",".join("?" for _ in ids)
+        known_at_filter = "AND recorded_at <= ?" if known_at is not None else ""
+        params: list[object] = [*ids, as_of]
+        if known_at is not None:
+            params.append(known_at)
         rows = self._con.execute(
             f"""
             SELECT id, asset_id, valid_date, close, currency, CAST(recorded_at AS VARCHAR)
@@ -54,11 +74,11 @@ class DuckDBPriceRepository:
                            PARTITION BY asset_id ORDER BY valid_date DESC, recorded_at DESC
                        ) AS rn
                 FROM price
-                WHERE asset_id IN ({placeholders}) AND valid_date <= ?
+                WHERE asset_id IN ({placeholders}) AND valid_date <= ? {known_at_filter}
             )
             WHERE rn = 1
             """,
-            [*ids, as_of],
+            params,
         ).fetchall()
         return {
             AssetId(UUID(row_asset_id)): PriceView(

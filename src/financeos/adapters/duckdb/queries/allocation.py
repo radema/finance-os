@@ -7,8 +7,9 @@ Three decisions here are worth reading before changing anything.
 **No `price` join is inlined.** RFC-0009 §9 makes that a rule, not a preference: `price` is
 bitemporal, every query against it has to choose between latest-known and as-known-then, and
 getting it wrong is a silent wrong number. So prices arrive from
-`DuckDBPriceRepository.as_of` — the one named ASOF accessor, whose own docstring cites that
-consequence — and the window function that resolves them exists in exactly one place.
+`DuckDBPriceRepository.price_latest` — one of the two named accessors, whose own docstring
+cites that consequence — and the window function that resolves them exists in exactly one
+place.
 `bucket_apportionment`'s supersession is resolved the same way, through
 `DuckDBApportionmentRepository.virtual_holdings`, for the same reason.
 
@@ -179,7 +180,7 @@ def portfolio_allocation(
         [portfolio_id],
     ).fetchall()
 
-    prices = DuckDBPriceRepository(con).as_of(
+    prices = DuckDBPriceRepository(con).price_latest(
         [AssetId(UUID(str(row[0]))) for row in holdings], as_of=as_of
     )
 
