@@ -108,7 +108,7 @@ def evaluate_strategy(
 
     asset_ids = {h.asset_id for h in holdings}
     assets = uow.assets.get_many(asset_ids)
-    prices = uow.prices.as_of(asset_ids, as_of=as_of)
+    prices = uow.prices.price_latest(asset_ids, as_of=as_of)
 
     allocation = compute_allocation(
         holdings, assets, prices, scope=scope, as_of=as_of, currency=currency

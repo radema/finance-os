@@ -33,6 +33,7 @@ from financeos.core.shared import (
     AssetId,
     BucketId,
     Currency,
+    OperationId,
     PortfolioId,
     Quantity,
     StrategyId,
@@ -119,7 +120,11 @@ class ApportionmentRepository(Protocol):
 
 
 class PriceRepository(Protocol):
-    """`price` — bitemporal append-only (ADR-0031)."""
+    """`price` — bitemporal append-only (ADR-0031).
+
+    `price_latest` and `price_as_known_at` are the only two read accessors (RFC-0009 §9): no
+    query module may inline a `price` join.
+    """
 
     def add(
         self,
@@ -133,9 +138,17 @@ class PriceRepository(Protocol):
         recorded_at: datetime,
     ) -> None: ...
 
-    def as_of(
+    def price_latest(
         self, asset_ids: Collection[AssetId], *, as_of: date
-    ) -> Mapping[AssetId, PriceView]: ...
+    ) -> Mapping[AssetId, PriceView]:
+        """Best current estimate: latest `valid_date <= as_of` per asset (RFC-0012)."""
+        ...
+
+    def price_as_known_at(
+        self, asset_ids: Collection[AssetId], *, as_of: date, known_at: datetime
+    ) -> Mapping[AssetId, PriceView]:
+        """As above, additionally bounded by `recorded_at <= known_at` — "as known then"."""
+        ...
 
 
 class OperationRepository(Protocol):
@@ -151,6 +164,20 @@ class OperationRepository(Protocol):
     def for_accounts(
         self, account_ids: Collection[AccountId], *, as_of: date
     ) -> tuple[Operation, ...]: ...
+
+    def get(self, operation_id: OperationId) -> Operation:
+        """The one `Operation` with `id = operation_id`. Raises `KeyError` if absent."""
+        ...
+
+    def leg_of(self, operation_id: OperationId) -> Operation | None:
+        """The auto-emitted cash leg of `operation_id` (`cash_leg_of = operation_id`), if any."""
+        ...
+
+    def transfer_sibling(
+        self, transfer_pair_id: UUID, *, exclude_id: OperationId
+    ) -> Operation | None:
+        """The other side of `transfer_pair_id`, excluding `exclude_id` (ADR-L01 W4/W7)."""
+        ...
 
 
 class StrategyRepository(Protocol):

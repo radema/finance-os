@@ -6,6 +6,7 @@ holds to the same posture by convention. `financeos.app` is the only layer that 
 
 from financeos.ports.clock import Clock
 from financeos.ports.ids import IdGen
+from financeos.ports.market import PriceProvider, PriceQuote
 from financeos.ports.repositories import (
     AccountInfo,
     AccountRepository,
@@ -30,6 +31,8 @@ __all__ = [
     "IdGen",
     "OperationRepository",
     "PortfolioRepository",
+    "PriceProvider",
+    "PriceQuote",
     "PriceRepository",
     "StrategyRepository",
 ]

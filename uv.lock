@@ -221,6 +221,7 @@ dependencies = [
     { name = "click" },
     { name = "duckdb" },
     { name = "fastapi" },
+    { name = "httpx2" },
     { name = "jinja2" },
     { name = "platformdirs" },
     { name = "pydantic" },
@@ -233,7 +234,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx2" },
     { name = "hypothesis" },
     { name = "import-linter" },
     { name = "mypy" },
@@ -247,6 +247,7 @@ requires-dist = [
     { name = "click" },
     { name = "duckdb" },
     { name = "fastapi" },
+    { name = "httpx2" },
     { name = "jinja2" },
     { name = "platformdirs" },
     { name = "pydantic", specifier = ">=2" },
@@ -259,7 +260,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx2" },
     { name = "hypothesis" },
     { name = "import-linter" },
     { name = "mypy" },
