@@ -60,6 +60,7 @@ from financeos.core.shared import (
     priority_rank,
 )
 from financeos.core.shared.errors import (
+    CurrencyMismatchError,
     InvariantViolationError,
     RegistryError,
     ReplayMismatchError,
@@ -733,13 +734,17 @@ DRIFT_OUTSIDE_TOLERANCE: Final = REGISTRY.register(
 
 
 # --------------------------------------------------------------------------------------
-# untargeted_allocation v1 (RFC-0007 §4.2, ADR-L04 §4.7 D6)
+# untargeted_allocation v1 (RFC-0006 §3, RFC-0007 §4.2, ADR-L04 §4.7 D6, ADR-L05)
 # --------------------------------------------------------------------------------------
 
 
 class UntargetedAllocationParams(BaseModel):
-    """Params of `untargeted_allocation`: the held-but-untargeted class, its scope, and the
-    weight threshold above which untargeted capital is worth a finding.
+    """Params of `untargeted_allocation`: `scope` and the weight threshold above which
+    untargeted capital is worth a finding.
+
+    BLOCKER 1 (review): the signature is `(scope, threshold_weight)` — RFC-0006 §3's catalog
+    row and RFC-0007 §4.2 both give it, and neither names an `asset_class` param. Which held
+    classes are untargeted is read from the facts at evaluation time, not authored.
 
     D6 (ADR-L04 §4.7, ratified P30): `threshold_weight <= 0` is rejected here, at construction,
     rather than left to `SKIPPED(zero_denominator)` — the `divide_safe` skip path — at exactly
@@ -748,7 +753,6 @@ class UntargetedAllocationParams(BaseModel):
 
     model_config = {"frozen": True, "extra": "forbid"}
 
-    asset_class: AssetClass
     scope: str
     threshold_weight: WeightAmount
 
@@ -765,54 +769,90 @@ class UntargetedAllocationParams(BaseModel):
 def evaluate_untargeted_allocation(
     params: UntargetedAllocationParams, facts: FactSet, recorder: TraceRecorder
 ) -> ConditionResult:
-    """Fire when a held `AssetClass` with no target exceeds `threshold_weight` of the scope.
+    """Fire when any held, untargeted `AssetClass` in `scope` exceeds `threshold_weight`
+    (ADR-L05 §3: untargeted-allocation-reduction).
 
-    Reads `allocation`, not `drift`: `compute_drift` iterates only the target tree's leaves
-    (RFC-0007 §4), so an untargeted class never gets a `DriftLine` — `allocation` is the fact
-    family that carries a weight for it at all. `severity = current_weight / threshold_weight`
-    (RFC-0007 §4.2), anchored at `1.0` on the authored threshold.
+    "Untargeted" is read from the facts, never invented (BLOCKER 1, review): `compute_drift`
+    emits a `DriftLine` only for the target tree's leaves (RFC-0007 §4), so a held class absent
+    from `facts.drift` has no target in the governing StrategyVersion, while `allocation`
+    carries a weight for every held class, targeted or not (RFC-0007 §4.1, ADR-0029). A
+    targeted class is therefore never a candidate, regardless of its own weight.
+
+    The kind's params carry no `asset_class`, and `finding_key` hashes `rule_id ‖ scope ‖
+    params` (ADR-0027), so several untargeted classes breaching at once must still reduce to
+    one Alert. ADR-L05 §3 gives the reduction: `severity = max(current_weight over the
+    affected/breaching set) / threshold_weight` — the worst single class, not a sum — and the
+    message names every affected class. The predicate (`gt`, strict) makes `severity == 1.00`
+    a limit approached from above and never attained on a `FIRED` row: at the boundary the sole
+    candidate drops out of the affected set, so a boundary `NOT_FIRED` carries `severity =
+    None`, not `1.00` — the same open-interval shape as `over_apportioned` (ADR-L04 §4.5),
+    unbounded above rather than capped at 2.
     """
-    fact = recorder.open_fact(
-        f"{FACT_ALLOCATION}:{params.asset_class}", facts.allocation_for(params.asset_class)
-    )
-    line = fact.value
-    fact.bind("current_weight", line.weight.value)
     recorder.bind(
         "threshold_weight",
         params.threshold_weight,
         source=SourceRef(kind="params", path="threshold_weight"),
     )
-    severity = recorder.ratio_to("severity", "current_weight", "threshold_weight")
-    breached = recorder.gt("breached", "current_weight", "threshold_weight")
+
+    untargeted_classes = sorted(
+        (
+            asset_class
+            for asset_class in facts.allocation
+            if facts.drift_for(asset_class) is None
+        ),
+        key=str,
+    )
+
+    breached_names: list[str] = []
+    affected: list[AssetClass] = []
+    weight_names: dict[AssetClass, str] = {}
+    weights: dict[AssetClass, Decimal] = {}
+    for asset_class in untargeted_classes:
+        fact = recorder.open_fact(
+            f"{FACT_ALLOCATION}:{asset_class}", facts.allocation_for(asset_class)
+        )
+        current_weight = fact.value.weight.value
+        weight_name = f"current_weight:{asset_class}"
+        fact.bind(weight_name, current_weight)
+        weight_names[asset_class] = weight_name
+        weights[asset_class] = current_weight
+
+        breached_name = f"breached:{asset_class}"
+        is_breached = recorder.gt(breached_name, weight_name, "threshold_weight")
+        breached_names.append(breached_name)
+        if is_breached:
+            affected.append(asset_class)
+
+    # Severity is recorded before the final predicate step: `replay_trace` requires the last
+    # step to be boolean (`rule_engine.py`, RFC-0009 §4.1), so any arithmetic must precede it —
+    # the same C-2 / ADR-L04 §4.4 ordering `over_apportioned` uses.
+    severity: Decimal | None = None
+    if affected:
+        worst = max(affected, key=lambda asset_class: weights[asset_class])
+        severity = recorder.ratio_to("severity", weight_names[worst], "threshold_weight")
+
+    fired = recorder.any_of("fired", *breached_names)
 
     recorder.message_bindings(
-        _untargeted_allocation_message_bindings(params, facts, line, severity)
+        _untargeted_allocation_message_bindings(params, facts, affected, severity)
     )
-    return ConditionResult(fired=breached, severity=severity)
+    return ConditionResult(fired=fired, severity=severity)
 
 
 def _untargeted_allocation_message_bindings(
     params: UntargetedAllocationParams,
     facts: FactSet,
-    line: AllocationLine,
-    severity: Decimal,
+    affected: Sequence[AssetClass],
+    severity: Decimal | None,
 ) -> dict[str, str]:
-    return {
-        "asset_class": params.asset_class,
-        "asset_class_label": facts.label_for(params.asset_class),
-        "asset_class_label_the": label(params.asset_class, role=Role.THE),
-        "asset_class_label_the_cap": label(
-            params.asset_class, role=Role.THE, sentence_initial=True
-        ),
-        "asset_class_label_of": label(params.asset_class, role=Role.OF),
-        "asset_class_copula": copula(params.asset_class),
+    bindings: dict[str, str] = {
+        "asset_class_labels": ", ".join(facts.label_for(ac) for ac in affected),
         "scope": params.scope,
-        "currency": line.value.currency,
-        "current_pct": Percentage.from_ratio(line.weight.value).canonical(),
         "threshold_pct": Percentage.from_ratio(params.threshold_weight).canonical(),
-        "current_value": line.value.canonical(),
-        "severity": canonical_decimal(severity),
     }
+    if severity is not None:
+        bindings["severity"] = canonical_decimal(severity)
+    return bindings
 
 
 UNTARGETED_ALLOCATION: Final = REGISTRY.register(
@@ -820,17 +860,16 @@ UNTARGETED_ALLOCATION: Final = REGISTRY.register(
         kind="untargeted_allocation",
         kind_version=1,
         params_model=UntargetedAllocationParams,
-        required_facts=frozenset({FACT_ALLOCATION}),
+        required_facts=frozenset({FACT_DRIFT, FACT_ALLOCATION}),
         default_max_staleness=timedelta(days=7),
-        severity=SeverityDeclaration(formula="current_weight / threshold_weight"),
+        severity=SeverityDeclaration(
+            formula="max(current_weight over the affected set) / threshold_weight"
+        ),
         explanation_template=(
-            "{asset_class_label_the_cap} {asset_class_copula} al {current_pct}% del "
-            "portafoglio ({current_value} {currency}), priva di un target nella strategia "
-            "in vigore: soglia di attenzione {threshold_pct}%."
+            "{asset_class_labels}: capitale privo di un target nella strategia in vigore, "
+            "oltre la soglia di attenzione del {threshold_pct}%."
         ),
-        numeric_bindings=frozenset(
-            {"current_pct", "threshold_pct", "current_value", "severity"}
-        ),
+        numeric_bindings=frozenset({"threshold_pct", "severity"}),
         evaluate=evaluate_untargeted_allocation,
     )
 )
@@ -939,10 +978,16 @@ def evaluate_allocation_absent(
 ) -> ConditionResult:
     """Fire when a targeted `AssetClass` is held at zero.
 
-    Reads `drift`, not a separate `targets`/`allocation` pair: `compute_drift` emits a
-    `DriftLine` for every targeted leaf regardless of whether it is held (`current_weight = 0`
-    when unallocated), which is exactly `effective_target` and `current_weight` — the two
-    bindings ADR-L02 §4.1's sketch names. `severity = None` always (ADR-L02 §4.3): there is no
+    Binds `current_weight`/`effective_target` from the `drift` fact, unchanged (`compute_drift`
+    emits a `DriftLine` for every targeted leaf regardless of whether it is held —
+    `current_weight = 0` when unallocated — which is exactly the two bindings ADR-L02 §4.1's
+    sketch names). But `required_facts` no longer declares `drift` (review MAJOR 6): ADR-L02
+    §4.3 and RFC-0006 §3's catalog row both give this kind's declared dependency as `targets,
+    allocation`, not `drift`, and the family-level `drift` gate was over-broad — it SKIPped this
+    kind whenever the *whole* `drift` family was unavailable (zero portfolio value, an unrelated
+    unpriced asset elsewhere in scope) even on a run where this class's own line is fine. The
+    per-class `SkipSignal(missing_fact)` `open_fact` already raises when this class truly has no
+    line is the correct, narrower gate. `severity = None` always (ADR-L02 §4.3): there is no
     magnitude of absence, and the only commensurable denominator (`effective_band`) is optional
     per ADR-0017, so any formula built from it would be partial.
 
@@ -985,7 +1030,7 @@ ALLOCATION_ABSENT: Final = REGISTRY.register(
         kind="allocation_absent",
         kind_version=1,
         params_model=AllocationAbsentParams,
-        required_facts=frozenset({FACT_DRIFT}),
+        required_facts=frozenset({FACT_ALLOCATION}),
         default_max_staleness=timedelta(days=7),
         severity=SeverityDeclaration(formula=None),
         explanation_template=(
@@ -1044,6 +1089,14 @@ def evaluate_bucket_below_target_value(
     target_value` — which is the same number with no unsourced binding anywhere in the trace.
     """
     fact = recorder.open_fact(FACT_BUCKET_VALUE, facts.bucket_value)
+    if fact.value.currency != params.target_currency:
+        # I-15: no implicit conversion in the core (review MAJOR 4). Raised before any
+        # arithmetic, so `_evaluate_rule`'s generic exception handler turns this into
+        # `Outcome.ERROR` with a NULL severity, never a ratio computed across currencies.
+        raise CurrencyMismatchError(
+            f"bucket_below_target_value: bucket value is in {fact.value.currency}, "
+            f"target is authored in {params.target_currency}"
+        )
     current_value = fact.value.amount
     fact.bind("current_value", current_value)
     target_value = params.target_amount
