@@ -88,6 +88,7 @@ forbidden_modules = [
   "pandas",
   "polars",
   "httpx",
+  "httpx2",
   "requests",
 ]
 
@@ -118,4 +119,8 @@ forbidden_modules = ["financeos.adapters.duckdb.queries"]
 name = "C5 - no egress in core or app"
 type = "forbidden"
 source_modules = ["financeos.core", "financeos.app"]
-forbidden_modules = ["httpx", "requests"]
+# `httpx2` is listed because that is the real module name of the client
+# `adapters/market/http_price_provider.py` imports (as `import httpx2 as httpx`).
+# import-linter matches the imported module, not the alias, so a C5 that named
+# only "httpx" could not see the one HTTP client this project actually ships.
+forbidden_modules = ["httpx", "httpx2", "requests"]
