@@ -196,9 +196,11 @@ def compute_apportionment(
         scope: Restricts which Buckets' chains are folded in.
 
     Returns:
-        One `ApportionmentLine` per Asset with a non-zero resolved Σ apportioned quantity,
-        ordered by `asset_id` — never a line where `apportioned_quantity == 0`, which is the
-        fact-construction guarantee that keeps `over_apportioned`'s severity denominator safe.
+        One `ApportionmentLine` per Asset with a strictly positive resolved Σ apportioned
+        quantity, ordered by `asset_id` — never a line where `apportioned_quantity <= 0`
+        (review MAJOR 5: a cancelling or negative sum is excluded, not only zero), which is
+        the fact-construction guarantee that keeps `over_apportioned`'s severity denominator
+        safe. `ApportionmentLine` itself now rejects `apportioned_quantity <= 0`.
     """
     resolved = _resolve_latest(apportionments, as_of=as_of)
     holding_by_asset = {holding.asset_id: holding.quantity.amount for holding in holdings}
@@ -216,7 +218,7 @@ def compute_apportionment(
             holding_quantity=holding_by_asset.get(asset_id, Decimal(0)),
         )
         for asset_id, total in sorted(totals.items(), key=lambda item: str(item[0]))
-        if total != 0
+        if total > 0
     )
 
 

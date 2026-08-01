@@ -11,7 +11,10 @@ in the first place.
 from datetime import date
 from uuid import UUID
 
+from pydantic import model_validator
+
 from financeos.core.shared import AssetId, BucketId, DomainModel, Instant, Quantity, QuantityAmount
+from financeos.core.shared.errors import InvariantViolationError
 
 
 class ApportionmentRecord(DomainModel):
@@ -42,3 +45,16 @@ class ApportionmentLine(DomainModel):
     asset_id: AssetId
     apportioned_quantity: QuantityAmount
     holding_quantity: QuantityAmount
+
+    @model_validator(mode="after")
+    def _apportioned_quantity_is_positive(self) -> "ApportionmentLine":
+        """The model states the invariant itself (review MAJOR 5), not only the producer:
+        `over_apportioned`'s severity denominator (`Σ apportioned_quantity`) is only provably
+        non-zero on the firing set if no line is ever constructed at `apportioned_quantity <= 0`
+        (ADR-L04 §4.4 D5)."""
+        if self.apportioned_quantity <= 0:
+            raise InvariantViolationError(
+                "ApportionmentLine.apportioned_quantity must be > 0; "
+                f"got {self.apportioned_quantity}"
+            )
+        return self

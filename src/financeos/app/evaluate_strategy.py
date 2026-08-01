@@ -28,9 +28,7 @@ from financeos.core.engines import (
     rule_engine,
     strategy_engine,
 )
-from financeos.core.portfolio import ApportionmentLine
 from financeos.core.shared import (
-    AssetId,
     Bound,
     BucketId,
     Currency,
@@ -66,13 +64,19 @@ def evaluate_strategy(
     """
     now = clock.now()
 
-    apportionment: dict[AssetId, Bound[ApportionmentLine]] = {}
     if scope.kind is ScopeKind.BUCKET:
         bucket = uow.buckets.get(BucketId(scope.id))
         portfolio_id, resolved_strategy_id = bucket.portfolio_id, bucket.strategy_id
         holdings = tuple(
             vh.as_holding()
             for vh in uow.apportionments.virtual_holdings(bucket.id, as_of=as_of)
+        )
+        # I-9 is a Portfolio-wide invariant (ADR-L04 §4.4): `over_apportioned`'s holdings
+        # operand is always the Portfolio-wide fold, never this Bucket's own narrower one
+        # (review BLOCKER 2 — a Bucket-scoped run used to skip apportionment entirely).
+        portfolio_holdings = compute_holdings(
+            uow.operations.for_accounts(uow.portfolios.accounts_of(portfolio_id), as_of=as_of),
+            as_of=as_of,
         )
     else:
         if strategy_id is None:
@@ -82,20 +86,23 @@ def evaluate_strategy(
         account_ids = uow.portfolios.accounts_of(portfolio_id)
         operations = uow.operations.for_accounts(account_ids, as_of=as_of)
         holdings = compute_holdings(operations, as_of=as_of)
+        portfolio_holdings = holdings
 
-        # `over_apportioned` is only meaningfully authored at Portfolio scope (I-9 is a
-        # Portfolio-wide invariant); a Bucket-scoped run has no portfolio-wide holdings to
-        # compare against, so `facts.apportionment` stays empty there.
-        records = [
-            record
-            for bucket_id in uow.buckets.all_ids()
-            for record in uow.apportionments.full_history(bucket_id)
-        ]
-        lines = compute_apportionment(records, holdings, as_of=as_of, scope=scope)
-        apportionment = {
-            line.asset_id: Bound(value=line, source=SourceRef.derived(engine="portfolio"))
-            for line in lines
-        }
+    # `over_apportioned` is assembled in every scope (review BLOCKER 2): `compute_apportionment`
+    # itself narrows the resolved records to this scope (Bucket vs Portfolio, ADR-L04 §4.4), and
+    # the holdings compared against are always the Portfolio-wide fold above. Buckets are
+    # filtered to this Portfolio (review MAJOR 3) so a different Portfolio's apportionment chain
+    # can never leak into the fold.
+    records = [
+        record
+        for bucket_id in uow.buckets.for_portfolio(portfolio_id)
+        for record in uow.apportionments.full_history(bucket_id)
+    ]
+    lines = compute_apportionment(records, portfolio_holdings, as_of=as_of, scope=scope)
+    apportionment = {
+        line.asset_id: Bound(value=line, source=SourceRef.derived(engine="portfolio"))
+        for line in lines
+    }
 
     sv = uow.strategies.current_version(resolved_strategy_id)
 
@@ -108,10 +115,24 @@ def evaluate_strategy(
     )
     comp = compute_drift(allocation, sv.targets, strategy_version_id=sv.id)
 
+    # `allocation`/`bucket_value` are assembled so `untargeted_allocation` (BLOCKER 1) and
+    # `bucket_below_target_value` are actually evaluable in a real run rather than perpetually
+    # `SKIPPED(missing_fact)` — `compute_allocation` already computes both, for whichever scope
+    # was requested.
+    allocation_facts = {
+        asset_class: Bound(
+            value=line, source=SourceRef.derived(engine="portfolio", inputs=line.input_refs)
+        )
+        for asset_class, line in allocation.lines.items()
+    }
+    bucket_value = Bound(value=allocation.total_value, source=SourceRef.derived(engine="portfolio"))
+
     facts = FactSet(
         as_of=as_of,
         scope=scope,
         drift=comp.lines,
+        allocation=allocation_facts,
+        bucket_value=bucket_value,
         apportionment=apportionment,
         unavailable={"drift": comp.unavailable} if comp.unavailable else {},
     )
@@ -151,6 +172,15 @@ def _input_digest(facts: FactSet) -> str:
             asset_class: bound.value.model_dump(mode="json")
             for asset_class, bound in facts.drift.items()
         },
+        "allocation": {
+            asset_class: bound.value.model_dump(mode="json")
+            for asset_class, bound in facts.allocation.items()
+        },
+        "bucket_value": (
+            facts.bucket_value.value.model_dump(mode="json")
+            if facts.bucket_value is not None
+            else None
+        ),
         "apportionment": {
             str(asset_id): bound.value.model_dump(mode="json")
             for asset_id, bound in facts.apportionment.items()
