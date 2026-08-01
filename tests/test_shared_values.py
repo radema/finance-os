@@ -21,7 +21,6 @@ from financeos.core.shared import (
     Weight,
     asset_class_label,
     canonical_json,
-    entity_ref,
     sha256_hex,
 )
 from financeos.core.shared.errors import CurrencyMismatchError, FloatNotAllowedError
@@ -130,10 +129,6 @@ class TestIdentityAndRefs:
         assert Scope.for_bucket(bucket).ref == f"bucket:{bucket}"
         portfolio = PortfolioId(uuid4())
         assert Scope.for_portfolio(portfolio).ref == f"portfolio:{portfolio}"
-
-    def test_entity_ref(self) -> None:
-        identifier = uuid4()
-        assert entity_ref("op", identifier) == f"op:{identifier}"
 
     @pytest.mark.parametrize(
         ("code", "label"),

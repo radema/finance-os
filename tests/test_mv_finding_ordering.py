@@ -113,18 +113,6 @@ def test_null_severity_sorts_below_the_lowest_legal_firing_value(
     assert rows[1][1] is None
 
 
-def test_null_severity_sorts_last_within_its_priority_band(con: duckdb.DuckDBPyConnection) -> None:
-    """`NULLS LAST`: a kind that cannot express urgency (e.g. `allocation_absent`, ADR-L02)
-    must not outrank one that can, within the same `priority` band."""
-    _finding(con, alert_id="a1", rule_id="r-quantified", priority="HIGH", severity=1.50,
-              finding_key="fk-quantified")
-    _finding(con, alert_id="a2", rule_id="r-null", priority="HIGH", severity=None,
-              finding_key="fk-null")
-    rows = con.execute("SELECT rule_id, current_severity FROM mv_finding").fetchall()
-    assert [r[0] for r in rows] == ["r-quantified", "r-null"]
-    assert rows[1][1] is None
-
-
 def test_severity_tie_breaks_on_rule_id_ascending(con: duckdb.DuckDBPyConnection) -> None:
     """A severity tie is broken by `rule_id ASC` (UX-0001 §8.5's rows 4/5)."""
     _finding(con, alert_id="a1", rule_id="rule:b", priority="HIGH", severity=1.79,

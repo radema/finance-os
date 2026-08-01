@@ -232,10 +232,8 @@ def test_type_domain_accepts_all_seven_values(seeded: duckdb.DuckDBPyConnection)
 # ---------------------------------------------------------------------------
 
 
-def test_buy_negative_cash_leg_inserts(seeded: duckdb.DuckDBPyConnection) -> None:
-    insert_operation(seeded, "op1", "BUY", 10)
-    # exempt: cash leg of a BUY is negative
-    insert_operation(seeded, "op1-leg", "BUY", -1000, asset_id="cash", cash_leg_of="op1", price=1)
+# The BUY negative-cash-leg exemption is covered by the truth-table row it belongs to,
+# `test_row2_cash_leg_only_is_legal` (ADR-L01 §4.2).
 
 
 def test_buy_primary_with_negative_quantity_is_rejected(

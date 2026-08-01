@@ -113,14 +113,11 @@ def _untargeted_allocation_rule(threshold_weight: str = "0.05") -> Rule:
 
 
 class TestUntargetedAllocation:
-    def test_threshold_weight_zero_is_rejected_at_construction(self) -> None:
+    @pytest.mark.parametrize("threshold_weight", ["0", "-0.05"])
+    def test_threshold_weight_must_be_positive(self, threshold_weight: str) -> None:
         """D6 (ADR-L04 §4.7, ratified P30)."""
         with pytest.raises(ValidationError):
-            UntargetedAllocationParams(scope="x", threshold_weight=Decimal(0))
-
-    def test_negative_threshold_weight_is_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            UntargetedAllocationParams(scope="x", threshold_weight=Decimal("-0.05"))
+            UntargetedAllocationParams(scope="x", threshold_weight=Decimal(threshold_weight))
 
     def test_does_not_fire_on_a_class_that_is_targeted(self) -> None:
         """BLOCKER 1 (review): the predicate must check the class actually has no target — a
@@ -373,16 +370,11 @@ def _bucket_below_target_value_rule(target_amount: str = "24000.00") -> Rule:
 
 
 class TestBucketBelowTargetValue:
-    def test_target_amount_zero_is_rejected_at_construction(self) -> None:
+    @pytest.mark.parametrize("target_amount", ["0", "-1"])
+    def test_target_amount_must_be_positive(self, target_amount: str) -> None:
         with pytest.raises(ValidationError):
             BucketBelowTargetValueParams(
-                bucket="x", target_amount=Decimal(0), target_currency="EUR"
-            )
-
-    def test_negative_target_amount_is_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            BucketBelowTargetValueParams(
-                bucket="x", target_amount=Decimal("-1"), target_currency="EUR"
+                bucket="x", target_amount=Decimal(target_amount), target_currency="EUR"
             )
 
     def test_the_ux_0001_fixture_anchor(self) -> None:
