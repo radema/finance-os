@@ -10,6 +10,7 @@ from financeos.core.engines.portfolio_engine import (
     compute_allocation,
     compute_apportionment,
     compute_holdings,
+    compute_residual,
 )
 from financeos.core.engines.rule_engine import (
     REGISTRY,
@@ -23,7 +24,7 @@ from financeos.core.engines.rule_engine import (
     evaluate,
     replay_trace,
 )
-from financeos.core.engines.strategy_engine import compute_drift
+from financeos.core.engines.strategy_engine import compute_drift, compute_targets
 
 __all__ = [
     "REGISTRY",
@@ -39,6 +40,8 @@ __all__ = [
     "compute_apportionment",
     "compute_drift",
     "compute_holdings",
+    "compute_residual",
+    "compute_targets",
     "evaluate",
     "materialize",
     "replay_trace",

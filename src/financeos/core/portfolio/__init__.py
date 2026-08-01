@@ -14,6 +14,7 @@ from financeos.core.portfolio.holding import (
 )
 from financeos.core.portfolio.operation import Operation, OperationType
 from financeos.core.portfolio.portfolio import Bucket, Portfolio
+from financeos.core.portfolio.residual import ResidualComputation
 
 __all__ = [
     "AllocationBreakdown",
@@ -28,5 +29,6 @@ __all__ = [
     "Operation",
     "OperationType",
     "Portfolio",
+    "ResidualComputation",
     "VirtualHolding",
 ]

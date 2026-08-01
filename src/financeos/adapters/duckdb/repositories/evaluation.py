@@ -1,8 +1,10 @@
-"""`DuckDBEvaluationRepository` — `evaluation_run` + `alert` + `recommendation` (E4/E5).
+"""`DuckDBEvaluationRepository` — `evaluation_run` + `alert` + `recommendation` + `snapshot`
+(E4/E5, RFC-0009 §5.1).
 
-All three tables are append-only facts (C6). `save` writes the whole set of one evaluation's
+All four tables are append-only facts (C6). `save` writes the whole set of one evaluation's
 artifacts in a single transaction, mirroring the sequence RFC-0005 §3 diagrams: run, then
-every `Alert` (all four outcomes), then every `Recommendation` (`FIRED` only).
+every `Alert` (all four outcomes), then every `Recommendation` (`FIRED` only), then the
+`Snapshot` sharing this run's id — written on every evaluate (RFC-0010 V1.0).
 """
 
 from __future__ import annotations
@@ -12,7 +14,7 @@ from collections.abc import Sequence
 
 import duckdb
 
-from financeos.core.decision import Alert, EvaluationRun, Recommendation
+from financeos.core.decision import Alert, EvaluationRun, Recommendation, Snapshot
 
 
 class DuckDBEvaluationRepository:
@@ -24,6 +26,7 @@ class DuckDBEvaluationRepository:
         run: EvaluationRun,
         alerts: Sequence[Alert],
         recommendations: Sequence[Recommendation],
+        snapshot: Snapshot | None = None,
     ) -> None:
         self._con.execute("BEGIN TRANSACTION")
         try:
@@ -80,6 +83,34 @@ class DuckDBEvaluationRepository:
                         rec.suggestion_class.value if rec.suggestion_class else None,
                         json.dumps(list(rec.provenance.input_refs)),
                         rec.recorded_at,
+                    ],
+                )
+            if snapshot is not None:
+                self._con.execute(
+                    "INSERT INTO snapshot "
+                    "(id, portfolio_id, as_of, run_id, total_value, currency, allocation, "
+                    " by_bucket, recorded_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [
+                        str(snapshot.id),
+                        str(snapshot.portfolio_id),
+                        snapshot.as_of,
+                        str(snapshot.run_id) if snapshot.run_id else None,
+                        snapshot.total_value,
+                        snapshot.currency,
+                        json.dumps(
+                            {
+                                asset_class: {"value": str(line.value), "weight": str(line.weight)}
+                                for asset_class, line in snapshot.allocation.items()
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                key: {"value": str(line.value), "weight": str(line.weight)}
+                                for key, line in snapshot.by_bucket.items()
+                            }
+                        ),
+                        snapshot.recorded_at,
                     ],
                 )
         except Exception:

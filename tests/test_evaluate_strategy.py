@@ -8,6 +8,7 @@ constructs a `FactSet` by hand and cannot exercise either. These tests run a rea
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -315,6 +316,245 @@ class TestCrossPortfolioApportionmentLeakage:
         (alert,) = result.alerts
         assert alert.outcome is Outcome.FIRED
         assert alert.severity == Decimal("1.13207547")
+
+
+GLOBAL_FUND = AssetId(UUID(int=910))
+
+
+def _residual_rule() -> Rule:
+    return Rule(
+        id=RuleId(UUID(int=2)),
+        name="Capitale non apportionato",
+        priority=Priority.MEDIUM,
+        suggestion_class=SuggestionClass.REVIEW_BUCKET_ASSIGNMENT,
+        message="residuo",
+        condition=LeafCondition(
+            kind="unassigned_residual_above", kind_version=1, params={"threshold_weight": "0.05"}
+        ),
+    )
+
+
+def _untargeted_allocation_rule(scope: Scope) -> Rule:
+    return Rule(
+        id=RuleId(UUID(int=3)),
+        name="Classe non targettizzata",
+        priority=Priority.HIGH,
+        suggestion_class=SuggestionClass.REVIEW_STRATEGY,
+        message="non targettizzato",
+        condition=LeafCondition(
+            kind="untargeted_allocation",
+            kind_version=1,
+            params={"scope": scope.ref, "threshold_weight": "0.05"},
+        ),
+    )
+
+
+class TestResidualAndTargetsWiring:
+    """ADR-0029 / ADR-L05 §5: `residual` and `targets` are real fact producers in a real run,
+    not perpetual `SKIPPED(missing_fact)` (review M1/M2). Also exercises multiple `Bucket`s
+    apportioning distinct Assets of one Portfolio (RFC-0010:123) and the `Snapshot` written
+    alongside (RFC-0009 §5.1)."""
+
+    def test_unassigned_residual_and_untargeted_allocation_fire(
+        self, uow: DuckDBUnitOfWork, con: duckdb.DuckDBPyConnection
+    ) -> None:
+        portfolio_id = PortfolioId(uuid4())
+        strategy_id = StrategyId(uuid4())
+        bucket_id = BucketId(uuid4())
+        account_id = AccountId(uuid4())
+        uow.accounts.add(
+            AccountInfo(id=account_id, cash_asset_id=CASH_EUR, currency="EUR"),
+            name="Main",
+            type_="BROKERAGE",
+        )
+        uow.portfolios.add(Portfolio(id=portfolio_id, name="P", accounts=(account_id,)))
+        uow.strategies.ensure_strategy(strategy_id, name="S")
+
+        # An external counterparty account, only to satisfy W4's two-sided TRANSFER pair —
+        # never added to this Portfolio, so it never enters its holdings fold.
+        external_account_id = AccountId(uuid4())
+        uow.accounts.add(
+            AccountInfo(id=external_account_id, cash_asset_id=CASH_EUR, currency="EUR"),
+            name="External",
+            type_="BROKERAGE",
+        )
+
+        uow.assets.add(
+            Asset(id=GLOBAL_FUND, name="Global Fund", asset_class="EQUITY_GLOBAL", currency="EUR")
+        )
+        uow.prices.add(
+            uuid4(),
+            GLOBAL_FUND,
+            valid_date=AS_OF,
+            close="1",
+            currency="EUR",
+            source="seed",
+            recorded_at=NOW,
+        )
+        transfer_pair_id = uuid4()
+        fund_buy_id = OperationId(uuid4())
+        global_fund_buy_id = OperationId(uuid4())
+        # A 500 EUR deposit, funded from the external account, leaves 350 EUR CASH on hand
+        # after the two BUYs below — a nonzero Portfolio value with no CASH class dilution
+        # to reason about in the assertions.
+        uow.operations.write(
+            [
+                Operation(
+                    id=OperationId(uuid4()),
+                    type=OperationType.TRANSFER_IN,
+                    account_id=account_id,
+                    asset_id=CASH_EUR,
+                    trade_date=TRADE_DATE,
+                    quantity=Quantity(amount=Decimal("500")),
+                    price=Decimal("1"),
+                    fees=Decimal(0),
+                    currency="EUR",
+                    transfer_pair_id=transfer_pair_id,
+                    recorded_at=NOW,
+                ),
+                Operation(
+                    id=OperationId(uuid4()),
+                    type=OperationType.TRANSFER_OUT,
+                    account_id=external_account_id,
+                    asset_id=CASH_EUR,
+                    trade_date=TRADE_DATE,
+                    quantity=Quantity(amount=Decimal("-500")),
+                    price=Decimal("1"),
+                    fees=Decimal(0),
+                    currency="EUR",
+                    transfer_pair_id=transfer_pair_id,
+                    recorded_at=NOW,
+                ),
+                Operation(
+                    id=fund_buy_id,
+                    type=OperationType.BUY,
+                    account_id=account_id,
+                    asset_id=FUND,
+                    trade_date=TRADE_DATE,
+                    quantity=Quantity(amount=Decimal("100")),
+                    price=Decimal("1"),
+                    fees=Decimal(0),
+                    currency="EUR",
+                    recorded_at=NOW,
+                ),
+                Operation(
+                    id=OperationId(uuid4()),
+                    type=OperationType.BUY,
+                    account_id=account_id,
+                    asset_id=CASH_EUR,
+                    trade_date=TRADE_DATE,
+                    quantity=Quantity(amount=Decimal("-100")),
+                    price=Decimal("1"),
+                    fees=Decimal(0),
+                    currency="EUR",
+                    cash_leg_of=fund_buy_id,
+                    recorded_at=NOW,
+                ),
+                Operation(
+                    id=global_fund_buy_id,
+                    type=OperationType.BUY,
+                    account_id=account_id,
+                    asset_id=GLOBAL_FUND,
+                    trade_date=TRADE_DATE,
+                    quantity=Quantity(amount=Decimal("50")),
+                    price=Decimal("1"),
+                    fees=Decimal(0),
+                    currency="EUR",
+                    recorded_at=NOW,
+                ),
+                Operation(
+                    id=OperationId(uuid4()),
+                    type=OperationType.BUY,
+                    account_id=account_id,
+                    asset_id=CASH_EUR,
+                    trade_date=TRADE_DATE,
+                    quantity=Quantity(amount=Decimal("-50")),
+                    price=Decimal("1"),
+                    fees=Decimal(0),
+                    currency="EUR",
+                    cash_leg_of=global_fund_buy_id,
+                    recorded_at=NOW,
+                ),
+            ],
+            import_batch_id=uuid4(),
+        )
+
+        bucket_id_2 = BucketId(uuid4())
+        uow.buckets.add(
+            Bucket(id=bucket_id, portfolio_id=portfolio_id, strategy_id=strategy_id, name="B")
+        )
+        uow.buckets.add(
+            Bucket(id=bucket_id_2, portfolio_id=portfolio_id, strategy_id=strategy_id, name="B2")
+        )
+        # Two Buckets apportion two distinct Assets of the same Portfolio (RFC-0010:123):
+        # 60 of the 100 FUND units to B, 30 of the 50 GLOBAL_FUND units to B2. CASH and the
+        # rest are apportioned to nothing -> 410 of 500 total value (82%) is UNASSIGNED.
+        uow.apportionments.apportion(
+            uuid4(),
+            bucket_id,
+            FUND,
+            Quantity(amount=Decimal("60")),
+            effective_from=TRADE_DATE,
+            recorded_at=NOW,
+        )
+        uow.apportionments.apportion(
+            uuid4(),
+            bucket_id_2,
+            GLOBAL_FUND,
+            Quantity(amount=Decimal("30")),
+            effective_from=TRADE_DATE,
+            recorded_at=NOW,
+        )
+
+        scope = Scope.for_portfolio(portfolio_id)
+        residual_rule = _residual_rule()
+        untargeted_rule = _untargeted_allocation_rule(scope)
+        version = _strategy_version(
+            strategy_id=strategy_id,
+            version_id=StrategyVersionId(uuid4()),
+            rules=(residual_rule, untargeted_rule),
+        )
+        uow.strategies.freeze_version(version)
+
+        result = evaluate_strategy(
+            uow,
+            _CountingIdGen(0),
+            _FixedClock(),
+            scope=scope,
+            as_of=AS_OF,
+            currency="EUR",
+            strategy_id=strategy_id,
+        )
+
+        by_rule = {alert.rule_id: alert for alert in result.alerts}
+        assert by_rule[residual_rule.id].outcome is Outcome.FIRED
+        assert by_rule[untargeted_rule.id].outcome is Outcome.FIRED
+        # 410/500 = 0.82 residual weight against a 0.05 threshold -> severity 16.40.
+        assert by_rule[residual_rule.id].severity == Decimal("16.40000000")
+        # Worst untargeted class is CASH at 350/500 = 0.70 against a 0.05 threshold -> 14.00.
+        assert by_rule[untargeted_rule.id].severity == Decimal("14.00000000")
+
+        # `Snapshot` (RFC-0009 §5.1): written on this same evaluate, sharing its run_id.
+        run_id = str(by_rule[residual_rule.id].run_id)
+        row = con.cursor().execute(
+            "SELECT portfolio_id, total_value, currency, allocation, by_bucket "
+            "FROM snapshot WHERE run_id = ?",
+            [run_id],
+        ).fetchone()
+        assert row is not None
+        assert row[0] == str(portfolio_id)
+        assert row[1] == Decimal("500.0000")
+        assert row[2] == "EUR"
+        allocation = json.loads(row[3])
+        assert allocation["CASH"]["value"] == "350.0000"
+        assert allocation["CASH"]["weight"] == "0.70000000"
+        assert allocation["EQUITY_GLOBAL"]["value"] == "50.0000"
+        assert allocation["EQUITY_DEVELOPED"]["value"] == "100.0000"
+        by_bucket = json.loads(row[4])
+        assert by_bucket[str(bucket_id)]["value"] == "60.0000"
+        assert by_bucket[str(bucket_id_2)]["value"] == "30.0000"
+        assert by_bucket["UNASSIGNED"]["value"] == "410.0000"
+        assert by_bucket["UNASSIGNED"]["weight"] == "0.82000000"
 
 
 class TestBucketRepositoryForPortfolio:

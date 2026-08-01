@@ -28,6 +28,7 @@ PortfolioId = NewType("PortfolioId", UUID)
 PriceId = NewType("PriceId", UUID)
 RecommendationId = NewType("RecommendationId", UUID)
 RuleId = NewType("RuleId", UUID)
+SnapshotId = NewType("SnapshotId", UUID)
 StrategyId = NewType("StrategyId", UUID)
 StrategyVersionId = NewType("StrategyVersionId", UUID)
 

@@ -10,10 +10,18 @@ compute `input_digest` -> construct `EvaluationRun` -> `evaluate(sv.rules, facts
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import date
+from decimal import Decimal
 
 from financeos.app.unit_of_work import UnitOfWork
-from financeos.core.decision import EvaluationRun
+from financeos.core.decision import (
+    UNASSIGNED,
+    EvaluationRun,
+    Snapshot,
+    SnapshotBucketLine,
+    SnapshotClassLine,
+)
 from financeos.core.engines import (
     FactSet,
     MaterializationResult,
@@ -21,6 +29,8 @@ from financeos.core.engines import (
     compute_apportionment,
     compute_drift,
     compute_holdings,
+    compute_residual,
+    compute_targets,
     decision_engine,
     evaluate,
     materialize,
@@ -28,15 +38,21 @@ from financeos.core.engines import (
     rule_engine,
     strategy_engine,
 )
+from financeos.core.market import PriceView
+from financeos.core.portfolio import Asset, Holding, ResidualComputation
 from financeos.core.shared import (
+    AssetId,
     Bound,
     BucketId,
     Currency,
     EvaluationRunId,
+    Instant,
     PortfolioId,
     RunMode,
     Scope,
     ScopeKind,
+    SkipReason,
+    SnapshotId,
     SourceRef,
     StrategyId,
     canonical_json,
@@ -106,7 +122,10 @@ def evaluate_strategy(
 
     sv = uow.strategies.current_version(resolved_strategy_id)
 
-    asset_ids = {h.asset_id for h in holdings}
+    # The Portfolio-wide holdings' Assets are pulled in alongside scope's own, so the
+    # `residual` fact below (portfolio-scoped by nature, ADR-0029) never needs a second
+    # repository round trip for Assets/prices `holdings` alone would not have covered.
+    asset_ids = {h.asset_id for h in holdings} | {h.asset_id for h in portfolio_holdings}
     assets = uow.assets.get_many(asset_ids)
     prices = uow.prices.price_latest(asset_ids, as_of=as_of)
 
@@ -114,6 +133,26 @@ def evaluate_strategy(
         holdings, assets, prices, scope=scope, as_of=as_of, currency=currency
     )
     comp = compute_drift(allocation, sv.targets, strategy_version_id=sv.id)
+    targets_facts = compute_targets(sv.targets, strategy_version_id=sv.id)
+
+    # `residual` (ADR-0029) is portfolio-scoped by nature — `unassigned_residual_above` has no
+    # `scope` param — so it always folds the Portfolio-wide apportionment chain, never the
+    # scope-narrowed `lines` above (that narrowing exists only for `over_apportioned`'s
+    # `FACT_APPORTIONMENT`, ADR-L04 §4.4).
+    portfolio_scope = Scope.for_portfolio(portfolio_id)
+    residual_apportionment = compute_apportionment(
+        records, portfolio_holdings, as_of=as_of, scope=portfolio_scope
+    )
+    residual_comp = compute_residual(
+        portfolio_holdings, residual_apportionment, assets, prices, as_of=as_of, currency=currency
+    )
+    residual = None
+    if residual_comp.is_available:
+        assert residual_comp.residual_weight is not None  # `is_available` guarantees this
+        residual = Bound(
+            value=residual_comp.residual_weight,
+            source=SourceRef.derived(engine="portfolio", inputs=residual_comp.input_refs),
+        )
 
     # `allocation`/`bucket_value` are assembled so `untargeted_allocation` (BLOCKER 1) and
     # `bucket_below_target_value` are actually evaluable in a real run rather than perpetually
@@ -127,14 +166,22 @@ def evaluate_strategy(
     }
     bucket_value = Bound(value=allocation.total_value, source=SourceRef.derived(engine="portfolio"))
 
+    unavailable: dict[str, SkipReason] = {}
+    if comp.unavailable is not None:
+        unavailable["drift"] = comp.unavailable
+    if residual_comp.unavailable is not None:
+        unavailable["residual"] = residual_comp.unavailable
+
     facts = FactSet(
         as_of=as_of,
         scope=scope,
         drift=comp.lines,
         allocation=allocation_facts,
+        targets=targets_facts,
+        residual=residual,
         bucket_value=bucket_value,
         apportionment=apportionment,
-        unavailable={"drift": comp.unavailable} if comp.unavailable else {},
+        unavailable=unavailable,
     )
 
     run = EvaluationRun(
@@ -155,8 +202,95 @@ def evaluate_strategy(
 
     firings = evaluate(sv.rules, facts)
     result = materialize(firings, sv, run, next_id=id_gen, recorded_at=now)
-    uow.evaluations.save(run, result.alerts, result.recommendations)
+    snapshot = _build_snapshot(
+        uow,
+        id_gen,
+        portfolio_id=portfolio_id,
+        portfolio_holdings=portfolio_holdings,
+        portfolio_scope=portfolio_scope,
+        assets=assets,
+        prices=prices,
+        residual_comp=residual_comp,
+        as_of=as_of,
+        currency=currency,
+        run_id=run.id,
+        recorded_at=now,
+    )
+    uow.evaluations.save(run, result.alerts, result.recommendations, snapshot)
     return result
+
+
+def _build_snapshot(
+    uow: UnitOfWork,
+    id_gen: IdGen,
+    *,
+    portfolio_id: PortfolioId,
+    portfolio_holdings: Sequence[Holding],
+    portfolio_scope: Scope,
+    assets: Mapping[AssetId, Asset],
+    prices: Mapping[AssetId, PriceView],
+    residual_comp: ResidualComputation,
+    as_of: date,
+    currency: Currency,
+    run_id: EvaluationRunId,
+    recorded_at: Instant,
+) -> Snapshot:
+    """Build the Portfolio-wide checkpoint written on every evaluate (RFC-0009 §5.1).
+
+    Reuses the Portfolio-wide `holdings`/`assets`/`prices` and `residual_comp` the caller
+    already assembled for the `residual` fact — a Snapshot is the same valuation, just kept
+    rather than discarded after the rules run.
+    """
+    portfolio_allocation = compute_allocation(
+        portfolio_holdings, assets, prices, scope=portfolio_scope, as_of=as_of, currency=currency
+    )
+    total = portfolio_allocation.total_value.amount
+
+    classes = {
+        asset_class: SnapshotClassLine(value=line.value.amount, weight=line.weight.value)
+        for asset_class, line in portfolio_allocation.lines.items()
+    }
+
+    buckets: dict[str, SnapshotBucketLine] = {}
+    for bucket_id in uow.buckets.for_portfolio(portfolio_id):
+        bucket_holdings = tuple(
+            vh.as_holding() for vh in uow.apportionments.virtual_holdings(bucket_id, as_of=as_of)
+        )
+        bucket_allocation = compute_allocation(
+            bucket_holdings,
+            assets,
+            prices,
+            scope=Scope.for_bucket(bucket_id),
+            as_of=as_of,
+            currency=currency,
+        )
+        bucket_value = bucket_allocation.total_value.amount
+        buckets[str(bucket_id)] = SnapshotBucketLine(
+            value=bucket_value, weight=_share(bucket_value, total)
+        )
+
+    if residual_comp.is_available:
+        assert residual_comp.residual_weight is not None  # `is_available` guarantees this
+        buckets[UNASSIGNED] = SnapshotBucketLine(
+            value=residual_comp.unassigned_value.amount, weight=residual_comp.residual_weight
+        )
+
+    return Snapshot(
+        id=SnapshotId(id_gen()),
+        portfolio_id=portfolio_id,
+        as_of=as_of,
+        run_id=run_id,
+        total_value=total,
+        currency=currency,
+        allocation=classes,
+        by_bucket=buckets,
+        recorded_at=recorded_at,
+    )
+
+
+def _share(value: Decimal, total: Decimal) -> Decimal:
+    """`value / total`, or zero when the Portfolio has no value."""
+    return Decimal(0) if total == 0 else value / total
 
 
 def _input_digest(facts: FactSet) -> str:
@@ -176,6 +310,11 @@ def _input_digest(facts: FactSet) -> str:
             asset_class: bound.value.model_dump(mode="json")
             for asset_class, bound in facts.allocation.items()
         },
+        "targets": {
+            asset_class: bound.value.model_dump(mode="json")
+            for asset_class, bound in facts.targets.items()
+        },
+        "residual": facts.residual.value if facts.residual is not None else None,
         "bucket_value": (
             facts.bucket_value.value.model_dump(mode="json")
             if facts.bucket_value is not None

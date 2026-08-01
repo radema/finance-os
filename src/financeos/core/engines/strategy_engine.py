@@ -12,6 +12,7 @@ The skeleton authors a depth-1 tree, which this general implementation treats as
 case it is — no rewrite when hierarchy arrives (ADR-0017).
 """
 
+from collections.abc import Mapping
 from decimal import Decimal
 from typing import Final
 
@@ -33,7 +34,7 @@ from financeos.core.shared.numbers import (
     WEIGHT_SCALE,
     quantize,
 )
-from financeos.core.strategy import DriftComputation, DriftLine, TargetAllocation
+from financeos.core.strategy import DriftComputation, DriftLine, LeafTarget, TargetAllocation
 
 ENGINE_VERSION: Final = "1.0.0"
 ENGINE_NAME: Final = "strategy"
@@ -111,6 +112,31 @@ def compute_drift(
     return DriftComputation(
         scope=allocation.scope, as_of=allocation.as_of, total_value=total, lines=lines
     )
+
+
+def compute_targets(
+    targets: TargetAllocation, *, strategy_version_id: StrategyVersionId
+) -> Mapping[AssetClass, Bound[LeafTarget]]:
+    """Resolve the frozen target tree to its leaves as `targets` facts (RFC-0006 §4, ADR-L05).
+
+    A pure resolution of the tree already frozen inside the `StrategyVersion` — not a
+    financial computation (RFC-0006 §3.1) — so `untargeted_allocation` can test target
+    membership without depending on `drift` being computable (ADR-L05 §5).
+
+    Args:
+        targets: The frozen target tree of the governing `StrategyVersion`.
+        strategy_version_id: Pinned in every fact's source, mirroring `compute_drift` (I-11).
+
+    Returns:
+        One `Bound[LeafTarget]` per targeted leaf.
+    """
+    version_ref = entity_ref(REF_STRATEGY_VERSION, strategy_version_id)
+    return {
+        asset_class: Bound(
+            value=leaf, source=SourceRef.derived(engine=ENGINE_NAME, inputs=(version_ref,))
+        )
+        for asset_class, leaf in targets.leaves().items()
+    }
 
 
 def _unavailable_reason(allocation: AllocationBreakdown) -> SkipReason | None:

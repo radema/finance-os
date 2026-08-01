@@ -5,9 +5,13 @@ from decimal import Decimal
 
 import pytest
 
-from financeos.core.engines.portfolio_engine import compute_allocation, compute_holdings
-from financeos.core.portfolio import OperationType
-from financeos.core.shared import AccountId, AssetId, Money, Scope
+from financeos.core.engines.portfolio_engine import (
+    compute_allocation,
+    compute_holdings,
+    compute_residual,
+)
+from financeos.core.portfolio import ApportionmentLine, OperationType
+from financeos.core.shared import AccountId, AssetId, Money, Scope, SkipReason
 from financeos.core.shared.errors import CurrencyMismatchError
 from tests import factories as f
 
@@ -157,4 +161,87 @@ class TestComputeAllocation:
         with pytest.raises(KeyError):
             compute_allocation(
                 holdings, ASSETS, PRICES, scope=f.BUCKET_SCOPE, as_of=f.AS_OF, currency="EUR"
+            )
+
+
+class TestComputeResidual:
+    """ADR-0029: the `UNASSIGNED` residual, valued Portfolio-wide."""
+
+    def test_fully_apportioned_holdings_have_zero_residual(self) -> None:
+        holdings = compute_holdings([f.operation(1, qty="34")], as_of=f.AS_OF)
+        apportionment = [
+            ApportionmentLine(
+                asset_id=f.EQUITY, apportioned_quantity=Decimal(34), holding_quantity=Decimal(34)
+            )
+        ]
+        comp = compute_residual(
+            holdings, apportionment, ASSETS, PRICES, as_of=f.AS_OF, currency="EUR"
+        )
+        assert comp.is_available
+        assert comp.residual_weight == Decimal("0.00000000")
+        assert comp.unassigned_value == Money.zero("EUR")
+
+    def test_a_partially_apportioned_holding_leaves_a_positive_residual(self) -> None:
+        holdings = compute_holdings([f.operation(1, qty="100")], as_of=f.AS_OF)
+        apportionment = [
+            ApportionmentLine(
+                asset_id=f.EQUITY, apportioned_quantity=Decimal(88), holding_quantity=Decimal(100)
+            )
+        ]
+        comp = compute_residual(
+            holdings, apportionment, ASSETS, PRICES, as_of=f.AS_OF, currency="EUR"
+        )
+        assert comp.is_available
+        # 12 unassigned of 100 held -> 12%.
+        assert comp.residual_weight == Decimal("0.12000000")
+        assert comp.unassigned_value == f.money("1200")
+
+    def test_an_over_apportioned_holding_drives_the_residual_negative(self) -> None:
+        """RFC-0010:123 / RFC-0011 §12.4 item 3: the signed residual may legitimately go
+        negative when Σ apportioned exceeds the Holding (`over_apportioned`'s territory)."""
+        holdings = compute_holdings([f.operation(1, qty="100")], as_of=f.AS_OF)
+        apportionment = [
+            ApportionmentLine(
+                asset_id=f.EQUITY, apportioned_quantity=Decimal(110), holding_quantity=Decimal(100)
+            )
+        ]
+        comp = compute_residual(
+            holdings, apportionment, ASSETS, PRICES, as_of=f.AS_OF, currency="EUR"
+        )
+        assert comp.is_available
+        assert comp.residual_weight == Decimal("-0.10000000")
+        assert comp.unassigned_value == f.money("-1000")
+
+    def test_an_asset_absent_from_apportionment_is_wholly_unassigned(self) -> None:
+        holdings = compute_holdings([f.operation(1, qty="34")], as_of=f.AS_OF)
+        comp = compute_residual(holdings, [], ASSETS, PRICES, as_of=f.AS_OF, currency="EUR")
+        assert comp.residual_weight == Decimal("1.00000000")
+        assert comp.unassigned_value == f.money("3400")
+
+    def test_an_unpriced_holding_is_missing_fact(self) -> None:
+        holdings = compute_holdings(
+            [f.operation(1, qty="34"), f.operation(2, asset_id=f.BOND, qty="66")], as_of=f.AS_OF
+        )
+        comp = compute_residual(
+            holdings, [], ASSETS, {f.EQUITY: PRICES[f.EQUITY]}, as_of=f.AS_OF, currency="EUR"
+        )
+        assert not comp.is_available
+        assert comp.unavailable is SkipReason.MISSING_FACT
+        assert comp.residual_weight is None
+
+    def test_a_zero_value_portfolio_is_zero_portfolio_value(self) -> None:
+        comp = compute_residual([], [], ASSETS, PRICES, as_of=f.AS_OF, currency="EUR")
+        assert not comp.is_available
+        assert comp.unavailable is SkipReason.ZERO_PORTFOLIO_VALUE
+
+    def test_i15_a_foreign_currency_price_is_a_domain_error(self) -> None:
+        holdings = compute_holdings([f.operation(1, qty="10")], as_of=f.AS_OF)
+        with pytest.raises(CurrencyMismatchError):
+            compute_residual(
+                holdings,
+                [],
+                ASSETS,
+                {f.EQUITY: f.price(f.EQUITY, "100", currency="USD")},
+                as_of=f.AS_OF,
+                currency="EUR",
             )

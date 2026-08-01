@@ -26,7 +26,7 @@ from financeos.core.engines.rule_engine import (
     UntargetedAllocationParams,
     evaluate,
 )
-from financeos.core.engines.strategy_engine import compute_drift
+from financeos.core.engines.strategy_engine import compute_drift, compute_targets
 from financeos.core.portfolio import ApportionmentLine, ApportionmentRecord, Holding
 from financeos.core.shared import (
     AssetId,
@@ -84,7 +84,14 @@ def _untargeted_allocation_facts(current_pct: str, held_pct: str) -> FactSet:
     }
     targets = f.flat_targets(("EQUITY_DEVELOPED", "1.0", f.absolute("0.9")))
     comp = compute_drift(breakdown, targets, strategy_version_id=f.VERSION)
-    return FactSet(as_of=f.AS_OF, scope=f.BUCKET_SCOPE, allocation=allocation, drift=comp.lines)
+    target_facts = compute_targets(targets, strategy_version_id=f.VERSION)
+    return FactSet(
+        as_of=f.AS_OF,
+        scope=f.BUCKET_SCOPE,
+        allocation=allocation,
+        drift=comp.lines,
+        targets=target_facts,
+    )
 
 
 def _untargeted_allocation_rule(threshold_weight: str = "0.05") -> Rule:
@@ -178,8 +185,13 @@ class TestUntargetedAllocation:
         }
         targets = f.flat_targets(("EQUITY_DEVELOPED", "1.0", f.absolute("0.9")))
         comp = compute_drift(breakdown, targets, strategy_version_id=f.VERSION)
+        target_facts = compute_targets(targets, strategy_version_id=f.VERSION)
         facts = FactSet(
-            as_of=f.AS_OF, scope=f.BUCKET_SCOPE, allocation=allocation, drift=comp.lines
+            as_of=f.AS_OF,
+            scope=f.BUCKET_SCOPE,
+            allocation=allocation,
+            drift=comp.lines,
+            targets=target_facts,
         )
 
         (firing,) = evaluate((_untargeted_allocation_rule("0.05"),), facts)

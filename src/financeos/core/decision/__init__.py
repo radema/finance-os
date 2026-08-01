@@ -12,6 +12,12 @@ from financeos.core.decision.artifacts import (
     Recommendation,
 )
 from financeos.core.decision.firing import RuleFiring
+from financeos.core.decision.snapshot import (
+    UNASSIGNED,
+    Snapshot,
+    SnapshotBucketLine,
+    SnapshotClassLine,
+)
 from financeos.core.decision.trace import (
     TRACE_VERSION,
     Binding,
@@ -26,6 +32,7 @@ from financeos.core.decision.trace import (
 
 __all__ = [
     "TRACE_VERSION",
+    "UNASSIGNED",
     "Alert",
     "Binding",
     "ConditionRef",
@@ -35,6 +42,9 @@ __all__ = [
     "Provenance",
     "Recommendation",
     "RuleFiring",
+    "Snapshot",
+    "SnapshotBucketLine",
+    "SnapshotClassLine",
     "StaleFactNote",
     "Step",
     "StepOp",
