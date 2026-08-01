@@ -81,6 +81,14 @@ class BucketRepository(Protocol):
     def get(self, bucket_id: BucketId) -> Bucket: ...
     def all_ids(self) -> tuple[BucketId, ...]: ...
 
+    def for_portfolio(self, portfolio_id: PortfolioId) -> tuple[BucketId, ...]:
+        """Every Bucket belonging to `portfolio_id` (review MAJOR 3).
+
+        `all_ids` is unfiltered across the whole store; `evaluate_strategy`'s apportionment
+        fold must never pull in another Portfolio's `bucket_apportionment` chain.
+        """
+        ...
+
 
 class ApportionmentRepository(Protocol):
     """`bucket_apportionment` — temporal append-only supersession (ADR-0025)."""

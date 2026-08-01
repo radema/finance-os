@@ -71,3 +71,9 @@ class DuckDBBucketRepository:
     def all_ids(self) -> tuple[BucketId, ...]:
         rows = self._con.execute("SELECT id FROM bucket ORDER BY id").fetchall()
         return tuple(BucketId(UUID(row[0])) for row in rows)
+
+    def for_portfolio(self, portfolio_id: PortfolioId) -> tuple[BucketId, ...]:
+        rows = self._con.execute(
+            "SELECT id FROM bucket WHERE portfolio_id = ? ORDER BY id", [str(portfolio_id)]
+        ).fetchall()
+        return tuple(BucketId(UUID(row[0])) for row in rows)
