@@ -14,6 +14,8 @@ from decimal import Decimal
 from uuid import UUID
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 from pydantic import ValidationError
 
 from financeos.core.engines.portfolio_engine import compute_allocation, compute_apportionment
@@ -29,28 +31,38 @@ from financeos.core.portfolio import ApportionmentLine, ApportionmentRecord, Hol
 from financeos.core.shared import (
     AssetId,
     Bound,
+    BucketId,
     Outcome,
     Priority,
+    Quantity,
     Scope,
     SkipReason,
     SourceRef,
     SuggestionClass,
+    label,
 )
 from financeos.core.strategy import LeafCondition, Rule
 from tests import factories as f
 
 PORTFOLIO_SCOPE = Scope.for_portfolio(f.PORTFOLIO)
 
+#: `st.decimals` bounds shared by the `compute_apportionment` property tests (MAJOR 5).
+APPORTIONED_QUANTITIES = st.decimals(
+    min_value=Decimal("-1000"), max_value=Decimal("1000"), places=4, allow_nan=False
+)
+
 # --------------------------------------------------------------------------------------
 # untargeted_allocation
 # --------------------------------------------------------------------------------------
 
 GLOBAL_EQUITY = AssetId(UUID(int=60))
+COMMODITIES = AssetId(UUID(int=62))
 
 
 def _untargeted_allocation_facts(current_pct: str, held_pct: str) -> FactSet:
-    """An `allocation` fact for one untargeted class at `current_pct`, plus a targeted class
-    holding the rest, so the untargeted class's weight is exactly `current_pct`."""
+    """`GLOBAL_EQUITY` untargeted at `current_pct` of the scope; `f.EQUITY` targeted and
+    holding `held_pct` — so BLOCKER 1's fix is exercised against a scope where a held class
+    genuinely has a target, not one where nothing does."""
     assets = {
         GLOBAL_EQUITY: f.asset(GLOBAL_EQUITY, "EQUITY_GLOBAL", name="Global ETF"),
         f.EQUITY: f.asset(f.EQUITY, "EQUITY_DEVELOPED"),
@@ -70,7 +82,9 @@ def _untargeted_allocation_facts(current_pct: str, held_pct: str) -> FactSet:
         asset_class: Bound(value=line, source=SourceRef.derived(engine="portfolio"))
         for asset_class, line in breakdown.lines.items()
     }
-    return FactSet(as_of=f.AS_OF, scope=f.BUCKET_SCOPE, allocation=allocation)
+    targets = f.flat_targets(("EQUITY_DEVELOPED", "1.0", f.absolute("0.9")))
+    comp = compute_drift(breakdown, targets, strategy_version_id=f.VERSION)
+    return FactSet(as_of=f.AS_OF, scope=f.BUCKET_SCOPE, allocation=allocation, drift=comp.lines)
 
 
 def _untargeted_allocation_rule(threshold_weight: str = "0.05") -> Rule:
@@ -84,7 +98,6 @@ def _untargeted_allocation_rule(threshold_weight: str = "0.05") -> Rule:
             kind="untargeted_allocation",
             kind_version=1,
             params={
-                "asset_class": "EQUITY_GLOBAL",
                 "scope": f.BUCKET_SCOPE.ref,
                 "threshold_weight": threshold_weight,
             },
@@ -96,48 +109,97 @@ class TestUntargetedAllocation:
     def test_threshold_weight_zero_is_rejected_at_construction(self) -> None:
         """D6 (ADR-L04 §4.7, ratified P30)."""
         with pytest.raises(ValidationError):
-            UntargetedAllocationParams(
-                asset_class="EQUITY_GLOBAL", scope="x", threshold_weight=Decimal(0)
-            )
+            UntargetedAllocationParams(scope="x", threshold_weight=Decimal(0))
 
     def test_negative_threshold_weight_is_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            UntargetedAllocationParams(
-                asset_class="EQUITY_GLOBAL", scope="x", threshold_weight=Decimal("-0.05")
-            )
+            UntargetedAllocationParams(scope="x", threshold_weight=Decimal("-0.05"))
 
-    def test_exactly_at_the_threshold_does_not_fire_and_severity_is_one(self) -> None:
-        facts = _untargeted_allocation_facts("5", "95")
+    def test_does_not_fire_on_a_class_that_is_targeted(self) -> None:
+        """BLOCKER 1 (review): the predicate must check the class actually has no target — a
+        held class far above `threshold_weight` (97%, targeted here) must never drive this
+        kind's predicate; only the untargeted class (3%, below threshold) is a candidate."""
+        facts = _untargeted_allocation_facts("3", "97")
         (firing,) = evaluate((_untargeted_allocation_rule("0.05"),), facts)
         assert firing.outcome is Outcome.NOT_FIRED
-        assert firing.severity == Decimal("1.00000000")
+        assert firing.severity is None
 
-    def test_above_the_threshold_fires(self) -> None:
+    def test_a_single_untargeted_class_breach_fires(self) -> None:
         facts = _untargeted_allocation_facts("10", "90")
         (firing,) = evaluate((_untargeted_allocation_rule("0.05"),), facts)
         assert firing.outcome is Outcome.FIRED
         assert firing.severity == Decimal("2.00000000")
 
-    def test_a_class_not_held_at_all_is_skipped_with_missing_fact(self) -> None:
-        facts = _untargeted_allocation_facts("10", "90")
-        rule = Rule(
-            id=f.rule_id(1),
-            name="x",
-            priority=Priority.HIGH,
-            suggestion_class=SuggestionClass.REVIEW_STRATEGY,
-            message="x",
-            condition=LeafCondition(
-                kind="untargeted_allocation",
-                kind_version=1,
-                params={
-                    "asset_class": "REAL_ESTATE",
-                    "scope": f.BUCKET_SCOPE.ref,
-                    "threshold_weight": "0.05",
-                },
-            ),
+    def test_exactly_at_the_threshold_does_not_fire_with_no_severity(self) -> None:
+        """ADR-L05: the sole candidate drops out of the (empty) affected set at the boundary —
+        `severity = None`, not `1.00` (open-interval shape, same as `over_apportioned`)."""
+        facts = _untargeted_allocation_facts("5", "95")
+        (firing,) = evaluate((_untargeted_allocation_rule("0.05"),), facts)
+        assert firing.outcome is Outcome.NOT_FIRED
+        assert firing.severity is None
+
+    def test_the_boundary_is_a_limit_never_attained_on_a_fired_row(self) -> None:
+        """ADR-L05 §3: the predicate is a strict `gt`, so `severity == 1.00` is a limit
+        approached from above, never an attained value on a `FIRED` row.
+
+        Amounts large enough that the 1-unit-of-cent breach survives `Money`'s
+        `DECIMAL(19,4)` rounding (a tiny fractional quantity at `Weight`'s own 8-decimal
+        scale would round away before the weight division ever sees it)."""
+        facts = _untargeted_allocation_facts("50000.01", "949999.99")
+        (firing,) = evaluate((_untargeted_allocation_rule("0.05"),), facts)
+        assert firing.outcome is Outcome.FIRED
+        assert firing.severity is not None
+        assert Decimal("1.00000000") < firing.severity < Decimal("1.00000100")
+
+    def test_multiple_simultaneous_breaches_take_the_worst_severity(self) -> None:
+        """ADR-L05 §3: severity is the worst affected class's ratio, not a sum; the message
+        names every affected class."""
+        assets = {
+            GLOBAL_EQUITY: f.asset(GLOBAL_EQUITY, "EQUITY_GLOBAL", name="Global ETF"),
+            COMMODITIES: f.asset(COMMODITIES, "COMMODITIES", name="Commodities ETF"),
+            f.EQUITY: f.asset(f.EQUITY, "EQUITY_DEVELOPED"),
+        }
+        prices = {
+            GLOBAL_EQUITY: f.price(GLOBAL_EQUITY, "1", n=61),
+            COMMODITIES: f.price(COMMODITIES, "1", n=62),
+            f.EQUITY: f.price(f.EQUITY, "1", n=1),
+        }
+        holdings = [
+            Holding(asset_id=GLOBAL_EQUITY, quantity=f.quantity("10")),  # 10%, breaches
+            Holding(asset_id=COMMODITIES, quantity=f.quantity("20")),  # 20%, breaches, worst
+            Holding(asset_id=f.EQUITY, quantity=f.quantity("70")),  # targeted, excluded
+        ]
+        breakdown = compute_allocation(
+            holdings, assets, prices, scope=f.BUCKET_SCOPE, as_of=f.AS_OF, currency="EUR"
         )
-        (firing,) = evaluate((rule,), facts)
-        assert firing.outcome is Outcome.SKIPPED
+        allocation = {
+            asset_class: Bound(value=line, source=SourceRef.derived(engine="portfolio"))
+            for asset_class, line in breakdown.lines.items()
+        }
+        targets = f.flat_targets(("EQUITY_DEVELOPED", "1.0", f.absolute("0.9")))
+        comp = compute_drift(breakdown, targets, strategy_version_id=f.VERSION)
+        facts = FactSet(
+            as_of=f.AS_OF, scope=f.BUCKET_SCOPE, allocation=allocation, drift=comp.lines
+        )
+
+        (firing,) = evaluate((_untargeted_allocation_rule("0.05"),), facts)
+        assert firing.outcome is Outcome.FIRED
+        # worst affected: COMMODITIES at 20% / 5% threshold = 4.00
+        assert firing.severity == Decimal("4.00000000")
+        expected_labels = ", ".join(label(ac) for ac in sorted(("COMMODITIES", "EQUITY_GLOBAL")))
+        assert firing.trace.message_bindings["asset_class_labels"] == expected_labels
+
+    def test_severity_is_monotonic_in_the_breach_magnitude(self) -> None:
+        """MAJOR 7 (review): a representative monotonicity case per formula-bearing kind."""
+        (nearer,) = evaluate(
+            (_untargeted_allocation_rule("0.05"),), _untargeted_allocation_facts("6", "94")
+        )
+        (further,) = evaluate(
+            (_untargeted_allocation_rule("0.05"),), _untargeted_allocation_facts("20", "80")
+        )
+        assert nearer.severity is not None
+        assert further.severity is not None
+        assert nearer.severity < further.severity
 
 
 # --------------------------------------------------------------------------------------
@@ -192,6 +254,14 @@ class TestUnassignedResidualAbove:
         assert firing.outcome is Outcome.NOT_FIRED
         assert firing.severity == Decimal("-0.50000000")
 
+    def test_severity_is_monotonic_in_the_residual(self) -> None:
+        """MAJOR 7 (review): a representative monotonicity case per formula-bearing kind."""
+        (nearer,) = evaluate((_residual_rule("0.10"),), _residual_facts("0.11"))
+        (further,) = evaluate((_residual_rule("0.10"),), _residual_facts("0.30"))
+        assert nearer.severity is not None
+        assert further.severity is not None
+        assert nearer.severity < further.severity
+
 
 # --------------------------------------------------------------------------------------
 # allocation_absent
@@ -235,18 +305,38 @@ class TestAllocationAbsent:
         assert firing.outcome is Outcome.NOT_FIRED
         assert firing.severity is None
 
+    def test_does_not_skip_when_only_the_drift_family_is_flagged_unavailable(self) -> None:
+        """MAJOR 6 (review): `allocation_absent` declares `allocation` in `required_facts`,
+        not `drift` — an unrelated rule's `drift`-family outage (zero portfolio value, an
+        unpriced asset elsewhere in scope) must not gate this kind, since its own class line
+        is fine here regardless."""
+        from tests.test_strategy_engine import allocation_of
+
+        computation = compute_drift(
+            allocation_of((f.BOND, "100")), f.DEMO_TARGETS, strategy_version_id=f.VERSION
+        )
+        facts = FactSet(
+            as_of=f.AS_OF,
+            scope=f.BUCKET_SCOPE,
+            drift=computation.lines,
+            unavailable={"drift": SkipReason.ZERO_PORTFOLIO_VALUE},
+        )
+        (firing,) = evaluate((_allocation_absent_rule("EQUITY_DEVELOPED"),), facts)
+        assert firing.outcome is Outcome.FIRED
+        assert firing.severity is None
+
 
 # --------------------------------------------------------------------------------------
 # bucket_below_target_value
 # --------------------------------------------------------------------------------------
 
 
-def _bucket_value_facts(amount: str) -> FactSet:
+def _bucket_value_facts(amount: str, *, currency: str = "EUR") -> FactSet:
     return FactSet(
         as_of=f.AS_OF,
         scope=f.BUCKET_SCOPE,
         bucket_value=Bound(
-            value=f.money(amount), source=SourceRef.derived(engine="portfolio")
+            value=f.money(amount, currency), source=SourceRef.derived(engine="portfolio")
         ),
     )
 
@@ -315,6 +405,31 @@ class TestBucketBelowTargetValue:
         for step in firing.trace.steps:
             for name in step.inputs:
                 assert name.partition(".")[0] in bound_names | step_outputs
+
+    def test_currency_mismatch_errors_rather_than_computing_a_bogus_severity(self) -> None:
+        """MAJOR 4 (review, I-15): `fact.value.currency` vs `target_currency` must be checked
+        before any arithmetic — a mismatch is `Outcome.ERROR` with a NULL severity, never a
+        ratio computed across currencies."""
+        facts = _bucket_value_facts("18014.80", currency="USD")
+        (firing,) = evaluate((_bucket_below_target_value_rule("24000.00"),), facts)
+        assert firing.outcome is Outcome.ERROR
+        assert firing.severity is None
+
+    def test_severity_is_monotonic_in_the_shortfall(self) -> None:
+        """MAJOR 7 (review): a representative monotonicity case per formula-bearing kind."""
+        (at_target,) = evaluate(
+            (_bucket_below_target_value_rule("24000.00"),), _bucket_value_facts("24000.00")
+        )
+        (partial,) = evaluate(
+            (_bucket_below_target_value_rule("24000.00"),), _bucket_value_facts("18014.80")
+        )
+        (empty,) = evaluate(
+            (_bucket_below_target_value_rule("24000.00"),), _bucket_value_facts("0")
+        )
+        assert at_target.severity is not None
+        assert partial.severity is not None
+        assert empty.severity is not None
+        assert at_target.severity < partial.severity < empty.severity
 
 
 # --------------------------------------------------------------------------------------
@@ -522,26 +637,51 @@ class TestComputeApportionment:
         )
         assert lines[0].apportioned_quantity == Decimal("53.0000000000")
 
-    @pytest.mark.parametrize("n_buckets", [1, 2, 5])
+    @given(st.lists(APPORTIONED_QUANTITIES, min_size=1, max_size=6))
     def test_property_every_emitted_line_has_apportioned_quantity_above_zero(
-        self, n_buckets: int
+        self, quantities: list[Decimal]
     ) -> None:
-        """The property that keeps `over_apportioned`'s severity denominator safe."""
-        records = []
-        for index in range(n_buckets):
-            records.append(
-                ApportionmentRecord(
-                    id=UUID(int=100 + index),
-                    bucket_id=f.BUCKET,
-                    asset_id=AssetId(UUID(int=200 + index)),
-                    quantity=f.quantity(str(index)),  # includes a zero quantity
-                    effective_from=date(2026, 1, 1),
-                    recorded_at=datetime.fromisoformat("2026-01-01T00:00:00+00:00"),
-                )
+        """MAJOR 5 (review): the old example test gave each record a distinct Asset, so it
+        never exercised the same-Asset accumulation `compute_apportionment` actually performs
+        across Buckets — negative per-bucket quantities and a cancelling sum could never
+        arise. Each generated quantity here is a *different Bucket's* chain for the *same*
+        Asset, so Hypothesis can and does generate both."""
+        records = [
+            ApportionmentRecord(
+                id=UUID(int=500 + index),
+                bucket_id=BucketId(UUID(int=600 + index)),
+                asset_id=FUND,
+                quantity=Quantity(amount=quantity),
+                effective_from=date(2026, 1, 1),
+                recorded_at=datetime.fromisoformat("2026-01-01T00:00:00+00:00"),
             )
-        holdings: list[Holding] = []
-        lines = compute_apportionment(records, holdings, as_of=f.AS_OF, scope=PORTFOLIO_SCOPE)
+            for index, quantity in enumerate(quantities)
+        ]
+        lines = compute_apportionment(records, [], as_of=f.AS_OF, scope=PORTFOLIO_SCOPE)
         assert all(line.apportioned_quantity > 0 for line in lines)
+
+    def test_a_cancelling_sum_across_two_buckets_emits_no_line(self) -> None:
+        """ΣA == 0 for one Asset across two Buckets' chains: not a line, not a zero line."""
+        records = [
+            ApportionmentRecord(
+                id=UUID(int=501),
+                bucket_id=BucketId(UUID(int=601)),
+                asset_id=FUND,
+                quantity=Quantity(amount=Decimal("30")),
+                effective_from=date(2026, 1, 1),
+                recorded_at=datetime.fromisoformat("2026-01-01T00:00:00+00:00"),
+            ),
+            ApportionmentRecord(
+                id=UUID(int=502),
+                bucket_id=BucketId(UUID(int=602)),
+                asset_id=FUND,
+                quantity=Quantity(amount=Decimal("-30")),
+                effective_from=date(2026, 1, 1),
+                recorded_at=datetime.fromisoformat("2026-01-01T00:00:00+00:00"),
+            ),
+        ]
+        lines = compute_apportionment(records, [], as_of=f.AS_OF, scope=PORTFOLIO_SCOPE)
+        assert lines == ()
 
 
 # --------------------------------------------------------------------------------------
@@ -571,16 +711,14 @@ FIRING_FIXTURES: dict[str, tuple[Rule, FactSet]] = {
 #: Kinds that declare a `severity` formula, each at the exact boundary of its own firing
 #: threshold: `NOT_FIRED`, `severity == 1.00000000` (ADR-L02 §4.6 / ADR-L04 §4.5, §4.7's
 #: generalized registry property). `allocation_absent` declares `severity = None` and has no
-#: anchor to check. `over_apportioned` is a documented exception (ADR-L04 §4.5): its firing
-#: range is the *open* interval `(1, 2]` — an asset exactly at `A == H` drops out of the
-#: affected set entirely (the empty-affected-set `NOT_FIRED`/`severity = None` case), so `1.00`
-#: is approached only in the limit, never attained on any row. See
-#: `TestOverApportioned.test_severity_is_a_strict_lower_bound_approached_in_the_limit`.
+#: anchor to check. `over_apportioned` and `untargeted_allocation` are documented exceptions
+#: (ADR-L04 §4.5, ADR-L05 §3 respectively — see `OPEN_INTERVAL_KINDS` in
+#: `test_condition_registry.py`): their firing ranges are *open* — the sole/worst candidate
+#: exactly at its threshold drops out of the affected set entirely (the empty-affected-set
+#: `NOT_FIRED`/`severity = None` case), so `1.00` is approached only in the limit, never
+#: attained on any row. See `TestOverApportioned.test_severity_is_a_strict_lower_bound_...`
+#: and `TestUntargetedAllocation.test_the_boundary_is_a_limit_never_attained_on_a_fired_row`.
 ANCHOR_FIXTURES: dict[str, tuple[Rule, FactSet]] = {
-    "untargeted_allocation": (
-        _untargeted_allocation_rule("0.05"),
-        _untargeted_allocation_facts("5", "95"),
-    ),
     "unassigned_residual_above": (_residual_rule("0.10"), _residual_facts("0.10")),
     "bucket_below_target_value": (
         _bucket_below_target_value_rule("24000.00"),

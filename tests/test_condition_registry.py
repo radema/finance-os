@@ -36,6 +36,15 @@ from tests import factories as f
 from tests.test_rule_engine import BREACHED, facts_for
 from tests.test_rule_engine_v1_kinds import ANCHOR_FIXTURES, FIRING_FIXTURES
 
+#: Kinds whose declared formula's own firing predicate makes `severity == 1.00000000` a limit
+#: approached from above, never attained on a `FIRED` row (review MAJOR 7): the boundary case
+#: drops the sole/worst candidate out of the affected set instead of firing at exactly 1.00.
+#: `over_apportioned` (ADR-L04 §4.5) is bounded above at 2.00; `untargeted_allocation`
+#: (ADR-L05 §3) is unbounded above. Both are tested for their own open-interval boundary
+#: elsewhere (`TestOverApportioned`, `TestUntargetedAllocation`), not against the exact-1.0
+#: anchor assertion below.
+OPEN_INTERVAL_KINDS: frozenset[str] = frozenset({"over_apportioned", "untargeted_allocation"})
+
 #: The complete registration of a well-formed kind, used as the baseline every "missing
 #: component" case is derived from.
 COMPLETE: dict[str, Any] = {
@@ -164,13 +173,33 @@ class TestTheShippedCatalog:
         spec = REGISTRY.get("drift_outside_tolerance", 1)
         assert spec.severity.formula == "|drift| / effective_band"
 
+    @pytest.mark.parametrize("spec", REGISTRY.all_kinds(), ids=lambda spec: spec.kind)
+    def test_every_formula_kind_has_an_anchor_fixture_or_a_documented_exemption(
+        self, spec: ConditionKindSpec[Any]
+    ) -> None:
+        """ADR-L04 §6.1: 'the suite fails if a kind is registered with a formula and no
+        anchor case.' Registry-driven (`REGISTRY.all_kinds()`), not the hand-maintained kind
+        list the boundary test below used to parametrize over — that list silently skipped a
+        kind with a formula and no anchor fixture (review MAJOR 7)."""
+        if spec.severity.formula is None:
+            return  # a legitimate `null` declaration (ADR-L02 §4.3) has no anchor to check
+        if spec.kind == "drift_outside_tolerance":
+            return  # tested directly below, against its own `facts_for` fixture
+        assert spec.kind in ANCHOR_FIXTURES or spec.kind in OPEN_INTERVAL_KINDS, (
+            f"{spec.kind}: declares a severity formula but has neither an ANCHOR_FIXTURES "
+            "entry nor an OPEN_INTERVAL_KINDS exemption"
+        )
+
     @pytest.mark.parametrize("kind", sorted(ANCHOR_FIXTURES) + ["drift_outside_tolerance"])
     def test_severity_equals_one_exactly_at_the_kind_s_own_firing_threshold(
         self, kind: str
     ) -> None:
         """The generalized registry property (ADR-L02 §4.6, ADR-L04 §4.5/§4.7): for every
-        kind declaring a `severity` formula, `1.00000000` sits exactly on the boundary — the
-        last `NOT_FIRED` state before the predicate flips."""
+        kind declaring a `severity` formula and not in `OPEN_INTERVAL_KINDS`, `1.00000000`
+        sits exactly on the boundary — the last `NOT_FIRED` state before the predicate flips.
+        `over_apportioned` and `untargeted_allocation` are excluded here (open-interval
+        formulas, tested for their own boundary in `TestOverApportioned`/
+        `TestUntargetedAllocation`) but still covered by the completeness test above."""
         if kind == "drift_outside_tolerance":
             (firing,) = evaluate(
                 (f.drift_rule(1),), facts_for((f.EQUITY, "38"), (f.BOND, "62"))
