@@ -8,7 +8,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from financeos.core.engines.portfolio_engine import compute_allocation
-from financeos.core.engines.strategy_engine import compute_drift
+from financeos.core.engines.strategy_engine import compute_drift, compute_targets
 from financeos.core.portfolio import AllocationBreakdown, AllocationLine, Holding
 from financeos.core.shared import AssetId, Money, SkipReason, Weight
 from financeos.core.strategy import DriftLine, TargetAllocation
@@ -226,3 +226,22 @@ class TestDeterminism:
             allocation_of(*positions), f.DEMO_TARGETS, strategy_version_id=f.VERSION
         )
         assert first == second
+
+
+class TestComputeTargets:
+    """ADR-L05 §5: the `targets` fact family `untargeted_allocation` tests membership
+    against, independent of `drift`."""
+
+    def test_resolves_one_bound_leaf_per_targeted_class(self) -> None:
+        facts = compute_targets(f.DEMO_TARGETS, strategy_version_id=f.VERSION)
+        assert set(facts) == {"EQUITY_DEVELOPED", "BONDS_GOV_EUR"}
+        assert facts["EQUITY_DEVELOPED"].value.effective_target == Decimal("0.40000000")
+        assert facts["BONDS_GOV_EUR"].value.effective_target == Decimal("0.60000000")
+
+    def test_an_untargeted_class_is_simply_absent(self) -> None:
+        facts = compute_targets(f.DEMO_TARGETS, strategy_version_id=f.VERSION)
+        assert "COMMODITIES" not in facts
+
+    def test_source_pins_the_strategy_version(self) -> None:
+        facts = compute_targets(f.DEMO_TARGETS, strategy_version_id=f.VERSION)
+        assert facts["EQUITY_DEVELOPED"].source.inputs == (f"sv:{f.VERSION}",)

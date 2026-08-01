@@ -25,6 +25,7 @@ from financeos.core.portfolio import (
     Asset,
     Holding,
     Operation,
+    ResidualComputation,
 )
 from financeos.core.shared import (
     REF_OPERATION,
@@ -38,6 +39,7 @@ from financeos.core.shared import (
     Quantity,
     Scope,
     ScopeKind,
+    SkipReason,
     Weight,
     entity_ref,
 )
@@ -219,6 +221,93 @@ def compute_apportionment(
         )
         for asset_id, total in sorted(totals.items(), key=lambda item: str(item[0]))
         if total > 0
+    )
+
+
+def compute_residual(
+    holdings: Sequence[Holding],
+    apportionment: Sequence[ApportionmentLine],
+    assets: Mapping[AssetId, Asset],
+    prices: Mapping[AssetId, PriceView],
+    *,
+    as_of: date,
+    currency: Currency,
+) -> ResidualComputation:
+    """Value the `UNASSIGNED` residual across the whole Portfolio (ADR-0029).
+
+    `unassigned_residual_above` is portfolio-scoped by nature (ADR-0029: `scope` was never
+    meaningful on its params), so both `holdings` and `apportionment` must be the
+    Portfolio-wide fold — the Bucket-narrowed `compute_apportionment` call
+    `over_apportioned`'s `FACT_APPORTIONMENT` reads from would understate every other
+    Bucket's committed capital and overstate the residual.
+
+    For each held Asset, `unassigned_quantity = holding_quantity − apportioned_quantity`
+    (zero when unlisted in `apportionment`), valued at the same price as the rest of the
+    Portfolio and summed — signed, exactly like `over_apportioned`'s deficit (RFC-0011 §12.4
+    item 3, RFC-0010:123): an over-apportioned Asset drags the residual negative rather than
+    vanishing at zero.
+
+    Args:
+        holdings: The Portfolio-wide fold (`compute_holdings`'s output, unfiltered by account).
+        apportionment: `compute_apportionment`'s output at Portfolio scope.
+        assets, prices: For valuation, exactly as `compute_allocation` uses them.
+        as_of: The domain date valued against.
+        currency: The reporting currency.
+
+    Returns:
+        A `ResidualComputation`: either the signed `residual_weight`, or the reason it could
+        not be computed (an unpriced holding, or a zero-value Portfolio).
+    """
+    apportioned_by_asset = {line.asset_id: line.apportioned_quantity for line in apportionment}
+    total_value = Money.zero(currency)
+    unassigned_value = Money.zero(currency)
+    unpriced: list[AssetId] = []
+    refs: list[str] = []
+
+    for holding in holdings:
+        asset = assets[holding.asset_id]
+        price = prices.get(holding.asset_id)
+        if price is None:
+            unpriced.append(holding.asset_id)
+            continue
+        if price.currency != currency:
+            raise CurrencyMismatchError(
+                f"price for {asset.name} is quoted in {price.currency}, not {currency}"
+            )
+        total_value = total_value + Money(
+            amount=holding.quantity.amount * price.close, currency=currency
+        )
+        apportioned_qty = apportioned_by_asset.get(holding.asset_id, Decimal(0))
+        unassigned_qty = holding.quantity.amount - apportioned_qty
+        unassigned_value = unassigned_value + Money(
+            amount=unassigned_qty * price.close, currency=currency
+        )
+        refs.extend((*holding.input_refs, entity_ref(REF_PRICE, price.price_id)))
+
+    if unpriced:
+        return ResidualComputation(
+            as_of=as_of,
+            total_value=total_value,
+            unassigned_value=Money.zero(currency),
+            unavailable=SkipReason.MISSING_FACT,
+        )
+    if total_value.is_zero:
+        return ResidualComputation(
+            as_of=as_of,
+            total_value=total_value,
+            unassigned_value=Money.zero(currency),
+            unavailable=SkipReason.ZERO_PORTFOLIO_VALUE,
+        )
+
+    residual_weight = quantize(
+        unassigned_value.amount / total_value.amount, precision=WEIGHT_PRECISION, scale=WEIGHT_SCALE
+    )
+    return ResidualComputation(
+        as_of=as_of,
+        total_value=total_value,
+        unassigned_value=unassigned_value,
+        residual_weight=residual_weight,
+        input_refs=tuple(refs),
     )
 
 

@@ -67,7 +67,7 @@ from financeos.core.shared.errors import (
     UnknownConditionKindError,
 )
 from financeos.core.shared.numbers import ROUNDING
-from financeos.core.strategy import DriftLine, Rule
+from financeos.core.strategy import DriftLine, LeafTarget, Rule
 
 ENGINE_VERSION: Final = "1.0.0"
 ENGINE_NAME: Final = "rule"
@@ -82,6 +82,12 @@ FACT_ALLOCATION: Final = "allocation"
 #: The name of the residual fact family (RFC-0006 §4, ADR-0029): the `UNASSIGNED` pseudo-
 #: bucket's weight, relative to total portfolio value. Portfolio-scoped by nature.
 FACT_RESIDUAL: Final = "residual"
+
+#: The name of the targets fact family (RFC-0006 §4, ADR-L05 §5): one `LeafTarget` per
+#: targeted `AssetClass`, resolved from the frozen target tree. `untargeted_allocation` tests
+#: membership against this family rather than against `drift`, so discovery no longer depends
+#: on drift being computable.
+FACT_TARGETS: Final = "targets"
 
 #: The name of the bucket-value fact family (RFC-0006 §3, ERR-4): a scope's total valued
 #: holdings, for `bucket_below_target_value`. ERR-4 removed the phantom `prices` fact this
@@ -111,6 +117,9 @@ class FactSet(DomainModel):
 
     Attributes:
         drift: One `Bound[DriftLine]` per targeted `AssetClass`, from the Strategy Engine.
+        targets: One `Bound[LeafTarget]` per targeted `AssetClass` (ADR-L05 §5), independent
+            of whether `drift` could be computed for it — `untargeted_allocation` tests
+            membership here rather than in `drift`.
         unavailable: Why a whole fact family could not be computed, e.g.
             ``{"drift": SkipReason.ZERO_PORTFOLIO_VALUE}``. The reason reaches the trace, so a
             rule that could not be evaluated never reads as `NOT_FIRED` (ADR-0016).
@@ -122,6 +131,7 @@ class FactSet(DomainModel):
     scope: Scope
     drift: Mapping[AssetClass, Bound[DriftLine]] = Field(default_factory=dict)
     allocation: Mapping[AssetClass, Bound[AllocationLine]] = Field(default_factory=dict)
+    targets: Mapping[AssetClass, Bound[LeafTarget]] = Field(default_factory=dict)
     residual: Bound[WeightAmount] | None = None
     bucket_value: Bound[Money] | None = None
     apportionment: Mapping[AssetId, Bound[ApportionmentLine]] = Field(default_factory=dict)
@@ -772,11 +782,13 @@ def evaluate_untargeted_allocation(
     """Fire when any held, untargeted `AssetClass` in `scope` exceeds `threshold_weight`
     (ADR-L05 §3: untargeted-allocation-reduction).
 
-    "Untargeted" is read from the facts, never invented (BLOCKER 1, review): `compute_drift`
-    emits a `DriftLine` only for the target tree's leaves (RFC-0007 §4), so a held class absent
-    from `facts.drift` has no target in the governing StrategyVersion, while `allocation`
-    carries a weight for every held class, targeted or not (RFC-0007 §4.1, ADR-0029). A
-    targeted class is therefore never a candidate, regardless of its own weight.
+    "Untargeted" is read from the facts, never invented (BLOCKER 1, review): `facts.targets`
+    carries one `LeafTarget` per targeted `AssetClass` (ADR-L05 §5), so a held class absent
+    from it has no target in the governing StrategyVersion, while `allocation` carries a
+    weight for every held class, targeted or not (RFC-0007 §4.1, ADR-0029). A targeted class
+    is therefore never a candidate, regardless of its own weight. Testing against `targets`
+    rather than `drift` decouples this discovery kind from drift being computable — a
+    zero-value Portfolio or an unrelated unpriced Asset elsewhere in scope no longer masks it.
 
     The kind's params carry no `asset_class`, and `finding_key` hashes `rule_id ‖ scope ‖
     params` (ADR-0027), so several untargeted classes breaching at once must still reduce to
@@ -798,7 +810,7 @@ def evaluate_untargeted_allocation(
         (
             asset_class
             for asset_class in facts.allocation
-            if facts.drift_for(asset_class) is None
+            if asset_class not in facts.targets
         ),
         key=str,
     )
@@ -860,7 +872,7 @@ UNTARGETED_ALLOCATION: Final = REGISTRY.register(
         kind="untargeted_allocation",
         kind_version=1,
         params_model=UntargetedAllocationParams,
-        required_facts=frozenset({FACT_DRIFT, FACT_ALLOCATION}),
+        required_facts=frozenset({FACT_TARGETS, FACT_ALLOCATION}),
         default_max_staleness=timedelta(days=7),
         severity=SeverityDeclaration(
             formula="max(current_weight over the affected set) / threshold_weight"

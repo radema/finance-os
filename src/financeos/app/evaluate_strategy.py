@@ -21,6 +21,8 @@ from financeos.core.engines import (
     compute_apportionment,
     compute_drift,
     compute_holdings,
+    compute_residual,
+    compute_targets,
     decision_engine,
     evaluate,
     materialize,
@@ -37,6 +39,7 @@ from financeos.core.shared import (
     RunMode,
     Scope,
     ScopeKind,
+    SkipReason,
     SourceRef,
     StrategyId,
     canonical_json,
@@ -106,7 +109,10 @@ def evaluate_strategy(
 
     sv = uow.strategies.current_version(resolved_strategy_id)
 
-    asset_ids = {h.asset_id for h in holdings}
+    # The Portfolio-wide holdings' Assets are pulled in alongside scope's own, so the
+    # `residual` fact below (portfolio-scoped by nature, ADR-0029) never needs a second
+    # repository round trip for Assets/prices `holdings` alone would not have covered.
+    asset_ids = {h.asset_id for h in holdings} | {h.asset_id for h in portfolio_holdings}
     assets = uow.assets.get_many(asset_ids)
     prices = uow.prices.as_of(asset_ids, as_of=as_of)
 
@@ -114,6 +120,26 @@ def evaluate_strategy(
         holdings, assets, prices, scope=scope, as_of=as_of, currency=currency
     )
     comp = compute_drift(allocation, sv.targets, strategy_version_id=sv.id)
+    targets_facts = compute_targets(sv.targets, strategy_version_id=sv.id)
+
+    # `residual` (ADR-0029) is portfolio-scoped by nature — `unassigned_residual_above` has no
+    # `scope` param — so it always folds the Portfolio-wide apportionment chain, never the
+    # scope-narrowed `lines` above (that narrowing exists only for `over_apportioned`'s
+    # `FACT_APPORTIONMENT`, ADR-L04 §4.4).
+    portfolio_scope = Scope.for_portfolio(portfolio_id)
+    residual_apportionment = compute_apportionment(
+        records, portfolio_holdings, as_of=as_of, scope=portfolio_scope
+    )
+    residual_comp = compute_residual(
+        portfolio_holdings, residual_apportionment, assets, prices, as_of=as_of, currency=currency
+    )
+    residual = None
+    if residual_comp.is_available:
+        assert residual_comp.residual_weight is not None  # `is_available` guarantees this
+        residual = Bound(
+            value=residual_comp.residual_weight,
+            source=SourceRef.derived(engine="portfolio", inputs=residual_comp.input_refs),
+        )
 
     # `allocation`/`bucket_value` are assembled so `untargeted_allocation` (BLOCKER 1) and
     # `bucket_below_target_value` are actually evaluable in a real run rather than perpetually
@@ -127,14 +153,22 @@ def evaluate_strategy(
     }
     bucket_value = Bound(value=allocation.total_value, source=SourceRef.derived(engine="portfolio"))
 
+    unavailable: dict[str, SkipReason] = {}
+    if comp.unavailable is not None:
+        unavailable["drift"] = comp.unavailable
+    if residual_comp.unavailable is not None:
+        unavailable["residual"] = residual_comp.unavailable
+
     facts = FactSet(
         as_of=as_of,
         scope=scope,
         drift=comp.lines,
         allocation=allocation_facts,
+        targets=targets_facts,
+        residual=residual,
         bucket_value=bucket_value,
         apportionment=apportionment,
-        unavailable={"drift": comp.unavailable} if comp.unavailable else {},
+        unavailable=unavailable,
     )
 
     run = EvaluationRun(
@@ -176,6 +210,11 @@ def _input_digest(facts: FactSet) -> str:
             asset_class: bound.value.model_dump(mode="json")
             for asset_class, bound in facts.allocation.items()
         },
+        "targets": {
+            asset_class: bound.value.model_dump(mode="json")
+            for asset_class, bound in facts.targets.items()
+        },
+        "residual": facts.residual.value if facts.residual is not None else None,
         "bucket_value": (
             facts.bucket_value.value.model_dump(mode="json")
             if facts.bucket_value is not None
