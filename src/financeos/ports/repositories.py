@@ -18,7 +18,7 @@ from datetime import date, datetime
 from typing import NamedTuple, Protocol
 from uuid import UUID
 
-from financeos.core.decision import Alert, EvaluationRun, Recommendation
+from financeos.core.decision import Alert, EvaluationRun, Recommendation, Snapshot
 from financeos.core.market import PriceView
 from financeos.core.portfolio import (
     ApportionmentRecord,
@@ -175,11 +175,13 @@ class StrategyRepository(Protocol):
 
 
 class EvaluationRepository(Protocol):
-    """`evaluation_run` + `alert` + `recommendation` — one evaluation's artifacts (E4/E5)."""
+    """`evaluation_run` + `alert` + `recommendation` + `snapshot` — one evaluation's
+    artifacts (E4/E5, RFC-0009 §5.1)."""
 
     def save(
         self,
         run: EvaluationRun,
         alerts: Sequence[Alert],
         recommendations: Sequence[Recommendation],
+        snapshot: Snapshot | None = None,
     ) -> None: ...

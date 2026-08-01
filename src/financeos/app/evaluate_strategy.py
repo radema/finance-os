@@ -10,10 +10,18 @@ compute `input_digest` -> construct `EvaluationRun` -> `evaluate(sv.rules, facts
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import date
+from decimal import Decimal
 
 from financeos.app.unit_of_work import UnitOfWork
-from financeos.core.decision import EvaluationRun
+from financeos.core.decision import (
+    UNASSIGNED,
+    EvaluationRun,
+    Snapshot,
+    SnapshotBucketLine,
+    SnapshotClassLine,
+)
 from financeos.core.engines import (
     FactSet,
     MaterializationResult,
@@ -30,16 +38,21 @@ from financeos.core.engines import (
     rule_engine,
     strategy_engine,
 )
+from financeos.core.market import PriceView
+from financeos.core.portfolio import Asset, Holding, ResidualComputation
 from financeos.core.shared import (
+    AssetId,
     Bound,
     BucketId,
     Currency,
     EvaluationRunId,
+    Instant,
     PortfolioId,
     RunMode,
     Scope,
     ScopeKind,
     SkipReason,
+    SnapshotId,
     SourceRef,
     StrategyId,
     canonical_json,
@@ -189,8 +202,95 @@ def evaluate_strategy(
 
     firings = evaluate(sv.rules, facts)
     result = materialize(firings, sv, run, next_id=id_gen, recorded_at=now)
-    uow.evaluations.save(run, result.alerts, result.recommendations)
+    snapshot = _build_snapshot(
+        uow,
+        id_gen,
+        portfolio_id=portfolio_id,
+        portfolio_holdings=portfolio_holdings,
+        portfolio_scope=portfolio_scope,
+        assets=assets,
+        prices=prices,
+        residual_comp=residual_comp,
+        as_of=as_of,
+        currency=currency,
+        run_id=run.id,
+        recorded_at=now,
+    )
+    uow.evaluations.save(run, result.alerts, result.recommendations, snapshot)
     return result
+
+
+def _build_snapshot(
+    uow: UnitOfWork,
+    id_gen: IdGen,
+    *,
+    portfolio_id: PortfolioId,
+    portfolio_holdings: Sequence[Holding],
+    portfolio_scope: Scope,
+    assets: Mapping[AssetId, Asset],
+    prices: Mapping[AssetId, PriceView],
+    residual_comp: ResidualComputation,
+    as_of: date,
+    currency: Currency,
+    run_id: EvaluationRunId,
+    recorded_at: Instant,
+) -> Snapshot:
+    """Build the Portfolio-wide checkpoint written on every evaluate (RFC-0009 §5.1).
+
+    Reuses the Portfolio-wide `holdings`/`assets`/`prices` and `residual_comp` the caller
+    already assembled for the `residual` fact — a Snapshot is the same valuation, just kept
+    rather than discarded after the rules run.
+    """
+    portfolio_allocation = compute_allocation(
+        portfolio_holdings, assets, prices, scope=portfolio_scope, as_of=as_of, currency=currency
+    )
+    total = portfolio_allocation.total_value.amount
+
+    classes = {
+        asset_class: SnapshotClassLine(value=line.value.amount, weight=line.weight.value)
+        for asset_class, line in portfolio_allocation.lines.items()
+    }
+
+    buckets: dict[str, SnapshotBucketLine] = {}
+    for bucket_id in uow.buckets.for_portfolio(portfolio_id):
+        bucket_holdings = tuple(
+            vh.as_holding() for vh in uow.apportionments.virtual_holdings(bucket_id, as_of=as_of)
+        )
+        bucket_allocation = compute_allocation(
+            bucket_holdings,
+            assets,
+            prices,
+            scope=Scope.for_bucket(bucket_id),
+            as_of=as_of,
+            currency=currency,
+        )
+        bucket_value = bucket_allocation.total_value.amount
+        buckets[str(bucket_id)] = SnapshotBucketLine(
+            value=bucket_value, weight=_share(bucket_value, total)
+        )
+
+    if residual_comp.is_available:
+        assert residual_comp.residual_weight is not None  # `is_available` guarantees this
+        buckets[UNASSIGNED] = SnapshotBucketLine(
+            value=residual_comp.unassigned_value.amount, weight=residual_comp.residual_weight
+        )
+
+    return Snapshot(
+        id=SnapshotId(id_gen()),
+        portfolio_id=portfolio_id,
+        as_of=as_of,
+        run_id=run_id,
+        total_value=total,
+        currency=currency,
+        allocation=classes,
+        by_bucket=buckets,
+        recorded_at=recorded_at,
+    )
+
+
+def _share(value: Decimal, total: Decimal) -> Decimal:
+    """`value / total`, or zero when the Portfolio has no value."""
+    return Decimal(0) if total == 0 else value / total
 
 
 def _input_digest(facts: FactSet) -> str:

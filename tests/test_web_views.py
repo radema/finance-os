@@ -136,11 +136,16 @@ def test_explanation_surface_renders_all_nine_blocks(
         "La decisione",
     ):
         assert designation in body, designation
-    # The three blocks with no source in the skeleton report the absence rather than vanishing:
+    # Two blocks with no source in the skeleton report the absence rather than vanishing:
     # an omitted block is indistinguishable from a reassuring one (ADR-0016).
     assert "Nessuna ricomputazione eseguita." in body
-    assert "Nessuno snapshot per questa valutazione." in body
     assert "Registra decisione" in body
+    # Portfolio state now has a source: `evaluate_strategy` writes a `Snapshot` sharing this
+    # run's id on every run (RFC-0009 §5.1), so the ledger renders instead of the absence note.
+    assert "Nessuno snapshot per questa valutazione." not in body
+    assert "€54.000,00" in body
+    assert "0.66000000" in body
+    assert "0.34000000" in body
 
 
 def test_trace_is_a_lazy_htmx_fragment(client: TestClient, recommendation_id: str) -> None:

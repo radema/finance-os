@@ -14,10 +14,11 @@ server-rendered fragment behind one endpoint (ADR-0007). The fragment renders
 `partials/trace_ladder.html` — the same partial the design preview uses, so the served
 derivation cannot drift from the component contract.
 
-**Three blocks report an absence rather than being omitted.** Reconcile has no recomputation
-behind it, Portfolio state has no `snapshot` row, and Decision has no `decision` table. Each one
-says so. Dropping a block would be indistinguishable from a block that had nothing to report,
-and under ADR-0016 that difference is the whole point.
+**Two blocks report an absence rather than being omitted.** Reconcile has no recomputation
+behind it, and Decision has no `decision` table. Each one says so. Dropping a block would be
+indistinguishable from a block that had nothing to report, and under ADR-0016 that difference
+is the whole point. Portfolio state now has a source — `Snapshot`, written on every `evaluate`
+(RFC-0009 §5.1) — and reports its own absence only for a run predating that wiring.
 """
 
 from __future__ import annotations

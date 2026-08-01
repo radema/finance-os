@@ -8,6 +8,7 @@ constructs a `FactSet` by hand and cannot exercise either. These tests run a rea
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -350,10 +351,12 @@ def _untargeted_allocation_rule(scope: Scope) -> Rule:
 
 class TestResidualAndTargetsWiring:
     """ADR-0029 / ADR-L05 §5: `residual` and `targets` are real fact producers in a real run,
-    not perpetual `SKIPPED(missing_fact)` (review M1/M2)."""
+    not perpetual `SKIPPED(missing_fact)` (review M1/M2). Also exercises multiple `Bucket`s
+    apportioning distinct Assets of one Portfolio (RFC-0010:123) and the `Snapshot` written
+    alongside (RFC-0009 §5.1)."""
 
     def test_unassigned_residual_and_untargeted_allocation_fire(
-        self, uow: DuckDBUnitOfWork
+        self, uow: DuckDBUnitOfWork, con: duckdb.DuckDBPyConnection
     ) -> None:
         portfolio_id = PortfolioId(uuid4())
         strategy_id = StrategyId(uuid4())
@@ -476,16 +479,29 @@ class TestResidualAndTargetsWiring:
             import_batch_id=uuid4(),
         )
 
+        bucket_id_2 = BucketId(uuid4())
         uow.buckets.add(
             Bucket(id=bucket_id, portfolio_id=portfolio_id, strategy_id=strategy_id, name="B")
         )
-        # Only 60 of the 100 FUND units are apportioned; GLOBAL_FUND and CASH are apportioned
-        # to nothing -> 440 of 500 total value (88%) is UNASSIGNED, well above the threshold.
+        uow.buckets.add(
+            Bucket(id=bucket_id_2, portfolio_id=portfolio_id, strategy_id=strategy_id, name="B2")
+        )
+        # Two Buckets apportion two distinct Assets of the same Portfolio (RFC-0010:123):
+        # 60 of the 100 FUND units to B, 30 of the 50 GLOBAL_FUND units to B2. CASH and the
+        # rest are apportioned to nothing -> 410 of 500 total value (82%) is UNASSIGNED.
         uow.apportionments.apportion(
             uuid4(),
             bucket_id,
             FUND,
             Quantity(amount=Decimal("60")),
+            effective_from=TRADE_DATE,
+            recorded_at=NOW,
+        )
+        uow.apportionments.apportion(
+            uuid4(),
+            bucket_id_2,
+            GLOBAL_FUND,
+            Quantity(amount=Decimal("30")),
             effective_from=TRADE_DATE,
             recorded_at=NOW,
         )
@@ -513,10 +529,32 @@ class TestResidualAndTargetsWiring:
         by_rule = {alert.rule_id: alert for alert in result.alerts}
         assert by_rule[residual_rule.id].outcome is Outcome.FIRED
         assert by_rule[untargeted_rule.id].outcome is Outcome.FIRED
-        # 440/500 = 0.88 residual weight against a 0.05 threshold -> severity 17.60.
-        assert by_rule[residual_rule.id].severity == Decimal("17.60000000")
+        # 410/500 = 0.82 residual weight against a 0.05 threshold -> severity 16.40.
+        assert by_rule[residual_rule.id].severity == Decimal("16.40000000")
         # Worst untargeted class is CASH at 350/500 = 0.70 against a 0.05 threshold -> 14.00.
         assert by_rule[untargeted_rule.id].severity == Decimal("14.00000000")
+
+        # `Snapshot` (RFC-0009 §5.1): written on this same evaluate, sharing its run_id.
+        run_id = str(by_rule[residual_rule.id].run_id)
+        row = con.cursor().execute(
+            "SELECT portfolio_id, total_value, currency, allocation, by_bucket "
+            "FROM snapshot WHERE run_id = ?",
+            [run_id],
+        ).fetchone()
+        assert row is not None
+        assert row[0] == str(portfolio_id)
+        assert row[1] == Decimal("500.0000")
+        assert row[2] == "EUR"
+        allocation = json.loads(row[3])
+        assert allocation["CASH"]["value"] == "350.0000"
+        assert allocation["CASH"]["weight"] == "0.70000000"
+        assert allocation["EQUITY_GLOBAL"]["value"] == "50.0000"
+        assert allocation["EQUITY_DEVELOPED"]["value"] == "100.0000"
+        by_bucket = json.loads(row[4])
+        assert by_bucket[str(bucket_id)]["value"] == "60.0000"
+        assert by_bucket[str(bucket_id_2)]["value"] == "30.0000"
+        assert by_bucket["UNASSIGNED"]["value"] == "410.0000"
+        assert by_bucket["UNASSIGNED"]["weight"] == "0.82000000"
 
 
 class TestBucketRepositoryForPortfolio:

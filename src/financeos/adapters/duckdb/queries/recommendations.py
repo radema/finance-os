@@ -11,9 +11,9 @@ reassuring one (ADR-0016):
 * **Reconcile** — shown only when a recomputation diverges from `input_digest` (RFC-0009 §2.2).
   Nothing in the skeleton recomputes, so `reconcile_available` is `False` and the block says so
   in words. Omitting it would read as "reconciled, no divergence", which is not known.
-* **Portfolio state** — a join on `snapshot.run_id`. `snapshot` is specified as written on every
-  `evaluate` run (RFC-0009 §5.1) but `app/evaluate_strategy.py` writes none, so the table is
-  empty and `snapshot` is `None`.
+* **Portfolio state** — a join on `snapshot.run_id`. `snapshot` is written on every `evaluate`
+  run (RFC-0009 §5.1) by `app/evaluate_strategy.py`; `snapshot` is `None` only for a run
+  predating that wiring, or for a Portfolio holding nothing.
 * **Decision** — there is no `decision` table in migration 001; capture is V1.1 (ADR-0002,
   UX-0001 §2.2 draws the control disabled).
 
