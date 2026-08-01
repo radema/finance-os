@@ -20,7 +20,7 @@ import duckdb
 
 from financeos.adapters.duckdb._time import parse_instant
 from financeos.core.portfolio import Operation, OperationType
-from financeos.core.shared import AccountId, InvariantViolationError
+from financeos.core.shared import AccountId, InvariantViolationError, OperationId
 
 _PRIMARY_LEG_TYPES = frozenset(
     {OperationType.BUY, OperationType.SELL, OperationType.DIVIDEND, OperationType.COUPON}
@@ -101,6 +101,32 @@ class DuckDBOperationRepository:
             [*ids, as_of],
         ).fetchall()
         return tuple(_operation_from_row(row) for row in rows)
+
+    def get(self, operation_id: OperationId) -> Operation:
+        row = self._con.execute(
+            "SELECT id, type, account_id, asset_id, trade_date, quantity, price, fees, "
+            "currency, import_batch_id, corrects_id, transfer_pair_id, cash_leg_of, "
+            "CAST(recorded_at AS VARCHAR) FROM operation WHERE id = ?",
+            [str(operation_id)],
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"no operation {operation_id}")
+        return _operation_from_row(row)
+
+    def leg_of(self, operation_id: OperationId) -> Operation | None:
+        row = self._con.execute(
+            "SELECT id FROM operation WHERE cash_leg_of = ?", [str(operation_id)]
+        ).fetchone()
+        return self.get(OperationId(UUID(row[0]))) if row else None
+
+    def transfer_sibling(
+        self, transfer_pair_id: UUID, *, exclude_id: OperationId
+    ) -> Operation | None:
+        row = self._con.execute(
+            "SELECT id FROM operation WHERE transfer_pair_id = ? AND id <> ?",
+            [str(transfer_pair_id), str(exclude_id)],
+        ).fetchone()
+        return self.get(OperationId(UUID(row[0]))) if row else None
 
     def _fetch_row(self, op_id: UUID) -> _Row | None:
         row = self._con.execute(
