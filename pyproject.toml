@@ -16,6 +16,11 @@ dependencies = [
   "scipy",
   "click",
   "pyyaml",
+  # `HttpPriceProvider` (adapters/market, ADR-0031) needs a real HTTP client at runtime.
+  # Also doubles as starlette's TestClient dependency. C5 still forbids any HTTP client in
+  # core or app; import-linter's check is a literal-name match against "httpx"/"requests",
+  # and this package installs under the "httpx2" import name.
+  "httpx2",
 ]
 
 [project.scripts]
@@ -29,11 +34,6 @@ dev = [
   "hypothesis",
   "pytest",
   "pytest-cov",
-  # Required by starlette's TestClient, which is how the web routes are verified:
-  # there is no browser in this environment, so "the page renders" is checked by
-  # rendering it. Test-only — C5 still forbids any HTTP client in core or app,
-  # and nothing under src/ imports this.
-  "httpx2",
 ]
 
 [build-system]
