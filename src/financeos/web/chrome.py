@@ -53,9 +53,9 @@ def nav_of(current: str, *, findings_count: int | None = None) -> list[dict[str,
 
     Grouping follows UX-0001 §5.2's own invented Decide/Hold/Declare/Verify split, which is
     explicitly free to change but is kept because it separates what the V1.0 screens are *for*.
-    Buckets joins Allocation under "Detenere" (both are about what is held). Operations joins
-    "Dichiarare" — the ledger is an authored record. Strategy will join it in the commit that
-    adds its own route, so a rail entry never points at a route that does not exist yet.
+    Buckets joins Allocation under "Detenere" (both are about what is held). Operations and
+    Strategy sit under "Dichiarare" — the ledger and the frozen declaration are both authored
+    records.
     """
     count = None if findings_count is None else _findings_count_label(findings_count)
     return [
@@ -90,6 +90,12 @@ def nav_of(current: str, *, findings_count: int | None = None) -> list[dict[str,
                     "url": "/operations",
                     "count": None,
                     "current": current == "operations",
+                },
+                {
+                    "label": "Strategie",
+                    "url": "/strategies",
+                    "count": None,
+                    "current": current == "strategies",
                 },
             ],
         },

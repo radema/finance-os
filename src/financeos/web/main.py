@@ -35,6 +35,7 @@ from financeos.web.routes import (
     operations,
     recommendations,
     runs,
+    strategies,
 )
 
 
@@ -53,6 +54,7 @@ def create_app(db_path: Path) -> FastAPI:
     app.include_router(allocation.router)
     app.include_router(buckets.router)
     app.include_router(operations.router)
+    app.include_router(strategies.router)
     app.include_router(runs.router)
     app.include_router(design.router)
     return app
