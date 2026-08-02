@@ -77,9 +77,17 @@ UX-0001 §8 is a complete reconciling fixture — 9 assets with prices at `as_of
 apportionment units, derived totals (net worth **€107,586.33** = buckets + UNASSIGNED exactly), two
 strategies (deliberately, so `SKIPPED(heterogeneous_strategies)` is reachable), and a 28-evaluation
 run splitting 10 FIRED / 9 NOT_FIRED / 8 SKIPPED / 1 ERROR. Its ordered findings table exercises
-**all three** ORDER BY clauses (null severity sorting first on band alone; a severity tie broken by
+**all three** ORDER BY clauses (a CRITICAL row sorting first on band alone; a severity tie broken by
 `rule_id ASC`; a higher severity sorting *below* on band dominance) — a fixture that does not
 exercise all three is not testing the ordering contract. Lift it into `demo/` and `demo/expected/`.
+
+> **Superseded numbers — read ADR-L04 §4.6, not this paragraph, for the ordered table.** This text
+> originally said the first clause was exercised by *"null severity sorting first on band alone"*.
+> That is stale: ADR-L02 §4.4 moved row 1 from null to `bucket_below_target_value` at `1.25`, and
+> ADR-L04 §4.6 then swapped rows 8 and 9 (`over_apportioned` to 1.13, ahead of the 1.05 drift row).
+> After ADR-L02 and ADR-L04 **no V1.0 kind that fires in this fixture declares a null severity**, so
+> `NULLS LAST` coverage lives in a dedicated read-side test over `mv_finding` with synthetic rows
+> (`tests/test_mv_finding_ordering.py`), not here. ADR-L04 §4.6 prints the authoritative 10 rows.
 The skeleton needs only its canonical row: EQ/DEV 34.00% vs 40.00% target, ±2.00pp ABSOLUTE,
 drift −6.00pp, `severity = 3.00`, drift value −€3,240.00.
 
