@@ -27,7 +27,15 @@ from fastapi.staticfiles import StaticFiles
 
 from financeos.adapters.duckdb.connection import connect
 from financeos.web.preview import STATIC_DIR
-from financeos.web.routes import allocation, buckets, design, findings, recommendations, runs
+from financeos.web.routes import (
+    allocation,
+    buckets,
+    design,
+    findings,
+    operations,
+    recommendations,
+    runs,
+)
 
 
 def create_app(db_path: Path) -> FastAPI:
@@ -44,6 +52,7 @@ def create_app(db_path: Path) -> FastAPI:
     app.include_router(recommendations.router)
     app.include_router(allocation.router)
     app.include_router(buckets.router)
+    app.include_router(operations.router)
     app.include_router(runs.router)
     app.include_router(design.router)
     return app
