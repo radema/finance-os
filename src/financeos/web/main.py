@@ -3,14 +3,14 @@
     uv run financeos serve
 
 `create_app(db_path)` is the one assembly point: it opens the store, mounts the static tree,
-and includes the three skeleton routers plus the design preview. `cli.py`'s `serve` imports
-this symbol by name, which is why its signature is fixed.
+and includes every screen's router plus the design preview. `cli.py`'s `serve` imports this
+symbol by name, which is why its signature is fixed.
 
 **Why the connection is opened once and shared.** ADR-0008 is a single process on one local
 DuckDB file, with no worker pool and no connection pool. Opening per request would run the
 migration runner per request; keeping one connection matches the process topology the
-architecture actually chose. Every route is read-only (UX-0001 §2.1 — the two write actions
-belong to deferred screens), so there is no write contention to serialise.
+architecture actually chose. Every GET route is read-only; the two write actions (apportion,
+freeze) go through `app/`'s use cases over the same shared connection.
 
 **Why routes take the connection through `request.app.state`.** A router that reached for a
 module-level global could not be tested against a temporary store, and `TestClient` is the only
@@ -27,7 +27,7 @@ from fastapi.staticfiles import StaticFiles
 
 from financeos.adapters.duckdb.connection import connect
 from financeos.web.preview import STATIC_DIR
-from financeos.web.routes import allocation, design, findings, recommendations
+from financeos.web.routes import allocation, design, findings, recommendations, runs
 
 
 def create_app(db_path: Path) -> FastAPI:
@@ -43,5 +43,6 @@ def create_app(db_path: Path) -> FastAPI:
     app.include_router(findings.router)
     app.include_router(recommendations.router)
     app.include_router(allocation.router)
+    app.include_router(runs.router)
     app.include_router(design.router)
     return app

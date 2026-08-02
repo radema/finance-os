@@ -23,6 +23,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 
 import duckdb
 
@@ -126,6 +127,68 @@ def get_run(con: duckdb.DuckDBPyConnection, run_id: str) -> RunRow | None:
     """One run by id — the run a Recommendation pins, which may not be the latest."""
     row = con.execute(f"SELECT {_RUN_COLUMNS} {_RUN_JOINS} WHERE run.id = ?", [run_id]).fetchone()
     return _to_run(row) if row is not None else None
+
+
+def list_runs(con: duckdb.DuckDBPyConnection) -> tuple[RunRow, ...]:
+    """Every `evaluation_run`, most recent first — screen 7 (RFC-0006 §5, UX-0001 §2).
+
+    Both `ACTUAL` and `HYPOTHETICAL` runs are listed: a hypothetical run persists alerts and
+    traces (RFC-0008 §8) and its own broken configuration is exactly what this screen exists to
+    surface, so filtering it out would hide the one place it is visible. `mode` renders as its
+    own chip on each row so the two are never confused.
+    """
+    rows = con.execute(
+        f"SELECT {_RUN_COLUMNS} {_RUN_JOINS} ORDER BY run.evaluated_at DESC"
+    ).fetchall()
+    return tuple(_to_run(row) for row in rows)
+
+
+@dataclass(frozen=True)
+class AlertRow:
+    """One `alert` — a single rule's evaluation within one run, all four outcomes alike (E5)."""
+
+    id: str
+    rule_id: str
+    outcome: str
+    priority: str
+    severity: Decimal | None
+    reason: str | None  # skip_reason / error kind from the trace; SKIPPED and ERROR only
+
+
+def list_alerts(con: duckdb.DuckDBPyConnection, run_id: str) -> tuple[AlertRow, ...]:
+    """Every Alert of `run_id`, in the same order the findings list uses (RFC-0008 §3).
+
+    `NOT_FIRED` and `FIRED` alerts carry no `skip_reason`/`error_kind` — `reason` is `None` for
+    those, and the outcome chip partial requires one only for `SKIPPED`/`ERROR` (ADR-0016).
+    """
+    rows = con.execute(
+        """
+        SELECT id, rule_id, outcome, priority, severity,
+               coalesce(trace ->> 'skip_reason', trace ->> 'error_kind')
+        FROM alert
+        WHERE run_id = ?
+        ORDER BY
+            CASE priority
+                WHEN 'CRITICAL' THEN 5 WHEN 'HIGH' THEN 4
+                WHEN 'MEDIUM'   THEN 3 WHEN 'LOW'  THEN 2
+                ELSE 1
+            END DESC,
+            severity DESC NULLS LAST,
+            rule_id ASC
+        """,
+        [run_id],
+    ).fetchall()
+    return tuple(
+        AlertRow(
+            id=str(row[0]),
+            rule_id=str(row[1]),
+            outcome=str(row[2]),
+            priority=str(row[3]),
+            severity=row[4],
+            reason=str(row[5]) if row[5] is not None else None,
+        )
+        for row in rows
+    )
 
 
 def run_outcome_counts(con: duckdb.DuckDBPyConnection, run_id: str) -> OutcomeCounts:
