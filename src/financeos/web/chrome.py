@@ -53,10 +53,9 @@ def nav_of(current: str, *, findings_count: int | None = None) -> list[dict[str,
 
     Grouping follows UX-0001 §5.2's own invented Decide/Hold/Declare/Verify split, which is
     explicitly free to change but is kept because it separates what the V1.0 screens are *for*.
-    Screen 7 (Run health) joins the design preview under "Verificare" — the group for making a
-    configuration legible rather than for deciding or holding anything. The remaining screens
-    (4 Buckets, 5 Operations, 6 Strategy) join "Detenere"/"Dichiarare" in the commits that add
-    their own routes, so a rail entry never points at a route that does not exist yet.
+    Buckets joins Allocation under "Detenere" (both are about what is held). Operations and
+    Strategy will join "Dichiarare" in the commits that add their own routes, so a rail entry
+    never points at a route that does not exist yet.
     """
     count = None if findings_count is None else _findings_count_label(findings_count)
     return [
@@ -74,6 +73,12 @@ def nav_of(current: str, *, findings_count: int | None = None) -> list[dict[str,
                     "url": "/allocation",
                     "count": None,
                     "current": current == "allocation",
+                },
+                {
+                    "label": "Bucket e apportionment",
+                    "url": "/buckets",
+                    "count": None,
+                    "current": current == "buckets",
                 },
             ],
         },

@@ -1,0 +1,179 @@
+{#
+  ===========================================================================
+  SCREEN 4 — BUCKETS & APPORTIONMENT              (ADR-0025, ADR-0001, ADR-0029)
+  ===========================================================================
+  Over-apportionment warns and never blocks (I-9): the write action below
+  accepts any quantity, and the table further down names every asset that is
+  currently over-apportioned across its Buckets, in words, next to the
+  composition it belongs to — not as a rejected form.
+
+  The UNASSIGNED residual is a signed row, not a footnote: it can legitimately
+  go negative (a deficit — more capital apportioned than actually held), and
+  the reconciliation is honest only if that row stays in the same table as
+  every Bucket.
+#}
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if error %}
+<div class="notice" role="alert" style="margin-bottom: var(--sp-4)">
+  <div class="notice__margin" aria-hidden="true"></div>
+  <div class="notice__body"><p class="notice__lead">{{ error }}</p></div>
+</div>
+{% endif %}
+
+{% if v.over_apportioned %}
+<div class="notice" role="note" style="margin-bottom: var(--sp-6)">
+  <div class="notice__margin" aria-hidden="true"></div>
+  <div class="notice__body">
+    <p class="notice__lead">
+      <span class="value">{{ v.over_apportioned | length }}</span>
+      asset con apportionment in eccesso rispetto a quanto detenuto.
+    </p>
+    <p>
+      Non è un blocco: l'apportionment può eccedere il posseduto (I-9). Il rilievo
+      <span class="ident">over_apportioned</span> lo segnala come avviso in fase di
+      valutazione, mai come impedimento alla scrittura.
+    </p>
+    <table class="ledger" style="margin-top: var(--sp-3)">
+      <thead>
+        <tr><th>Asset</th><th class="numeric">Impegnato</th><th class="numeric">Detenuto</th><th class="numeric">Eccesso</th></tr>
+      </thead>
+      <tbody>
+        {% for o in v.over_apportioned %}
+        <tr>
+          <td>«{{ o.asset_name }}»</td>
+          <td class="numeric value">{{ o.apportioned | num_it }}</td>
+          <td class="numeric value">{{ o.held | num_it }}</td>
+          <td class="numeric value value--negative">{{ o.excess | num_it }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% for b in v.buckets %}
+<article class="record" style="margin-bottom: var(--sp-6)">
+  <div class="record__margin" aria-hidden="true"></div>
+  <div class="record__body">
+    <div class="record__head">
+      <span class="record__designation record__designation--minor">{{ b.name }}</span>
+      <span class="record__ref push">{{ b.strategy_name }}</span>
+    </div>
+
+    <table class="ledger" style="margin-bottom: var(--sp-4)">
+      <thead>
+        <tr>
+          <th>Asset</th><th>Classe</th>
+          <th class="numeric">Quantità apportionata</th><th class="numeric">Valore</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in b.lines %}
+        <tr>
+          <td>«{{ l.asset_name }}»</td>
+          <td>{{ l.asset_class | label_short }}</td>
+          <td class="numeric value">{{ l.quantity | num_it }}</td>
+          <td class="numeric value">
+            {{ l.value | money_it if l.value is not none else "senza prezzo" }}
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not b.lines %}
+        <tr><td colspan="4" class="note">Nessun asset ancora apportionato a questo Bucket.</td></tr>
+        {% endif %}
+        <tr class="ledger__total">
+          <td colspan="3">Valore del Bucket</td>
+          <td class="numeric value">{{ b.value | money_it }} · {{ b.weight | pct_it }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    {# --- write action: ApportionBucket (UX-0001 §2.2), one row appended, never edited --- #}
+    <details>
+      <summary class="ident">Apportiona un asset a questo Bucket</summary>
+      <form method="post" action="/buckets/{{ b.id }}/apportion" class="row"
+            style="gap: var(--sp-3); flex-wrap: wrap; margin-top: var(--sp-3); align-items: flex-end">
+        <div>
+          <label class="field__label" for="asset-{{ b.id }}">Asset</label>
+          <select id="asset-{{ b.id }}" name="asset_id" class="field" required>
+            {% for h in holdings %}
+            <option value="{{ h.asset_id }}">«{{ h.asset_name }}» ({{ h.asset_class | label_short }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="field__label" for="qty-{{ b.id }}">Quantità</label>
+          <input id="qty-{{ b.id }}" type="text" name="quantity" class="field" required
+                 inputmode="decimal" placeholder="0.0000000000">
+        </div>
+        <div>
+          <label class="field__label" for="date-{{ b.id }}">Valida dal</label>
+          <input id="date-{{ b.id }}" type="date" name="effective_from" class="field" required
+                 value="{{ today }}">
+        </div>
+        <button type="submit" class="button">Registra apportionment</button>
+      </form>
+    </details>
+  </div>
+</article>
+{% endfor %}
+
+{% if not v.buckets %}
+<article class="record" style="margin-bottom: var(--sp-6)">
+  <div class="record__margin" aria-hidden="true"></div>
+  <div class="record__body">
+    <p class="state__lead">Nessun Bucket definito per questo portafoglio.</p>
+    <p class="state__body">
+      L'intero patrimonio netto resta non assegnato: nessuna capitale è ancora stato
+      ripartito verso una strategia specifica.
+    </p>
+  </div>
+</article>
+{% endif %}
+
+<article class="record">
+  <div class="record__margin" aria-hidden="true"></div>
+  <div class="record__body">
+    <div class="record__head">
+      <span class="record__designation record__designation--minor">Riconciliazione</span>
+      <span class="record__ref push">ADR-0025</span>
+    </div>
+    <table class="ledger">
+      <thead>
+        <tr><th>Bucket</th><th class="numeric">Valore</th><th class="numeric">Quota</th></tr>
+      </thead>
+      <tbody>
+        {% for b in v.buckets %}
+        <tr>
+          <td>{{ b.name }}</td>
+          <td class="numeric value">{{ b.value | money_it }}</td>
+          <td class="numeric value">{{ b.weight | pct_it }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="ledger__residual">
+          <td>{{ "UNASSIGNED" | label }}</td>
+          <td class="numeric value{{ ' value--negative' if v.unassigned_value < 0 else '' }}">
+            {{ unassigned_rows[0] }}
+          </td>
+          <td class="numeric value">{{ unassigned_rows[1] }}</td>
+        </tr>
+        <tr class="ledger__total">
+          <td>Patrimonio netto</td>
+          <td class="numeric value">{{ v.net_worth | money_it }}</td>
+          <td class="numeric value">{{ '100,00%' if v.net_worth else '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin-top: var(--sp-3)">
+      Il patrimonio netto <em>è</em> i suoi Bucket più il capitale non assegnato: un
+      residuo negativo è un disavanzo, cioè capitale impegnato oltre quanto
+      effettivamente posseduto — uno stato legittimo, non un errore.
+    </p>
+  </div>
+</article>
+
+{% endblock %}
