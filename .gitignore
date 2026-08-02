@@ -27,6 +27,10 @@ data/
 imports/
 exports/
 
+# Agent worktrees — transient checkouts, never part of the project.
+# `.claude/skills/` IS tracked; only the worktree churn is excluded.
+.claude/worktrees/
+
 # Editors / OS
 .DS_Store
 .idea/
