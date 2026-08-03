@@ -1,0 +1,167 @@
+{#
+  ===========================================================================
+  VARIATION A — «Il verbale della valutazione»              (PROTOTYPE, W2 #12)
+  ===========================================================================
+  COVERAGE FIRST. The page reads top-to-bottom as one evaluation's report:
+  what the run measured, what it could not measure, then the findings in the
+  order mv_finding gives them, then the holdings as closing context.
+
+  FIRST QUESTION: can this run be trusted, and what did it not measure?
+
+  THE ARGUMENT. ADR-0016 says silent false reassurance is the failure mode most
+  likely to mislead. Every other conceivable dashboard puts findings or a total
+  first and the coverage somewhere below the fold — which is precisely the
+  presentation-layer version of the bug the four-outcome model exists to
+  prevent. This variation inverts that: the census of outcomes is the first
+  thing on the page, and the findings are read *inside* the coverage they came
+  from.
+
+  WHAT IT DELIBERATELY REFUSES. No net-worth figure above the findings, and no
+  aggregate "salute" score. A single score over four outcomes that mean
+  different things would be the average ADR-0016 and RFC-0007 §5 both forbid in
+  their own domains.
+
+  THE COST, stated in the head block and not hidden: a reader who opens the
+  product to see what the portfolio is worth reads a run report instead, and
+  still has to go to /allocation.
+
+  STRUCTURALLY: one column, no cards, no grid. Density over navigation.
+#}
+
+{# ---------------------------------------------------------------- 01 census #}
+<article class="record" style="margin-bottom: var(--sp-5)">
+  <div class="record__margin" aria-hidden="true"></div>
+  <div class="record__body">
+    <div class="record__head">
+      <span class="record__designation record__designation--minor">Censimento degli esiti</span>
+      <span class="record__ref push">{{ fixture.provenance.run_id }} · ADR-0016</span>
+    </div>
+
+    {# The measured fraction, said as a fraction and never as a percentage or a
+       score. 15 of 24 is a coverage statement; "62% conforme" would be a
+       verdict the system has no basis to issue. #}
+    <p style="font-size: var(--fs-m); margin-bottom: var(--sp-3)">
+      <span class="value">{{ coverage.measured }}</span> regole su
+      <span class="value">{{ coverage.total }}</span> hanno raggiunto un esito.
+      Le altre <span class="value">{{ coverage.skipped + coverage.error }}</span>
+      non dicono nulla sulla conformità: non sono state misurate.
+    </p>
+
+    <table class="ledger">
+      <caption class="visually-hidden">Esiti della valutazione, uno per riga</caption>
+      <thead>
+        <tr>
+          <th>Esito</th>
+          <th class="numeric">Conteggio</th>
+          <th class="numeric">Motivi registrati</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in coverage.census %}
+        <tr>
+          <td>
+            {% with outcome = row.outcome, reason = None %}
+              {% include "partials/outcome_chip.html" %}
+            {% endwith %}
+          </td>
+          <td class="numeric value">{{ row.count }}</td>
+          <td class="numeric">
+            {%- if row.reasons -%}
+              {%- for r in row.reasons %}<span class="ident">{{ r }}</span>{% if not loop.last %} · {% endif %}{% endfor -%}
+            {%- else -%}
+              <span class="note">—</span>
+            {%- endif -%}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {# I-12, said once and structurally: the four outcomes are readings, and
+       none of them is an instruction. #}
+    <p class="note" style="margin-top: var(--sp-3)">
+      I quattro esiti sono letture distinte e non sommabili fra loro. Nessuno di
+      essi è un'istruzione: la valutazione registra cosa ha misurato e cosa no.
+    </p>
+  </div>
+</article>
+
+{# ------------------------------------------------- 02 the skip notice, above #}
+{% with skipped_count = skip.skipped_count, error_count = skip.error_count,
+        total_count = skip.total_count, reasons = skip.reasons,
+        run_url = skip.run_url %}
+  {% include "partials/skip_notice.html" %}
+{% endwith %}
+
+{# ------------------------------------------------------------- 03 the record #}
+<h2 style="font-size: var(--fs-m); margin: var(--sp-6) 0 var(--sp-2)">
+  I rilievi, nell'ordine in cui la valutazione li ha registrati
+</h2>
+<p class="note" style="margin-bottom: var(--sp-4)">
+  Priorità dichiarata prima, poi severità con i nulli in fondo, poi
+  <span class="ident">rule_id</span> (RFC-0008 §3). L'ordine è quello della lista
+  dei rilievi: questa pagina non lo riordina, così non introduce una seconda
+  gerarchia accanto a quella che hai dichiarato tu. Rilievi correlati restano
+  separati, e la lettura entro tolleranza non è nascosta.
+</p>
+
+{% for f in findings %}
+<article class="record{{ ' record--breach' if f.outcome == 'FIRED' else '' }}"
+         style="margin-bottom: var(--sp-4)">
+  <div class="record__margin">{{ '%02d' | format(loop.index) }}</div>
+  <div class="record__body">
+    <div class="record__head">
+      <span class="record__designation">{{ f.designation }}</span>
+      {% with outcome = f.outcome, reason = None %}
+        {% include "partials/outcome_chip.html" %}
+      {% endwith %}
+      <span class="record__ref push">
+        priorità {{ f.priority }} · {{ f.scope }} · <span class="ident">{{ f.rule }}</span>
+      </span>
+    </div>
+
+    <p style="font-size: var(--fs-s)">{{ f.observation_it }}</p>
+
+    <div class="row" style="align-items: flex-end; gap: var(--sp-5); margin-top: var(--sp-4)">
+      <div style="flex: 1; min-width: 170px">
+        {# CONTRACT 1 — the rail, included unchanged. Same geometry as every
+           other screen; a fourth geometry here would lose the contract. #}
+        {% with signed_severity = rail_cases[loop.index0].signed_severity,
+                target_label = rail_cases[loop.index0].target_label,
+                aria_label = f.observation_it %}
+          {% include "partials/tolerance_rail.html" %}
+        {% endwith %}
+      </div>
+      <div class="severity">
+        <span class="severity__label">Severità</span>
+        <span class="severity__value {{ rail_cases[loop.index0].severity_class }}">
+          {{- rail_cases[loop.index0].severity_display -}}
+        </span>
+        <span class="severity__formula">|drift| ÷ effective_band</span>
+      </div>
+      <div class="severity">
+        <span class="severity__label">Scostamento</span>
+        <span class="severity__value">{{ f.delta_it }}</span>
+        <span class="severity__formula">come registrato</span>
+      </div>
+    </div>
+  </div>
+</article>
+{% endfor %}
+
+{# --------------------------------------------------- 04 holdings, as closing #}
+<h2 style="font-size: var(--fs-m); margin: var(--sp-6) 0 var(--sp-2)">
+  Il capitale su cui la valutazione ha lavorato
+</h2>
+<p class="note" style="margin-bottom: var(--sp-4)">
+  In fondo e non in testa: qui è il contesto della lettura, non il suo oggetto.
+</p>
+
+{% with chart_id = 'proto-a-comp', option = fixture.chart_composition,
+        height = '150px', caption = fixture.chart_composition_caption,
+        legend = fixture.chart_composition_legend,
+        table_head = fixture.chart_composition_head,
+        table_rows = fixture.chart_composition_rows,
+        table_label = 'Composizione del patrimonio netto, come registrata' %}
+  {% include "partials/chart.html" %}
+{% endwith %}
