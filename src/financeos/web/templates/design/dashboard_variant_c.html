@@ -1,0 +1,194 @@
+{#
+  ===========================================================================
+  VARIATION C — «Il patrimonio annotato»                    (PROTOTYPE, W2 #12)
+  ===========================================================================
+  AGGREGATE FIRST. Net worth and the composition of the whole lead the page,
+  and the findings arrive as an annotation layer hanging off it: each Bucket
+  carries what was measured inside it, what was not, and its worst severity.
+  The ordered list of findings is a compact ledger below, not the subject.
+
+  FIRST QUESTION: what is held, and in which part of it are the deviations?
+
+  THIS IS THE VARIATION UX-0001 §5.3 ARGUES AGAINST, deliberately and in full.
+  §5.3 says there is no net-worth hero number because P1 makes the decisions the
+  product, so the landing screen is the findings list. That section also says of
+  itself that it is "a reading of the Manifest, not a requirement"
+  (UX-0001:155), and the product owner asked for a dashboard on 2026-08-01. So
+  the argument is not settled by fiat here — it is built, with its cost visible,
+  so the owner can price it. If this variation is picked, §5.3's row becomes a
+  pointer per UX-0001 §10 and nothing needs overturning: P1 is the scope
+  ratification, not a landing-page rule.
+
+  WHAT MAKES IT SURVIVABLE ANYWAY. Two things, and without them it would be the
+  false-reassurance dashboard §5.3 fears:
+
+  1. NO BUCKET SHOWS A FINDING COUNT WITHOUT ITS UNEVALUATED COUNT. Personale
+     is the case that proves it: zero findings AND seven rules that never ran,
+     shown together on the same card. A card reading "0 rilievi" alone would be
+     ADR-0016's silent false reassurance re-introduced at the presentation
+     layer, after the domain went to trouble to prevent it.
+  2. THE WHOLE RECONCILES IN VIEW. The composition segments close on the net
+     worth tick, and the unassigned residual is one of them. A hero number
+     whose parts are not shown closing on it is a number nobody can check.
+
+  THE COST, stated in the head block: the first thing the product says becomes
+  a total rather than a deliberation.
+
+  STRUCTURALLY: hero, then a card grid, then a compact ledger. No records.
+#}
+
+{# ---------------------------------------------------------------- the whole #}
+<article class="record" style="margin-bottom: var(--sp-5)">
+  <div class="record__margin" aria-hidden="true"></div>
+  <div class="record__body">
+    <div class="record__head">
+      <span class="record__designation record__designation--minor">Patrimonio netto</span>
+      <span class="record__ref push">
+        EUR · {{ fixture.provenance.as_of }} · {{ fixture.provenance.run_id }}
+      </span>
+    </div>
+
+    <p class="value" style="font-size: var(--fs-2xl)">{{ net_worth_it }}</p>
+
+    {# The one sentence that keeps the hero number honest: it is as-recorded,
+       not recomputed, and it is a measurement of a date and nothing else. It
+       is not phrased as a state of health, because a total is not one. #}
+    <p class="note" style="margin-bottom: var(--sp-4)">
+      Come registrato dalla valutazione alla data
+      {{ fixture.provenance.as_of }}, non ricalcolato in lettura (ADR-0012).
+      È la somma dei Bucket più il residuo non assegnato: un totale, non un
+      giudizio sul patrimonio.
+    </p>
+
+    {% with chart_id = 'proto-c-comp', option = fixture.chart_composition,
+            height = '150px', caption = fixture.chart_composition_caption,
+            legend = fixture.chart_composition_legend,
+            table_head = fixture.chart_composition_head,
+            table_rows = fixture.chart_composition_rows,
+            table_label = 'Composizione del patrimonio netto, come registrata' %}
+      {% include "partials/chart.html" %}
+    {% endwith %}
+  </div>
+</article>
+
+{# The skip notice sits ABOVE the cards, because the cards make count claims. #}
+{% with skipped_count = skip.skipped_count, error_count = skip.error_count,
+        total_count = skip.total_count, reasons = skip.reasons,
+        run_url = skip.run_url %}
+  {% include "partials/skip_notice.html" %}
+{% endwith %}
+
+{# ------------------------------------------------------- the annotation layer #}
+<h2 style="font-size: var(--fs-m); margin: var(--sp-6) 0 var(--sp-2)">
+  Dove stanno gli scostamenti, dentro il totale
+</h2>
+<p class="note" style="margin-bottom: var(--sp-4)">
+  Ogni Bucket dichiara due conteggi, sempre insieme: quanti rilievi sono aperti
+  e quante delle sue regole non hanno raggiunto un esito. Un Bucket con zero
+  rilievi e sette regole non valutate non è un Bucket in ordine — è un Bucket
+  su cui non è stata fatta una misura.
+</p>
+
+<div class="proto-annot">
+  {% for b in buckets %}
+  <article class="record{{ ' record--breach' if b.state.open else '' }}">
+    <div class="record__margin" aria-hidden="true"></div>
+    <div class="record__body">
+      <div class="record__head">
+        <span class="record__designation record__designation--minor">{{ b.name }}</span>
+      </div>
+
+      <p class="value" style="font-size: var(--fs-m)">{{ b.value }}</p>
+      <p class="note">{{ b.share }} del patrimonio netto</p>
+
+      {% if b.residual %}
+        {# The residual is not a Bucket and has no rules of its own: saying so is
+           the honest reading, and inventing a count for it would not be. #}
+        <p class="note" style="margin-top: var(--sp-3)">
+          Non è un Bucket: è il capitale che nessun Bucket rivendica. Resta nel
+          denominatore di ogni quota (ADR-0029), e nessuna regola di questa
+          valutazione lo misura da solo.
+        </p>
+      {% else %}
+        <dl class="voices" style="margin-top: var(--sp-3)">
+          <div class="voices__row">
+            <dt>Rilievi aperti</dt>
+            <dd class="value{{ ' value--negative' if b.state.open else '' }}">{{ b.state.open }}</dd>
+          </div>
+          <div class="voices__row">
+            <dt>Regole con un esito</dt>
+            <dd class="value">{{ b.state.measured }}</dd>
+          </div>
+          <div class="voices__row">
+            <dt>Regole non valutate</dt>
+            <dd class="value{{ ' value--negative' if b.state.unevaluated else '' }}">
+              {{- b.state.unevaluated -}}
+            </dd>
+          </div>
+          <div class="voices__row">
+            <dt>Severità più alta</dt>
+            <dd class="value">{{ b.state.worst_severity | default('—', true) }}</dd>
+          </div>
+        </dl>
+
+        {% if b.state.unevaluated and not b.state.open %}
+        <p class="note" style="margin-top: var(--sp-3)">
+          Zero rilievi con <span class="value">{{ b.state.unevaluated }}</span>
+          regole non valutate: qui l'assenza di un rilievo è assenza di
+          informazione, non un esito.
+        </p>
+        {% endif %}
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+{# --------------------------------------------------- the findings, as a ledger #}
+<h2 style="font-size: var(--fs-m); margin: var(--sp-6) 0 var(--sp-2)">
+  I rilievi registrati, nell'ordine della lista
+</h2>
+<p class="note" style="margin-bottom: var(--sp-3)">
+  Priorità dichiarata prima, poi severità con i nulli in fondo (RFC-0008 §3).
+  Su questa variante sono una riga per rilievo: la frase completa e la sua
+  derivazione stanno un clic più in là.
+</p>
+
+<table class="ledger">
+  <caption class="visually-hidden">Rilievi della valutazione corrente</caption>
+  <thead>
+    <tr>
+      <th></th>
+      <th>Rilievo</th>
+      <th>Bucket</th>
+      <th>Esito</th>
+      <th class="numeric">Severità</th>
+      <th class="numeric">Scostamento</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for f in findings %}
+    <tr>
+      <td class="ledger__ord">{{ '%02d' | format(loop.index) }}</td>
+      <td>
+        {{ f.designation }}
+        <span class="record__ref" style="display: block">{{ f.rule }}</span>
+      </td>
+      <td>{{ f.scope }}</td>
+      <td>
+        {% with outcome = f.outcome, reason = None %}
+          {% include "partials/outcome_chip.html" %}
+        {% endwith %}
+      </td>
+      <td class="numeric value">{{ rail_cases[loop.index0].severity_display }}</td>
+      <td class="numeric value">{{ f.delta_it }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p class="note" style="margin-top: var(--sp-3)">
+  Nessuna riga nomina uno strumento, una direzione o un importo da muovere: non
+  esiste un campo per farlo (I-12, E7). Le righe correlate restano separate e la
+  lettura entro tolleranza non è filtrata via.
+</p>
