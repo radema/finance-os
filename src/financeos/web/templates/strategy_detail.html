@@ -14,9 +14,10 @@
   Scope, stated rather than silently narrowed (see routes/strategies.py):
   the tree editor reaches depth 1-2 and edits weight + tolerance on every
   existing leaf, plus one new depth-1 leaf; it does not restructure a tree.
-  The rule editor edits enabled/priority/suggestion_class/message on every
-  existing Rule and adds one new Rule from the real closed catalog; it does
-  not edit an existing Rule's condition or delete a Rule.
+  The rule editor edits enabled/priority/suggestion_class/message and the
+  condition's own params on every existing Rule, and adds one new Rule from
+  the real closed catalog; it does not change an existing Rule's condition
+  *kind*, or delete a Rule.
 #}
 {% extends "base.html" %}
 
@@ -190,6 +191,13 @@
         <label class="field__label">Messaggio</label>
         <textarea class="field" name="rule_message" rows="2">{{ r.message }}</textarea>
       </div>
+      {% for f in r.param_fields %}
+      <div>
+        <label class="field__label">{{ f.name }}</label>
+        <input class="field" type="text" name="rule_param_{{ r.id }}_{{ f.name }}"
+               value="{{ f.value }}" style="width: 16ch">
+      </div>
+      {% endfor %}
     </div>
     {% endfor %}
 

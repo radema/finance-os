@@ -22,6 +22,7 @@ import duckdb
 
 from financeos.adapters.duckdb._time import parse_instant
 from financeos.core.engines.rule_engine import REGISTRY
+from financeos.core.shared import UnknownConditionKindError
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,15 @@ class TargetNodeView:
 
 
 @dataclass(frozen=True)
+class RuleParamFieldView:
+    """One param field the catalog declares for a Rule's `(kind, kind_version)`, with its
+    frozen value — the edit form's source of truth for which fields exist (ADR-0014)."""
+
+    name: str
+    value: str
+
+
+@dataclass(frozen=True)
 class RuleView:
     """One frozen `Rule`, with its condition's params as an ordered list of (key, value)."""
 
@@ -52,6 +62,7 @@ class RuleView:
     kind: str
     kind_version: int
     params: tuple[tuple[str, str], ...]
+    param_fields: tuple[RuleParamFieldView, ...]
 
 
 @dataclass(frozen=True)
@@ -165,6 +176,8 @@ def _node(data: dict[str, Any]) -> TargetNodeView:
 def _rule(data: dict[str, Any]) -> RuleView:
     condition = data.get("condition") or {}
     params = condition.get("params") or {}
+    kind = str(condition.get("kind", ""))
+    kind_version = int(condition.get("kind_version", 1))
     return RuleView(
         id=str(data["id"]),
         name=str(data.get("name", "")),
@@ -172,9 +185,25 @@ def _rule(data: dict[str, Any]) -> RuleView:
         priority=str(data.get("priority", "")),
         suggestion_class=data.get("suggestion_class"),
         message=str(data.get("message", "")),
-        kind=str(condition.get("kind", "")),
-        kind_version=int(condition.get("kind_version", 1)),
+        kind=kind,
+        kind_version=kind_version,
         params=tuple((str(k), str(v)) for k, v in params.items()),
+        param_fields=_param_fields(kind, kind_version, params),
+    )
+
+
+def _param_fields(
+    kind: str, kind_version: int, params: dict[str, Any]
+) -> tuple[RuleParamFieldView, ...]:
+    """The edit form's field list for one Rule: the catalog's own declaration (ADR-0014), not
+    a hand-copied one, so it can never list a field the Rule Engine would then reject."""
+    try:
+        spec = REGISTRY.get(kind, kind_version)
+        field_names: tuple[str, ...] = tuple(spec.params_model.model_fields)
+    except UnknownConditionKindError:
+        field_names = tuple(params.keys())
+    return tuple(
+        RuleParamFieldView(name=name, value=str(params.get(name, ""))) for name in field_names
     )
 
 

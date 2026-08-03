@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import duckdb
 import pytest
@@ -127,6 +128,78 @@ def test_freeze_without_a_change_note_is_rejected(
     )
     assert response.status_code == 303
     assert "error=" in response.headers["location"]
+    after_count = _one(con, "SELECT count(*) FROM strategy_version")
+    assert after_count == before_count
+
+
+def test_editing_a_rule_param_freezes_a_new_version_and_leaves_the_old_one_intact(
+    client: TestClient, con: duckdb.DuckDBPyConnection
+) -> None:
+    """A params edit goes through the same freeze-a-new-version path as every other edit
+    (RFC-0007 §7) — the prior `strategy_version` row and its `definition` are never touched."""
+    rule_id = _FREEZE_FORM["rule_id"]
+    strategy_id = _one(con, "SELECT id FROM strategy LIMIT 1")
+    old_version_id = _one(
+        con, "SELECT current_version_id FROM strategy WHERE id = ?", [strategy_id]
+    )
+    old_definition = _one(
+        con, "SELECT definition FROM strategy_version WHERE id = ?", [old_version_id]
+    )
+
+    response = client.post(
+        f"/strategies/{strategy_id}",
+        data={
+            **_FREEZE_FORM,
+            f"rule_param_{rule_id}_scope": "bucket:11111111-1111-1111-1111-111111111111",
+            "change_note": "Riassegno la regola a un altro bucket.",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    new_version_id = _one(
+        con, "SELECT current_version_id FROM strategy WHERE id = ?", [strategy_id]
+    )
+    assert new_version_id != old_version_id
+
+    new_definition = _one(
+        con, "SELECT definition FROM strategy_version WHERE id = ?", [new_version_id]
+    )
+    assert "bucket:11111111-1111-1111-1111-111111111111" in new_definition
+    assert "bucket:11111111-1111-1111-1111-111111111111" not in old_definition
+
+    # the old version's row is byte-identical to what it was before the freeze
+    unchanged = _one(
+        con, "SELECT definition FROM strategy_version WHERE id = ?", [old_version_id]
+    )
+    assert unchanged == old_definition
+
+
+def test_editing_a_rule_param_with_an_invalid_value_is_rejected_in_italian(
+    client: TestClient, con: duckdb.DuckDBPyConnection
+) -> None:
+    """An `asset_class` that fails the catalog's own pattern is rejected with a redirect and
+    an Italian message — never a 500 (ADR-0014: params are validated against the kind's
+    declared schema)."""
+    rule_id = _FREEZE_FORM["rule_id"]
+    strategy_id = _one(con, "SELECT id FROM strategy LIMIT 1")
+    before_count = _one(con, "SELECT count(*) FROM strategy_version")
+
+    response = client.post(
+        f"/strategies/{strategy_id}",
+        data={
+            **_FREEZE_FORM,
+            f"rule_param_{rule_id}_asset_class": "not a valid class!",
+            "change_note": "Tentativo con un asset_class non valido.",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = unquote(response.headers["location"])
+    assert "error=" in location
+    assert "Parametro" in location
+    assert "non valido" in location
+
     after_count = _one(con, "SELECT count(*) FROM strategy_version")
     assert after_count == before_count
 

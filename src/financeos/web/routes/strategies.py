@@ -21,10 +21,11 @@ nothing here claims to perform it.
   either level, plus adding one new depth-1 leaf). It does not support restructuring a tree
   (moving a node, adding a child under an existing branch, or deleting a node) — RFC-0010 §352
   calls this screen "the fiddliest UI in V1", and reshaping is the fiddliest part of it.
-- The rule editor supports enable/disable, Priority, SuggestionClass and message on every
-  existing Rule, plus adding one new Rule from the real closed catalog (`ConditionRegistry`,
-  ADR-0014) with its own kind, params and priority. It does not support editing an existing
-  Rule's condition kind or params, or deleting a Rule.
+- The rule editor supports enable/disable, Priority, SuggestionClass, message and the
+  condition's own params on every existing Rule, plus adding one new Rule from the real
+  closed catalog (`ConditionRegistry`, ADR-0014) with its own kind, params and priority. It
+  does not support changing an existing Rule's condition *kind* (that path is "add a new
+  Rule from the catalog" instead), or deleting a Rule.
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ from pydantic import ValidationError
 
 from financeos.adapters.duckdb.queries.runs import latest_actual_run
 from financeos.adapters.duckdb.queries.strategies import (
+    RuleView,
     StrategyDetail,
     TargetNodeView,
     get_strategy_detail,
@@ -48,7 +50,16 @@ from financeos.adapters.duckdb.queries.strategies import (
 from financeos.adapters.system import SystemClock, UUIDv7IdGen
 from financeos.app.freeze_strategy import freeze_strategy
 from financeos.app.unit_of_work import DuckDBUnitOfWork
-from financeos.core.shared import Priority, RuleId, StrategyId, SuggestionClass, Weight
+from financeos.core.engines.rule_engine import REGISTRY
+from financeos.core.shared import (
+    Priority,
+    RuleId,
+    StrategyId,
+    SuggestionClass,
+    UnknownConditionKindError,
+    Weight,
+    canonical_decimal,
+)
 from financeos.core.strategy import (
     Horizon,
     LeafCondition,
@@ -229,13 +240,53 @@ def _decimal(raw: Any) -> Decimal:
     return Decimal(str(raw))
 
 
+def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
+    """Re-validate an existing Rule's edited params against the catalog before freezing.
+
+    Drives off `ConditionKindSpec.params_model` (ADR-0014) rather than a hand-copied field
+    list, exactly like `rule_catalog_kinds()` already does for the "add a new Rule" picklist.
+    A field left blank in the form falls back to the value already frozen on `view` — same
+    per-field-optional convention `_rebuild_node` uses for weight/tolerance — so the existing
+    test form (which sends no `rule_param_*` fields at all) still carries params forward
+    unchanged. The kind itself is never re-derived from the form: changing it is out of scope
+    (module docstring "Scope").
+    """
+    existing = dict(view.params)
+    try:
+        spec = REGISTRY.get(view.kind, view.kind_version)
+    except UnknownConditionKindError as exc:
+        raise ValueError(
+            f"La regola «{view.name}» usa un tipo di condizione non più nel catalogo."
+        ) from exc
+
+    raw: dict[str, str] = {}
+    for name in spec.params_model.model_fields:
+        posted = form.get(f"rule_param_{view.id}_{name}")
+        raw[name] = str(posted) if posted not in (None, "") else existing.get(name, "")
+
+    try:
+        validated = spec.params_model.model_validate(raw)
+    except ValidationError as exc:
+        detail = exc.errors()[0]
+        field = ".".join(str(part) for part in detail["loc"]) or "?"
+        raise ValueError(
+            f"Parametro «{field}» non valido per la regola «{view.name}»: {detail['msg']}."
+        ) from exc
+
+    params = {
+        name: canonical_decimal(value) if isinstance(value, Decimal) else str(value)
+        for name, value in validated.model_dump().items()
+    }
+    return LeafCondition(kind=view.kind, kind_version=view.kind_version, params=params)
+
+
 def _rebuild_rules(detail: StrategyDetail, form: Any, id_gen: UUIDv7IdGen) -> tuple[Rule, ...]:
     """Every existing Rule with its metadata edited in place, plus at most one new Rule.
 
-    A Rule's `id`, condition `kind`/`kind_version`/`params` are carried forward unchanged
-    (§ docstring "Scope"): only `enabled`, `priority`, `suggestion_class` and `message` are
-    editable on an existing Rule, keyed by its stable `RuleId` so a reordering in the form
-    cannot silently attach one Rule's edits to another.
+    A Rule's `id` and condition `kind`/`kind_version` are carried forward unchanged (§
+    docstring "Scope"): `enabled`, `priority`, `suggestion_class`, `message` and the
+    condition's own params are editable on an existing Rule, keyed by its stable `RuleId` so
+    a reordering in the form cannot silently attach one Rule's edits to another.
     """
     ids = form.getlist("rule_id")
     enabled = form.getlist("rule_enabled")
@@ -265,9 +316,7 @@ def _rebuild_rules(detail: StrategyDetail, form: Any, id_gen: UUIDv7IdGen) -> tu
                 priority=Priority(pr),
                 suggestion_class=SuggestionClass(sc),
                 message=msg,
-                condition=LeafCondition(
-                    kind=view.kind, kind_version=view.kind_version, params=dict(view.params)
-                ),
+                condition=_rebuild_condition(view, form),
             )
         )
 
