@@ -63,7 +63,7 @@ class RuleView:
     kind_version: int
     params: tuple[tuple[str, str], ...]
     param_fields: tuple[RuleParamFieldView, ...]
-    max_staleness_seconds: float | None
+    max_staleness: str | None
 
 
 @dataclass(frozen=True)
@@ -190,9 +190,13 @@ def _rule(data: dict[str, Any]) -> RuleView:
         kind_version=kind_version,
         params=tuple((str(k), str(v)) for k, v in params.items()),
         param_fields=_param_fields(kind, kind_version, params),
-        max_staleness_seconds=(
-            float(max_staleness_seconds)
-            if (max_staleness_seconds := condition.get("max_staleness_seconds")) is not None
+        # `LeafCondition.model_dump_json()` emits the field under its own name, "max_staleness",
+        # as an ISO 8601 duration string (e.g. "P2D") — carried verbatim, never converted to a
+        # float, since it round-trips byte-identical back through `LeafCondition`'s own
+        # `timedelta` parsing and this string can end up re-frozen and hashed into `finding_key`.
+        max_staleness=(
+            str(raw_max_staleness)
+            if (raw_max_staleness := condition.get("max_staleness")) is not None
             else None
         ),
     )

@@ -5,6 +5,7 @@ ADR-0027, ADR-0030). Built last, per RFC-0005 §8 / UX-0001 §9.3.
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -320,12 +321,17 @@ def _rule_condition_params(definition_json: str, rule_id: str) -> dict[str, str]
 def test_freeze_carries_an_untouched_rules_params_byte_identical(
     client: TestClient, con: duckdb.DuckDBPyConnection
 ) -> None:
-    """BLOCKER regression: `_rebuild_condition` must re-serialize only the params actually
-    posted for a Rule. `finding_key = sha256(rule_id ‖ scope_id ‖ canonical(condition.params))`
-    (RFC-0008 §4) hashes the raw stored string, so reformatting an untouched Rule's params on
-    every freeze — `"0.02"` -> `"0.02000000"` — would change its finding_key and silently
-    detach every recorded Decision from its finding."""
+    """BLOCKER regression (Opus review of 4c9f4d8): the real form posts *every* param of
+    *every* Rule — `strategy_detail.html` prefills each input with the stored string — so
+    "was this field posted" is never a usable signal for "was it edited". This form mirrors
+    exactly what a real browser sends: both rules' params are posted, the untouched Rule's
+    `threshold_weight` included verbatim ("0.02", not the canonical "0.02000000"), only
+    rule 1's `scope` actually changed. `finding_key = sha256(rule_id ‖ scope_id ‖
+    canonical(condition.params))` (RFC-0008 §4) hashes the raw stored string, so
+    reformatting the untouched Rule's params on this freeze would change its finding_key and
+    silently detach every recorded Decision from its finding."""
     strategy_id = _one(con, "SELECT id FROM strategy LIMIT 1")
+    edited_rule_id = _FREEZE_FORM["rule_id"]
     untouched_rule_id = _add_untouched_rule_with_a_non_canonical_param(con, strategy_id)
 
     before_version_id = _one(
@@ -337,21 +343,37 @@ def test_freeze_carries_an_untouched_rules_params_byte_identical(
     before_params = _rule_condition_params(before_definition, untouched_rule_id)
     assert before_params["threshold_weight"] == "0.02"
     scope_id = "portfolio:test"
-    before_key = sha256_hex(
-        untouched_rule_id, scope_id, canonical_json(before_params)
-    )
+    before_key = sha256_hex(untouched_rule_id, scope_id, canonical_json(before_params))
 
-    # edit only the OTHER rule's `scope` param; leave the untouched Rule alone entirely
+    # Every field of every Rule, exactly as `strategy_detail.html` renders it — a real POST,
+    # not the shorthand `_FREEZE_FORM` (which sends zero `rule_param_*` fields and would pass
+    # against 4c9f4d8 too, hiding the bug). Repeated field names (one value per Rule, in
+    # document order) are list values, matching how `request.form().getlist(...)` sees a real
+    # multi-Rule submission.
+    form_fields: dict[str, str | list[str]] = {
+        "target_key_0": "EQUITY_DEVELOPED",
+        "target_weight_0": "0.40000000",
+        "target_tol_kind_0": "ABSOLUTE",
+        "target_tol_band_0": "0.02000000",
+        "target_key_1": "BOND_GOV_EUR",
+        "target_weight_1": "0.60000000",
+        "target_tol_kind_1": "ABSOLUTE",
+        "target_tol_band_1": "0.05000000",
+        "rule_id": [edited_rule_id, untouched_rule_id],
+        "rule_enabled": ["true", "true"],
+        "rule_priority": ["HIGH", "MEDIUM"],
+        "rule_suggestion_class": ["CONSIDER_REBALANCE", "REVIEW_ALLOCATION"],
+        "rule_message": [
+            "messaggio invariato {asset_class_label_the_cap}",
+            "Residuo al {residual_pct}% sopra la soglia del {threshold_pct}%.",
+        ],
+        f"rule_param_{edited_rule_id}_asset_class": "EQUITY_DEVELOPED",
+        f"rule_param_{edited_rule_id}_scope": "bucket:22222222-2222-2222-2222-222222222222",
+        f"rule_param_{untouched_rule_id}_threshold_weight": "0.02",
+        "change_note": "Modifico solo la prima regola.",
+    }
     response = client.post(
-        f"/strategies/{strategy_id}",
-        data={
-            **_FREEZE_FORM,
-            f"rule_param_{_FREEZE_FORM['rule_id']}_scope": (
-                "bucket:22222222-2222-2222-2222-222222222222"
-            ),
-            "change_note": "Modifico solo la prima regola.",
-        },
-        follow_redirects=False,
+        f"/strategies/{strategy_id}", data=form_fields, follow_redirects=False
     )
     assert response.status_code == 303, response.text
 
@@ -368,6 +390,92 @@ def test_freeze_carries_an_untouched_rules_params_byte_identical(
     assert after_params["threshold_weight"] == "0.02"
     after_key = sha256_hex(untouched_rule_id, scope_id, canonical_json(after_params))
     assert after_key == before_key
+
+    # rule 1's own edit did take effect
+    edited_params = _rule_condition_params(after_definition, edited_rule_id)
+    assert edited_params["scope"] == "bucket:22222222-2222-2222-2222-222222222222"
+
+
+def test_freeze_carries_an_authored_max_staleness_override_through_an_edit(
+    client: TestClient, con: duckdb.DuckDBPyConnection
+) -> None:
+    """MAJOR regression (Opus review of 26bcdae/4c9f4d8): a Rule's authored per-leaf
+    `max_staleness` override (RFC-0006 §12) must survive a freeze that edits something else
+    on the same Rule — this route has no field for it, so it can never come from the form,
+    only carried forward from what was already frozen."""
+    strategy_id = _one(con, "SELECT id FROM strategy LIMIT 1")
+    rule_id = _FREEZE_FORM["rule_id"]
+
+    definition = StrategyDefinition(
+        name="Crescita di lungo periodo",
+        description=None,
+        objective="Preservare e accrescere il capitale su un orizzonte di venti anni.",
+        horizon=Horizon(years=20, target_date=None),
+        risk=RiskProfile(
+            level=RiskLevel.BALANCED,
+            principles=("preservare il potere d'acquisto senza fare market timing",),
+        ),
+        targets=TargetAllocation(
+            children=(
+                TargetNode(
+                    key="EQUITY_DEVELOPED",
+                    weight=Weight(value=Decimal("0.40")),
+                    tolerance=Tolerance(kind=ToleranceKind.ABSOLUTE, band=Decimal("0.02")),
+                    children=(),
+                ),
+                TargetNode(
+                    key="BOND_GOV_EUR",
+                    weight=Weight(value=Decimal("0.60")),
+                    tolerance=Tolerance(kind=ToleranceKind.ABSOLUTE, band=Decimal("0.05")),
+                    children=(),
+                ),
+            )
+        ),
+        rules=(
+            Rule(
+                id=RuleId(UUID(rule_id)),
+                name="Equity/Developed fuori tolleranza — Pensione",
+                enabled=True,
+                priority=Priority.HIGH,
+                suggestion_class=SuggestionClass.CONSIDER_REBALANCE,
+                message="messaggio invariato {asset_class_label_the_cap}",
+                condition=LeafCondition(
+                    kind="drift_outside_tolerance",
+                    kind_version=1,
+                    params={
+                        "asset_class": "EQUITY_DEVELOPED",
+                        "scope": "bucket:44940ba1-0bfd-5d7c-ba07-4d80aefdd508",
+                    },
+                    max_staleness=timedelta(days=2),
+                ),
+            ),
+        ),
+    )
+    uow = DuckDBUnitOfWork(con)
+    freeze_strategy(
+        uow,
+        UUIDv7IdGen(),
+        SystemClock(),
+        StrategyId(UUID(strategy_id)),
+        definition,
+        "Preparazione test: max_staleness autorizzato.",
+    )
+
+    response = client.post(
+        f"/strategies/{strategy_id}",
+        data={**_FREEZE_FORM, "change_note": "Modifica non correlata al max_staleness."},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    version_id = _one(
+        con, "SELECT current_version_id FROM strategy WHERE id = ?", [strategy_id]
+    )
+    definition_json = _one(
+        con, "SELECT definition FROM strategy_version WHERE id = ?", [version_id]
+    )
+    rule = next(r for r in json.loads(definition_json)["rules"] if r["id"] == rule_id)
+    assert rule["condition"]["max_staleness"] == "P2D"
 
 
 def test_editing_a_rule_param_with_a_blank_value_is_rejected_not_silently_ignored(

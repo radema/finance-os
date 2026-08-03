@@ -37,7 +37,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from financeos.adapters.duckdb.queries.runs import latest_actual_run
 from financeos.adapters.duckdb.queries.strategies import (
@@ -247,6 +247,16 @@ def _canonical_param(value: Any) -> str:
     return canonical_decimal(value) if isinstance(value, Decimal) else str(value)
 
 
+_MAX_STALENESS_ADAPTER: TypeAdapter[timedelta] = TypeAdapter(timedelta)
+
+
+def _parse_max_staleness(iso: str | None) -> timedelta | None:
+    """`RuleView.max_staleness` is the ISO 8601 duration string `LeafCondition` itself emits
+    (e.g. `"P2D"`) — parsed with the same Pydantic `timedelta` adapter that will re-emit it, so
+    the round trip through this route is byte-identical rather than a fresh reformatting."""
+    return None if iso is None else _MAX_STALENESS_ADAPTER.validate_python(iso)
+
+
 def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
     """Re-validate an existing Rule's edited params against the catalog before freezing.
 
@@ -256,16 +266,20 @@ def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
     docstring "Scope"). `max_staleness` is carried forward verbatim — this route has no field
     for it, so it is never something the form can edit.
 
-    Only a field the form actually posted is re-serialized through the catalog model and
-    `canonical_decimal`; every other field's frozen string is carried through byte-identical.
-    `finding_key = sha256(rule_id ‖ scope_id ‖ canonical(condition.params))` hashes that raw
-    string (RFC-0008 §4) — reformatting an untouched Rule's params on every freeze (e.g.
-    `"0.02"` -> `"0.02000000"`) would change its finding_key and silently detach every
-    recorded Decision from its finding, the exact bug class CLAUDE.md already flags as having
-    shipped once. A field the form posted — even as an empty string — is *not* a "no edit"
-    signal: it is sent into that kind's own validation as-is, which rejects it if (and only
-    if) the field's declared type has no legal empty value, rather than this route silently
-    keeping the old value while the change note implies an edit happened.
+    The real form always re-posts every field for every Rule (`strategy_detail.html` prefills
+    each input with the stored string), so "was this edited" cannot be "was it posted" — it has
+    to be "does the posted value differ from what's already frozen". Only a field whose posted
+    value actually differs from `existing` is re-serialized through the catalog model and
+    `canonical_decimal`; every other field's frozen string is carried through byte-identical,
+    unread by `model_dump`. `finding_key = sha256(rule_id ‖ scope_id ‖ canonical(condition.params))`
+    hashes that raw string (RFC-0008 §4) — reformatting an untouched field on every freeze (e.g.
+    `"0.02"` -> `"0.02000000"`) would change its finding_key and silently detach every recorded
+    Decision from its finding, the exact bug class CLAUDE.md already flags as having shipped
+    once. A field posted as an empty string still counts as "differs" whenever the frozen value
+    is non-empty, so a deliberate clear is *not* treated as "no edit": it is sent into that
+    kind's own validation as-is, which rejects it if (and only if) the field's declared type has
+    no legal empty value, rather than this route silently keeping the old value while the change
+    note implies an edit happened.
     """
     existing = dict(view.params)
     try:
@@ -278,11 +292,14 @@ def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
     edited: set[str] = set()
     raw: dict[str, str] = {}
     for name in spec.params_model.model_fields:
+        stored = existing.get(name, "")
         posted = form.get(f"rule_param_{view.id}_{name}")
         if posted is None:
-            raw[name] = existing.get(name, "")
-        else:
-            raw[name] = str(posted)
+            raw[name] = stored
+            continue
+        posted_str = str(posted)
+        raw[name] = posted_str
+        if posted_str != stored:
             edited.add(name)
 
     try:
@@ -296,18 +313,18 @@ def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
 
     dumped = validated.model_dump()
     params = {
-        name: _canonical_param(dumped[name])
-        if name in edited
-        else existing.get(name, str(dumped[name]))
+        name: (
+            _canonical_param(dumped[name])
+            if name in edited or name not in existing
+            else existing[name]
+        )
         for name in spec.params_model.model_fields
     }
-    max_staleness = (
-        timedelta(seconds=view.max_staleness_seconds)
-        if view.max_staleness_seconds is not None
-        else None
-    )
     return LeafCondition(
-        kind=view.kind, kind_version=view.kind_version, params=params, max_staleness=max_staleness
+        kind=view.kind,
+        kind_version=view.kind_version,
+        params=params,
+        max_staleness=_parse_max_staleness(view.max_staleness),
     )
 
 
