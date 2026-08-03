@@ -224,3 +224,132 @@ No further decision needed on either; both close here.
 `RuleScopeGate(kind=BUCKET, bucket_id=None)` "any Bucket" case is implemented and tested
 (`TestRuleScopeGateModel`) but has no authored example yet. The §8.5 fixture task should confirm
 which authoring shape it wants for the "7 generic rules" row before writing it.
+
+---
+
+## 7. Opus review findings (fix-then-ship), and their resolutions
+
+An independent review of `43e36b9..e619957` found 2 blockers, 3 should-fix items and 2 nits, all
+inside the mechanism this ADR builds (none touched `web/routes/strategies.py`,
+`adapters/duckdb/queries/strategies.py`, `web/templates/strategy_detail.html`, or
+`tests/test_web_strategies.py` — a different lane's boundary). Recorded here because each one
+changes what §4/§5 actually guarantee, not only how they are implemented.
+
+### 7.1 BLOCKER 1 — heterogeneous governance only protected `drift`, not every target-tree consumer
+
+§4/§5 as first shipped set `unavailable["drift"]` under mixed governance and left `targets_facts`
+populated with the arbitrary candidate Strategy's real values. `untargeted_allocation` declares
+`required_facts = {targets, allocation}`, so it never consulted `drift`'s unavailability at all —
+it read the candidate's target tree directly and could `FIRE` on it, which is exactly the average
+RFC-0007 §5 forbids, just laundered through a second fact family rather than caught.
+
+**Fix.** Under mixed governance neither `drift` nor `targets` is computed with real values at all —
+both are left empty (`{}`), and *both* are marked `unavailable = HETEROGENEOUS_STRATEGIES`
+(`_TARGET_TREE_FACT_FAMILIES = (rule_engine.FACT_DRIFT, rule_engine.FACT_TARGETS)`, referencing the
+catalog's own constants rather than re-typed literals). Emptying the underlying mapping — not only
+flagging `unavailable` — is what also protects `allocation_absent`, which bypasses the
+`required_facts` precheck entirely and reads a per-class `drift:{asset_class}` fact directly
+(`rule_engine.py`): with `drift = {}`, that per-class read finds nothing and the kind's own
+`SkipSignal(missing_fact)` path takes over, so it can never fire on the candidate's numbers either,
+regardless of which gate mechanism a given kind uses.
+
+Verified by `TestHeterogeneousGovernanceBlocksEveryTargetTreeConsumer` — an `untargeted_allocation`
+rule that would fire at ~80% severity if the candidate's tree were ever consulted now reads
+`SKIPPED(heterogeneous_strategies)`.
+
+### 7.2 BLOCKER 2 — the scope inference only read `params["scope"]`, missing `params["bucket"]`
+
+`bucket_below_target_value` names its Bucket under the params key `"bucket"`
+(`BucketBelowTargetValueParams`), not `"scope"`. The original `_condition_scope_ref` read only
+`params.get("scope")`, so a `bucket_below_target_value` rule was always "unconstrained" and, once
+the Portfolio-scope call existed, ran there too — comparing the whole Portfolio's value against one
+Bucket's authored target.
+
+**Fix.** `_named_scope_value` scans every value in `condition.params`, not a hardcoded set of key
+names, and returns the one that is shaped like a `Scope.ref` (`"kind:<uuid>"`). Every scope-naming
+param the catalog authors — under `"scope"` for four kinds, under `"bucket"` for
+`bucket_below_target_value` — is written in exactly that form, so this covers both without special
+-casing either, and covers a future kind using a third key name under the same convention for free.
+
+Verified by `TestBucketNamedScopeParamGating`: a `bucket_below_target_value` rule now applies at its
+own Bucket's call and is absent from the Portfolio-scope call's firings entirely.
+
+### 7.3 SHOULD-FIX 3 — `drift_history`'s tiebreak could land on the wrong governing version
+
+§5.3's dedupe picks the Snapshot with the latest `recorded_at` per `(portfolio_id, as_of)`. Under
+homogeneous governance every Snapshot at that `as_of` is pinned to the same `strategy_version_id`
+(every call resolves it from the same shared Strategy), so any tiebreak is safe and the "identical"
+claim in §5.3's earlier text holds for the `allocation` payload — but under **mixed** governance the
+Portfolio-scope call's candidate is an arbitrary choice among disagreeing Strategies, and since it
+evaluates last it always wins the tiebreak. The chart would then show `target`/`drift` computed
+against a tree that does not govern anything.
+
+**Fix.** `drift_history` now also computes `count(DISTINCT run.strategy_version_id) OVER (PARTITION
+BY snap.as_of)` and drops any `as_of` where that count is `> 1` — no point at all for a date whose
+Snapshots disagree on their governing version, rather than reporting one Strategy's tree as the
+Portfolio's own. This is the same "`SKIPPED`, never an average" posture RFC-0007 §5 and CLAUDE.md
+both state, applied to a read-side series instead of a rule outcome. §5.3's "identical" claim above
+is now qualified: true under homogeneous governance, which is the only case this dedupe alone
+resolves — mixed governance needed this second, independent fix.
+
+Verified by `TestDriftHistoryExcludesHeterogeneousAsOf`: a 2-Bucket Portfolio with disagreeing
+Strategies produces zero `EQUITY_DEVELOPED` drift points for their shared `as_of`.
+
+### 7.4 SHOULD-FIX 4 — a malformed or foreign scope reference silently widened or vanished
+
+`_condition_scope_ref` (as first shipped) returned `None` whenever `params["scope"]` failed to
+parse, and `None` was read the same way as "no scope-naming param at all" — falling through to
+"unconstrained". Two failure modes hid behind that one `None`: an authored string that is not a
+valid `Scope.ref` at all (malformed), and one that parses but names a Bucket outside the Portfolio
+being evaluated (foreign, e.g. moved or deleted). Both left the rule invisible on the run health
+panel — the first by silently widening what it saw, the second because a name that never matches
+any call's scope means it never appears in any run's firings, ever, with nothing in `SKIPPED`/`ERROR`
+to say so. ADR-0016 is explicit that this is exactly the failure mode the four-outcome model exists
+to prevent.
+
+**Fix.** `_placement_error` checks, before `_applies_to_this_call` is ever consulted, whether a
+rule's scope-shaped param is unparseable or names a Bucket/Portfolio foreign to the one being
+evaluated. Either case excludes the rule from every call **and** synthesizes an `Outcome.ERROR`
+`RuleFiring` (`_placement_error_firing`, built in the app layer with the same
+`RuleFiring`/`EvaluationTrace` shape `rule_engine._errored` uses for an evaluator defect), so it
+still lands in `materialize`'s output and renders on the run health panel like any other `ERROR`.
+
+Verified by `TestUnplaceableConditionScopeSurfacesAsError` (both the malformed and the foreign-Bucket
+case) and `TestRunOutcomeCountsCoalesce::test_placement_error_run_counts_as_error_not_skipped`.
+
+### 7.5 SHOULD-FIX 5 — `unassigned_residual_above` had no scope-naming param, so it ran everywhere
+
+ADR-0029 removed `scope` from `unassigned_residual_above`'s params because the question "relative to
+which Bucket" was never meaningful — the kind is portfolio-scoped by nature. But with no scope
+param to infer from and no `scope_gate` authored, the rule fell through `_applies_to_this_call` to
+"unconstrained": it ran once per Bucket *and* once at Portfolio scope, producing N+1 findings for
+what the corpus describes as one Portfolio-wide fact, each Bucket-scope one under a *different*
+`finding_key` (it hashes `scope_id`) that no existing dismissal covers.
+
+**Corpus check, per the review's own instruction not to invent this:** ADR-0029 states plainly that
+`unassigned_residual_above.threshold_weight` "is relative to total portfolio value. The rule is
+portfolio-scoped by nature" — and W2-rule-scope-partition.md §1's own count independently forces the
+same conclusion, listing `unassigned_residual_above · portfolio` as one of exactly the three
+portfolio-scope rules the §8.5 fixture partition requires. The corpus settles this: Portfolio scope
+only. Not a product-definition question left open.
+
+**Fix.** `_default_scope_gate` derives a `RuleScopeGate(kind=PORTFOLIO)` default for any rule whose
+kind's *only* required fact is one RFC-0006 §4 itself documents as portfolio-scoped by nature
+(`_PORTFOLIO_SCOPED_FACT_FAMILIES = {rule_engine.FACT_RESIDUAL}` today) — derived from the registry's
+declared `required_facts`, not the kind's name, so a future kind sharing the same fact family gets
+the same default with no second edit here. Consulted only when neither an explicit `scope_gate` nor
+a condition-level scope reference exists, so it changes nothing for any kind that already names its
+own scope.
+
+Verified by `TestUnassignedResidualAboveDefaultsToPortfolioScope` and
+`TestRunOutcomeCountsCoalesce::test_zero_alert_run_reads_as_all_zero_counts_not_a_crash` (the
+Bucket-scope run this default now correctly excludes the rule from).
+
+### 7.6 Nits
+
+- The stale comment naming `allocation_absent` among the kinds gated by `unavailable["drift"]` — it
+  was never gated by the family precheck at all (§7.1) — is rewritten to describe the real bypass.
+- `run_outcome_counts` had zero tests despite the `coalesce(count_if(...), 0)` fix landing two
+  commits earlier; `TestRunOutcomeCountsCoalesce` now covers both the zero-alert-run case and the
+  `§4.2` condition-level-inference path (via the placement-error scenario, §7.4), so a regression in
+  either is caught here rather than only by a downstream web test happening to exercise it.

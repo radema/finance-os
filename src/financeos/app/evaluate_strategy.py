@@ -13,12 +13,16 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import date
 from decimal import Decimal
+from typing import Final
 from uuid import UUID
 
 from financeos.app.unit_of_work import UnitOfWork
 from financeos.core.decision import (
     UNASSIGNED,
+    ConditionRef,
     EvaluationRun,
+    EvaluationTrace,
+    RuleFiring,
     Snapshot,
     SnapshotBucketLine,
     SnapshotClassLine,
@@ -42,12 +46,14 @@ from financeos.core.engines import (
 from financeos.core.market import PriceView
 from financeos.core.portfolio import Asset, Holding, ResidualComputation
 from financeos.core.shared import (
+    AssetClass,
     AssetId,
     Bound,
     BucketId,
     Currency,
     EvaluationRunId,
     Instant,
+    Outcome,
     PortfolioId,
     RunMode,
     Scope,
@@ -59,8 +65,23 @@ from financeos.core.shared import (
     canonical_json,
     sha256_hex,
 )
-from financeos.core.strategy import Rule
+from financeos.core.shared.errors import UnknownConditionKindError
+from financeos.core.strategy import DriftLine, LeafTarget, Rule, RuleScopeGate
 from financeos.ports import Clock, IdGen
+
+#: The two fact families whose value is a function of the governing `StrategyVersion`'s own
+#: target tree (`strategy_engine.compute_drift`/`compute_targets`, both take `sv.targets`).
+#: Under mixed governance (RFC-0007 §5) neither may carry one arbitrarily-chosen candidate
+#: Strategy's numbers — referenced from `rule_engine`'s own constants, not re-typed literals,
+#: so the two lists cannot silently drift apart.
+_TARGET_TREE_FACT_FAMILIES: Final = (rule_engine.FACT_DRIFT, rule_engine.FACT_TARGETS)
+
+#: Fact families RFC-0006 §4 itself documents as "portfolio-scoped by nature" — today only
+#: `residual` (ADR-0029: `unassigned_residual_above` carries no `scope` param because the
+#: question was never meaningful per-Bucket). A rule whose *only* required facts fall in this
+#: set, and which names no scope any other way, defaults to the Portfolio-scope call rather
+#: than every call — the corpus's own reason for removing the param in the first place.
+_PORTFOLIO_SCOPED_FACT_FAMILIES: Final = frozenset({rule_engine.FACT_RESIDUAL})
 
 
 def evaluate_strategy(
@@ -145,8 +166,20 @@ def evaluate_strategy(
     allocation = compute_allocation(
         holdings, assets, prices, scope=scope, as_of=as_of, currency=currency
     )
-    comp = compute_drift(allocation, sv.targets, strategy_version_id=sv.id)
-    targets_facts = compute_targets(sv.targets, strategy_version_id=sv.id)
+    # BLOCKER 1 (review): under mixed governance neither fact the candidate `sv.targets` feeds
+    # may be computed at all — not merely flagged `unavailable` afterward, which a kind that
+    # bypasses the `required_facts` precheck (`allocation_absent`'s own per-class `drift:
+    # {asset_class}` read, `rule_engine.py:1010-1013`) would never see. Leaving both empty is
+    # what makes every consumer fail honestly on its own terms, whichever gate it uses.
+    if heterogeneous_governance:
+        drift_lines: Mapping[AssetClass, Bound[DriftLine]] = {}
+        targets_facts: Mapping[AssetClass, Bound[LeafTarget]] = {}
+        drift_unavailable: SkipReason | None = SkipReason.HETEROGENEOUS_STRATEGIES
+    else:
+        comp = compute_drift(allocation, sv.targets, strategy_version_id=sv.id)
+        drift_lines = comp.lines
+        targets_facts = compute_targets(sv.targets, strategy_version_id=sv.id)
+        drift_unavailable = comp.unavailable
 
     # `residual` (ADR-0029) is portfolio-scoped by nature — `unassigned_residual_above` has no
     # `scope` param — so it always folds the Portfolio-wide apportionment chain, never the
@@ -182,18 +215,21 @@ def evaluate_strategy(
     unavailable: dict[str, SkipReason] = {}
     if heterogeneous_governance:
         # RFC-0007 §5: reuses the Rule Engine's own SKIPPED machinery rather than an average
-        # or a special-cased error path — every rule declaring `drift` in its `required_facts`
-        # (drift_outside_tolerance, allocation_absent) is skipped with this reason.
-        unavailable["drift"] = SkipReason.HETEROGENEOUS_STRATEGIES
-    elif comp.unavailable is not None:
-        unavailable["drift"] = comp.unavailable
+        # or a special-cased error path. Both target-tree-derived families are marked, not
+        # just `drift` — `untargeted_allocation` declares `targets` in its own
+        # `required_facts` and would otherwise evaluate against the candidate's tree instead
+        # of being gated at all.
+        for family in _TARGET_TREE_FACT_FAMILIES:
+            unavailable[family] = SkipReason.HETEROGENEOUS_STRATEGIES
+    elif drift_unavailable is not None:
+        unavailable[rule_engine.FACT_DRIFT] = drift_unavailable
     if residual_comp.unavailable is not None:
-        unavailable["residual"] = residual_comp.unavailable
+        unavailable[rule_engine.FACT_RESIDUAL] = residual_comp.unavailable
 
     facts = FactSet(
         as_of=as_of,
         scope=scope,
-        drift=comp.lines,
+        drift=drift_lines,
         allocation=allocation_facts,
         targets=targets_facts,
         residual=residual,
@@ -221,8 +257,21 @@ def evaluate_strategy(
     # ADR-L06: `sv.rules` mixes rules meant for every governed Bucket call, rules meant only
     # for the Portfolio-scope call, and rules named to one specific Bucket. The engine takes
     # no scope (C2, RFC-0006 §3.1) — the application layer subsets the rules it hands over.
-    rules = tuple(rule for rule in sv.rules if _applies_to_this_call(rule, scope))
-    firings = evaluate(rules, facts)
+    # A rule whose own scope reference is malformed or names a Bucket/Portfolio foreign to
+    # this one (review SHOULD-FIX 4) is excluded from every call and surfaced as a synthetic
+    # `ERROR` firing instead of silently vanishing (ADR-0016).
+    known_bucket_ids = frozenset(uow.buckets.for_portfolio(portfolio_id))
+    applicable_rules: list[Rule] = []
+    placement_error_firings: list[RuleFiring] = []
+    for rule in sv.rules:
+        error = _placement_error(rule, portfolio_id=portfolio_id, known_bucket_ids=known_bucket_ids)
+        if error is not None:
+            placement_error_firings.append(_placement_error_firing(rule, error))
+            continue
+        if _applies_to_this_call(rule, scope):
+            applicable_rules.append(rule)
+
+    firings = evaluate(tuple(applicable_rules), facts) + tuple(placement_error_firings)
     result = materialize(firings, sv, run, next_id=id_gen, recorded_at=now)
     snapshot = _build_snapshot(
         uow,
@@ -242,20 +291,26 @@ def evaluate_strategy(
     return result
 
 
-def _condition_scope_ref(rule: Rule) -> Scope | None:
-    """The `Scope` a rule's own `condition.params["scope"]` names, if present and parseable.
+def _named_scope_value(rule: Rule) -> str | None:
+    """The one scope-shaped string among `rule.condition.params`'s values, if there is one.
 
-    Four condition kinds carry a `scope` param (`drift_outside_tolerance`,
-    `untargeted_allocation`, `allocation_absent`, `over_apportioned`), but RFC-0006 §3.1 never
-    compares it against the facts' actual scope — it is read only as a message binding
-    (W2-rule-scope-partition.md §2). ADR-L06 §4.2 promotes it to also being the rule's default
-    applicability gate: a rule authored against one Bucket's own ref, e.g.
-    `drift_outside_tolerance`'s ``"bucket:44940ba1-..."``, applies only to that Bucket's call,
-    never to a Portfolio-scope call evaluated alongside it.
+    Every condition kind that names a Bucket or Scope writes it in `Scope.ref` form
+    (``"bucket:<uuid>"`` / ``"portfolio:<uuid>"``) — `drift_outside_tolerance`,
+    `untargeted_allocation`, `allocation_absent` and `over_apportioned` under the params key
+    `"scope"`; `bucket_below_target_value` under the key `"bucket"`
+    (`rule_engine.py`'s `BucketBelowTargetValueParams`, review BLOCKER 2). Scanning every
+    *value* rather than a hardcoded set of key names is what makes this cover both without
+    special-casing either, and covers a future kind using a third key name under the same
+    `Scope.ref` convention for free.
     """
-    raw = rule.condition.params.get("scope")
-    if raw is None:
-        return None
+    for value in rule.condition.params.values():
+        if ":" in value:
+            return value
+    return None
+
+
+def _parse_scope_ref(raw: str) -> Scope | None:
+    """`raw` parsed as a canonical `Scope` ref, or `None` if it is not one."""
     kind_str, sep, id_str = raw.partition(":")
     if not sep:
         return None
@@ -265,19 +320,99 @@ def _condition_scope_ref(rule: Rule) -> Scope | None:
         return None
 
 
+def _placement_error(
+    rule: Rule, *, portfolio_id: PortfolioId, known_bucket_ids: frozenset[BucketId]
+) -> str | None:
+    """Why `rule` can never be placed in *any* call of this Portfolio's evaluation, or `None`.
+
+    Two authoring defects share this path (review SHOULD-FIX 4): a scope-shaped param that
+    fails to parse (malformed — previously fell through to "unconstrained", silently widening
+    what the rule sees instead of narrowing it), and one that parses but names a Bucket or
+    Portfolio foreign to this one (deleted or moved — previously made the rule vanish from
+    every run with no `SKIPPED`/`ERROR` row). ADR-0016: an unplaceable rule must show up on the
+    run-health panel, not disappear.
+
+    An explicit `scope_gate` is never a defect, whatever it names — this only inspects the
+    condition-level inference `_applies_to_this_call` falls back to.
+    """
+    if rule.scope_gate is not None:
+        return None
+    raw = _named_scope_value(rule)
+    if raw is None:
+        return None
+    parsed = _parse_scope_ref(raw)
+    if parsed is None:
+        return f"condition.params names an unparseable scope reference: {raw!r}"
+    if parsed.kind is ScopeKind.PORTFOLIO and PortfolioId(parsed.id) != portfolio_id:
+        return f"condition.params names a different Portfolio ({parsed.id})"
+    if parsed.kind is ScopeKind.BUCKET and BucketId(parsed.id) not in known_bucket_ids:
+        return f"condition.params names a Bucket not governed by this Portfolio ({parsed.id})"
+    return None
+
+
+def _placement_error_firing(rule: Rule, message: str) -> RuleFiring:
+    """A synthetic `ERROR` firing for a rule this call could never place (ADR-0016).
+
+    Built here in the app layer — `rule_engine.evaluate` never sees a rule excluded before it
+    is called — with the same `RuleFiring`/`EvaluationTrace` shape `rule_engine._errored`
+    builds for an evaluator defect, so it renders identically on the run health panel.
+    """
+    reference = ConditionRef(
+        kind=rule.condition.kind,
+        kind_version=rule.condition.kind_version,
+        params=dict(rule.condition.params),
+    )
+    return RuleFiring(
+        rule_id=rule.id,
+        priority=rule.priority,
+        outcome=Outcome.ERROR,
+        error=message,
+        trace=EvaluationTrace(condition=reference, outcome=Outcome.ERROR, error=message),
+    )
+
+
+def _default_scope_gate(rule: Rule) -> RuleScopeGate | None:
+    """The Portfolio-scope default a rule's condition *kind* carries by construction, if any.
+
+    `unassigned_residual_above`'s sole required fact is `residual`, which RFC-0006 §4 itself
+    documents as portfolio-scoped by nature — ADR-0029 removed `scope` from its params for
+    exactly this reason, so there is no per-call authored intent to read (review SHOULD-FIX 5).
+    Derived from the registry's declared `required_facts` against the small, documented set of
+    portfolio-scoped-by-nature families, rather than the kind's name, so a future kind sharing
+    the same fact family gets the same default with no second edit here.
+    """
+    try:
+        spec = rule_engine.REGISTRY.get(rule.condition.kind, rule.condition.kind_version)
+    except UnknownConditionKindError:
+        return None
+    if spec.required_facts and spec.required_facts <= _PORTFOLIO_SCOPED_FACT_FAMILIES:
+        return RuleScopeGate(kind=ScopeKind.PORTFOLIO)
+    return None
+
+
 def _applies_to_this_call(rule: Rule, scope: Scope) -> bool:
     """ADR-L06: whether `rule` is meant to evaluate in this `scope`'s call.
 
-    An explicit `scope_gate` wins (§4.1). Otherwise a parseable `condition.params["scope"]`
-    narrows the rule to that exact scope (§4.2). With neither, the rule is unconstrained — it
-    applies to whichever call it is given, preserving every rule's behaviour from before
-    ADR-L06 (`unassigned_residual_above`, which authors no `scope` param at all — ADR-0029).
+    An explicit `scope_gate` wins (§4.1). Otherwise a parseable scope-shaped value among
+    `condition.params` narrows the rule to that exact scope (§4.2, review BLOCKER 2). Absent
+    both, a kind whose required facts are portfolio-scoped by nature defaults to the
+    Portfolio call (§4.5, ADR-0029, review SHOULD-FIX 5). With none of the three, the rule is
+    unconstrained — it applies to whichever call it is given, preserving every rule's
+    behaviour from before ADR-L06.
+
+    Callers must run `_placement_error` first: a rule with a malformed or foreign scope
+    reference is excluded from every call before this function is ever asked about it.
     """
     if rule.scope_gate is not None:
         return rule.scope_gate.applies_to(scope)
-    condition_scope = _condition_scope_ref(rule)
-    if condition_scope is not None:
-        return condition_scope == scope
+    raw = _named_scope_value(rule)
+    if raw is not None:
+        condition_scope = _parse_scope_ref(raw)
+        if condition_scope is not None:
+            return condition_scope == scope
+    default_gate = _default_scope_gate(rule)
+    if default_gate is not None:
+        return default_gate.applies_to(scope)
     return True
 
 
