@@ -396,6 +396,139 @@ def test_freeze_carries_an_untouched_rules_params_byte_identical(
     assert edited_params["scope"] == "bucket:22222222-2222-2222-2222-222222222222"
 
 
+def test_freeze_edits_one_param_while_a_non_canonical_sibling_param_stays_untouched(
+    client: TestClient, con: duckdb.DuckDBPyConnection
+) -> None:
+    """TEST GAP + SHOULD-FIX regression (third Opus review of 42dc1d3): the earlier tests
+    only ever left a *different* Rule's non-canonical param byte-identical to what was
+    posted. Here `bucket` is genuinely edited while the sibling `target_amount` — a
+    non-canonical `Decimal` on the *same* Rule, stored `"1000"` rather than the
+    `MoneyAmount`-quantized `"1000.0000"` — is re-posted as `"1000.00"`: a different byte
+    string, same number. A raw-string comparison would call that "edited" and reformat it;
+    comparing canonical forms must not. It must come out `"1000"`, byte-identical to what was
+    frozen, and the Rule's finding_key-relevant params must change only in the `bucket` slot."""
+    strategy_id = _one(con, "SELECT id FROM strategy LIMIT 1")
+    rule_id = uuid4()
+
+    definition = StrategyDefinition(
+        name="Crescita di lungo periodo",
+        description=None,
+        objective="Preservare e accrescere il capitale su un orizzonte di venti anni.",
+        horizon=Horizon(years=20, target_date=None),
+        risk=RiskProfile(
+            level=RiskLevel.BALANCED,
+            principles=("preservare il potere d'acquisto senza fare market timing",),
+        ),
+        targets=TargetAllocation(
+            children=(
+                TargetNode(
+                    key="EQUITY_DEVELOPED",
+                    weight=Weight(value=Decimal("0.40")),
+                    tolerance=Tolerance(kind=ToleranceKind.ABSOLUTE, band=Decimal("0.02")),
+                    children=(),
+                ),
+                TargetNode(
+                    key="BOND_GOV_EUR",
+                    weight=Weight(value=Decimal("0.60")),
+                    tolerance=Tolerance(kind=ToleranceKind.ABSOLUTE, band=Decimal("0.05")),
+                    children=(),
+                ),
+            )
+        ),
+        rules=(
+            Rule(
+                id=RuleId(rule_id),
+                name="Bucket sotto target",
+                enabled=True,
+                priority=Priority.MEDIUM,
+                suggestion_class=SuggestionClass.REVIEW_BUCKET_ASSIGNMENT,
+                message=(
+                    "Il bucket {bucket} è sotto il target di {target_amount} {target_currency}."
+                ),
+                condition=LeafCondition(
+                    kind="bucket_below_target_value",
+                    kind_version=1,
+                    params={
+                        "bucket": "bucket:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        "target_amount": "1000",  # deliberately non-canonical (MONEY_SCALE=4)
+                        "target_currency": "EUR",
+                    },
+                ),
+            ),
+        ),
+    )
+    uow = DuckDBUnitOfWork(con)
+    freeze_strategy(
+        uow,
+        UUIDv7IdGen(),
+        SystemClock(),
+        StrategyId(UUID(strategy_id)),
+        definition,
+        "Preparazione test: regola con un parametro decimale non canonico.",
+    )
+
+    before_version_id = _one(
+        con, "SELECT current_version_id FROM strategy WHERE id = ?", [strategy_id]
+    )
+    before_definition = _one(
+        con, "SELECT definition FROM strategy_version WHERE id = ?", [before_version_id]
+    )
+    before_params = _rule_condition_params(before_definition, str(rule_id))
+    assert before_params["target_amount"] == "1000"
+
+    response = client.post(
+        f"/strategies/{strategy_id}",
+        data={
+            "target_key_0": "EQUITY_DEVELOPED",
+            "target_weight_0": "0.40000000",
+            "target_tol_kind_0": "ABSOLUTE",
+            "target_tol_band_0": "0.02000000",
+            "target_key_1": "BOND_GOV_EUR",
+            "target_weight_1": "0.60000000",
+            "target_tol_kind_1": "ABSOLUTE",
+            "target_tol_band_1": "0.05000000",
+            "rule_id": str(rule_id),
+            "rule_enabled": "true",
+            "rule_priority": "MEDIUM",
+            "rule_suggestion_class": "REVIEW_BUCKET_ASSIGNMENT",
+            "rule_message": (
+                "Il bucket {bucket} è sotto il target di {target_amount} {target_currency}."
+            ),
+            f"rule_param_{rule_id}_bucket": "bucket:bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            # retyped differently, canonically identical — must not count as an edit
+            f"rule_param_{rule_id}_target_amount": "1000.00",
+            f"rule_param_{rule_id}_target_currency": "EUR",
+            "change_note": "Riassegno il bucket target; l'importo resta invariato.",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    after_version_id = _one(
+        con, "SELECT current_version_id FROM strategy WHERE id = ?", [strategy_id]
+    )
+    assert after_version_id != before_version_id
+    after_definition = _one(
+        con, "SELECT definition FROM strategy_version WHERE id = ?", [after_version_id]
+    )
+    after_params = _rule_condition_params(after_definition, str(rule_id))
+
+    assert after_params["bucket"] == "bucket:bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+    assert after_params["target_amount"] == "1000"  # untouched: byte-identical, still non-canonical
+    assert after_params["target_currency"] == "EUR"
+
+    scope_id = "portfolio:test"
+    before_key = sha256_hex(str(rule_id), scope_id, canonical_json(before_params))
+    after_key = sha256_hex(str(rule_id), scope_id, canonical_json(after_params))
+    assert before_key != after_key  # bucket did change — this IS a real edit
+
+    # swapping in only the new bucket reproduces `after_params` exactly — proof the edit
+    # touched nothing but that one slot
+    only_bucket_changed = dict(before_params)
+    only_bucket_changed["bucket"] = after_params["bucket"]
+    assert only_bucket_changed == after_params
+
+
 def test_freeze_carries_an_authored_max_staleness_override_through_an_edit(
     client: TestClient, con: duckdb.DuckDBPyConnection
 ) -> None:

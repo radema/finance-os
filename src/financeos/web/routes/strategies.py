@@ -268,18 +268,22 @@ def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
 
     The real form always re-posts every field for every Rule (`strategy_detail.html` prefills
     each input with the stored string), so "was this edited" cannot be "was it posted" — it has
-    to be "does the posted value differ from what's already frozen". Only a field whose posted
-    value actually differs from `existing` is re-serialized through the catalog model and
-    `canonical_decimal`; every other field's frozen string is carried through byte-identical,
-    unread by `model_dump`. `finding_key = sha256(rule_id ‖ scope_id ‖ canonical(condition.params))`
-    hashes that raw string (RFC-0008 §4) — reformatting an untouched field on every freeze (e.g.
-    `"0.02"` -> `"0.02000000"`) would change its finding_key and silently detach every recorded
-    Decision from its finding, the exact bug class CLAUDE.md already flags as having shipped
-    once. A field posted as an empty string still counts as "differs" whenever the frozen value
-    is non-empty, so a deliberate clear is *not* treated as "no edit": it is sent into that
-    kind's own validation as-is, which rejects it if (and only if) the field's declared type has
-    no legal empty value, rather than this route silently keeping the old value while the change
-    note implies an edit happened.
+    to be "does the posted value differ, *semantically*, from what's already frozen". A raw
+    string comparison is not enough either: retyping the same number differently (`"0.020"` or
+    `" 0.02"` over a stored `"0.02"`) is not an edit, but would look like one byte-for-byte. Both
+    sides are run through the catalog's own validator and compared as *canonical* values — only
+    a field whose canonical form actually changes is re-serialized through `canonical_decimal`;
+    every other field's frozen string is carried through byte-identical, never rewritten to its
+    own canonical form even when the two happen to agree. `finding_key =
+    sha256(rule_id ‖ scope_id ‖ canonical(condition.params))` hashes that raw string (RFC-0008
+    §4) — reformatting an untouched field on every freeze (e.g. `"0.02"` -> `"0.02000000"`)
+    would change its finding_key and silently detach every recorded Decision from its finding,
+    the exact bug class CLAUDE.md already flags as having shipped once. A field posted as an
+    empty string still counts as "differs" whenever the frozen value is non-empty, so a
+    deliberate clear is *not* treated as "no edit": it is sent into that kind's own validation
+    as-is, which rejects it if (and only if) the field's declared type has no legal empty value,
+    rather than this route silently keeping the old value while the change note implies an edit
+    happened.
     """
     existing = dict(view.params)
     try:
@@ -289,18 +293,16 @@ def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
             f"La regola «{view.name}» usa un tipo di condizione non più nel catalogo."
         ) from exc
 
-    edited: set[str] = set()
     raw: dict[str, str] = {}
+    posted_fields: set[str] = set()
     for name in spec.params_model.model_fields:
         stored = existing.get(name, "")
         posted = form.get(f"rule_param_{view.id}_{name}")
         if posted is None:
             raw[name] = stored
-            continue
-        posted_str = str(posted)
-        raw[name] = posted_str
-        if posted_str != stored:
-            edited.add(name)
+        else:
+            raw[name] = str(posted)
+            posted_fields.add(name)
 
     try:
         validated = spec.params_model.model_validate(raw)
@@ -311,7 +313,21 @@ def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
             f"Parametro «{field}» non valido per la regola «{view.name}»: {detail['msg']}."
         ) from exc
 
+    # The stored values, canonicalized the same way, so "edited" compares canonical forms —
+    # not raw bytes. Only fields present in `existing` can be validated this way; a field the
+    # frozen document never had is treated as edited regardless (there is no prior canonical
+    # form to compare against).
+    try:
+        stored_dumped = spec.params_model.model_validate(existing).model_dump()
+    except ValidationError:
+        stored_dumped = {}
+
     dumped = validated.model_dump()
+    edited = {
+        name
+        for name in posted_fields
+        if name not in stored_dumped or dumped[name] != stored_dumped[name]
+    }
     params = {
         name: (
             _canonical_param(dumped[name])
