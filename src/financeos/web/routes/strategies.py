@@ -30,6 +30,7 @@ nothing here claims to perform it.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
@@ -240,16 +241,31 @@ def _decimal(raw: Any) -> Decimal:
     return Decimal(str(raw))
 
 
+def _canonical_param(value: Any) -> str:
+    """A validated param value, canonicalized for storage — `Decimal` values go through the
+    same fixed-point rendering as everywhere else in the frozen document (RFC-0006 §10)."""
+    return canonical_decimal(value) if isinstance(value, Decimal) else str(value)
+
+
 def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
     """Re-validate an existing Rule's edited params against the catalog before freezing.
 
     Drives off `ConditionKindSpec.params_model` (ADR-0014) rather than a hand-copied field
     list, exactly like `rule_catalog_kinds()` already does for the "add a new Rule" picklist.
-    A field left blank in the form falls back to the value already frozen on `view` — same
-    per-field-optional convention `_rebuild_node` uses for weight/tolerance — so the existing
-    test form (which sends no `rule_param_*` fields at all) still carries params forward
-    unchanged. The kind itself is never re-derived from the form: changing it is out of scope
-    (module docstring "Scope").
+    The kind itself is never re-derived from the form: changing it is out of scope (module
+    docstring "Scope"). `max_staleness` is carried forward verbatim — this route has no field
+    for it, so it is never something the form can edit.
+
+    Only a field the form actually posted is re-serialized through the catalog model and
+    `canonical_decimal`; every other field's frozen string is carried through byte-identical.
+    `finding_key = sha256(rule_id ‖ scope_id ‖ canonical(condition.params))` hashes that raw
+    string (RFC-0008 §4) — reformatting an untouched Rule's params on every freeze (e.g.
+    `"0.02"` -> `"0.02000000"`) would change its finding_key and silently detach every
+    recorded Decision from its finding, the exact bug class CLAUDE.md already flags as having
+    shipped once. A field the form posted — even as an empty string — is *not* a "no edit"
+    signal: it is sent into that kind's own validation as-is, which rejects it if (and only
+    if) the field's declared type has no legal empty value, rather than this route silently
+    keeping the old value while the change note implies an edit happened.
     """
     existing = dict(view.params)
     try:
@@ -259,10 +275,15 @@ def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
             f"La regola «{view.name}» usa un tipo di condizione non più nel catalogo."
         ) from exc
 
+    edited: set[str] = set()
     raw: dict[str, str] = {}
     for name in spec.params_model.model_fields:
         posted = form.get(f"rule_param_{view.id}_{name}")
-        raw[name] = str(posted) if posted not in (None, "") else existing.get(name, "")
+        if posted is None:
+            raw[name] = existing.get(name, "")
+        else:
+            raw[name] = str(posted)
+            edited.add(name)
 
     try:
         validated = spec.params_model.model_validate(raw)
@@ -273,11 +294,21 @@ def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
             f"Parametro «{field}» non valido per la regola «{view.name}»: {detail['msg']}."
         ) from exc
 
+    dumped = validated.model_dump()
     params = {
-        name: canonical_decimal(value) if isinstance(value, Decimal) else str(value)
-        for name, value in validated.model_dump().items()
+        name: _canonical_param(dumped[name])
+        if name in edited
+        else existing.get(name, str(dumped[name]))
+        for name in spec.params_model.model_fields
     }
-    return LeafCondition(kind=view.kind, kind_version=view.kind_version, params=params)
+    max_staleness = (
+        timedelta(seconds=view.max_staleness_seconds)
+        if view.max_staleness_seconds is not None
+        else None
+    )
+    return LeafCondition(
+        kind=view.kind, kind_version=view.kind_version, params=params, max_staleness=max_staleness
+    )
 
 
 def _rebuild_rules(detail: StrategyDetail, form: Any, id_gen: UUIDv7IdGen) -> tuple[Rule, ...]:

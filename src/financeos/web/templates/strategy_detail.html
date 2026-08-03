@@ -193,7 +193,7 @@
       </div>
       {% for f in r.param_fields %}
       <div>
-        <label class="field__label">{{ f.name }}</label>
+        <label class="field__label">Parametro <span class="ident">{{ f.name }}</span></label>
         <input class="field" type="text" name="rule_param_{{ r.id }}_{{ f.name }}"
                value="{{ f.value }}" style="width: 16ch">
       </div>

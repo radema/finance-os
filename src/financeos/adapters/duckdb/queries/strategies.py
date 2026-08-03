@@ -63,6 +63,7 @@ class RuleView:
     kind_version: int
     params: tuple[tuple[str, str], ...]
     param_fields: tuple[RuleParamFieldView, ...]
+    max_staleness_seconds: float | None
 
 
 @dataclass(frozen=True)
@@ -189,6 +190,11 @@ def _rule(data: dict[str, Any]) -> RuleView:
         kind_version=kind_version,
         params=tuple((str(k), str(v)) for k, v in params.items()),
         param_fields=_param_fields(kind, kind_version, params),
+        max_staleness_seconds=(
+            float(max_staleness_seconds)
+            if (max_staleness_seconds := condition.get("max_staleness_seconds")) is not None
+            else None
+        ),
     )
 
 
