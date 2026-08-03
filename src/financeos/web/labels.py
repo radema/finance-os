@@ -70,9 +70,7 @@ _OUTCOME: Final[Mapping[str, TermEntry]] = {
 }
 
 #: `SkipReason` (L05 §5.6). Keys are the lowercase enum *values*, unlike every other closed
-#: enum here. `heterogeneous_strategies` is drafted ahead of the enum member it names (HANDOFF
-#: §4.3): adding the member is then a one-line change, and the completeness test catches the
-#: day it lands without this row.
+#: enum here.
 _SKIP_REASON: Final[Mapping[str, TermEntry]] = {
     "disabled": TermEntry(
         text="Regola disattivata",

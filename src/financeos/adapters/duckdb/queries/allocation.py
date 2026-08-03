@@ -43,7 +43,7 @@ import duckdb
 
 from financeos.adapters.duckdb.repositories.apportionment import DuckDBApportionmentRepository
 from financeos.adapters.duckdb.repositories.price import DuckDBPriceRepository
-from financeos.core.shared import AssetId, BucketId
+from financeos.core.shared import AssetId, BucketId, SkipReason
 from financeos.core.shared.numbers import MONEY_PRECISION, MONEY_SCALE, quantize
 
 #: The pseudo-row for capital assigned to no Bucket (ADR-0025, P26). Not a Bucket: it is the
@@ -51,9 +51,10 @@ from financeos.core.shared.numbers import MONEY_PRECISION, MONEY_SCALE, quantize
 #: deficit, i.e. more capital apportioned than is actually held.
 UNASSIGNED = "UNASSIGNED"
 
-#: Why targets could not be shown, when they could not. Both values are `SkipReason`-shaped
-#: strings that `CHROME_LABELS` already labels and glosses.
-TARGETS_HETEROGENEOUS = "heterogeneous_strategies"
+#: Why targets could not be shown, when they could not. `TARGETS_HETEROGENEOUS` is the
+#: `SkipReason` enum member itself (a `str` subtype), not a duplicated literal, so the two
+#: can never drift apart. `CHROME_LABELS` already labels and glosses both.
+TARGETS_HETEROGENEOUS = SkipReason.HETEROGENEOUS_STRATEGIES
 TARGETS_NESTED = "nested_targets"
 
 
