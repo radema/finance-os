@@ -1,0 +1,190 @@
+{#
+  ===========================================================================
+  VARIATION B — «Il quadro degli scostamenti»               (PROTOTYPE, W2 #12)
+  ===========================================================================
+  DEVIATION FIRST, as an instrument panel rather than a report. Two columns:
+  the left one is nothing but distance from the declared shape — the cased cane
+  per class, then one calibrated column of tolerance rails, then the severity
+  of the worst finding over time. The right one is the holdings, small, as
+  context for reading the left.
+
+  FIRST QUESTION: how far is everything from the shape that was declared?
+
+  THE ARGUMENT. Severity is dimensionless (RFC-0007 §3.1), which is the one
+  property that makes a *panel* possible at all: a 6,00pp breach on a 40%
+  ABSOLUTE target and a 0,42-band reading on a RELATIVE 0,25 tolerance can sit
+  in the same column and be compared by eye. No other quantity in this product
+  has that property, so this is the only variation that could be built this way
+  and the only one that uses the severity contract as a layout primitive.
+
+  WHAT IT DELIBERATELY REFUSES. No prose per finding. The observation sentence
+  lives one click away; here each row is designation · rail · severity, so
+  twelve rows fit where four records fit in variation A. The rail's aria-label
+  still carries the whole fact in words, because the gauge is an image.
+
+  THE COST, stated in the head block: a calibrated column invites reading the
+  longest bar as the most important thing, and RFC-0008 §3 says otherwise —
+  declared priority orders first, severity only inside it. The rows here are
+  still in mv_finding's order, and the column ordering is therefore NOT the
+  severity ranking it looks like. That mismatch is the honest reason to be
+  suspicious of this variation.
+
+  STRUCTURALLY: a two-column instrument panel. Charts lead; no record blocks.
+#}
+
+{# The skip notice spans both columns, above everything: a panel of deviations
+   is exactly the surface on which nine unmeasured rules disappear. #}
+{% with skipped_count = skip.skipped_count, error_count = skip.error_count,
+        total_count = skip.total_count, reasons = skip.reasons,
+        run_url = skip.run_url %}
+  {% include "partials/skip_notice.html" %}
+{% endwith %}
+
+<div class="proto-split" style="margin-top: var(--sp-5)">
+
+  {# ------------------------------------------------------------ left column #}
+  <div class="stack">
+
+    <section>
+      <h2 style="font-size: var(--fs-m); margin-bottom: var(--sp-2)">
+        La forma dichiarata e quella che c'è
+      </h2>
+      <p class="note" style="margin-bottom: var(--sp-3)">
+        Una sola scala, tutte le classi del Bucket Pensione. La cassa è il
+        target congelato, il nucleo è quanto c'è: un nucleo corto è un
+        ammanco, un nucleo che sporge oltre la tacca è un eccesso. Le
+        Azioni globali non hanno cassa perché per loro non è stata dichiarata
+        alcuna forma, e restano comunque nel denominatore (RFC-0007 §4.1).
+      </p>
+      {% with chart_id = 'proto-b-alloc', option = fixture.chart_allocation,
+              height = '300px', caption = fixture.chart_allocation_caption,
+              legend = fixture.chart_allocation_legend,
+              table_head = fixture.chart_allocation_head,
+              table_rows = fixture.chart_allocation_rows,
+              table_label = 'Allocazione contro la strategia congelata, come registrata' %}
+        {% include "partials/chart.html" %}
+      {% endwith %}
+    </section>
+
+    <section>
+      <h2 style="font-size: var(--fs-m); margin-bottom: var(--sp-2)">
+        Distanza in ampiezze di banda
+      </h2>
+      <p class="note" style="margin-bottom: var(--sp-4)">
+        La severità è adimensionale (RFC-0007 §3.1): per questo una sola scala
+        regge classi e tolleranze diverse, e queste righe sono confrontabili a
+        occhio. L'ordine resta quello della lista dei rilievi — priorità
+        dichiarata prima, severità dopo, nulli in fondo — e <em>non</em> è la
+        classifica delle severità che la colonna sembra suggerire.
+      </p>
+
+      <div class="proto-rails">
+        {% for f in findings %}
+        {% set rc = rail_cases[loop.index0] %}
+        <div class="proto-rail-row">
+          <span>
+            <span class="ident" style="display: block">{{ f.designation }}</span>
+            <span class="record__ref">{{ f.scope }} · {{ f.priority }}</span>
+          </span>
+
+          {# CONTRACT 1, unchanged. Twelve of these in a column is the whole
+             point of the variation; a forked geometry would break the
+             comparison it exists to make. #}
+          {% with signed_severity = rc.signed_severity,
+                  target_label = rc.target_label,
+                  aria_label = f.observation_it %}
+            {% include "partials/tolerance_rail.html" %}
+          {% endwith %}
+
+          <span class="severity" style="align-items: flex-end">
+            <span class="severity__value {{ rc.severity_class }}">{{ rc.severity_display }}</span>
+            {% with outcome = f.outcome, reason = None %}
+              {% include "partials/outcome_chip.html" %}
+            {% endwith %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <p class="note" style="margin-top: var(--sp-4)">
+        Una riga senza indice sulla scala è una condizione che non definisce
+        una banda: la severità manca come semantica, non come dato. Rilievi
+        correlati — un ammanco su una classe e un eccesso su un'altra —
+        compaiono come due righe, perché sono due letture dello stesso
+        squilibrio e sceglierne una sarebbe il sistema a decidere quale metà
+        guardare.
+      </p>
+    </section>
+
+    <section>
+      <h2 style="font-size: var(--fs-m); margin-bottom: var(--sp-2)">
+        Severità nel tempo, sul rilievo più severo
+      </h2>
+      {% with chart_id = 'proto-b-sev', option = fixture.chart_severity,
+              height = '190px', caption = fixture.chart_severity_caption,
+              legend = None,
+              table_head = fixture.chart_severity_head,
+              table_rows = fixture.chart_severity_rows,
+              table_label = 'Severità su dodici valutazioni, come registrata' %}
+        {% include "partials/chart.html" %}
+      {% endwith %}
+    </section>
+  </div>
+
+  {# ----------------------------------------------------------- right column #}
+  <div class="stack">
+    <article class="record">
+      <div class="record__margin" aria-hidden="true"></div>
+      <div class="record__body">
+        <div class="record__head">
+          <span class="record__designation record__designation--minor">Il capitale misurato</span>
+          <span class="record__ref push">{{ fixture.provenance.as_of }}</span>
+        </div>
+
+        {# Present, but small and on the right: in this variation the aggregate
+           is the denominator of the left column, not the subject of the page. #}
+        <p class="value" style="font-size: var(--fs-l)">{{ net_worth_it }}</p>
+        <p class="note">
+          Patrimonio netto come registrato dalla valutazione, non ricalcolato
+          in lettura. È qui perché le ampiezze di banda a sinistra si leggono
+          contro un capitale, non perché sia l'oggetto della pagina.
+        </p>
+
+        <table class="ledger" style="margin-top: var(--sp-4)">
+          <caption class="visually-hidden">Valore per Bucket, come registrato</caption>
+          <thead>
+            <tr><th>Bucket</th><th class="numeric">Valore</th><th class="numeric">Quota</th></tr>
+          </thead>
+          <tbody>
+            {% for b in buckets %}
+            <tr {% if b.residual %}class="ledger__residual"{% endif %}>
+              <td>{{ b.name }}</td>
+              <td class="numeric value">{{ b.value }}</td>
+              <td class="numeric value">{{ b.share }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <p class="note" style="margin-top: var(--sp-3)">
+          Il residuo non assegnato resta nel denominatore (ADR-0029): tenerlo
+          fuori farebbe sembrare le quote più vicine ai target di quanto siano.
+        </p>
+      </div>
+    </article>
+
+    <div class="notice notice--reference" role="note">
+      <div class="notice__margin" aria-hidden="true"></div>
+      <div class="notice__body">
+        <p class="notice__lead">Cosa non è misurato in questo quadro</p>
+        <p>
+          Le colonne a sinistra mostrano soltanto le condizioni che hanno
+          raggiunto un esito. Le <span class="value">{{ coverage.skipped + coverage.error }}</span>
+          rimanenti su <span class="value">{{ coverage.total }}</span> non
+          compaiono su nessuna scala, perché non esiste una distanza da
+          disegnare per una regola che non è stata eseguita.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
