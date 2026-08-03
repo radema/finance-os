@@ -257,17 +257,24 @@ def evaluate_strategy(
     # ADR-L06: `sv.rules` mixes rules meant for every governed Bucket call, rules meant only
     # for the Portfolio-scope call, and rules named to one specific Bucket. The engine takes
     # no scope (C2, RFC-0006 §3.1) — the application layer subsets the rules it hands over.
-    # A rule whose own scope reference is malformed or names a Bucket/Portfolio foreign to
-    # this one (review SHOULD-FIX 4) is excluded from every call and surfaced as a synthetic
-    # `ERROR` firing instead of silently vanishing (ADR-0016).
-    known_bucket_ids = frozenset(uow.buckets.for_portfolio(portfolio_id))
+    # A rule whose own scope reference is malformed or names a Bucket/Portfolio that does not
+    # exist at all (review SHOULD-FIX 4) is excluded from every call and surfaced as a
+    # synthetic `ERROR` firing instead of silently vanishing (ADR-0016). A **disabled** rule
+    # is never subjected to that check (review round-3 BLOCKER 1): it must not produce
+    # run-health noise merely because its scope ref happens to be malformed, the same way a
+    # disabled rule's condition params are never validated against the catalog at evaluation
+    # time either.
+    all_bucket_ids = frozenset(uow.buckets.all_ids())
     applicable_rules: list[Rule] = []
     placement_error_firings: list[RuleFiring] = []
     for rule in sv.rules:
-        error = _placement_error(rule, portfolio_id=portfolio_id, known_bucket_ids=known_bucket_ids)
-        if error is not None:
-            placement_error_firings.append(_placement_error_firing(rule, error))
-            continue
+        if rule.enabled:
+            error = _placement_error(
+                rule, uow, portfolio_id=portfolio_id, all_bucket_ids=all_bucket_ids
+            )
+            if error is not None:
+                placement_error_firings.append(_placement_error_firing(rule, error))
+                continue
         if _applies_to_this_call(rule, scope):
             applicable_rules.append(rule)
 
@@ -291,6 +298,13 @@ def evaluate_strategy(
     return result
 
 
+#: The lowercase and uppercase `ScopeKind` values a scope-shaped param's prefix must match
+#: (review round-3 BLOCKER 2) — a colon alone is not the signal; the text before it must
+#: actually name a scope kind, so a future param that merely happens to contain a colon
+#: (an ISIN, a timestamp) is never mistaken for one.
+_SCOPE_KIND_PREFIXES: Final = frozenset(kind.value for kind in ScopeKind)
+
+
 def _named_scope_value(rule: Rule) -> str | None:
     """The one scope-shaped string among `rule.condition.params`'s values, if there is one.
 
@@ -301,10 +315,14 @@ def _named_scope_value(rule: Rule) -> str | None:
     (`rule_engine.py`'s `BucketBelowTargetValueParams`, review BLOCKER 2). Scanning every
     *value* rather than a hardcoded set of key names is what makes this cover both without
     special-casing either, and covers a future kind using a third key name under the same
-    `Scope.ref` convention for free.
+    `Scope.ref` convention for free. The value's prefix (before the colon) must itself name a
+    `ScopeKind` — a bare colon is not the signal, or the first unrelated param that happens to
+    carry one (an ISIN, a timestamp) would be read as a scope reference and permanently
+    disable its rule.
     """
     for value in rule.condition.params.values():
-        if ":" in value:
+        prefix, sep, _ = value.partition(":")
+        if sep and prefix.upper() in _SCOPE_KIND_PREFIXES:
             return value
     return None
 
@@ -321,16 +339,28 @@ def _parse_scope_ref(raw: str) -> Scope | None:
 
 
 def _placement_error(
-    rule: Rule, *, portfolio_id: PortfolioId, known_bucket_ids: frozenset[BucketId]
+    rule: Rule,
+    uow: UnitOfWork,
+    *,
+    portfolio_id: PortfolioId,
+    all_bucket_ids: frozenset[BucketId],
 ) -> str | None:
-    """Why `rule` can never be placed in *any* call of this Portfolio's evaluation, or `None`.
+    """Why `rule` can never be placed in *any* call, or `None` — only ever for an **enabled**
+    rule (callers must not run this for a disabled one, review round-3 BLOCKER 1).
 
-    Two authoring defects share this path (review SHOULD-FIX 4): a scope-shaped param that
-    fails to parse (malformed — previously fell through to "unconstrained", silently widening
-    what the rule sees instead of narrowing it), and one that parses but names a Bucket or
-    Portfolio foreign to this one (deleted or moved — previously made the rule vanish from
-    every run with no `SKIPPED`/`ERROR` row). ADR-0016: an unplaceable rule must show up on the
-    run-health panel, not disappear.
+    Exactly one authoring defect reaches here (review SHOULD-FIX 4): a scope-shaped param that
+    fails to parse (previously fell through to "unconstrained", silently widening what the rule
+    saw instead of narrowing it). ADR-0016: an unplaceable rule must show up on the run-health
+    panel, not disappear.
+
+    A ref naming a Bucket or Portfolio that **exists but is not this evaluation's own** is
+    deliberately *not* a defect (review round-3 SHOULD-FIX 5): a Strategy — and therefore a
+    Rule frozen inside it — may be shared across Portfolios, so a Bucket-named rule simply
+    does not apply to a Portfolio it was never written for, exactly like a rule whose scope
+    matches a sibling Bucket in this same Portfolio. That case is left to
+    `_applies_to_this_call`'s ordinary scope comparison, which naturally never matches any call
+    of an evaluation it was not named for. Only a reference to something that does not exist
+    *anywhere* is treated as an authoring defect.
 
     An explicit `scope_gate` is never a defect, whatever it names — this only inspects the
     condition-level inference `_applies_to_this_call` falls back to.
@@ -343,10 +373,16 @@ def _placement_error(
     parsed = _parse_scope_ref(raw)
     if parsed is None:
         return f"condition.params names an unparseable scope reference: {raw!r}"
-    if parsed.kind is ScopeKind.PORTFOLIO and PortfolioId(parsed.id) != portfolio_id:
-        return f"condition.params names a different Portfolio ({parsed.id})"
-    if parsed.kind is ScopeKind.BUCKET and BucketId(parsed.id) not in known_bucket_ids:
-        return f"condition.params names a Bucket not governed by this Portfolio ({parsed.id})"
+    if parsed.kind is ScopeKind.BUCKET:
+        if BucketId(parsed.id) not in all_bucket_ids:
+            return f"condition.params names a Bucket that does not exist: {parsed.id}"
+        return None
+    if PortfolioId(parsed.id) == portfolio_id:
+        return None
+    try:
+        uow.portfolios.get(PortfolioId(parsed.id))
+    except KeyError:
+        return f"condition.params names a Portfolio that does not exist: {parsed.id}"
     return None
 
 

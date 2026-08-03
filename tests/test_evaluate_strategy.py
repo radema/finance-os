@@ -921,6 +921,63 @@ class TestHeterogeneousGovernanceBlocksEveryTargetTreeConsumer:
         assert alert.outcome is Outcome.SKIPPED
         assert alert.trace.skip_reason is SkipReason.HETEROGENEOUS_STRATEGIES
 
+    def test_allocation_absent_skips_with_missing_fact_under_mixed_governance(
+        self, uow: DuckDBUnitOfWork
+    ) -> None:
+        """`allocation_absent` bypasses the `required_facts` precheck (it declares only
+        `allocation`) and reads a per-class `drift:{asset_class}` fact directly. With `drift`
+        emptied under mixed governance that per-class read finds nothing, so it correctly
+        never fires on the candidate's numbers -- but the *reason* recorded is `missing_fact`,
+        not `heterogeneous_strategies` (ADR-L06 §7.1/§7.3: documented, not silently claimed
+        as covered by the same reason drift_outside_tolerance/untargeted_allocation get)."""
+        portfolio_id = PortfolioId(uuid4())
+        strategy_id_a = StrategyId(uuid4())
+        strategy_id_b = StrategyId(uuid4())
+        bucket_a = BucketId(uuid4())
+        bucket_b = BucketId(uuid4())
+        _setup_portfolio(
+            uow, portfolio_id=portfolio_id, strategy_id=strategy_id_a, fund_holding="100"
+        )
+        uow.strategies.ensure_strategy(strategy_id_b, name="Sb")
+        uow.buckets.add(
+            Bucket(id=bucket_a, portfolio_id=portfolio_id, strategy_id=strategy_id_a, name="A")
+        )
+        uow.buckets.add(
+            Bucket(id=bucket_b, portfolio_id=portfolio_id, strategy_id=strategy_id_b, name="B")
+        )
+
+        scope = Scope.for_portfolio(portfolio_id)
+        rule = Rule(
+            id=RuleId(UUID(int=21)),
+            name="Classe assente",
+            priority=Priority.HIGH,
+            suggestion_class=SuggestionClass.REVIEW_STRATEGY,
+            message="assente",
+            condition=LeafCondition(
+                kind="allocation_absent",
+                kind_version=1,
+                params={"asset_class": "EQUITY_DEVELOPED", "scope": scope.ref},
+            ),
+        )
+        version = _strategy_version(
+            strategy_id=strategy_id_a, version_id=StrategyVersionId(uuid4()), rules=(rule,)
+        )
+        uow.strategies.freeze_version(version)
+
+        result = evaluate_strategy(
+            uow,
+            _CountingIdGen(0),
+            _FixedClock(),
+            scope=scope,
+            as_of=AS_OF,
+            currency="EUR",
+            strategy_id=strategy_id_a,
+        )
+
+        (alert,) = result.alerts
+        assert alert.outcome is Outcome.SKIPPED
+        assert alert.trace.skip_reason is SkipReason.MISSING_FACT
+
 
 class TestBucketNamedScopeParamGating:
     """Review BLOCKER 2: `bucket_below_target_value` names its Bucket via `params["bucket"]`,
@@ -984,11 +1041,12 @@ class TestBucketNamedScopeParamGating:
 
 
 class TestDriftHistoryExcludesHeterogeneousAsOf:
-    """Review SHOULD-FIX 3: a `drift_history` point tied to an arbitrary candidate Strategy
-    under mixed governance is a wrong number, not a stale one -- the honest reading is no
-    point at all for that `as_of`."""
+    """Review SHOULD-FIX 3 / round-3 SHOULD-FIX 4: a `drift_history` point's `target`/`drift`
+    tied to an arbitrary candidate Strategy under mixed governance is a wrong number, not a
+    stale one -- nulled for that `as_of`. `weight` is governance-independent (a fact about the
+    Portfolio's own valuation) and is kept."""
 
-    def test_mixed_governance_produces_no_drift_point_for_that_as_of(
+    def test_mixed_governance_nulls_target_and_drift_but_keeps_weight(
         self, uow: DuckDBUnitOfWork, con: duckdb.DuckDBPyConnection
     ) -> None:
         portfolio_id = PortfolioId(uuid4())
@@ -1042,21 +1100,24 @@ class TestDriftHistoryExcludesHeterogeneousAsOf:
             strategy_id=strategy_id_a,
         )
 
-        assert drift_history(con, str(portfolio_id), "EQUITY_DEVELOPED") == ()
+        (point,) = drift_history(con, str(portfolio_id), "EQUITY_DEVELOPED")
+        assert point.weight is not None
+        assert point.target is None
+        assert point.drift is None
 
 
 class TestUnplaceableConditionScopeSurfacesAsError:
-    """Review SHOULD-FIX 4: a rule whose condition names a scope that can never match any
-    call of this Portfolio must show up as `ERROR` on the run health panel (ADR-0016), not
-    silently fall back to "unconstrained" or vanish from every run."""
+    """Review SHOULD-FIX 4: a rule whose condition names a scope reference that does not exist
+    anywhere must show up as `ERROR` on the run health panel (ADR-0016), not silently fall
+    back to "unconstrained" or vanish from every run."""
 
-    def test_foreign_bucket_reference_yields_an_error_firing(
+    def test_bucket_reference_to_nothing_yields_an_error_firing(
         self, uow: DuckDBUnitOfWork
     ) -> None:
         portfolio_id = PortfolioId(uuid4())
         strategy_id = StrategyId(uuid4())
         bucket_id = BucketId(uuid4())
-        foreign_bucket_id = BucketId(uuid4())  # never added to any Portfolio
+        nonexistent_bucket_id = BucketId(uuid4())  # never added anywhere
         _setup_portfolio(
             uow, portfolio_id=portfolio_id, strategy_id=strategy_id, fund_holding="100"
         )
@@ -1066,7 +1127,7 @@ class TestUnplaceableConditionScopeSurfacesAsError:
 
         rule = Rule(
             id=RuleId(UUID(int=40)),
-            name="Regola su bucket estraneo",
+            name="Regola su bucket inesistente",
             priority=Priority.HIGH,
             suggestion_class=SuggestionClass.CONSIDER_REBALANCE,
             message="drift",
@@ -1075,7 +1136,7 @@ class TestUnplaceableConditionScopeSurfacesAsError:
                 kind_version=1,
                 params={
                     "asset_class": "EQUITY_DEVELOPED",
-                    "scope": Scope.for_bucket(foreign_bucket_id).ref,
+                    "scope": Scope.for_bucket(nonexistent_bucket_id).ref,
                 },
             ),
         )
@@ -1096,7 +1157,7 @@ class TestUnplaceableConditionScopeSurfacesAsError:
         (alert,) = result.alerts
         assert alert.rule_id == rule.id
         assert alert.outcome is Outcome.ERROR
-        assert "not governed" in (alert.trace.error or "")
+        assert "does not exist" in (alert.trace.error or "")
 
     def test_unparseable_scope_reference_yields_an_error_firing(
         self, uow: DuckDBUnitOfWork
@@ -1141,6 +1202,119 @@ class TestUnplaceableConditionScopeSurfacesAsError:
         assert alert.rule_id == rule.id
         assert alert.outcome is Outcome.ERROR
         assert "unparseable" in (alert.trace.error or "")
+
+    def test_disabled_rule_with_a_malformed_scope_reads_only_as_disabled(
+        self, uow: DuckDBUnitOfWork
+    ) -> None:
+        """Review round-3 BLOCKER 1: a disabled rule reports the ordinary
+        `SKIPPED(disabled)` a disabled rule always reports — never an *additional* `ERROR`
+        firing for a scope reference the placement check never runs against it."""
+        portfolio_id = PortfolioId(uuid4())
+        strategy_id = StrategyId(uuid4())
+        bucket_id = BucketId(uuid4())
+        _setup_portfolio(
+            uow, portfolio_id=portfolio_id, strategy_id=strategy_id, fund_holding="100"
+        )
+        uow.buckets.add(
+            Bucket(id=bucket_id, portfolio_id=portfolio_id, strategy_id=strategy_id, name="B")
+        )
+
+        rule = Rule(
+            id=RuleId(UUID(int=42)),
+            name="Regola disattivata con scope malformato",
+            enabled=False,
+            priority=Priority.HIGH,
+            suggestion_class=SuggestionClass.CONSIDER_REBALANCE,
+            message="drift",
+            condition=LeafCondition(
+                kind="drift_outside_tolerance",
+                kind_version=1,
+                params={"asset_class": "EQUITY_DEVELOPED", "scope": "bucket:not-a-uuid"},
+            ),
+        )
+        version = _strategy_version(
+            strategy_id=strategy_id, version_id=StrategyVersionId(uuid4()), rules=(rule,)
+        )
+        uow.strategies.freeze_version(version)
+
+        result = evaluate_strategy(
+            uow,
+            _CountingIdGen(0),
+            _FixedClock(),
+            scope=Scope.for_bucket(bucket_id),
+            as_of=AS_OF,
+            currency="EUR",
+        )
+
+        (alert,) = result.alerts
+        assert alert.rule_id == rule.id
+        assert alert.outcome is Outcome.SKIPPED
+        assert alert.trace.skip_reason is SkipReason.DISABLED
+
+
+class TestSharedStrategyAcrossPortfolios:
+    """Review round-3 SHOULD-FIX 5: a Strategy — and the Rules frozen inside it — may be
+    shared across Portfolios. A rule naming a real Bucket that belongs to a *different*
+    Portfolio must simply not apply here, not `ERROR`."""
+
+    def test_bucket_in_a_different_real_portfolio_is_not_applicable_not_an_error(
+        self, uow: DuckDBUnitOfWork
+    ) -> None:
+        strategy_id = StrategyId(uuid4())
+        portfolio_id = PortfolioId(uuid4())
+        bucket_id = BucketId(uuid4())
+        _setup_portfolio(
+            uow, portfolio_id=portfolio_id, strategy_id=strategy_id, fund_holding="100"
+        )
+        uow.buckets.add(
+            Bucket(id=bucket_id, portfolio_id=portfolio_id, strategy_id=strategy_id, name="B")
+        )
+
+        # A second, real Portfolio, sharing the same Strategy, with its own real Bucket.
+        other_portfolio_id = PortfolioId(uuid4())
+        other_bucket_id = BucketId(uuid4())
+        _setup_portfolio(
+            uow, portfolio_id=other_portfolio_id, strategy_id=strategy_id, fund_holding="50"
+        )
+        uow.buckets.add(
+            Bucket(
+                id=other_bucket_id,
+                portfolio_id=other_portfolio_id,
+                strategy_id=strategy_id,
+                name="Other B",
+            )
+        )
+
+        rule = Rule(
+            id=RuleId(UUID(int=43)),
+            name="Regola del bucket dell'altro portafoglio",
+            priority=Priority.HIGH,
+            suggestion_class=SuggestionClass.CONSIDER_REBALANCE,
+            message="drift",
+            condition=LeafCondition(
+                kind="drift_outside_tolerance",
+                kind_version=1,
+                params={
+                    "asset_class": "EQUITY_DEVELOPED",
+                    "scope": Scope.for_bucket(other_bucket_id).ref,
+                },
+            ),
+        )
+        version = _strategy_version(
+            strategy_id=strategy_id, version_id=StrategyVersionId(uuid4()), rules=(rule,)
+        )
+        uow.strategies.freeze_version(version)
+
+        result = evaluate_strategy(
+            uow,
+            _CountingIdGen(0),
+            _FixedClock(),
+            scope=Scope.for_bucket(bucket_id),
+            as_of=AS_OF,
+            currency="EUR",
+        )
+
+        assert result.alerts == ()
 
 
 class TestUnassignedResidualAboveDefaultsToPortfolioScope:

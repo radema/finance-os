@@ -59,15 +59,16 @@ def drift_history(
     they are genuinely identical and the row with the latest `recorded_at` (tie-broken on
     `id`) is picked deterministically. Under **mixed** governance the Portfolio-scope call's
     candidate is an arbitrary choice among disagreeing Strategies (review SHOULD-FIX 3) — a
-    `target`/`drift` read off it would not represent anything that actually governs. Per
-    RFC-0007 §5 (`SKIPPED`, never an average, review the same finding), the honest reading is
-    **no point at all** for such an `as_of`: any `as_of` whose Snapshots disagree on their
-    governing `strategy_version_id` is dropped from the series entirely, rather than reporting
-    one Strategy's tree as if it were the Portfolio's own.
+    `target`/`drift` read off it would not represent anything that actually governs, per
+    RFC-0007 §5's "`SKIPPED`, never an average". `weight`, though, is a fact about the
+    Portfolio's own valuation and does not depend on which Strategy governs — it is identical
+    across every Snapshot at that `as_of` regardless of governance (review round-3
+    SHOULD-FIX 4) — so it is kept; only `target`/`drift` are nulled for such an `as_of`,
+    mirroring the existing "no target for this class" case `DriftPoint` already represents.
     """
     rows = con.execute(
         """
-        SELECT as_of, allocation, definition
+        SELECT as_of, allocation, definition, distinct_versions
         FROM (
             SELECT snap.as_of, snap.allocation, sv.definition,
                    count(DISTINCT run.strategy_version_id) OVER (
@@ -82,18 +83,22 @@ def drift_history(
             JOIN strategy_version sv ON sv.id  = run.strategy_version_id
             WHERE snap.portfolio_id = ? AND run.mode = 'ACTUAL'
         )
-        WHERE rn = 1 AND distinct_versions = 1
+        WHERE rn = 1
         ORDER BY as_of ASC
         """,
         [portfolio_id],
     ).fetchall()
 
     points: list[DriftPoint] = []
-    for as_of, allocation_json, definition_json in rows:
+    for as_of, allocation_json, definition_json, distinct_versions in rows:
         allocation: dict[str, Any] = json.loads(str(allocation_json))
         line = allocation.get(asset_class)
         weight = Decimal(str(line["weight"])) if line else None
-        target = _target_weight(json.loads(str(definition_json)), asset_class)
+        target = (
+            _target_weight(json.loads(str(definition_json)), asset_class)
+            if distinct_versions == 1
+            else None
+        )
         drift = weight - target if weight is not None and target is not None else None
         points.append(DriftPoint(as_of=as_of, weight=weight, target=target, drift=drift))
     return tuple(points)

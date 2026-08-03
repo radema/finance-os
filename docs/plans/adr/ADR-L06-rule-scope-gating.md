@@ -257,6 +257,18 @@ Verified by `TestHeterogeneousGovernanceBlocksEveryTargetTreeConsumer` — an `u
 rule that would fire at ~80% severity if the candidate's tree were ever consulted now reads
 `SKIPPED(heterogeneous_strategies)`.
 
+**Correction (round 3, SHOULD-FIX 3): `allocation_absent` never fires, but not with this reason.**
+The sentence above ("can never fire … regardless of which gate mechanism") is true of the *outcome*
+only. `allocation_absent` declares `required_facts = {allocation}`, never `{drift}` or `{targets}`,
+so the family-level `unavailable` dict this fix populates is never consulted for it at all — its
+`SKIPPED` comes entirely from `open_fact` raising on the now-empty per-class `drift:{asset_class}`
+binding, which always raises `SkipReason.MISSING_FACT`, never `HETEROGENEOUS_STRATEGIES`. Making the
+kind report the more specific reason would require teaching `rule_engine.open_fact` about a second,
+app-supplied cause for a fact's absence, which is a change to the engine's own contract and out of
+this ADR's scope. Recorded here rather than silently claimed as covered:
+`TestHeterogeneousGovernanceBlocksEveryTargetTreeConsumer::test_allocation_absent_skips_with_missing_fact_under_mixed_governance`
+verifies the actual reason (`missing_fact`), not the one drift_outside_tolerance/untargeted_allocation get.
+
 ### 7.2 BLOCKER 2 — the scope inference only read `params["scope"]`, missing `params["bucket"]`
 
 `bucket_below_target_value` names its Bucket under the params key `"bucket"`
@@ -345,6 +357,21 @@ Verified by `TestUnassignedResidualAboveDefaultsToPortfolioScope` and
 `TestRunOutcomeCountsCoalesce::test_zero_alert_run_reads_as_all_zero_counts_not_a_crash` (the
 Bucket-scope run this default now correctly excludes the rule from).
 
+**Consequence, written down rather than discovered (DOC item, round 3):** `finding_key` hashes
+`rule_id ‖ scope_id ‖ canonical(condition.params)` (ADR-0027/RFC-0008 §4). Before this fix a live
+`unassigned_residual_above` Rule produced one finding per Bucket plus one at Portfolio scope, each
+under its own `scope_id` and therefore its own `finding_key`. Any `Decision` (dismissal) a user
+recorded against one of those Bucket-scope keys is **orphaned** by this change: the Bucket-scope
+finding it dismissed no longer exists (the rule is Portfolio-scope only from here on), and the
+Portfolio-scope finding — the one that now carries the same information — has always had a
+*different* `finding_key` and was never dismissed. It reappears as if newly found. This is the
+exact behaviour CLAUDE.md's dedup warning describes ("keying on less than the full `finding_key`
+silently hides live findings — this bug has already shipped once") applied in the opposite
+direction: not a key that under-hashes, but a rule whose *scope itself* changed, carrying every
+finding_key it ever produced along with it. No migration exists for stored `Decision` rows and none
+is proposed here — this is a one-time consequence of fixing SHOULD-FIX 5, surfaced for whoever
+deploys this change, not a defect in the fix itself.
+
 ### 7.6 Nits
 
 - The stale comment naming `allocation_absent` among the kinds gated by `unavailable["drift"]` — it
@@ -353,3 +380,90 @@ Bucket-scope run this default now correctly excludes the rule from).
   commits earlier; `TestRunOutcomeCountsCoalesce` now covers both the zero-alert-run case and the
   `§4.2` condition-level-inference path (via the placement-error scenario, §7.4), so a regression in
   either is caught here rather than only by a downstream web test happening to exercise it.
+
+---
+
+## 8. Round-3 review findings, and their resolutions
+
+A second independent review of `e619957..2b55008` found 2 further blockers, 3 further should-fix
+items and 1 doc item, all inside §7's own mechanism.
+
+### 8.1 BLOCKER 1 — `_placement_error` ran before the `enabled` check
+
+A **disabled** rule with a malformed or unparseable scope reference still went through
+`_placement_error` and produced a synthetic `ERROR` firing on every run, with no way to silence it —
+a disabled rule must never generate run-health noise merely because its authored (but never
+evaluated) scope ref happens to be malformed.
+
+**Fix.** The per-rule loop in `evaluate_strategy` now checks `rule.enabled` first: `_placement_error`
+runs only for an enabled rule. A disabled rule falls straight through to `_applies_to_this_call`,
+whose "unconstrained" default (§4) makes it eligible for whichever call's scope it is handed —
+`rule_engine.evaluate` itself then reports the ordinary `SKIPPED(disabled)` every disabled rule
+reports, once per call. It is not silence and it is not a second, distinct outcome; it is the one
+signal a disabled rule has always produced, with the placement check never in its way.
+
+Verified by
+`TestUnplaceableConditionScopeSurfacesAsError::test_disabled_rule_with_a_malformed_scope_reads_only_as_disabled`.
+
+### 8.2 BLOCKER 2 — `_named_scope_value` treated any colon as the signal
+
+Scanning every `condition.params` value for `":" in value` (§4.2) works only by accident: nothing
+stops a future kind's unrelated param — an ISIN, a timestamp, anything with a colon — from being
+misread as a scope reference. The first one that does becomes "unparseable" under `_placement_error`
+and permanently disables its own rule, or silently steals the "named scope" slot from whichever
+param the kind actually intended to name a scope with.
+
+**Fix.** `_named_scope_value` now requires the text *before* the colon to itself be a `ScopeKind`
+value (`_SCOPE_KIND_PREFIXES = frozenset(kind.value for kind in ScopeKind)`, checked
+case-insensitively) — a bare colon is no longer the signal, the prefix has to actually claim to name
+a scope kind. Every real scope reference in the catalog already reads `"bucket:…"` / `"portfolio:…"`,
+so this changes nothing for any existing kind and only narrows what a future false positive could be.
+
+### 8.3 SHOULD-FIX 3 — see §7.1's correction, above
+
+Folded into §7.1 directly (the finding is about that section's own claim) rather than repeated here.
+
+### 8.4 SHOULD-FIX 4 — `drift_history` dropped `weight` along with `target`/`drift` under mixed governance
+
+§7.3's dedupe dropped the *entire* point for an `as_of` whose Snapshots disagreed on their governing
+`strategy_version_id`. But `weight` comes from the Snapshot's `allocation` JSON — the Portfolio's own
+valuation, computed identically by `_build_snapshot` regardless of which Strategy the call's
+candidate happened to be — so it is a fact about the Portfolio, not about which Strategy governs it,
+and dropping it along with the genuinely arbitrary `target`/`drift` throws away a real number for no
+reason.
+
+**Fix.** The query keeps every `rn = 1` row regardless of `distinct_versions`, carrying that count
+into Python; `target` is computed from the row's `definition` only when `distinct_versions == 1`,
+otherwise left `None` (and `drift` follows, since it needs both operands) — the same "no target for
+this class" shape `DriftPoint` already represents, applied for a different reason.
+
+Verified by `TestDriftHistoryExcludesHeterogeneousAsOf` (renamed
+`test_mixed_governance_nulls_target_and_drift_but_keeps_weight`): one point is returned, `weight` is
+set, `target`/`drift` are both `None`.
+
+### 8.5 SHOULD-FIX 5 — a Bucket-named rule in a shared Strategy read as a foreign-Bucket defect
+
+`_placement_error`'s original Bucket check compared against `known_bucket_ids = uow.buckets.for_portfolio(portfolio_id)`
+— *this* Portfolio's own Buckets only. A Strategy (and therefore any Rule frozen inside it) is not
+scoped to one Portfolio by the data model; nothing stops the same Strategy from governing Buckets in
+two different Portfolios. Evaluating that Strategy for the *other* Portfolio made a perfectly valid,
+correctly-Bucket-named rule read as a placement defect and produce a spurious `ERROR`.
+
+**Fix.** The Bucket check now asks whether the named Bucket exists **anywhere**
+(`all_bucket_ids = frozenset(uow.buckets.all_ids())`), not only in this Portfolio. A Bucket that
+exists but belongs to a different Portfolio is left to `_applies_to_this_call`'s ordinary scope
+comparison, which naturally never matches any call of an evaluation it was not named for — exactly
+like a rule naming a sibling Bucket in the *same* Portfolio already worked. Only a reference to a
+Bucket that does not exist *at all* is still a placement error. The equivalent Portfolio-kind check
+was widened the same way, using `uow.portfolios.get(...)` to distinguish "a different, real
+Portfolio" (not applicable, not an error) from "no such Portfolio" (a genuine defect).
+
+Verified by `TestSharedStrategyAcrossPortfolios::test_bucket_in_a_different_real_portfolio_is_not_applicable_not_an_error`
+(no alert at all, not an `ERROR`) alongside the unchanged
+`TestUnplaceableConditionScopeSurfacesAsError::test_bucket_reference_to_nothing_yields_an_error_firing`
+(still an `ERROR`, now for "does not exist" rather than "not governed by this Portfolio").
+
+### 8.6 DOC — the orphaned-dismissal consequence
+
+Folded into §7.5 directly (see the paragraph beginning "Consequence, written down rather than
+discovered"), rather than repeated here.
