@@ -78,6 +78,9 @@ class SkipReason(StrEnum):
     STALE_FACT = "stale_fact"
     ZERO_DENOMINATOR = "zero_denominator"
     ZERO_PORTFOLIO_VALUE = "zero_portfolio_value"
+    #: A Portfolio-scope evaluation cannot resolve one target tree because its governed
+    #: Buckets follow different StrategyVersions (RFC-0007 §5). Never averaged.
+    HETEROGENEOUS_STRATEGIES = "heterogeneous_strategies"
 
 
 class RunMode(StrEnum):

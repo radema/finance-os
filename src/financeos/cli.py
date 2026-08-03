@@ -229,6 +229,29 @@ def evaluate(ctx: click.Context, bucket_id: str | None, as_of: str | None, curre
         )
         total_recommendations += len(result.recommendations)
 
+    if bucket_id is None:
+        # Portfolio-scope pass (RFC-0007 §5): one evaluation per governed Portfolio, alongside
+        # the per-Bucket loop above. Only when evaluating every Bucket — a caller naming one
+        # Bucket via --bucket-id asked for that Bucket alone. `strategy_id` is required by
+        # `evaluate_strategy` for Portfolio scope (a Portfolio has no single governing Strategy
+        # the way a Bucket does); any one governed Bucket's is passed as the candidate, and
+        # heterogeneous governance across Buckets yields `SKIPPED(heterogeneous_strategies)`
+        # rather than an average, not a caller-side branch.
+        portfolio_ids = sorted({uow.buckets.get(bid).portfolio_id for bid in bucket_ids})
+        for one_portfolio_id in portfolio_ids:
+            governed_bucket_ids = sorted(uow.buckets.for_portfolio(one_portfolio_id))
+            candidate_strategy_id = uow.buckets.get(governed_bucket_ids[0]).strategy_id
+            result = evaluate_strategy(
+                uow,
+                id_gen,
+                clock,
+                scope=Scope.for_portfolio(one_portfolio_id),
+                as_of=eval_date,
+                currency=currency,
+                strategy_id=candidate_strategy_id,
+            )
+            total_recommendations += len(result.recommendations)
+
     click.echo(f"Valutazione completata: {total_recommendations} Recommendation generate.")
 
 

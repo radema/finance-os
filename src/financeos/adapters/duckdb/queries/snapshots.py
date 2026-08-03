@@ -45,25 +45,60 @@ def drift_history(
     A `Snapshot` with no `run_id` (an on-demand checkpoint, not one written by `evaluate`) has
     no governing `StrategyVersion` to compare against and is excluded, along with any
     `HYPOTHETICAL` run.
+
+    One point per `as_of` (ADR-L06 §5.3): `evaluate_strategy` writes a Portfolio-wide Snapshot
+    on **every** call, so an N-Bucket Portfolio's `financeos evaluate` (one call per Bucket,
+    ADR-0020, plus one Portfolio-scope call, RFC-0007 §5) writes N+1 Snapshots at the same
+    `as_of`. This was already true before the Portfolio-scope call existed — an N-Bucket
+    Portfolio already wrote N Snapshots per `as_of` — a pre-existing read-side defect that a
+    single-Bucket demo never exercised.
+
+    Under **homogeneous** governance every Snapshot at one `as_of` is pinned to the same
+    governing `StrategyVersion` (every Bucket call resolves it via `bucket.strategy_id`, and
+    the Portfolio-scope call's candidate is one of those same Buckets' own — RFC-0007 §5), so
+    they are genuinely identical and the row with the latest `recorded_at` (tie-broken on
+    `id`) is picked deterministically. Under **mixed** governance the Portfolio-scope call's
+    candidate is an arbitrary choice among disagreeing Strategies (review SHOULD-FIX 3) — a
+    `target`/`drift` read off it would not represent anything that actually governs, per
+    RFC-0007 §5's "`SKIPPED`, never an average". `weight`, though, is a fact about the
+    Portfolio's own valuation and does not depend on which Strategy governs — it is identical
+    across every Snapshot at that `as_of` regardless of governance (review round-3
+    SHOULD-FIX 4) — so it is kept; only `target`/`drift` are nulled for such an `as_of`,
+    mirroring the existing "no target for this class" case `DriftPoint` already represents.
     """
     rows = con.execute(
         """
-        SELECT snap.as_of, snap.allocation, sv.definition
-        FROM snapshot snap
-        JOIN evaluation_run run  ON run.id = snap.run_id
-        JOIN strategy_version sv ON sv.id  = run.strategy_version_id
-        WHERE snap.portfolio_id = ? AND run.mode = 'ACTUAL'
-        ORDER BY snap.as_of ASC, snap.recorded_at ASC
+        SELECT as_of, allocation, definition, distinct_versions
+        FROM (
+            SELECT snap.as_of, snap.allocation, sv.definition,
+                   count(DISTINCT run.strategy_version_id) OVER (
+                       PARTITION BY snap.as_of
+                   ) AS distinct_versions,
+                   row_number() OVER (
+                       PARTITION BY snap.as_of
+                       ORDER BY snap.recorded_at DESC, snap.id DESC
+                   ) AS rn
+            FROM snapshot snap
+            JOIN evaluation_run run  ON run.id = snap.run_id
+            JOIN strategy_version sv ON sv.id  = run.strategy_version_id
+            WHERE snap.portfolio_id = ? AND run.mode = 'ACTUAL'
+        )
+        WHERE rn = 1
+        ORDER BY as_of ASC
         """,
         [portfolio_id],
     ).fetchall()
 
     points: list[DriftPoint] = []
-    for as_of, allocation_json, definition_json in rows:
+    for as_of, allocation_json, definition_json, distinct_versions in rows:
         allocation: dict[str, Any] = json.loads(str(allocation_json))
         line = allocation.get(asset_class)
         weight = Decimal(str(line["weight"])) if line else None
-        target = _target_weight(json.loads(str(definition_json)), asset_class)
+        target = (
+            _target_weight(json.loads(str(definition_json)), asset_class)
+            if distinct_versions == 1
+            else None
+        )
         drift = weight - target if weight is not None and target is not None else None
         points.append(DriftPoint(as_of=as_of, weight=weight, target=target, drift=drift))
     return tuple(points)

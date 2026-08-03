@@ -22,13 +22,22 @@ from uuid import UUID
 
 import yaml  # type: ignore[import-untyped]
 
-from financeos.core.shared import Priority, RuleId, StrategyId, SuggestionClass, Weight
+from financeos.core.shared import (
+    BucketId,
+    Priority,
+    RuleId,
+    ScopeKind,
+    StrategyId,
+    SuggestionClass,
+    Weight,
+)
 from financeos.core.strategy import (
     Horizon,
     LeafCondition,
     RiskLevel,
     RiskProfile,
     Rule,
+    RuleScopeGate,
     StrategyDefinition,
     TargetAllocation,
     TargetNode,
@@ -80,6 +89,17 @@ def _parse_risk(data: Any) -> RiskProfile:
     )
 
 
+def _parse_scope_gate(data: Any) -> RuleScopeGate | None:
+    """`scope_gate` (ADR-L06), or `None` — unconstrained, today's implicit behaviour."""
+    if data is None:
+        return None
+    bucket_id = data.get("bucket_id")
+    return RuleScopeGate(
+        kind=ScopeKind(str(data["kind"])),
+        bucket_id=BucketId(UUID(str(bucket_id))) if bucket_id else None,
+    )
+
+
 def _parse_rule(data: Any) -> Rule:
     condition = data["condition"]
     max_staleness_seconds = condition.get("max_staleness_seconds")
@@ -98,6 +118,7 @@ def _parse_rule(data: Any) -> Rule:
                 timedelta(seconds=float(max_staleness_seconds)) if max_staleness_seconds else None
             ),
         ),
+        scope_gate=_parse_scope_gate(data.get("scope_gate")),
     )
 
 
