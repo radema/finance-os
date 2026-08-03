@@ -87,8 +87,28 @@ def test_unknown_run_is_404(client: TestClient) -> None:
 def test_provenance_bar_links_to_run_health(
     client: TestClient, con: duckdb.DuckDBPyConnection
 ) -> None:
-    run_id = _one(con, "SELECT id FROM evaluation_run LIMIT 1")
-    assert f'href="/runs/{run_id}"' in client.get("/").text
+    """The provenance bar links to *the* run — the truly latest `ACTUAL` one (ADR-L06 §6.1).
+
+    `financeos evaluate` now writes at least two `evaluation_run` rows per `as_of` (one per
+    governed Bucket plus one Portfolio-scope call, RFC-0007 §5), so picking "a run" with no
+    ordering is meaningless — this mirrors `latest_actual_run`'s own
+    `mode = 'ACTUAL', ORDER BY as_of DESC, evaluated_at DESC` exactly, rather than asserting
+    against whichever row an unordered scan happens to return first.
+    """
+    latest_run_id = _one(
+        con,
+        "SELECT id FROM evaluation_run WHERE mode = 'ACTUAL' "
+        "ORDER BY as_of DESC, evaluated_at DESC LIMIT 1",
+    )
+    earlier_run_id = _one(
+        con,
+        "SELECT id FROM evaluation_run WHERE mode = 'ACTUAL' AND id != ? "
+        "ORDER BY as_of DESC, evaluated_at DESC LIMIT 1",
+        [latest_run_id],
+    )
+    body = client.get("/").text
+    assert f'href="/runs/{latest_run_id}"' in body
+    assert f'href="/runs/{earlier_run_id}"' not in body
 
 
 def test_nav_lists_run_health(client: TestClient) -> None:

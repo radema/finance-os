@@ -184,42 +184,43 @@ plan's wording points at rather than a new invention.
   and Portfolio scope for one `as_of` yields exactly one `DriftPoint`. Both `drift_history` tests
   now pass unedited.
 
-  **`test_provenance_bar_links_to_run_health` remains unresolved — reported, not patched.** The
-  homepage's actual query (`latest_actual_run`, `adapters/duckdb/queries/runs.py`) is *already*
-  deterministic — `ORDER BY run.as_of DESC, run.evaluated_at DESC LIMIT 1` — and correctly returns
-  the truly most-recent `evaluation_run` row (the Portfolio-scope one, evaluated last in the CLI's
-  loop). Reproduced directly: with a Bucket-scope run and a Portfolio-scope run at the same `as_of`,
-  `latest_actual_run` returns the Portfolio one, and the homepage links to it. The test's own
-  comparison query, `SELECT id FROM evaluation_run LIMIT 1` with no `ORDER BY`/no grouping, returns
-  a *different* row (empirically, the first-inserted — the Bucket-scope run) whenever more than one
-  `evaluation_run` row exists for a Portfolio, which — like the Snapshot case above — was already
-  true for any N-Bucket Portfolio before this ADR (task #14 only turned `N ≥ 1` into `N ≥ 2`, making
-  it reachable at `N = 1` too). Unlike `Snapshot`, there is no read-side "collapse to one" available
-  here without changing what "the run" means: `evaluation_run` is append-only (C6) so the two rows
-  cannot be merged at the physical level, and the app's own selection is already the correct
-  "deterministic latest" — matching the test would require either weakening that correctness (never
-  pick the true latest, pick whatever the test's unordered scan happens to return first) or editing
-  the test to add the ordering/grouping its own assertion implicitly assumes, both of which this
-  ADR's mandate rules out. Reported for a decision rather than guessed at.
+  **`test_provenance_bar_links_to_run_health` — a test-fixture defect, not a production one;
+  fixed by editing the test (owner ruling).** The homepage's own query (`latest_actual_run`,
+  `adapters/duckdb/queries/runs.py`) was never wrong: `ORDER BY run.as_of DESC, run.evaluated_at
+  DESC LIMIT 1` is already deterministic and already returns the truly most-recent
+  `evaluation_run` row (the Portfolio-scope one, evaluated last in the CLI's loop). The test's
+  *own* comparison query — `SELECT id FROM evaluation_run LIMIT 1`, no `ORDER BY`, no `mode`
+  filter — never expressed "the run the provenance bar points at"; it expressed "an arbitrary
+  run", and only read as the former because exactly one `evaluation_run` row existed when the
+  test was written. Like the Snapshot case above, that assumption was already false for any
+  N-Bucket Portfolio (`N ≥ 2` rows, arbitrary pick) before this ADR; task #14 only made it
+  reachable at `N = 1` too. This is a defect in the test's own fixture query, not in the
+  production read path, so the fix is in the test: its query now mirrors `latest_actual_run`
+  exactly (`mode = 'ACTUAL'`, `ORDER BY as_of DESC, evaluated_at DESC`), and the assertion is
+  strengthened to check both that the bar links to that truly-latest run **and** that it does
+  not link to an earlier one — the property the original assertion was silently failing to
+  check even when it happened to pass. `latest_actual_run` itself is untouched.
 
 ## 6. Consequences of the ruling, and what remains open
 
-### 6.1 The Snapshot/drift_history question — resolved
+### 6.1 Both read-side questions — resolved
 
-Closed by the owner ruling in §5.3: read-side dedupe, write side unchanged. `drift_history`'s
-`row_number()`-windowed collapse is the shipped answer; no further decision needed here.
+- **Snapshot/`drift_history`** (§5.3): read-side dedupe, write side unchanged. `drift_history`'s
+  `row_number()`-windowed collapse to one row per `(portfolio_id, as_of)` is the shipped answer.
+- **`test_provenance_bar_links_to_run_health`** (§5.3): a test-fixture defect, not a production
+  one — the test's own comparison query never expressed "the run the provenance bar points at",
+  only "an arbitrary run", and passed before this ADR only because exactly one `evaluation_run`
+  row existed for the single-Bucket demo. Fixed by editing the test's query to mirror
+  `latest_actual_run` (`mode = 'ACTUAL'`, `ORDER BY as_of DESC, evaluated_at DESC`) and
+  strengthening the assertion to also check the bar does *not* link to an earlier run —
+  `latest_actual_run` itself was already correct and is untouched.
 
-### 6.2 Open items for the product owner
+No further decision needed on either; both close here.
 
-1. **`test_provenance_bar_links_to_run_health`** (§5.3) is still failing and needs a decision: is
-   `latest_actual_run`'s "truly most recent run, any scope" semantics the one the homepage should
-   show, with the test rewritten to match it (by whoever owns changes to that test file); or does
-   "the run" for the homepage's provenance bar need a different, narrower definition (e.g. prefer
-   the Portfolio-scope run when one exists for the same `as_of`, which happens to coincide with
-   "most recent" in every case observed so far, but is a different rule)? Either answer requires
-   touching the test, which is outside this ADR's authority to decide alone.
-2. **Authoring convention for a future "generic, any-Bucket" rule.** Today's only example
-   (`demo/strategy.yaml`) hardcodes one Rule per Bucket, each with its own literal `scope` ref — the
-   `RuleScopeGate(kind=BUCKET, bucket_id=None)` "any Bucket" case is implemented and tested
-   (`TestRuleScopeGateModel`) but has no authored example yet. The §8.5 fixture task should confirm
-   which authoring shape it wants for the "7 generic rules" row before writing it.
+### 6.2 Open item for the product owner
+
+**Authoring convention for a future "generic, any-Bucket" rule.** Today's only example
+(`demo/strategy.yaml`) hardcodes one Rule per Bucket, each with its own literal `scope` ref — the
+`RuleScopeGate(kind=BUCKET, bucket_id=None)` "any Bucket" case is implemented and tested
+(`TestRuleScopeGateModel`) but has no authored example yet. The §8.5 fixture task should confirm
+which authoring shape it wants for the "7 generic rules" row before writing it.
