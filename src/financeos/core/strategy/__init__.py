@@ -5,7 +5,7 @@
 """
 
 from financeos.core.strategy.drift import DriftComputation, DriftLine
-from financeos.core.strategy.rule import LeafCondition, Rule
+from financeos.core.strategy.rule import LeafCondition, Rule, RuleScopeGate
 from financeos.core.strategy.strategy import (
     Horizon,
     RiskLevel,
@@ -34,6 +34,7 @@ __all__ = [
     "RiskLevel",
     "RiskProfile",
     "Rule",
+    "RuleScopeGate",
     "Strategy",
     "StrategyDefinition",
     "StrategyVersion",

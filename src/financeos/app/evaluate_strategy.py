@@ -4,8 +4,8 @@ Wiring order (HANDOFF-2026-07-26 §4.3, from the core implementer): load `sv` **
 `compute_holdings` (for Bucket scope, resolve `VirtualHolding`s and call `.as_holding()`; the
 engine takes `Sequence[Holding]` and does not branch on scope) -> `compute_allocation` ->
 `compute_drift(allocation, sv.targets, strategy_version_id=sv.id)` -> build `FactSet` ->
-compute `input_digest` -> construct `EvaluationRun` -> `evaluate(sv.rules, facts)` ->
-`materialize(...)`.
+compute `input_digest` -> construct `EvaluationRun` -> subset `sv.rules` to this call's scope
+(ADR-L06) -> `evaluate(rules, facts)` -> `materialize(...)`.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import date
 from decimal import Decimal
+from uuid import UUID
 
 from financeos.app.unit_of_work import UnitOfWork
 from financeos.core.decision import (
@@ -58,6 +59,7 @@ from financeos.core.shared import (
     canonical_json,
     sha256_hex,
 )
+from financeos.core.strategy import Rule
 from financeos.ports import Clock, IdGen
 
 
@@ -79,6 +81,13 @@ def evaluate_strategy(
             governing Strategy the way a Bucket does (`Bucket.strategy_id`).
     """
     now = clock.now()
+
+    # RFC-0007 §5: `scope: portfolio` compares against one target tree, which is only
+    # meaningful when every governed Bucket of this Portfolio follows the *same* Strategy
+    # (and therefore, since a Strategy has exactly one current version at a time, the same
+    # StrategyVersion). Set below, in the Portfolio branch only; `drift` is marked
+    # `unavailable` under it rather than averaged (see the `unavailable` assembly below).
+    heterogeneous_governance = False
 
     if scope.kind is ScopeKind.BUCKET:
         bucket = uow.buckets.get(BucketId(scope.id))
@@ -103,6 +112,10 @@ def evaluate_strategy(
         operations = uow.operations.for_accounts(account_ids, as_of=as_of)
         holdings = compute_holdings(operations, as_of=as_of)
         portfolio_holdings = holdings
+        heterogeneous_governance = any(
+            uow.buckets.get(bucket_id).strategy_id != resolved_strategy_id
+            for bucket_id in uow.buckets.for_portfolio(portfolio_id)
+        )
 
     # `over_apportioned` is assembled in every scope (review BLOCKER 2): `compute_apportionment`
     # itself narrows the resolved records to this scope (Bucket vs Portfolio, ADR-L04 §4.4), and
@@ -167,7 +180,12 @@ def evaluate_strategy(
     bucket_value = Bound(value=allocation.total_value, source=SourceRef.derived(engine="portfolio"))
 
     unavailable: dict[str, SkipReason] = {}
-    if comp.unavailable is not None:
+    if heterogeneous_governance:
+        # RFC-0007 §5: reuses the Rule Engine's own SKIPPED machinery rather than an average
+        # or a special-cased error path — every rule declaring `drift` in its `required_facts`
+        # (drift_outside_tolerance, allocation_absent) is skipped with this reason.
+        unavailable["drift"] = SkipReason.HETEROGENEOUS_STRATEGIES
+    elif comp.unavailable is not None:
         unavailable["drift"] = comp.unavailable
     if residual_comp.unavailable is not None:
         unavailable["residual"] = residual_comp.unavailable
@@ -200,7 +218,11 @@ def evaluate_strategy(
         input_digest=_input_digest(facts),
     )
 
-    firings = evaluate(sv.rules, facts)
+    # ADR-L06: `sv.rules` mixes rules meant for every governed Bucket call, rules meant only
+    # for the Portfolio-scope call, and rules named to one specific Bucket. The engine takes
+    # no scope (C2, RFC-0006 §3.1) — the application layer subsets the rules it hands over.
+    rules = tuple(rule for rule in sv.rules if _applies_to_this_call(rule, scope))
+    firings = evaluate(rules, facts)
     result = materialize(firings, sv, run, next_id=id_gen, recorded_at=now)
     snapshot = _build_snapshot(
         uow,
@@ -218,6 +240,45 @@ def evaluate_strategy(
     )
     uow.evaluations.save(run, result.alerts, result.recommendations, snapshot)
     return result
+
+
+def _condition_scope_ref(rule: Rule) -> Scope | None:
+    """The `Scope` a rule's own `condition.params["scope"]` names, if present and parseable.
+
+    Four condition kinds carry a `scope` param (`drift_outside_tolerance`,
+    `untargeted_allocation`, `allocation_absent`, `over_apportioned`), but RFC-0006 §3.1 never
+    compares it against the facts' actual scope — it is read only as a message binding
+    (W2-rule-scope-partition.md §2). ADR-L06 §4.2 promotes it to also being the rule's default
+    applicability gate: a rule authored against one Bucket's own ref, e.g.
+    `drift_outside_tolerance`'s ``"bucket:44940ba1-..."``, applies only to that Bucket's call,
+    never to a Portfolio-scope call evaluated alongside it.
+    """
+    raw = rule.condition.params.get("scope")
+    if raw is None:
+        return None
+    kind_str, sep, id_str = raw.partition(":")
+    if not sep:
+        return None
+    try:
+        return Scope(kind=ScopeKind(kind_str.upper()), id=UUID(id_str))
+    except ValueError:
+        return None
+
+
+def _applies_to_this_call(rule: Rule, scope: Scope) -> bool:
+    """ADR-L06: whether `rule` is meant to evaluate in this `scope`'s call.
+
+    An explicit `scope_gate` wins (§4.1). Otherwise a parseable `condition.params["scope"]`
+    narrows the rule to that exact scope (§4.2). With neither, the rule is unconstrained — it
+    applies to whichever call it is given, preserving every rule's behaviour from before
+    ADR-L06 (`unassigned_residual_above`, which authors no `scope` param at all — ADR-0029).
+    """
+    if rule.scope_gate is not None:
+        return rule.scope_gate.applies_to(scope)
+    condition_scope = _condition_scope_ref(rule)
+    if condition_scope is not None:
+        return condition_scope == scope
+    return True
 
 
 def _build_snapshot(

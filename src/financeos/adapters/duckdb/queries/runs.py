@@ -201,14 +201,17 @@ def run_outcome_counts(con: duckdb.DuckDBPyConnection, run_id: str) -> OutcomeCo
     row = con.execute(
         """
         SELECT count(*),
-               count_if(outcome = 'FIRED'),
-               count_if(outcome = 'NOT_FIRED'),
-               count_if(outcome = 'SKIPPED'),
-               count_if(outcome = 'ERROR')
+               coalesce(count_if(outcome = 'FIRED'), 0),
+               coalesce(count_if(outcome = 'NOT_FIRED'), 0),
+               coalesce(count_if(outcome = 'SKIPPED'), 0),
+               coalesce(count_if(outcome = 'ERROR'), 0)
         FROM alert WHERE run_id = ?
         """,
         [run_id],
     ).fetchone()
+    # `count_if` over a run with zero alerts (e.g. a Portfolio-scope run whose rules were all
+    # Bucket-gated, ADR-L06) returns NULL, not 0, unlike `count(*)` on the same empty group —
+    # a DuckDB aggregate quirk this run's own scope-gating is the first thing to reach.
     total, fired, not_fired, skipped, error = (int(v) for v in row) if row else (0, 0, 0, 0, 0)
 
     reason_rows = con.execute(
