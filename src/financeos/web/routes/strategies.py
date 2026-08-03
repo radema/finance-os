@@ -21,24 +21,27 @@ nothing here claims to perform it.
   either level, plus adding one new depth-1 leaf). It does not support restructuring a tree
   (moving a node, adding a child under an existing branch, or deleting a node) — RFC-0010 §352
   calls this screen "the fiddliest UI in V1", and reshaping is the fiddliest part of it.
-- The rule editor supports enable/disable, Priority, SuggestionClass and message on every
-  existing Rule, plus adding one new Rule from the real closed catalog (`ConditionRegistry`,
-  ADR-0014) with its own kind, params and priority. It does not support editing an existing
-  Rule's condition kind or params, or deleting a Rule.
+- The rule editor supports enable/disable, Priority, SuggestionClass, message and the
+  condition's own params on every existing Rule, plus adding one new Rule from the real
+  closed catalog (`ConditionRegistry`, ADR-0014) with its own kind, params and priority. It
+  does not support changing an existing Rule's condition *kind* (that path is "add a new
+  Rule from the catalog" instead), or deleting a Rule.
 """
 
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from financeos.adapters.duckdb.queries.runs import latest_actual_run
 from financeos.adapters.duckdb.queries.strategies import (
+    RuleView,
     StrategyDetail,
     TargetNodeView,
     get_strategy_detail,
@@ -48,7 +51,16 @@ from financeos.adapters.duckdb.queries.strategies import (
 from financeos.adapters.system import SystemClock, UUIDv7IdGen
 from financeos.app.freeze_strategy import freeze_strategy
 from financeos.app.unit_of_work import DuckDBUnitOfWork
-from financeos.core.shared import Priority, RuleId, StrategyId, SuggestionClass, Weight
+from financeos.core.engines.rule_engine import REGISTRY
+from financeos.core.shared import (
+    Priority,
+    RuleId,
+    StrategyId,
+    SuggestionClass,
+    UnknownConditionKindError,
+    Weight,
+    canonical_decimal,
+)
 from financeos.core.strategy import (
     Horizon,
     LeafCondition,
@@ -229,13 +241,116 @@ def _decimal(raw: Any) -> Decimal:
     return Decimal(str(raw))
 
 
+def _canonical_param(value: Any) -> str:
+    """A validated param value, canonicalized for storage — `Decimal` values go through the
+    same fixed-point rendering as everywhere else in the frozen document (RFC-0006 §10)."""
+    return canonical_decimal(value) if isinstance(value, Decimal) else str(value)
+
+
+_MAX_STALENESS_ADAPTER: TypeAdapter[timedelta] = TypeAdapter(timedelta)
+
+
+def _parse_max_staleness(iso: str | None) -> timedelta | None:
+    """`RuleView.max_staleness` is the ISO 8601 duration string `LeafCondition` itself emits
+    (e.g. `"P2D"`) — parsed with the same Pydantic `timedelta` adapter that will re-emit it, so
+    the round trip through this route is byte-identical rather than a fresh reformatting."""
+    return None if iso is None else _MAX_STALENESS_ADAPTER.validate_python(iso)
+
+
+def _rebuild_condition(view: RuleView, form: Any) -> LeafCondition:
+    """Re-validate an existing Rule's edited params against the catalog before freezing.
+
+    Drives off `ConditionKindSpec.params_model` (ADR-0014) rather than a hand-copied field
+    list, exactly like `rule_catalog_kinds()` already does for the "add a new Rule" picklist.
+    The kind itself is never re-derived from the form: changing it is out of scope (module
+    docstring "Scope"). `max_staleness` is carried forward verbatim — this route has no field
+    for it, so it is never something the form can edit.
+
+    The real form always re-posts every field for every Rule (`strategy_detail.html` prefills
+    each input with the stored string), so "was this edited" cannot be "was it posted" — it has
+    to be "does the posted value differ, *semantically*, from what's already frozen". A raw
+    string comparison is not enough either: retyping the same number differently (`"0.020"` or
+    `" 0.02"` over a stored `"0.02"`) is not an edit, but would look like one byte-for-byte. Both
+    sides are run through the catalog's own validator and compared as *canonical* values — only
+    a field whose canonical form actually changes is re-serialized through `canonical_decimal`;
+    every other field's frozen string is carried through byte-identical, never rewritten to its
+    own canonical form even when the two happen to agree. `finding_key =
+    sha256(rule_id ‖ scope_id ‖ canonical(condition.params))` hashes that raw string (RFC-0008
+    §4) — reformatting an untouched field on every freeze (e.g. `"0.02"` -> `"0.02000000"`)
+    would change its finding_key and silently detach every recorded Decision from its finding,
+    the exact bug class CLAUDE.md already flags as having shipped once. A field posted as an
+    empty string still counts as "differs" whenever the frozen value is non-empty, so a
+    deliberate clear is *not* treated as "no edit": it is sent into that kind's own validation
+    as-is, which rejects it if (and only if) the field's declared type has no legal empty value,
+    rather than this route silently keeping the old value while the change note implies an edit
+    happened.
+    """
+    existing = dict(view.params)
+    try:
+        spec = REGISTRY.get(view.kind, view.kind_version)
+    except UnknownConditionKindError as exc:
+        raise ValueError(
+            f"La regola «{view.name}» usa un tipo di condizione non più nel catalogo."
+        ) from exc
+
+    raw: dict[str, str] = {}
+    posted_fields: set[str] = set()
+    for name in spec.params_model.model_fields:
+        stored = existing.get(name, "")
+        posted = form.get(f"rule_param_{view.id}_{name}")
+        if posted is None:
+            raw[name] = stored
+        else:
+            raw[name] = str(posted)
+            posted_fields.add(name)
+
+    try:
+        validated = spec.params_model.model_validate(raw)
+    except ValidationError as exc:
+        detail = exc.errors()[0]
+        field = ".".join(str(part) for part in detail["loc"]) or "?"
+        raise ValueError(
+            f"Parametro «{field}» non valido per la regola «{view.name}»: {detail['msg']}."
+        ) from exc
+
+    # The stored values, canonicalized the same way, so "edited" compares canonical forms —
+    # not raw bytes. Only fields present in `existing` can be validated this way; a field the
+    # frozen document never had is treated as edited regardless (there is no prior canonical
+    # form to compare against).
+    try:
+        stored_dumped = spec.params_model.model_validate(existing).model_dump()
+    except ValidationError:
+        stored_dumped = {}
+
+    dumped = validated.model_dump()
+    edited = {
+        name
+        for name in posted_fields
+        if name not in stored_dumped or dumped[name] != stored_dumped[name]
+    }
+    params = {
+        name: (
+            _canonical_param(dumped[name])
+            if name in edited or name not in existing
+            else existing[name]
+        )
+        for name in spec.params_model.model_fields
+    }
+    return LeafCondition(
+        kind=view.kind,
+        kind_version=view.kind_version,
+        params=params,
+        max_staleness=_parse_max_staleness(view.max_staleness),
+    )
+
+
 def _rebuild_rules(detail: StrategyDetail, form: Any, id_gen: UUIDv7IdGen) -> tuple[Rule, ...]:
     """Every existing Rule with its metadata edited in place, plus at most one new Rule.
 
-    A Rule's `id`, condition `kind`/`kind_version`/`params` are carried forward unchanged
-    (§ docstring "Scope"): only `enabled`, `priority`, `suggestion_class` and `message` are
-    editable on an existing Rule, keyed by its stable `RuleId` so a reordering in the form
-    cannot silently attach one Rule's edits to another.
+    A Rule's `id` and condition `kind`/`kind_version` are carried forward unchanged (§
+    docstring "Scope"): `enabled`, `priority`, `suggestion_class`, `message` and the
+    condition's own params are editable on an existing Rule, keyed by its stable `RuleId` so
+    a reordering in the form cannot silently attach one Rule's edits to another.
     """
     ids = form.getlist("rule_id")
     enabled = form.getlist("rule_enabled")
@@ -265,9 +380,7 @@ def _rebuild_rules(detail: StrategyDetail, form: Any, id_gen: UUIDv7IdGen) -> tu
                 priority=Priority(pr),
                 suggestion_class=SuggestionClass(sc),
                 message=msg,
-                condition=LeafCondition(
-                    kind=view.kind, kind_version=view.kind_version, params=dict(view.params)
-                ),
+                condition=_rebuild_condition(view, form),
             )
         )
 
