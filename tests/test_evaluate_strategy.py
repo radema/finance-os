@@ -19,6 +19,7 @@ import duckdb
 import pytest
 from pydantic import ValidationError
 
+from financeos.adapters.duckdb.queries.snapshots import drift_history
 from financeos.app.evaluate_strategy import evaluate_strategy
 from financeos.app.unit_of_work import DuckDBUnitOfWork
 from financeos.core.portfolio import Asset, Bucket, Operation, OperationType, Portfolio
@@ -739,3 +740,61 @@ class TestHeterogeneousGovernance:
         (alert,) = result.alerts
         assert alert.outcome is Outcome.SKIPPED
         assert alert.trace.skip_reason is SkipReason.HETEROGENEOUS_STRATEGIES
+
+
+class TestSnapshotDedupeAcrossScopeCalls:
+    """ADR-L06 §5.3: a pre-existing read-side defect, universal now rather than latent.
+
+    `evaluate_strategy` writes a Portfolio-wide Snapshot on *every* call (RFC-0009 §5.1). An
+    N-Bucket Portfolio's `financeos evaluate` already made N such calls before the
+    Portfolio-scope call existed (one per Bucket, ADR-0020) — N identical Snapshots at one
+    `as_of`, silently. `drift_history` must collapse them to exactly one point per `as_of`.
+    """
+
+    def test_n_bucket_portfolio_yields_one_drift_point_per_as_of(
+        self, uow: DuckDBUnitOfWork, con: duckdb.DuckDBPyConnection
+    ) -> None:
+        portfolio_id = PortfolioId(uuid4())
+        strategy_id = StrategyId(uuid4())
+        bucket_a = BucketId(uuid4())
+        bucket_b = BucketId(uuid4())
+        _setup_portfolio(
+            uow, portfolio_id=portfolio_id, strategy_id=strategy_id, fund_holding="100"
+        )
+        uow.buckets.add(
+            Bucket(id=bucket_a, portfolio_id=portfolio_id, strategy_id=strategy_id, name="A")
+        )
+        uow.buckets.add(
+            Bucket(id=bucket_b, portfolio_id=portfolio_id, strategy_id=strategy_id, name="B")
+        )
+        version = _strategy_version(
+            strategy_id=strategy_id,
+            version_id=StrategyVersionId(uuid4()),
+            rules=(_residual_rule(),),
+        )
+        uow.strategies.freeze_version(version)
+
+        for offset, scope in enumerate(
+            (Scope.for_bucket(bucket_a), Scope.for_bucket(bucket_b))
+        ):
+            evaluate_strategy(
+                uow,
+                _CountingIdGen(offset * 1000),
+                _FixedClock(),
+                scope=scope,
+                as_of=AS_OF,
+                currency="EUR",
+            )
+        evaluate_strategy(
+            uow,
+            _CountingIdGen(2000),
+            _FixedClock(),
+            scope=Scope.for_portfolio(portfolio_id),
+            as_of=AS_OF,
+            currency="EUR",
+            strategy_id=strategy_id,
+        )
+
+        points = drift_history(con, str(portfolio_id), "EQUITY_DEVELOPED")
+        assert len(points) == 1
+        assert points[0].as_of == AS_OF

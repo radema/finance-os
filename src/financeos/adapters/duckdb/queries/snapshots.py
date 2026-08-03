@@ -45,15 +45,31 @@ def drift_history(
     A `Snapshot` with no `run_id` (an on-demand checkpoint, not one written by `evaluate`) has
     no governing `StrategyVersion` to compare against and is excluded, along with any
     `HYPOTHETICAL` run.
+
+    One point per `as_of` (ADR-L06 §5.3): `evaluate_strategy` writes a Portfolio-wide Snapshot
+    on **every** call, so an N-Bucket Portfolio's `financeos evaluate` (one call per Bucket,
+    ADR-0020, plus one Portfolio-scope call, RFC-0007 §5) writes N+1 Snapshots at the same
+    `as_of`. This was already true before the Portfolio-scope call existed — an N-Bucket
+    Portfolio already wrote N identical Snapshots per `as_of` — a pre-existing read-side defect
+    that a single-Bucket demo never exercised. Collapsed here to the row with the latest
+    `recorded_at` per `(portfolio_id, as_of)`, deterministically tie-broken on `id`.
     """
     rows = con.execute(
         """
-        SELECT snap.as_of, snap.allocation, sv.definition
-        FROM snapshot snap
-        JOIN evaluation_run run  ON run.id = snap.run_id
-        JOIN strategy_version sv ON sv.id  = run.strategy_version_id
-        WHERE snap.portfolio_id = ? AND run.mode = 'ACTUAL'
-        ORDER BY snap.as_of ASC, snap.recorded_at ASC
+        SELECT as_of, allocation, definition
+        FROM (
+            SELECT snap.as_of, snap.allocation, sv.definition,
+                   row_number() OVER (
+                       PARTITION BY snap.as_of
+                       ORDER BY snap.recorded_at DESC, snap.id DESC
+                   ) AS rn
+            FROM snapshot snap
+            JOIN evaluation_run run  ON run.id = snap.run_id
+            JOIN strategy_version sv ON sv.id  = run.strategy_version_id
+            WHERE snap.portfolio_id = ? AND run.mode = 'ACTUAL'
+        )
+        WHERE rn = 1
+        ORDER BY as_of ASC
         """,
         [portfolio_id],
     ).fetchall()

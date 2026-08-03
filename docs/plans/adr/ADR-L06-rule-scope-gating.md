@@ -139,7 +139,8 @@ plan's wording points at rather than a new invention.
 | `src/financeos/adapters/duckdb/queries/allocation.py` | `TARGETS_HETEROGENEOUS` now aliases the enum member instead of a duplicated string literal. |
 | `src/financeos/web/labels.py` | Removed the now-stale comment describing the label as "drafted ahead of the enum member." |
 | `src/financeos/adapters/duckdb/queries/runs.py` | `run_outcome_counts`: `coalesce(count_if(...), 0)` — see §5.3. |
-| `tests/test_evaluate_strategy.py` | `TestRuleScopeGateModel`, `TestRuleScopeGating` (a Bucket-gated and a Portfolio-gated rule are mutually exclusive across the two calls), `TestHeterogeneousGovernance` (`SKIPPED(heterogeneous_strategies)` from `evaluate_strategy`). |
+| `src/financeos/adapters/duckdb/queries/snapshots.py` | `drift_history` collapses to one row per `(portfolio_id, as_of)` — see §5.3/§6.1 (owner ruling). |
+| `tests/test_evaluate_strategy.py` | `TestRuleScopeGateModel`, `TestRuleScopeGating` (a Bucket-gated and a Portfolio-gated rule are mutually exclusive across the two calls), `TestHeterogeneousGovernance` (`SKIPPED(heterogeneous_strategies)` from `evaluate_strategy`), `TestSnapshotDedupeAcrossScopeCalls` (an N-Bucket Portfolio yields exactly one `DriftPoint` per `as_of`). |
 
 ### 5.2 Positive
 
@@ -160,27 +161,63 @@ plan's wording points at rather than a new invention.
   gating makes possible for a single-Strategy Portfolio (its one rule gated out of the Portfolio
   call entirely) is the first case that reaches it. Fixed with `coalesce(..., 0)`; recorded here
   because it was latent before this change and only this change made it reachable.
-- **Three pre-existing tests fail once the Portfolio-scope call (task #14) exists at all, for a
-  reason this ADR's own scope does not reach — reported to the product owner, not patched:**
-  `tests/test_queries.py::test_drift_history_reads_the_snapshot_written_on_evaluate`,
-  `tests/test_queries.py::test_drift_history_is_empty_for_an_untargeted_class`, and
-  `tests/test_web_runs.py::test_provenance_bar_links_to_run_health`. `evaluate_strategy` writes a
-  full Portfolio-wide `Snapshot` on **every** call (RFC-0009 §5.1's own wording), regardless of
-  scope; a single-Bucket Portfolio previously received exactly one `evaluate_strategy` call per
-  `as_of` (the Bucket-scope one), so exactly one `Snapshot` existed per `as_of`. With a
-  Portfolio-scope call always added alongside it, two `Snapshot` rows now exist at the same
-  `(portfolio_id, as_of)` for any Portfolio, which `drift_history` (assumes at most one row per
-  `as_of`) and one test's own un-ordered "latest run" query were not written to expect. This is a
-  genuine multi-run-per-`as_of` question (should `evaluate_strategy` dedupe/supersede a same-`as_of`
-  Snapshot from an earlier call in the same batch? should `list_runs`/"latest run" semantics be
-  re-stated once more than one run per `as_of` is normal?) outside this ADR's scope — RuleScopeGate
-  and the Portfolio-scope call are both otherwise correct and independently tested (§5.1's test
-  additions), and neither test file nor Snapshot-writing semantics were touched to force a pass.
+- **A pre-existing read-side defect, made universal rather than created.** `evaluate_strategy` has
+  always written a full Portfolio-wide `Snapshot` on **every** call (RFC-0009 §5.1) — this ADR does
+  not touch that, and the owner ruling below confirms it stands. `cli.py:216-229` already looped
+  **every** Bucket before this ADR, so an N-Bucket Portfolio already made N `evaluate_strategy`
+  calls per `as_of` and already wrote N identical `Snapshot` rows at that `as_of`; `drift_history`
+  (assumed at most one row per `as_of`) already returned N duplicate points per date for such a
+  Portfolio. The three tests that surfaced this — `tests/test_queries.py`'s two `drift_history`
+  tests and `tests/test_web_runs.py::test_provenance_bar_links_to_run_health` — passed only because
+  the demo fixture is a single-Bucket Portfolio, where N happened to be 1. This ADR's
+  Portfolio-scope call did not create the defect: it added one more call alongside the (already
+  N ≥ 1) Bucket-scope loop, turning `N` into `N + 1` and making the multiplicity universal —
+  reachable even at `N = 1` — rather than a latent property of multi-Bucket Portfolios nobody had
+  written a fixture for yet.
 
-## 6. Open items for the product owner
+  **Owner ruling: dedupe read-side.** RFC-0009 §5.1 stands unchanged — every `evaluate_strategy`
+  call still writes its own `Snapshot`; the write side is not touched. `drift_history`
+  (`adapters/duckdb/queries/snapshots.py`) now collapses to one row per `(portfolio_id, as_of)`,
+  picking the latest `recorded_at` (ties broken on `snapshot.id`) via a `row_number()` window,
+  keeping the existing `run.mode = 'ACTUAL'` and no-`run_id` exclusions intact. Verified by
+  `TestSnapshotDedupeAcrossScopeCalls` (§5.1): a 2-Bucket Portfolio evaluated at both Bucket scopes
+  and Portfolio scope for one `as_of` yields exactly one `DriftPoint`. Both `drift_history` tests
+  now pass unedited.
 
-1. **§5.3's Snapshot/latest-run question**, stated above, needs a decision before those three tests
-   can be made to pass without weakening what they check.
+  **`test_provenance_bar_links_to_run_health` remains unresolved — reported, not patched.** The
+  homepage's actual query (`latest_actual_run`, `adapters/duckdb/queries/runs.py`) is *already*
+  deterministic — `ORDER BY run.as_of DESC, run.evaluated_at DESC LIMIT 1` — and correctly returns
+  the truly most-recent `evaluation_run` row (the Portfolio-scope one, evaluated last in the CLI's
+  loop). Reproduced directly: with a Bucket-scope run and a Portfolio-scope run at the same `as_of`,
+  `latest_actual_run` returns the Portfolio one, and the homepage links to it. The test's own
+  comparison query, `SELECT id FROM evaluation_run LIMIT 1` with no `ORDER BY`/no grouping, returns
+  a *different* row (empirically, the first-inserted — the Bucket-scope run) whenever more than one
+  `evaluation_run` row exists for a Portfolio, which — like the Snapshot case above — was already
+  true for any N-Bucket Portfolio before this ADR (task #14 only turned `N ≥ 1` into `N ≥ 2`, making
+  it reachable at `N = 1` too). Unlike `Snapshot`, there is no read-side "collapse to one" available
+  here without changing what "the run" means: `evaluation_run` is append-only (C6) so the two rows
+  cannot be merged at the physical level, and the app's own selection is already the correct
+  "deterministic latest" — matching the test would require either weakening that correctness (never
+  pick the true latest, pick whatever the test's unordered scan happens to return first) or editing
+  the test to add the ordering/grouping its own assertion implicitly assumes, both of which this
+  ADR's mandate rules out. Reported for a decision rather than guessed at.
+
+## 6. Consequences of the ruling, and what remains open
+
+### 6.1 The Snapshot/drift_history question — resolved
+
+Closed by the owner ruling in §5.3: read-side dedupe, write side unchanged. `drift_history`'s
+`row_number()`-windowed collapse is the shipped answer; no further decision needed here.
+
+### 6.2 Open items for the product owner
+
+1. **`test_provenance_bar_links_to_run_health`** (§5.3) is still failing and needs a decision: is
+   `latest_actual_run`'s "truly most recent run, any scope" semantics the one the homepage should
+   show, with the test rewritten to match it (by whoever owns changes to that test file); or does
+   "the run" for the homepage's provenance bar need a different, narrower definition (e.g. prefer
+   the Portfolio-scope run when one exists for the same `as_of`, which happens to coincide with
+   "most recent" in every case observed so far, but is a different rule)? Either answer requires
+   touching the test, which is outside this ADR's authority to decide alone.
 2. **Authoring convention for a future "generic, any-Bucket" rule.** Today's only example
    (`demo/strategy.yaml`) hardcodes one Rule per Bucket, each with its own literal `scope` ref — the
    `RuleScopeGate(kind=BUCKET, bucket_id=None)` "any Bucket" case is implemented and tested
