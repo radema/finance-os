@@ -563,6 +563,75 @@ class TestResidualAndTargetsWiring:
         assert by_bucket["UNASSIGNED"]["weight"] == "0.82000000"
 
 
+class TestZeroPortfolioValueSkipsAllocationDependentKinds:
+    """ADR-L07: an empty Bucket (`zero_portfolio_value`) must `SKIP` `untargeted_allocation`
+    and `allocation_absent` with that same reason, not silently `NOT_FIRED` /
+    `SKIPPED(missing_fact)` — the inverted-silence failure ADR-0016 exists to prevent, now
+    closed for every kind declaring `allocation` in `required_facts`
+    (`drift_outside_tolerance` already skipped correctly before this fix)."""
+
+    def _empty_bucket_scope(self, uow: DuckDBUnitOfWork) -> tuple[Scope, StrategyId]:
+        """A Bucket that exists, in a Portfolio that holds value elsewhere, but has nothing
+        apportioned to it at all -> zero_portfolio_value at its own scope specifically."""
+        portfolio_id = PortfolioId(uuid4())
+        strategy_id = StrategyId(uuid4())
+        bucket_id = BucketId(uuid4())
+        _setup_portfolio(
+            uow, portfolio_id=portfolio_id, strategy_id=strategy_id, fund_holding="46"
+        )
+        uow.buckets.add(
+            Bucket(id=bucket_id, portfolio_id=portfolio_id, strategy_id=strategy_id, name="Empty")
+        )
+        return Scope.for_bucket(bucket_id), strategy_id
+
+    def test_untargeted_allocation_skips_with_zero_portfolio_value(
+        self, uow: DuckDBUnitOfWork
+    ) -> None:
+        scope, strategy_id = self._empty_bucket_scope(uow)
+        rule = _untargeted_allocation_rule(scope)
+        version = _strategy_version(
+            strategy_id=strategy_id, version_id=StrategyVersionId(uuid4()), rules=(rule,)
+        )
+        uow.strategies.freeze_version(version)
+
+        result = evaluate_strategy(
+            uow, _CountingIdGen(0), _FixedClock(), scope=scope, as_of=AS_OF, currency="EUR"
+        )
+
+        (alert,) = result.alerts
+        assert alert.outcome is Outcome.SKIPPED
+        assert alert.trace.skip_reason is SkipReason.ZERO_PORTFOLIO_VALUE
+
+    def test_allocation_absent_skips_with_zero_portfolio_value(
+        self, uow: DuckDBUnitOfWork
+    ) -> None:
+        scope, strategy_id = self._empty_bucket_scope(uow)
+        rule = Rule(
+            id=RuleId(UUID(int=4)),
+            name="Classe assente",
+            priority=Priority.LOW,
+            suggestion_class=SuggestionClass.REVIEW_ALLOCATION,
+            message="assente",
+            condition=LeafCondition(
+                kind="allocation_absent",
+                kind_version=1,
+                params={"asset_class": "EQUITY_DEVELOPED", "scope": scope.ref},
+            ),
+        )
+        version = _strategy_version(
+            strategy_id=strategy_id, version_id=StrategyVersionId(uuid4()), rules=(rule,)
+        )
+        uow.strategies.freeze_version(version)
+
+        result = evaluate_strategy(
+            uow, _CountingIdGen(0), _FixedClock(), scope=scope, as_of=AS_OF, currency="EUR"
+        )
+
+        (alert,) = result.alerts
+        assert alert.outcome is Outcome.SKIPPED
+        assert alert.trace.skip_reason is SkipReason.ZERO_PORTFOLIO_VALUE
+
+
 class TestBucketRepositoryForPortfolio:
     """MAJOR 3 (review): the new port method itself, at the DuckDB adapter level."""
 

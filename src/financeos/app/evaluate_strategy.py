@@ -223,6 +223,18 @@ def evaluate_strategy(
             unavailable[family] = SkipReason.HETEROGENEOUS_STRATEGIES
     elif drift_unavailable is not None:
         unavailable[rule_engine.FACT_DRIFT] = drift_unavailable
+        if drift_unavailable is SkipReason.ZERO_PORTFOLIO_VALUE:
+            # ADR-L07: a scope with zero total value has computed no allocation at all —
+            # `untargeted_allocation`/`allocation_absent` must SKIP with the same reason
+            # `drift_outside_tolerance` already does, not silently NOT_FIRE on a vacuously
+            # empty `allocation` mapping (`untargeted_allocation`) or SKIP with the narrower
+            # `missing_fact` reason the per-class `open_fact` lookup happens to raise
+            # (`allocation_absent`). `MISSING_FACT` (an unpriced Asset elsewhere in scope) is
+            # deliberately excluded here — that case leaves real, partial allocation lines,
+            # and marking a partially-populated fact family wholesale unavailable would
+            # discard real data rather than report a genuine absence (ADR-L04 §4.2's "never
+            # invent a partial denominator", applied in the other direction).
+            unavailable[rule_engine.FACT_ALLOCATION] = drift_unavailable
     if residual_comp.unavailable is not None:
         unavailable[rule_engine.FACT_RESIDUAL] = residual_comp.unavailable
 
