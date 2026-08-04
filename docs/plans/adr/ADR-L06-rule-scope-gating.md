@@ -217,13 +217,47 @@ plan's wording points at rather than a new invention.
 
 No further decision needed on either; both close here.
 
-### 6.2 Open item for the product owner
+### 6.2 Authoring convention for a generic, any-Bucket rule — resolved
 
-**Authoring convention for a future "generic, any-Bucket" rule.** Today's only example
-(`demo/strategy.yaml`) hardcodes one Rule per Bucket, each with its own literal `scope` ref — the
-`RuleScopeGate(kind=BUCKET, bucket_id=None)` "any Bucket" case is implemented and tested
-(`TestRuleScopeGateModel`) but has no authored example yet. The §8.5 fixture task should confirm
-which authoring shape it wants for the "7 generic rules" row before writing it.
+**Resolved by the §8.5 fixture build.** `demo/strategy.yaml`'s "Crescita di lungo periodo" v3
+now carries seven generic Bucket-scope rules (five `drift_outside_tolerance`, one
+`untargeted_allocation`, one `allocation_absent`), each authored once and evaluated at every
+Bucket the Strategy governs (Pensione, Figli, Personale) rather than duplicated per Bucket. The
+shape is exactly the one this section anticipated:
+
+```yaml
+condition:
+  kind: drift_outside_tolerance
+  kind_version: 1
+  params:
+    asset_class: EQUITY_DEVELOPED
+    scope: "any_bucket"        # non-committal label only — see below
+scope_gate:
+  kind: BUCKET                 # bucket_id omitted -> None -> "any Bucket" (§4)
+```
+
+Two rules the fixture settles, both mechanical rather than product-definition calls:
+
+1. **`scope_gate` is mandatory for a generic rule, not optional.** Without it, a kind whose own
+   condition params carry no real scope reference falls through to §4's "unconstrained" default
+   (applies to *every* call, Bucket **and** Portfolio) — which would add the rule to the
+   Portfolio-scope call too and break whatever fixed count that call expects. `scope_gate:
+   {kind: BUCKET}` is what excludes the Portfolio call; relying on a non-scope-shaped `scope`
+   param alone is not sufficient and was tried and rejected while building §8.5's fixture.
+2. **The condition's own scope-shaped param becomes a non-committal display label** (`"any_bucket"`
+   here), never a per-Bucket ref, once `scope_gate` is the applicability mechanism (§4.1 point 1:
+   an explicit `scope_gate` wins over any condition-level inference, whatever the latter says). It
+   still satisfies the params model's required field and still reaches the message bindings
+   dictionary — none of the six V1.0 kinds' `explanation_template`s actually render `{scope}` in
+   the rendered Italian prose (verified across all six registrations in
+   `core/engines/rule_engine.py`), so the placeholder is inert at render time and exists only to
+   satisfy the schema.
+
+No further decision needed; both close here. Verified end to end by
+`tests/test_golden_demo.py`'s six-class fixture (UX-0001 §8.5): the seven generic rules produce
+exactly Pensione 3 FIRED + 4 NOT_FIRED, Figli 2 FIRED + 5 NOT_FIRED, Personale 7
+`SKIPPED(zero_portfolio_value)` — 7 evaluations per Bucket, 21 total, with no rule leaking into
+the Portfolio-scope call.
 
 ---
 

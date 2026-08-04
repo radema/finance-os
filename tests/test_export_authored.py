@@ -66,7 +66,8 @@ def test_apportionment_export_includes_a_superseded_row(tmp_path: Path) -> None:
     _export(runner, db_path, out_dir)
 
     records = yaml.safe_load((out_dir / "apportionment" / f"{BUCKET_ID}.yaml").read_text())
-    assert len(records) == 3  # 2 demo rows + the supersession just written
+    # UX-0001 §8.2: Pensione apportions 6 distinct Assets + the supersession just written.
+    assert len(records) == 7
     assert str(original_id) in {r["id"] for r in records}  # superseded row is not dropped
     superseding = next(r for r in records if r.get("supersedes_id") == str(original_id))
     assert superseding["quantity"]["amount"] == "200.0000000000"

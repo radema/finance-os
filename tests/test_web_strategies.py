@@ -94,8 +94,12 @@ def test_strategy_detail_shows_targets_rules_and_requires_change_note(
     assert "required" in body
 
 
+#: `_one(con, "SELECT id FROM strategy LIMIT 1")` (used throughout this file) resolves to
+#: "Preservazione del capitale" — cap-pres-v1's flat 2-leaf tree (CASH, BOND_GOV_EUR) matches
+#: this form's `target_key_0`/`target_key_1` shape directly; `rule_id` names one of its own
+#: three real Rules (UX-0001 §8.4/§8.5), not a dangling id from the old one-rule skeleton.
 _FREEZE_FORM = {
-    "target_key_0": "EQUITY_DEVELOPED",
+    "target_key_0": "CASH",
     "target_weight_0": "0.40000000",
     "target_tol_kind_0": "ABSOLUTE",
     "target_tol_band_0": "0.02000000",
@@ -103,7 +107,7 @@ _FREEZE_FORM = {
     "target_weight_1": "0.60000000",
     "target_tol_kind_1": "ABSOLUTE",
     "target_tol_band_1": "0.05000000",
-    "rule_id": "8e968a19-7229-5a9c-b2ad-9628229e77ae",
+    "rule_id": "3d020000-0000-0000-0000-000000000001",
     "rule_enabled": "true",
     "rule_priority": "HIGH",
     "rule_suggestion_class": "CONSIDER_REBALANCE",

@@ -21,7 +21,10 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from pathlib import Path
+from uuid import UUID, uuid4
 
 import duckdb
 import pytest
@@ -29,16 +32,61 @@ from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
 from financeos.adapters.duckdb.queries.findings import list_findings
+from financeos.app.evaluate_strategy import evaluate_strategy
+from financeos.app.unit_of_work import DuckDBUnitOfWork
 from financeos.cli import app as cli
+from financeos.core.portfolio import Asset, Bucket, Operation, OperationType, Portfolio
+from financeos.core.shared import (
+    AccountId,
+    AssetId,
+    BucketId,
+    OperationId,
+    PortfolioId,
+    Priority,
+    Quantity,
+    RuleId,
+    Scope,
+    StrategyId,
+    StrategyVersionId,
+    SuggestionClass,
+)
+from financeos.core.strategy import (
+    Horizon,
+    LeafCondition,
+    RiskLevel,
+    RiskProfile,
+    Rule,
+    StrategyDefinition,
+    StrategyVersion,
+)
+from financeos.ports import AccountInfo
 from financeos.web.main import create_app
+from tests import factories as f
+from tests.test_evaluate_strategy import MIGRATION_PATH
+
+
+class _FixedTestClock:
+    def now(self) -> datetime:
+        return datetime(2026, 7, 24, 12, 0, tzinfo=UTC)
+
+
+class _CountingIdGen:
+    def __init__(self, start: int) -> None:
+        self._n = start
+
+    def __call__(self) -> UUID:
+        self._n += 1
+        return UUID(int=self._n)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOKENS_CSS = REPO_ROOT / "src" / "financeos" / "web" / "static" / "css" / "tokens.css"
 
-#: The canonical fixture's net worth at portfolio scope: 183.6 + 356.4 units at 100,00 each.
-#: The CASH position carries no price row, so it is reported rather than valued — which is what
-#: `portfolio_engine.compute_allocation`'s own contract says an unpriced holding does.
-NET_WORTH = "€54.000,00"
+#: UX-0001 §8.3: the six-class fixture's Portfolio-wide net worth.
+NET_WORTH = "€107.586,33"
+
+#: UX-0001 §8.5 row 2 / RFC-0005 §8.3: the canonical finding — Pensione's Equity/Developed
+#: drift, the only one at severity 3.00000000.
+CANONICAL_RULE_ID = "10000000-0000-0000-0000-000000000001"
 
 OPTION_RE = re.compile(r'<script type="application/json" id="([^"]+)">([\s\S]*?)</script>')
 TOKEN_RE = re.compile(r'"token:(--[a-z0-9-]+)"')
@@ -55,7 +103,7 @@ def _seed(tmp_path: Path, *, evaluate: bool = True) -> Path:
             cli, ["--db-path", str(db_path), "evaluate", "--as-of", "2026-07-24"]
         )
         assert evaluated.exit_code == 0, evaluated.output
-        assert "1 Recommendation" in evaluated.output
+        assert "10 Recommendation" in evaluated.output
     return db_path
 
 
@@ -67,13 +115,21 @@ def client(tmp_path: Path) -> TestClient:
 
 @pytest.fixture
 def recommendation_id(client: TestClient) -> str:
-    """The one Recommendation the demo dataset produces, read from `client`'s own store.
+    """The canonical Recommendation (RFC-0005 §8.3): Pensione's Equity/Developed drift,
+    severity 3.00000000 — the only one of the fixture's ten at that exact severity.
 
     Derived from the client rather than seeded separately: ids are UUIDv7 generated per seed,
     so a second store would hand out an id the app under test has never heard of.
     """
     con: duckdb.DuckDBPyConnection = client.app.state.connection  # type: ignore[attr-defined]
-    row = con.cursor().execute("SELECT id FROM recommendation").fetchone()
+    row = (
+        con.cursor()
+        .execute(
+            "SELECT r.id FROM recommendation r JOIN alert a ON a.id = r.alert_id "
+            "WHERE a.rule_id = ? AND a.severity = 3"
+        , [CANONICAL_RULE_ID])
+        .fetchone()
+    )
     assert row is not None
     return str(row[0])
 
@@ -143,9 +199,8 @@ def test_explanation_surface_renders_all_nine_blocks(
     # Portfolio state now has a source: `evaluate_strategy` writes a `Snapshot` sharing this
     # run's id on every run (RFC-0009 §5.1), so the ledger renders instead of the absence note.
     assert "Nessuno snapshot per questa valutazione." not in body
-    assert "€54.000,00" in body
-    assert "0.66000000" in body
-    assert "0.34000000" in body
+    assert NET_WORTH in body
+    assert "0.25496468" in body
 
 
 def test_trace_is_a_lazy_htmx_fragment(client: TestClient, recommendation_id: str) -> None:
@@ -193,16 +248,228 @@ def test_allocation_carries_net_worth_and_reconciles(client: TestClient) -> None
     assert "Capitale non assegnato" in body
 
 
-def test_allocation_targets_use_the_runs_frozen_version_not_current(
-    client: TestClient,
+def _single_strategy_portfolio_db(db_path: Path) -> None:
+    """A single-Bucket, single-Strategy Portfolio, written straight to `db_path`.
+
+    The demo Portfolio is *permanently* heterogeneous by construction (UX-0001 §8.4's two
+    Strategies) — `adapters/duckdb/queries/allocation.py` determines "heterogeneous" from
+    the Portfolio's *own* Bucket set, not from which scope a particular run evaluated, so no
+    `--bucket-id` selection against the demo fixture can make `/allocation`'s target
+    percentages observable. This builds a Portfolio where they are.
+    """
+    con = duckdb.connect(str(db_path))
+    con.execute("SET TimeZone='UTC'")
+    con.execute(MIGRATION_PATH.read_text())
+    uow = DuckDBUnitOfWork(con)
+
+    fund_id = AssetId(UUID(int=8001))
+    cash_id = AssetId(UUID(int=8002))
+    uow.assets.add(Asset(id=fund_id, name="Fund", asset_class="CASH", currency="EUR"))
+    uow.assets.add(Asset(id=cash_id, name="Cash", asset_class="CASH", currency="EUR"))
+    uow.prices.add(
+        uuid4(), fund_id, valid_date=date(2026, 7, 24), close="1", currency="EUR",
+        source="seed", recorded_at=datetime(2026, 7, 24, 12, 0, tzinfo=UTC),
+    )
+    account_id = AccountId(uuid4())
+    uow.accounts.add(
+        AccountInfo(id=account_id, cash_asset_id=cash_id, currency="EUR"), name="Main",
+        type_="BROKERAGE",
+    )
+    portfolio_id = PortfolioId(uuid4())
+    uow.portfolios.add(Portfolio(id=portfolio_id, name="P", accounts=(account_id,)))
+    strategy_id = StrategyId(uuid4())
+    uow.strategies.ensure_strategy(strategy_id, name="S")
+    bucket_id = BucketId(uuid4())
+    uow.buckets.add(
+        Bucket(id=bucket_id, portfolio_id=portfolio_id, strategy_id=strategy_id, name="B")
+    )
+    primary_id = OperationId(uuid4())
+    uow.operations.write(
+        [
+            Operation(
+                id=primary_id, type=OperationType.BUY, account_id=account_id, asset_id=fund_id,
+                trade_date=date(2026, 7, 24), quantity=Quantity(amount=Decimal("100")),
+                price=Decimal("1"), fees=Decimal(0), currency="EUR",
+                recorded_at=datetime(2026, 7, 24, 12, 0, tzinfo=UTC),
+            ),
+            Operation(
+                id=OperationId(uuid4()), type=OperationType.BUY, account_id=account_id,
+                asset_id=cash_id, trade_date=date(2026, 7, 24),
+                quantity=Quantity(amount=Decimal("-100")), price=Decimal("1"), fees=Decimal(0),
+                currency="EUR", cash_leg_of=primary_id,
+                recorded_at=datetime(2026, 7, 24, 12, 0, tzinfo=UTC),
+            ),
+        ],
+        import_batch_id=uuid4(),
+    )
+    version = StrategyVersion(
+        id=StrategyVersionId(uuid4()),
+        strategy_id=strategy_id,
+        definition=StrategyDefinition(
+            name="S",
+            horizon=Horizon(years=10),
+            risk=RiskProfile(level=RiskLevel.BALANCED),
+            targets=f.flat_targets(("CASH", "1.0", f.absolute("0.10"))),
+            rules=(
+                Rule(
+                    id=RuleId(UUID(int=1)),
+                    name="r",
+                    priority=Priority.HIGH,
+                    suggestion_class=SuggestionClass.CONSIDER_REBALANCE,
+                    message="m",
+                    condition=LeafCondition(
+                        kind="drift_outside_tolerance",
+                        kind_version=1,
+                        params={
+                            "asset_class": "CASH",
+                            "scope": Scope.for_bucket(bucket_id).ref,
+                        },
+                    ),
+                ),
+            ),
+        ),
+        change_note="seed",
+        frozen_at=datetime(2026, 7, 24, 12, 0, tzinfo=UTC),
+    )
+    uow.strategies.freeze_version(version)
+    evaluate_strategy(
+        uow, _CountingIdGen(0), _FixedTestClock(), scope=Scope.for_bucket(bucket_id),
+        as_of=date(2026, 7, 24), currency="EUR",
+    )
+    con.close()
+
+
+def _unpriced_holding_portfolio_db(db_path: Path) -> None:
+    """A Bucket holding one priced and one genuinely unpriced Asset.
+
+    The demo fixture prices every Asset — CASH included, at par (UX-0001 §8.1) — so it no
+    longer exercises `compute_allocation`'s "an unpriced holding contributes nothing and is
+    reported" contract at the read side. `compute_residual` (ADR-0029) also treats *any*
+    unpriced Portfolio-wide holding as unavailable, so this cannot be grafted onto the demo
+    fixture without SKIPping `unassigned_residual_above` and moving the §8.5 SKIPPED count —
+    an isolated Portfolio is the only way to exercise this without disturbing it.
+    """
+    con = duckdb.connect(str(db_path))
+    con.execute("SET TimeZone='UTC'")
+    con.execute(MIGRATION_PATH.read_text())
+    uow = DuckDBUnitOfWork(con)
+
+    priced_id = AssetId(UUID(int=8101))
+    unpriced_id = AssetId(UUID(int=8102))
+    cash_id = AssetId(UUID(int=8103))
+    uow.assets.add(
+        Asset(id=priced_id, name="Priced Fund", asset_class="EQUITY_DEVELOPED", currency="EUR")
+    )
+    uow.assets.add(
+        Asset(id=unpriced_id, name="Unpriced Fund", asset_class="EQUITY_GLOBAL", currency="EUR")
+    )
+    uow.assets.add(Asset(id=cash_id, name="Cash", asset_class="CASH", currency="EUR"))
+    uow.prices.add(
+        uuid4(), priced_id, valid_date=date(2026, 7, 24), close="1", currency="EUR",
+        source="seed", recorded_at=datetime(2026, 7, 24, 12, 0, tzinfo=UTC),
+    )
+    # unpriced_id deliberately gets no price row.
+
+    account_id = AccountId(uuid4())
+    uow.accounts.add(
+        AccountInfo(id=account_id, cash_asset_id=cash_id, currency="EUR"), name="Main",
+        type_="BROKERAGE",
+    )
+    portfolio_id = PortfolioId(uuid4())
+    uow.portfolios.add(Portfolio(id=portfolio_id, name="P", accounts=(account_id,)))
+    strategy_id = StrategyId(uuid4())
+    uow.strategies.ensure_strategy(strategy_id, name="S")
+    bucket_id = BucketId(uuid4())
+    uow.buckets.add(
+        Bucket(id=bucket_id, portfolio_id=portfolio_id, strategy_id=strategy_id, name="B")
+    )
+    legs: list[Operation] = []
+    for asset_id, quantity in ((priced_id, "100"), (unpriced_id, "50")):
+        primary_id = OperationId(uuid4())
+        legs.append(
+            Operation(
+                id=primary_id, type=OperationType.BUY, account_id=account_id, asset_id=asset_id,
+                trade_date=date(2026, 7, 24), quantity=Quantity(amount=Decimal(quantity)),
+                price=Decimal("1"), fees=Decimal(0), currency="EUR",
+                recorded_at=datetime(2026, 7, 24, 12, 0, tzinfo=UTC),
+            )
+        )
+        legs.append(
+            Operation(
+                id=OperationId(uuid4()), type=OperationType.BUY, account_id=account_id,
+                asset_id=cash_id, trade_date=date(2026, 7, 24),
+                quantity=Quantity(amount=-Decimal(quantity)), price=Decimal("1"), fees=Decimal(0),
+                currency="EUR", cash_leg_of=primary_id,
+                recorded_at=datetime(2026, 7, 24, 12, 0, tzinfo=UTC),
+            )
+        )
+    uow.operations.write(legs, import_batch_id=uuid4())
+
+    version = StrategyVersion(
+        id=StrategyVersionId(uuid4()),
+        strategy_id=strategy_id,
+        definition=StrategyDefinition(
+            name="S",
+            horizon=Horizon(years=10),
+            risk=RiskProfile(level=RiskLevel.BALANCED),
+            targets=f.flat_targets(("EQUITY_DEVELOPED", "1.0", f.absolute("0.10"))),
+            rules=(
+                Rule(
+                    id=RuleId(UUID(int=2)),
+                    name="r",
+                    priority=Priority.HIGH,
+                    suggestion_class=SuggestionClass.CONSIDER_REBALANCE,
+                    message="m",
+                    condition=LeafCondition(
+                        kind="drift_outside_tolerance",
+                        kind_version=1,
+                        params={
+                            "asset_class": "EQUITY_DEVELOPED",
+                            "scope": Scope.for_bucket(bucket_id).ref,
+                        },
+                    ),
+                ),
+            ),
+        ),
+        change_note="seed",
+        frozen_at=datetime(2026, 7, 24, 12, 0, tzinfo=UTC),
+    )
+    uow.strategies.freeze_version(version)
+    evaluate_strategy(
+        uow, _CountingIdGen(0), _FixedTestClock(), scope=Scope.for_bucket(bucket_id),
+        as_of=date(2026, 7, 24), currency="EUR",
+    )
+    con.close()
+
+
+def test_allocation_reports_the_unpriced_position_rather_than_dropping_it(
+    tmp_path: Path,
 ) -> None:
+    """The demo's CASH position is priced at par (UX-0001 §8.1), so this isolated Portfolio
+    is what exercises `compute_allocation`'s documented contract: an unpriced holding
+    contributes nothing and is recorded. Silently excluding it would understate the total by
+    an unknown amount while reading as a complete answer.
+    """
+    db_path = tmp_path / "financeos.duckdb"
+    _unpriced_holding_portfolio_db(db_path)
+    body = TestClient(create_app(db_path)).get("/allocation").text
+    assert "senza prezzo" in body
+    assert "Questo totale è un minimo, non un totale." in body
+    assert "Unpriced Fund" in body
+
+
+def test_allocation_targets_use_the_runs_frozen_version_not_current(tmp_path: Path) -> None:
     """ADR-0012: audit correctness reads what the run measured against.
 
     Re-freezing the Strategy after the run must not change what `/allocation` shows: the
     targets on screen are the run's pinned `strategy_version_id`, never
     `strategy.current_version_id`.
     """
-    con: duckdb.DuckDBPyConnection = client.app.state.connection  # type: ignore[attr-defined]
+    db_path = tmp_path / "financeos.duckdb"
+    _single_strategy_portfolio_db(db_path)
+
+    local_client = TestClient(create_app(db_path))
+    con: duckdb.DuckDBPyConnection = local_client.app.state.connection  # type: ignore[attr-defined]
     cur = con.cursor()
     row = cur.execute(
         "SELECT sv.strategy_id, sv.id, sv.definition "
@@ -212,9 +479,9 @@ def test_allocation_targets_use_the_runs_frozen_version_not_current(
     assert row is not None
     strategy_id, version_id, definition = row
     changed = json.loads(str(definition))
-    for child in changed["targets"]["children"]:
-        if child["key"] == "EQUITY_DEVELOPED":
-            child["weight"]["value"] = "0.99000000"
+    for node in changed["targets"]["children"]:
+        if node["key"] == "CASH":
+            node["weight"]["value"] = "0.99000000"
     new_version_id = "test-reversion-0001"
     cur.execute(
         "INSERT INTO strategy_version (id, strategy_id, parent_version_id, definition, "
@@ -225,24 +492,9 @@ def test_allocation_targets_use_the_runs_frozen_version_not_current(
         "UPDATE strategy SET current_version_id = ? WHERE id = ?", [new_version_id, strategy_id]
     )
 
-    body = client.get("/allocation").text
-    assert "contro un target del 40,00%" in body
+    body = local_client.get("/allocation").text
+    assert "contro un target del 100,00%" in body
     assert "99,00%" not in body
-
-
-def test_allocation_reports_the_unpriced_position_rather_than_dropping_it(
-    client: TestClient,
-) -> None:
-    """The demo's CASH position has no price row, so Net Worth is a lower bound.
-
-    Mirrors `compute_allocation`'s contract: an unpriced holding contributes nothing and is
-    recorded. Silently excluding it would understate the total by an unknown amount while
-    reading as a complete answer.
-    """
-    body = client.get("/allocation").text
-    assert "senza prezzo" in body
-    assert "Questo totale è un minimo, non un totale." in body
-    assert "Liquidita EUR" in body
 
 
 def test_design_preview_still_serves(client: TestClient) -> None:
