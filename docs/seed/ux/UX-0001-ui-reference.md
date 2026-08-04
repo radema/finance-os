@@ -150,9 +150,9 @@ The honest split. Read this before treating anything in the mock as a requiremen
 
 Screen count and grouping (Decide / Hold / Declare / Verify); the rail-and-marker geometry; the palette; the three-voice typography; sticky provenance bar; increment badges as a UI affordance; the copy of every observation and every empty/warning state; the greyed-out V1.1 slots; the "why is this here?" link from an untargeted class to its finding; interior nodes showing a roll-up with no band; showing UNASSIGNED as a pseudo-row in the by-Bucket table.
 
-### 5.3 Deliberately absent
+### 5.3 Deliberately absent — superseded, see §10
 
-No net-worth hero number. P1 says the decisions are the product, so the landing screen is the findings list and net worth lives one click away on screen 3. This is a reading of the Manifest, not a requirement — but building a big-number dashboard as the home screen would contradict P1 in the first thing a user sees.
+~~No net-worth hero number. P1 says the decisions are the product, so the landing screen is the findings list and net worth lives one click away on screen 3.~~ This was a reading of the Manifest, not a requirement, and the product owner asked for a dashboard landing page on 2026-08-01 (task #12). Three variations were built and compared for their cost against exactly this row (`docs/plans/W2-dashboard-variations.md`, now deleted per its own instruction once a variation was named); the owner picked variation C, «Il patrimonio annotato», and it is now a real route, **`/dashboard`** (`web/routes/dashboard.py`), sitting alongside `/` rather than replacing it. `/` (screen 1) is untouched: it stays the findings-first landing page this row describes, and P1 is unaffected — it is a scope ratification, not a landing-page rule. `/dashboard`'s own two guards (no open-findings count without its unevaluated count beside it; the composition reconciles on the net-worth tick, ADR-0029) are what keep it from being the false-reassurance dashboard this row originally warned against.
 
 ---
 
