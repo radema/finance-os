@@ -69,6 +69,12 @@ def nav_of(current: str, *, findings_count: int | None = None) -> list[dict[str,
             "label": "Detenere",
             "items": [
                 {
+                    "label": "Patrimonio",
+                    "url": "/dashboard",
+                    "count": None,
+                    "current": current == "dashboard",
+                },
+                {
                     "label": "Allocazione e patrimonio",
                     "url": "/allocation",
                     "count": None,

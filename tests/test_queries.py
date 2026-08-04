@@ -12,8 +12,13 @@ import duckdb
 import pytest
 from click.testing import CliRunner
 
+from financeos.adapters.duckdb.queries.dashboard import (
+    aggregate_outcome_counts,
+    bucket_findings_states,
+)
 from financeos.adapters.duckdb.queries.findings import list_findings
 from financeos.adapters.duckdb.queries.holdings import list_holdings
+from financeos.adapters.duckdb.queries.runs import latest_actual_run_for_scope
 from financeos.adapters.duckdb.queries.snapshots import drift_history
 from financeos.app.evaluate_strategy import evaluate_strategy
 from financeos.app.unit_of_work import DuckDBUnitOfWork
@@ -47,6 +52,7 @@ from tests import factories as f
 from tests.test_evaluate_strategy import MIGRATION_PATH
 
 DEMO_PORTFOLIO_ID = "a8283d57-9cc4-5376-8952-1cf4208fcbd7"
+DEMO_BUCKET_ID = "44940ba1-0bfd-5d7c-ba07-4d80aefdd508"
 
 _SINGLE_GOV_AS_OF = date(2026, 3, 1)
 _SINGLE_GOV_NOW = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
@@ -237,3 +243,48 @@ def test_drift_history_populates_target_and_drift_under_single_governance(
     assert point.weight == Decimal("1.00000000")
     assert point.target == Decimal("1.00000000")
     assert point.drift == Decimal("0.00000000")
+
+
+def test_bucket_findings_states_carries_both_counts_together(tmp_path: Path) -> None:
+    """`/dashboard`'s guard (task #12): open findings and unevaluated always travel together."""
+    con = duckdb.connect(str(_seeded_and_evaluated(tmp_path)))
+    con.execute("SET TimeZone='UTC'")
+    states = bucket_findings_states(con, [DEMO_BUCKET_ID], as_of=date(2026, 7, 24))
+    state = states[DEMO_BUCKET_ID]
+    assert state.run_id is not None
+    assert state.open_findings == 3
+    assert state.rules_measured == 7
+    assert state.rules_unevaluated == 1
+    assert state.worst_severity == Decimal("3.00000000")
+
+
+def test_bucket_findings_states_reports_never_evaluated_rather_than_zero(
+    tmp_path: Path,
+) -> None:
+    """A Bucket with no run of its own is `None`, not a false `0` (ADR-0016)."""
+    con = duckdb.connect(str(_seeded_and_evaluated(tmp_path)))
+    con.execute("SET TimeZone='UTC'")
+    never_run_id = "00000000-0000-0000-0000-000000000000"
+    states = bucket_findings_states(con, [never_run_id], as_of=date(2026, 7, 24))
+    state = states[never_run_id]
+    assert state.run_id is None
+    assert state.open_findings is None
+    assert state.rules_measured is None
+    assert state.rules_unevaluated is None
+    assert state.worst_severity is None
+
+
+def test_aggregate_outcome_counts_sums_across_runs(tmp_path: Path) -> None:
+    db_path = _seeded_and_evaluated(tmp_path)
+    con = duckdb.connect(str(db_path))
+    con.execute("SET TimeZone='UTC'")
+    bucket_run = latest_actual_run_for_scope(con, "BUCKET", DEMO_BUCKET_ID)
+    portfolio_run = latest_actual_run_for_scope(con, "PORTFOLIO", DEMO_PORTFOLIO_ID)
+    assert bucket_run is not None
+    assert portfolio_run is not None
+
+    counts = aggregate_outcome_counts(con, [bucket_run.id, portfolio_run.id])
+    # Six-class fixture (UX-0001 §8.5): summed across the Pensione Bucket run and the
+    # Portfolio-scope run, not the full 28-evaluation demo total.
+    assert counts.total == 11
+    assert counts.fired == 5

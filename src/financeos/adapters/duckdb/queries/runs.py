@@ -123,6 +123,27 @@ def latest_actual_run(con: duckdb.DuckDBPyConnection) -> RunRow | None:
     return _to_run(row) if row is not None else None
 
 
+def latest_actual_run_for_scope(
+    con: duckdb.DuckDBPyConnection, scope_kind: str, scope_id: str
+) -> RunRow | None:
+    """The most recent `ACTUAL` run of exactly one scope, or `None` if that scope was never run.
+
+    Mirrors `latest_actual_run` but narrowed to one `(scope_kind, scope_id)` pair. The two can
+    legitimately disagree: `cli.py`'s `evaluate` calls `evaluate_strategy` once per Bucket and
+    then, in the same invocation, once more for the Portfolio scope (RFC-0007 §5, ADR-L06), and
+    the Portfolio-scope call runs last — so the globally-latest run `latest_actual_run` returns
+    is not necessarily any one Bucket's own latest run. `/dashboard` (task #12) needs a Bucket's
+    own coverage, not whichever scope happened to be evaluated most recently overall.
+    """
+    row = con.execute(
+        f"SELECT {_RUN_COLUMNS} {_RUN_JOINS} "
+        "WHERE run.mode = 'ACTUAL' AND run.scope_kind = ? AND run.scope_id = ? "
+        "ORDER BY run.as_of DESC, run.evaluated_at DESC LIMIT 1",
+        [scope_kind, scope_id],
+    ).fetchone()
+    return _to_run(row) if row is not None else None
+
+
 def get_run(con: duckdb.DuckDBPyConnection, run_id: str) -> RunRow | None:
     """One run by id — the run a Recommendation pins, which may not be the latest."""
     row = con.execute(f"SELECT {_RUN_COLUMNS} {_RUN_JOINS} WHERE run.id = ?", [run_id]).fetchone()
