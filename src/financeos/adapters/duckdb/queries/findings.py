@@ -61,6 +61,11 @@ class FindingRow:
     observation: str
     rationale: str
     suggestion_class: str | None
+    #: The scope of the run that produced `latest_recommendation_id` — a Bucket id or a
+    #: Portfolio id per `scope_kind` (RFC-0000's `Scope`). Carried here, not just used
+    #: internally for `_resolved`, so a caller can group open findings by Bucket (`/dashboard`,
+    #: task #12) without a second query re-deriving what this one already read.
+    scope_id: str
 
 
 def list_findings(con: duckdb.DuckDBPyConnection) -> list[FindingRow]:
@@ -112,6 +117,7 @@ def list_findings(con: duckdb.DuckDBPyConnection) -> list[FindingRow]:
             observation=row[10],
             rationale=row[11],
             suggestion_class=row[12],
+            scope_id=str(row[13]),
         )
         for row in rows
         if not _resolved(
