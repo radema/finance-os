@@ -159,11 +159,16 @@ def test_dashboard_ledger_is_mv_finding_order_never_resorted(client: TestClient)
     assert "Scattata" in body
 
 
-def test_dashboard_skip_notice_absent_when_nothing_was_skipped(client: TestClient) -> None:
-    """The demo run leaves no SKIPPED/ERROR alert, so the notice renders nothing (ADR-0016)."""
+def test_dashboard_skip_notice_present_when_something_was_skipped(client: TestClient) -> None:
+    """The six-class demo fixture (task #2) now carries real SKIPPED/ERROR outcomes, so the
+    notice must render rather than stay silent (ADR-0016). This test used to assert the
+    opposite — the pre-growth demo had no SKIPPED/ERROR alert — and was updated when the
+    fixture grew. The "absent when nothing was skipped" branch is untested here; it would
+    need its own isolated no-skip fixture (see `single_governance_con` in test_queries.py for
+    the pattern) rather than reusing the shared demo/, which is deliberately not skip-free."""
     body = client.get("/dashboard").text
-    assert "non sono state valutate" not in body
-    assert "si sono interrotte con un errore" not in body
+    assert "non sono state valutate" in body
+    assert "si è interrotta con un errore" in body
 
 
 def test_dashboard_nav_entry_present(client: TestClient) -> None:
