@@ -1,0 +1,1546 @@
+# Finance OS — machine-readable entity index
+#
+# Point-in-time map, base commit 2dd7346. Ground truth is docs/seed/rfcs/ (frozen corpus)
+# then src/. If this file disagrees with either, this file is wrong. See ../README.md.
+#
+# QUERY RECIPES
+#   grep -A30 '^- entity: Rule$'            entities.yaml   # one entity's full record
+#   grep -n  '^- entity:'                   entities.yaml   # every entity, with line numbers
+#   grep -B2 -A2 'I-12'                     entities.yaml   # what an invariant constrains
+#   grep -A30 '^- entity:' entities.yaml | grep -E '^\s+context: strategy' -B8
+#
+# FIELD CONTRACT (every record carries all of these; `null` is used, never omission)
+#   entity          PascalCase type name as it appears in code, or the SQL object name
+#   context         cashflow | portfolio | strategy | market | decision | shared | engine | read_side
+#   classification  aggregate_root | entity | value_object | derived_read_model | contract_dto
+#                   | engine_artifact | enum | sql_view | not_implemented
+#   code            path:line of the defining class, or null when nothing defines it
+#   table           persisted DuckDB object, or null when the entity has no relational identity
+#   authority       RFC sections and ADRs that specify it; first item is the primary definition
+#   invariants      I-* / C-* ids this entity is constrained by
+#   attributes      field: type, as declared
+#   relations       predicate: object — see relationships.yaml for the flat edge list
+#   notes           what a future agent gets wrong if it only reads the field list
+
+schema_version: 1
+base_commit: 2dd7346
+generated_from:
+  - docs/seed/rfcs/            # normative
+  - src/financeos/             # implementation
+  - docs/plans/adr/            # local ADRs (ADR-L01..L06)
+
+# The sequence below sits at column 0 by design — `grep -A30 '^- entity: Rule$'` must work.
+entities:
+
+# =====================================================================================
+# PORTFOLIO context — src/financeos/core/portfolio/
+# =====================================================================================
+
+- entity: Portfolio
+  context: portfolio
+  classification: aggregate_root
+  code: src/financeos/core/portfolio/portfolio.py:6
+  table: portfolio
+  authority: [RFC-0004 §2.2, RFC-0011 ERR-8]
+  invariants: []
+  attributes:
+    - id: PortfolioId
+    - name: str
+    - accounts: tuple[AccountId, ...]
+  relations:
+    - owns: Bucket (many, via Bucket.portfolio_id)
+    - references: Account (many, via portfolio_account link table)
+    - checkpointed_by: Snapshot
+  notes: >
+    Deliberately thin — it does NOT contain Holdings. Holdings are derived (ADR-0003).
+    A Portfolio is a set of Accounts in scope, nothing more.
+
+- entity: Bucket
+  context: portfolio
+  classification: aggregate_root
+  code: src/financeos/core/portfolio/portfolio.py:17
+  table: bucket
+  authority: [RFC-0004 §2.2, RFC-0007 §5, ADR-0020, ADR-0025, RFC-0011 ERR-9]
+  invariants: [I-3]
+  attributes:
+    - id: BucketId
+    - portfolio_id: PortfolioId       # non-nullable (ERR-9)
+    - strategy_id: StrategyId         # non-nullable (I-3: governed by exactly one Strategy)
+    - name: str
+  relations:
+    - belongs_to: Portfolio
+    - governed_by: Strategy (exactly one — I-3)
+    - scope_of: EvaluationRun (ScopeKind.BUCKET — the normal case, ADR-0020)
+  notes: >
+    Thin since ADR-0025 moved apportionment OUT of the aggregate. VirtualHolding is now a
+    derived read model, so the Bucket's transactional boundary holds no apportionment state.
+    A Strategy is a policy applied per Bucket (ADR-0020) — several Buckets may share one.
+
+- entity: Asset
+  context: portfolio
+  classification: aggregate_root
+  code: src/financeos/core/portfolio/asset.py:28
+  table: asset
+  authority: [RFC-0004 §2.2, ADR-0003, ADR-0012, RFC-0009 §3.3]
+  invariants: [I-1, I-2, I-14, I-20]
+  attributes:
+    - id: AssetId
+    - name: str
+    - asset_class: AssetClass         # opaque taxonomy key, lives in core/shared (C3)
+    - currency: Currency
+    - identifiers: tuple[AssetIdentifier, ...]
+  relations:
+    - classified_by: AssetClass (mutable in place under the correction model, ADR-0012)
+    - audited_by: asset_classification_audit (table, E6)
+    - held_via: Operation (quantity never lives on the Asset — ADR-0003)
+  notes: >
+    An Asset carries NO quantity. Quantity lives in Operation and is folded into Holding.
+    asset_class is mutable in place, but a reclassification must be accompanied by an
+    asset_classification_audit row — that is a repository concern, not a model validator.
+
+- entity: AssetIdentifier
+  context: portfolio
+  classification: value_object
+  code: src/financeos/core/portfolio/asset.py:21
+  table: null                        # stored as asset.identifiers JSON
+  authority: [RFC-0004 §2.1]
+  invariants: []
+  attributes:
+    - scheme: IdentifierScheme       # ISIN | TICKER | INTERNAL
+    - value: str
+  relations:
+    - identifies: Asset (an Asset may carry several)
+  notes: One Asset, many external identifiers. Nothing enforces uniqueness across Assets.
+
+- entity: Operation
+  context: portfolio
+  classification: aggregate_root
+  code: src/financeos/core/portfolio/operation.py:53
+  table: operation
+  authority: [RFC-0004 §2.2, RFC-0009 §3.1, ADR-0011, ADR-0026, ADR-0028, ADR-L01]
+  invariants: [I-8, I-10, C6]
+  attributes:
+    - id: OperationId
+    - type: OperationType            # 7 values, E10/ADR-0028
+    - account_id: AccountId
+    - asset_id: AssetId
+    - trade_date: date
+    - quantity: Quantity             # SIGNED change in units
+    - price: PriceAmount | None      # None on DIVIDEND/COUPON primaries (quantity == 0)
+    - fees: MoneyAmount
+    - currency: Currency
+    - import_batch_id: UUID | None
+    - corrects_id: OperationId | None
+    - transfer_pair_id: UUID | None
+    - cash_leg_of: OperationId | None
+    - recorded_at: Instant
+  relations:
+    - corrects: Operation (via corrects_id, type == CORRECTION only)
+    - paired_with: Operation (via transfer_pair_id — TRANSFER_IN/TRANSFER_OUT)
+    - cash_leg_of: Operation (auto-emitted leg, ADR-0026)
+    - folds_into: Holding (derived, never stored)
+  notes: >
+    Append-only (I-10, C6): no setters, no repository update path. Corrections are
+    compensating CORRECTION rows (ADR-0028), never mutations. The model validator enforces
+    exactly the ROW-LOCAL rules (the ADR-L01 truth table over corrects_id / transfer_pair_id
+    / cash_leg_of). Cross-row invariants — leg totality, pair cardinality, no correction
+    chains — are repository-enforced by design: one Operation cannot see its sibling.
+
+- entity: OperationType
+  context: portfolio
+  classification: enum
+  code: src/financeos/core/portfolio/operation.py:32
+  table: null                        # operation.type VARCHAR with a 7-value CHECK
+  authority: [ADR-0028, E10]
+  invariants: []
+  attributes:
+    - members: BUY | SELL | DIVIDEND | COUPON | TRANSFER_IN | TRANSFER_OUT | CORRECTION
+  relations:
+    - typed_on: Operation
+  notes: >
+    TRANSFER is deliberately ABSENT. A transfer is two-sided by nature and is represented as
+    a TRANSFER_OUT/TRANSFER_IN pair sharing one transfer_pair_id. Do not add TRANSFER.
+
+- entity: Holding
+  context: portfolio
+  classification: derived_read_model
+  code: src/financeos/core/portfolio/holding.py:27
+  table: mv_holding                  # VIEW (plain, not materialized) over operation
+  authority: [RFC-0004 §2.3, ADR-0003]
+  invariants: [I-1]
+  attributes:
+    - asset_id: AssetId
+    - quantity: Quantity
+    - input_refs: tuple[str, ...]    # Stage B provenance (ADR-0004)
+  relations:
+    - derived_from: Operation (folded)
+    - of: Asset (exactly one — I-1)
+  notes: >
+    Computed, NEVER authored (ADR-0003). A stored mutable quantity would let a position
+    change with no corresponding Operation — unauditable, and the most likely source of
+    silent divergence. Do not add a holding table.
+
+- entity: VirtualHolding
+  context: portfolio
+  classification: derived_read_model
+  code: src/financeos/core/portfolio/holding.py:40
+  table: null                        # projection of bucket_apportionment at as_of
+  authority: [RFC-0004 §2.2, ADR-0025, E3]
+  invariants: [I-9]
+  attributes:
+    - bucket_id: BucketId
+    - asset_id: AssetId
+    - quantity: Quantity
+    - input_refs: tuple[str, ...]
+  relations:
+    - derived_from: ApportionmentRecord (fold of the supersession chain at as_of)
+    - apportions: Asset to Bucket
+    - projects_to: Holding (via .as_holding(), for Bucket-scoped valuation)
+  notes: >
+    Derived since ADR-0025 (was a child entity of Bucket in RFC-0004 §2.2). The AUTHORED fact
+    is the bucket_apportionment row; this entity is the projection of its supersession chain —
+    exactly the Operation/Holding relationship one level down.
+
+- entity: ApportionmentRecord
+  context: portfolio
+  classification: entity
+  code: src/financeos/core/portfolio/apportionment.py:20
+  table: bucket_apportionment
+  authority: [RFC-0009 §7.1, ADR-0011, ADR-0025]
+  invariants: [I-9, C6]
+  attributes:
+    - id: UUID
+    - bucket_id: BucketId
+    - asset_id: AssetId
+    - quantity: Quantity             # CHECK >= 0 at the DDL
+    - effective_from: date
+    - supersedes_id: UUID | None     # the supersession chain
+    - recorded_at: Instant
+  relations:
+    - supersedes: ApportionmentRecord
+    - projects_to: VirtualHolding
+    - assigns: Asset to Bucket
+  relations_note: AUTHORED DATA — no recovery path but `financeos export --authored`.
+  notes: >
+    Every row ever written, current or superseded. Re-apportioning is a change of mind, not a
+    mistake: a superseded row is what the supersession chain is reconstructed FROM, so
+    dropping it on export would lose history that virtual_holdings never carried.
+
+- entity: ApportionmentLine
+  context: portfolio
+  classification: derived_read_model
+  code: src/financeos/core/portfolio/apportionment.py:32
+  table: null
+  authority: [ADR-0025, ADR-L04 §4.4 D5]
+  invariants: [I-9]
+  attributes:
+    - asset_id: AssetId
+    - apportioned_quantity: QuantityAmount   # model validator: MUST be > 0
+    - holding_quantity: QuantityAmount
+  relations:
+    - derived_from: ApportionmentRecord (fold across every Bucket) + Holding
+    - consumed_by: over_apportioned (FACT_APPORTIONMENT)
+  notes: >
+    One asset's Σ apportionment folded across every Bucket, paired against the Portfolio-wide
+    Holding — the two operands I-9's predicate compares. apportioned_quantity > 0 is asserted
+    by the MODEL, not only by the producer: it is what makes over_apportioned's severity
+    denominator (Σ apportioned_quantity) provably non-zero on the firing set.
+
+- entity: AllocationLine
+  context: portfolio
+  classification: derived_read_model
+  code: src/financeos/core/portfolio/holding.py:53
+  table: null
+  authority: [RFC-0004 §2.1]
+  invariants: []
+  attributes:
+    - asset_class: AssetClass
+    - value: Money
+    - weight: Weight
+    - input_refs: tuple[str, ...]
+  relations:
+    - part_of: AllocationBreakdown
+    - consumed_by: untargeted_allocation, allocation_absent (FACT_ALLOCATION)
+  notes: >
+    One AssetClass's value and share of a scope. Covers every HELD class, targeted or not —
+    unlike DriftLine, which covers only targeted leaves. That asymmetry is why
+    untargeted_allocation needs both FACT_ALLOCATION and FACT_TARGETS.
+
+- entity: AllocationBreakdown
+  context: portfolio
+  classification: derived_read_model
+  code: src/financeos/core/portfolio/holding.py:62
+  table: null
+  authority: [RFC-0004 §2.3, RFC-0007 §4.1]
+  invariants: []
+  attributes:
+    - scope: Scope
+    - as_of: date
+    - total_value: Money
+    - lines: Mapping[AssetClass, AllocationLine]
+    - unpriced_assets: tuple[AssetId, ...]
+  relations:
+    - produced_by: portfolio_engine.compute_allocation
+    - consumed_by: strategy_engine.compute_drift
+  notes: >
+    is_complete is False when any held Asset could not be valued. An INCOMPLETE breakdown must
+    not be consumed: it would produce a partial denominator, which RFC-0007 §4.1 forbids, so
+    the Strategy Engine SKIPs instead of computing a wrong weight.
+
+- entity: ResidualComputation
+  context: portfolio
+  classification: derived_read_model
+  code: src/financeos/core/portfolio/residual.py:13
+  table: null
+  authority: [ADR-0029, RFC-0011 §12.4]
+  invariants: [I-9]
+  attributes:
+    - as_of: date
+    - total_value: Money
+    - unassigned_value: Money        # SIGNED — may be negative
+    - residual_weight: WeightAmount | None
+    - unavailable: SkipReason | None
+    - input_refs: tuple[str, ...]
+  relations:
+    - consumed_by: unassigned_residual_above (FACT_RESIDUAL)
+  notes: >
+    The UNASSIGNED pseudo-bucket, valued Portfolio-wide. unassigned_value may legitimately be
+    NEGATIVE when Σ apportioned exceeds a Holding (I-9, over_apportioned's territory) — a
+    deficit, not a defect. Untargeted and unassigned capital STAYS in the denominator
+    (ADR-0029); the resulting scatter of small under-allocation findings is the honest reading.
+
+# =====================================================================================
+# STRATEGY context — src/financeos/core/strategy/
+# =====================================================================================
+
+- entity: Strategy
+  context: strategy
+  classification: aggregate_root
+  code: src/financeos/core/strategy/strategy.py:149
+  table: strategy
+  authority: [RFC-0004 §2.2, RFC-0007 §5, ADR-0020, RFC-0011 ERR-8]
+  invariants: [I-3, I-4]
+  attributes:
+    - id: StrategyId
+    - name: str
+    - description: str | None
+    - current_version_id: StrategyVersionId | None
+  relations:
+    - has_versions: StrategyVersion (many; lineage via parent_version_id)
+    - points_at: StrategyVersion (current_version_id — the only MUTABLE field, repointed by UPDATE)
+    - governs: Bucket (many — a policy applied per Bucket, ADR-0020)
+  relations_note: AUTHORED DATA — no recovery path but `financeos export --authored`.
+  notes: >
+    Identity and name ONLY. Every frozen copy of targets/tolerances/rules/horizon/risk lives in
+    StrategyVersion.definition (ERR-8, ADR-0027). A Strategy is a POLICY, not a per-Bucket
+    instance — several Buckets may be governed by the same Strategy.
+
+- entity: StrategyVersion
+  context: strategy
+  classification: aggregate_root
+  code: src/financeos/core/strategy/strategy.py:118
+  table: strategy_version
+  authority: [RFC-0007 §7, E2, ADR-0027, ADR-0030, ADR-0035]
+  invariants: [I-11, I-22]
+  attributes:
+    - id: StrategyVersionId
+    - strategy_id: StrategyId
+    - parent_version_id: StrategyVersionId | None   # lineage
+    - definition: StrategyDefinition                 # stored as JSON
+    - change_note: str                               # REQUIRED on freeze
+    - frozen_at: Instant
+  relations:
+    - version_of: Strategy
+    - parent_of: StrategyVersion (lineage chain)
+    - contains: Rule (document containment, ADR-0027 — not an FK relation)
+    - contains: TargetAllocation
+    - pinned_by: EvaluationRun (I-11)
+    - sole_source_of: Recommendation.rationale (ADR-0023)
+  notes: >
+    IMMUTABLE. Written on every change to the Strategy aggregate — targets, tolerances, rules,
+    horizon, risk, principles, objective, name, description — with NO materiality judgment
+    (RFC-0007 §7). Goal links sit OUTSIDE the freeze boundary (ADR-0030). change_note is the
+    only place the WHY of a change lives and is unrecoverable later.
+    `.rule(rule_id)` is the integrity guarantee that replaced the dropped FK (ADR-0027).
+
+- entity: StrategyDefinition
+  context: strategy
+  classification: value_object
+  code: src/financeos/core/strategy/strategy.py:81
+  table: null                        # strategy_version.definition JSON
+  authority: [ADR-0023, RFC-0007 §7]
+  invariants: [I-4]
+  attributes:
+    - name: str
+    - description: str | None
+    - objective: str | None
+    - horizon: Horizon
+    - risk: RiskProfile
+    - targets: TargetAllocation
+    - rules: tuple[Rule, ...]        # I-4: at least one; ids distinct within a version
+  relations:
+    - frozen_into: StrategyVersion
+    - resolves: Rule (via .rule(rule_id), raises RuleNotInVersionError)
+  notes: >
+    The frozen document: everything an evaluation is ALLOWED to cite (ADR-0023). Sole input to
+    a Recommendation's assembled rationale — which is what makes the system restate the user's
+    own prior declaration rather than assert suitability (the MiFID firewall as a schema).
+
+- entity: Rule
+  context: strategy
+  classification: entity
+  code: src/financeos/core/strategy/rule.py:90
+  table: null                        # NO TABLE AT ALL — ADR-0027
+  authority: [RFC-0004 §2.2, RFC-0006 §2, ADR-0027, ADR-L06]
+  invariants: [I-4, I-5, I-11]
+  attributes:
+    - id: RuleId                     # STABLE across versions — firing history depends on it
+    - name: str
+    - enabled: bool                  # False => SKIPPED(disabled), never NOT_FIRED
+    - priority: Priority             # author-declared, NEVER overridden by computation
+    - suggestion_class: SuggestionClass
+    - message: str                   # rendered from trace message_bindings
+    - condition: LeafCondition
+    - scope_gate: RuleScopeGate | None   # None == unconstrained (ADR-L06 §4.1 default)
+  relations:
+    - child_of: StrategyVersion (frozen into StrategyDefinition.rules, ADR-0027)
+    - evaluates_to: RuleFiring (one per evaluation)
+    - persisted_as: Alert (one per firing, whatever the outcome)
+    - produces: Recommendation (only when Outcome.FIRED — I-5)
+    - keyed_into: finding_key (rule_id is the first hash component)
+  notes: >
+    A Rule has NO relational identity: alert.rule_id and recommendation.rule_id carry no
+    foreign key (ADR-0027). It is resolved via run_id -> strategy_version.definition.rules,
+    guarded by StrategyDefinition.rule() plus a property test rather than an FK. A future agent
+    grepping for a `rule` table will find nothing — that is correct, not a missing migration.
+    rule_id is stable ACROSS versions; the definition is frozen PER version.
+
+- entity: LeafCondition
+  context: strategy
+  classification: value_object
+  code: src/financeos/core/strategy/rule.py:29
+  table: null                        # inside strategy_version.definition JSON
+  authority: [RFC-0006 §2, RFC-0006 §3, ADR-0014, RFC-0006 §8]
+  invariants: []
+  attributes:
+    - kind: str                      # catalog kind, e.g. "drift_outside_tolerance"
+    - kind_version: int              # recorded in EVERY trace
+    - params: Mapping[str, str]      # canonical STRING form
+    - max_staleness: timedelta | None   # per-leaf override of the kind's default
+  relations:
+    - drawn_from: ConditionKindSpec (the closed catalog, ADR-0014)
+    - keyed_into: finding_key (canonical(condition.params) is the third hash component)
+    - recorded_as: ConditionRef (in the trace)
+  notes: >
+    A leaf of a CLOSED TYPED CATALOG, not an expression language (ADR-0014). Params are
+    validated against the catalog's Pydantic model at AUTHORING time (app layer, on freeze);
+    the engine parses them at evaluation time — so core.strategy never imports the engine
+    registry and the frozen document stays self-describing. A kind's semantics NEVER change:
+    a new meaning is a new kind (RFC-0006 §8). Combinators (all_of/any_of/not, depth 1 only)
+    are specified but OUT of skeleton scope (RFC-0006 §12) — no combinator type exists yet.
+
+- entity: RuleScopeGate
+  context: strategy
+  classification: value_object
+  code: src/financeos/core/strategy/rule.py:48
+  table: null
+  authority: [ADR-L06, RFC-0006 §3.1, RFC-0007 §5, docs/plans/W2-rule-scope-partition.md §2]
+  invariants: [C2]
+  attributes:
+    - kind: ScopeKind                # BUCKET | PORTFOLIO
+    - bucket_id: BucketId | None     # only meaningful when kind == BUCKET; None == any governed Bucket
+  relations:
+    - gates: Rule
+    - read_by: app/evaluate_strategy.py (NEVER by the rule engine — C2, RFC-0006 §3.1)
+  notes: >
+    Nothing about a LeafCondition's own params says whether a Rule runs once per governed
+    Bucket, only at the whole-Portfolio call, or only for one named Bucket. The `scope` param
+    on the three kinds that carry it is a MESSAGE BINDING, never compared against the facts'
+    actual scope. This field carries that intent, and the APPLICATION layer subsets sv.rules
+    before calling RuleEngine.evaluate — the engine never sees a gate.
+
+- entity: TargetAllocation
+  context: strategy
+  classification: value_object
+  code: src/financeos/core/strategy/targets.py:141
+  table: null                        # inside strategy_version.definition JSON
+  authority: [ADR-0017, RFC-0007 §2, RFC-0011 ERR-5]
+  invariants: [I-13, I-14]
+  attributes:
+    - children: tuple[TargetNode, ...]   # root's own weight is 1 by definition, not stored
+  relations:
+    - frozen_into: StrategyDefinition
+    - resolves_to: LeafTarget (via .leaves())
+    - consumed_by: strategy_engine.compute_drift, strategy_engine.compute_targets
+  notes: >
+    A tree of RELATIVE weights (each node's weight is relative to its PARENT), so restructuring
+    a subtree is a local edit and the exported YAML keeps a readable diff (ADR-0009). A leaf's
+    effective target is the PRODUCT of weights along the root->leaf path. I-13 (revised, ERR-5):
+    children of EVERY node sum to 1 within an explicit Decimal epsilon (WEIGHT_SUM_EPSILON),
+    enforced in the constructor — so effective leaf targets sum to 1 by construction, with no
+    separate global check. Also enforced: distinct keys per level, and no AssetClass targeted by
+    more than one leaf. The skeleton authors a depth-1 tree, a strict special case.
+
+- entity: TargetNode
+  context: strategy
+  classification: value_object
+  code: src/financeos/core/strategy/targets.py:80
+  table: null
+  authority: [ADR-0017, ADR-0018, RFC-0007 §2.1]
+  invariants: [I-13, I-14]
+  attributes:
+    - key: AssetClass                # I-14 — NEVER an AssetId
+    - weight: Weight                 # relative to parent
+    - tolerance: Tolerance | None    # REQUIRED on a leaf, optional on an interior node
+    - children: tuple[TargetNode, ...]
+  relations:
+    - targets: AssetClass (leaf only)
+    - child_of: TargetNode | TargetAllocation
+  notes: >
+    A LEAF MUST declare a Tolerance: a target with no band cannot yield the effective_band
+    every drift finding is measured against. An interior node MAY declare one; interior breaches
+    are a DISTINCT finding reported by their own rule (RFC-0007 §2.1) and are NOT inherited by
+    leaves. Drift is computed at leaves only.
+
+- entity: LeafTarget
+  context: strategy
+  classification: derived_read_model
+  code: src/financeos/core/strategy/targets.py:127
+  table: null
+  authority: [RFC-0007 §2.1, ADR-L05 §5]
+  invariants: [I-13, I-14]
+  attributes:
+    - asset_class: AssetClass
+    - path: tuple[str, ...]
+    - effective_target: WeightAmount   # product of weights along root->leaf
+    - tolerance: Tolerance
+  relations:
+    - resolved_from: TargetAllocation
+    - consumed_by: untargeted_allocation (FACT_TARGETS)
+  notes: >
+    FACT_TARGETS exists separately from FACT_DRIFT (ADR-L05 §5) precisely so
+    untargeted_allocation can test MEMBERSHIP without depending on drift being computable.
+    target_path renders the dotted path for SourceRef.path.
+
+- entity: Tolerance
+  context: strategy
+  classification: value_object
+  code: src/financeos/core/strategy/targets.py:47
+  table: null
+  authority: [ADR-0018, RFC-0007 §3, RFC-0007 §3.1]
+  invariants: []
+  attributes:
+    - kind: ToleranceKind            # ABSOLUTE | RELATIVE
+    - band: WeightAmount             # model validator: MUST be > 0
+  relations:
+    - declared_on: TargetNode
+    - produces: effective_band (consumed by drift severity)
+  notes: >
+    ABSOLUTE(band) is +/-band in PERCENTAGE POINTS of scope weight. RELATIVE(band) is
+    +/-(band x effective_target) — the proportional form, without which a +/-5pp band on a 4%
+    target would let the position VANISH without registering a breach. A RELATIVE band on a ZERO
+    target is legitimately zero, which is exactly why severity is nullable (ERR-1).
+
+- entity: Horizon
+  context: strategy
+  classification: value_object
+  code: src/financeos/core/strategy/strategy.py:28
+  table: null
+  authority: [RFC-0007 §7]
+  invariants: []
+  attributes:
+    - years: int | None
+    - target_date: date | None
+  relations:
+    - part_of: StrategyDefinition
+  notes: EXACTLY ONE of years / target_date — enforced by a model validator.
+
+- entity: RiskLevel
+  context: strategy
+  classification: enum
+  code: src/financeos/core/strategy/strategy.py:41
+  table: null
+  authority: [P31, P32]
+  invariants: []
+  attributes:
+    - members: VERY_CONSERVATIVE(1) | CONSERVATIVE(2) | MODERATE(3) | BALANCED(4) | GROWTH(5) | HIGH_GROWTH(6) | AGGRESSIVE(7)
+    - ordinal_via: risk_level_rank() at src/financeos/core/strategy/strategy.py:69
+  relations:
+    - part_of: RiskProfile
+  notes: >
+    The seven-step UCITS KIID (SRRI) / PRIIPs KID (SRI) synthetic risk scale, per P31/P32. This
+    is an OWNER-DECLARED value merely expressed on the regulatory scale — this codebase does NOT
+    compute SRRI/SRI from volatility or risk bands, and no field, docstring or UI string may
+    imply otherwise. A COMPUTED portfolio risk level is a separate out-of-V1.0 feature (P33).
+    StrEnum cannot carry the ordinal, hence risk_level_rank() (mirrors priority_rank()).
+
+- entity: RiskProfile
+  context: strategy
+  classification: value_object
+  code: src/financeos/core/strategy/strategy.py:74
+  table: null
+  authority: [P31, P32]
+  invariants: []
+  attributes:
+    - level: RiskLevel
+    - principles: tuple[str, ...]
+  relations:
+    - part_of: StrategyDefinition
+    - cited_by: Recommendation.rationale (ADR-0023)
+  notes: The `principi` attribute of a Strategy — a level plus the principles declared with it.
+
+- entity: DriftLine
+  context: strategy
+  classification: derived_read_model
+  code: src/financeos/core/strategy/drift.py:24
+  table: null
+  authority: [RFC-0007 §4, RFC-0007 §3.1, RFC-0006 §3.1]
+  invariants: []
+  attributes:
+    - asset_class: AssetClass
+    - current_value: Money
+    - current_weight: WeightAmount   # value(class) / total_value(scope)
+    - effective_target: WeightAmount
+    - target_value: Money
+    - drift: WeightAmount            # current_weight - effective_target; NEGATIVE means under
+    - drift_value: Money             # drift x total_value
+    - tolerance: Tolerance
+    - effective_band: WeightAmount
+    - severity: SeverityAmount | None   # |drift| / effective_band; None when band == 0
+  relations:
+    - produced_by: strategy_engine.compute_drift
+    - consumed_by: drift_outside_tolerance (FACT_DRIFT)
+  notes: >
+    Carries every binding RFC-0007 §4 names, so the RULE ENGINE PERFORMS NO FINANCIAL
+    COMPUTATION (RFC-0006 §3.1): severity arrives PRE-COMPUTED together with effective_band.
+    Covers TARGETED leaves only. severity is None when effective_band is zero — undefined
+    rather than infinite (ERR-1 permits a null alert.severity).
+
+- entity: DriftComputation
+  context: strategy
+  classification: derived_read_model
+  code: src/financeos/core/strategy/drift.py:50
+  table: null
+  authority: [RFC-0007 §4, RFC-0007 §4.1, ADR-0016]
+  invariants: []
+  attributes:
+    - scope: Scope
+    - as_of: date
+    - total_value: Money
+    - lines: Mapping[AssetClass, Bound[DriftLine]]
+    - unavailable: SkipReason | None
+  relations:
+    - produced_by: strategy_engine.compute_drift
+    - feeds: FactSet.drift and FactSet.unavailable
+  notes: >
+    EITHER lines is populated OR unavailable says why drift could not be computed at all — a
+    zero-value portfolio (a legitimate onboarding state) or an incomplete valuation. The reason
+    TRAVELS to the Rule Engine so the resulting Alert reads SKIPPED(<reason>) rather than the
+    inverted NOT_FIRED (ADR-0016).
+
+# =====================================================================================
+# MARKET context — src/financeos/core/market/
+# =====================================================================================
+
+- entity: PriceView
+  context: market
+  classification: contract_dto
+  code: src/financeos/core/market/price.py:14
+  table: price                       # bitemporal append-only
+  authority: [ADR-0031, E11, RFC-0009 §3.1, RFC-0005 §5.7]
+  invariants: [C6]
+  attributes:
+    - asset_id: AssetId
+    - price_id: PriceId
+    - valid_date: date               # the date the close refers to
+    - close: PriceAmount
+    - currency: Currency
+    - recorded_at: Instant           # second half of the bitemporal pair
+  relations:
+    - contract_between: market and portfolio
+    - values: Asset
+  notes: >
+    Market owns EVERY external observation, prices included (ADR-0031, E11), so egress lives
+    behind one context (Privacy First, RFC-0005 §5.7). Portfolio NEVER queries the price table;
+    it consumes this flat DTO. The bitemporal (valid_date, recorded_at) pair is what lets a
+    later discrepancy be explained as a RESTATEMENT rather than a bug.
+
+# =====================================================================================
+# DECISION context — src/financeos/core/decision/
+# No context depends on this one: edges are INBOUND ONLY (RFC-0004 §4).
+# =====================================================================================
+
+- entity: EvaluationRun
+  context: decision
+  classification: aggregate_root
+  code: src/financeos/core/decision/artifacts.py:42
+  table: evaluation_run
+  authority: [RFC-0009 §3.2, E4, RFC-0011 ERR-2, RFC-0006 §10, ADR-0035]
+  invariants: [I-11, C6]
+  attributes:
+    - id: EvaluationRunId
+    - portfolio_id: PortfolioId
+    - strategy_id: StrategyId
+    - strategy_version_id: StrategyVersionId    # the I-11 pin
+    - scope: Scope                              # scope_kind + scope_id (added by ERR-2)
+    - as_of: date                               # the DOMAIN date evaluated against
+    - evaluated_at: Instant                     # wall clock, from the Clock port
+    - mode: RunMode                             # ACTUAL | HYPOTHETICAL
+    - engine_versions: Mapping[str, str]
+    - input_digest: str                         # sha256, pattern-enforced ^[0-9a-f]{64}$
+  relations:
+    - pins: StrategyVersion (I-11 — one join away from every Alert, so the pin cannot dangle, ERR-6)
+    - groups: Alert (many)
+    - groups: Recommendation (many, ACTUAL runs only)
+    - shares_run_id_with: Snapshot
+    - scoped_to: Bucket or Portfolio (via Scope)
+  notes: >
+    HYPOTHETICAL runs persist Alerts and traces but produce ZERO Recommendations (RFC-0008 §8),
+    so a speculative firing cannot leak into the findings list. mv_finding filters
+    `WHERE run.mode = 'ACTUAL'` for the same reason. input_digest answers "would this evaluate
+    identically today?" without recomputing anything.
+
+- entity: Alert
+  context: decision
+  classification: entity
+  code: src/financeos/core/decision/artifacts.py:67
+  table: alert
+  authority: [E5, RFC-0009 §3.2, ADR-0016, RFC-0011 ERR-1, ADR-0027]
+  invariants: [I-6, I-11, C6]
+  attributes:
+    - id: AlertId
+    - run_id: EvaluationRunId
+    - rule_id: RuleId                # NO foreign key (ADR-0027)
+    - outcome: Outcome               # ALL FOUR are persisted
+    - priority: Priority
+    - severity: SeverityAmount | None   # NULL for no-formula kinds AND for SKIPPED/ERROR (ERR-1)
+    - trace: EvaluationTrace         # stored as JSON (ADR-0013)
+    - recorded_at: Instant
+  relations:
+    - belongs_to: EvaluationRun
+    - records_evaluation_of: Rule (resolved via run -> strategy_version.definition.rules)
+    - produces: Recommendation (1:1, FIRED only)
+    - carries: EvaluationTrace (I-6)
+  validators:
+    - trace.outcome must equal self.outcome
+    - FIRED/NOT_FIRED require a bound, stepped trace (I-6)
+    - severity must be None for SKIPPED and ERROR (ERR-1)
+  notes: >
+    A RULE EVALUATION RECORD (E5), not a notification: all four outcomes are persisted, because
+    "nothing fired" is as much an explanation as a firing. Only FIRED reaches the recommendations
+    list; SKIPPED and ERROR reach the RUN HEALTH panel. This is the entity most often missed —
+    a Recommendation is 1:1 with a FIRED **Alert**, and Alert is the thing that actually persists.
+
+- entity: Provenance
+  context: decision
+  classification: value_object
+  code: src/financeos/core/decision/artifacts.py:102
+  table: null                        # flattened onto recommendation columns
+  authority: [RFC-0004 §2.1, RFC-0009 §4.2, P7]
+  invariants: [I-5]
+  attributes:
+    - run_id: EvaluationRunId        # non-nullable
+    - strategy_id: StrategyId
+    - strategy_version_id: StrategyVersionId
+    - rule_id: RuleId                # non-nullable
+    - input_refs: tuple[str, ...]
+    - evaluated_at: Instant
+  relations:
+    - carried_by: Recommendation
+  notes: >
+    The P7 carrier. rule_id and run_id are NON-NULLABLE, so NO CONSTRUCTION PATH EXISTS for a
+    Recommendation that does not derive from a Rule — I-5 enforced structurally, not by check.
+
+- entity: Recommendation
+  context: decision
+  classification: aggregate_root
+  code: src/financeos/core/decision/artifacts.py:117
+  table: recommendation
+  authority: [RFC-0008 §5, RFC-0008 §4, ADR-0023, E7]
+  invariants: [I-5, I-12, I-17, C6]
+  attributes:
+    - id: RecommendationId
+    - alert_id: AlertId              # 1:1 with a FIRED Alert
+    - provenance: Provenance
+    - finding_key: str               # sha256, pattern ^[0-9a-f]{64}$
+    - observation: str               # WHAT is true — rendered from trace.message_bindings
+    - rationale: str                 # WHY it matters — assembled from the frozen StrategyVersion
+    - suggestion_class: SuggestionClass
+    - recorded_at: Instant
+  relations:
+    - produced_by: Alert (exactly one, Outcome.FIRED only)
+    - derives_from: Rule (via Provenance — I-5)
+    - grouped_into: Finding (mv_finding, keyed on finding_key)
+    - resolved_against_by: Decision (SPECIFIED, NOT IMPLEMENTED — see below)
+  forbidden_fields:
+    - instrument, action, direction, quantity, size, price_target
+  notes: >
+    Motivated, NEVER prescriptive. I-12 IS STRUCTURAL: there is no instrument, action, direction
+    or quantity field to populate — which is also the MiFID suitability firewall expressed as a
+    SCHEMA rather than as a policy. rationale is assembled from the frozen StrategyVersion
+    (ADR-0023) so the system restates the user's own declaration and never asserts suitability.
+    I-17: a Recommendation cannot reference a Decision (the edge points the other way).
+    IMMUTABLE — dismissal does NOT mutate it and there is NO `dismissed` flag (ADR-0022).
+
+- entity: RuleFiring
+  context: decision
+  classification: contract_dto
+  code: src/financeos/core/decision/firing.py:11
+  table: null                        # in-memory only; becomes an Alert
+  authority: [RFC-0004 §4.1, E5, ADR-0016, RFC-0011 ERR-1]
+  invariants: []
+  attributes:
+    - rule_id: RuleId
+    - priority: Priority
+    - outcome: Outcome
+    - skip_reason: SkipReason | None
+    - severity: SeverityAmount | None
+    - error: str | None              # the exception message for ERROR; the run CONTINUES
+    - trace: EvaluationTrace
+  relations:
+    - contract_between: strategy (produces) and decision (consumes)
+    - produced_by: rule_engine.evaluate
+    - materialized_into: Alert (by decision_engine.materialize)
+  notes: >
+    The Strategy -> Decision contract, OWNED BY THE CONSUMING CONTEXT (it lives in
+    core/decision/). Strategy evaluates rules and hands over outcomes plus traces; it NEVER
+    constructs a Recommendation. All four outcomes travel.
+
+- entity: EvaluationTrace
+  context: decision
+  classification: value_object
+  code: src/financeos/core/decision/trace.py:122
+  table: null                        # alert.trace JSON (ADR-0013)
+  authority: [RFC-0009 §4.1, RFC-0006 §4.1, ADR-0013, RFC-0009 §7.2]
+  invariants: [I-6]
+  attributes:
+    - trace_version: int             # TRACE_VERSION == 1
+    - condition: ConditionRef
+    - bindings: tuple[Binding, ...]
+    - steps: tuple[Step, ...]
+    - outcome: Outcome
+    - skip_reason: SkipReason | None
+    - unavailable_facts: tuple[FactUnavailable, ...]
+    - stale_facts: tuple[StaleFactNote, ...]
+    - error: str | None
+    - message_bindings: Mapping[str, str]   # CAPTURED, not re-derived at render time
+  replay_contract: >
+    Given `condition` plus the `value` of every binding, and IGNORING ALL `source` FIELDS,
+    re-executing `steps` must reproduce `outcome` exactly (RFC-0009 §4.1). Executable form:
+    rule_engine.replay_trace().
+  relations:
+    - carried_by: Alert (I-6)
+    - accumulated_by: TraceRecorder
+    - replayed_by: rule_engine.replay_trace
+  notes: >
+    STORED TRACES ARE NEVER MIGRATED (RFC-0009 §7.2): a schema change bumps TRACE_VERSION and
+    the reader for EVERY prior version is retained. Four load-bearing properties: (1) every
+    binding carries both value (Stage A) and source (Stage B) — the A subset-of B mechanism of
+    ADR-0004; (2) steps are explicit and ORDERED, which makes replay mechanical not
+    interpretive; (3) Decimals serialize as STRINGS — a trace that round-trips 0.4 as
+    0.4000000000000001 is not an audit artifact; (4) message_bindings are CAPTURED, so a March
+    message is reproducible verbatim in October. One deliberate deviation from RFC-0009 §4.1's
+    illustrative JSON: a step's operand list is `inputs`, not `in` (Python keyword).
+
+- entity: Binding
+  context: decision
+  classification: value_object
+  code: src/financeos/core/decision/trace.py:66
+  table: null
+  authority: [RFC-0009 §4.1, ADR-0004]
+  invariants: [I-6]
+  attributes:
+    - name: str
+    - value: TraceValue             # str (canonical decimal) | bool | Mapping[str, str]
+    - source: SourceRef
+    - observed_at: Instant | None
+  relations:
+    - part_of: EvaluationTrace
+    - derived_from: Bound
+  notes: >
+    The persisted, flattened form of a Bound. `value` is what a replay uses; `source` is
+    IGNORED by replay and used only for Stage B resolution.
+
+- entity: Step
+  context: decision
+  classification: value_object
+  code: src/financeos/core/decision/trace.py:75
+  table: null
+  authority: [RFC-0006 §4.1]
+  invariants: []
+  attributes:
+    - op: StepOp
+    - inputs: tuple[str, ...]        # binding names or previous step outputs; dotted for fields
+    - out: str
+    - value: TraceValue | None       # None records divide_safe over a ZERO denominator
+  relations:
+    - part_of: EvaluationTrace
+  notes: >
+    `value: None` is a SKIP MARKER, not an error (RFC-0006 §4.1). A dotted input name addresses
+    a field of a structured binding value, e.g. "tolerance.band".
+
+- entity: StepOp
+  context: decision
+  classification: enum
+  code: src/financeos/core/decision/trace.py:37
+  table: null
+  authority: [RFC-0006 §4.1]
+  invariants: []
+  attributes:
+    - arity_15_members: subtract | add | multiply | divide_safe | abs | gt | gte | lt | lte | eq | abs_gt | ratio_to | all | any | not
+  relations:
+    - executed_by: rule_engine.apply_op (one implementation serves BOTH recording and replay)
+  notes: >
+    THE STEP ALGEBRA — deliberately tiny, total and Decimal-exact, executed under a FIXED
+    decimal Context(prec=28) so a replay on another machine cannot diverge. EXACTLY 15 OPS.
+    ADDING ONE REQUIRES AN ADR: the list growing is the signal that a general expression
+    language is being reinvented by accident.
+
+- entity: ConditionRef
+  context: decision
+  classification: value_object
+  code: src/financeos/core/decision/trace.py:91
+  table: null
+  authority: [RFC-0006 §8, RFC-0009 §4.1]
+  invariants: []
+  attributes:
+    - kind: str
+    - kind_version: int
+    - params: Mapping[str, str]
+  relations:
+    - part_of: EvaluationTrace
+    - snapshot_of: LeafCondition
+  notes: The condition AS EVALUATED. kind_version is recorded in every trace (RFC-0006 §8).
+
+- entity: FactUnavailable
+  context: decision
+  classification: value_object
+  code: src/financeos/core/decision/trace.py:99
+  table: null
+  authority: [RFC-0006 §5]
+  invariants: []
+  attributes:
+    - name: str
+    - reason: SkipReason
+  relations:
+    - part_of: EvaluationTrace
+  notes: >
+    Generalizes RFC-0006 §5's "the trace lists which" to LISTS WHICH, AND WHY. Recording the
+    reason next to the name is what lets a replay RECONSTRUCT the skip instead of guessing.
+
+- entity: StaleFactNote
+  context: decision
+  classification: value_object
+  code: src/financeos/core/decision/trace.py:113
+  table: null
+  authority: [RFC-0006 §5, RFC-0011 ERR-10]
+  invariants: []
+  attributes:
+    - name: str
+    - observed_at: Instant
+    - age_days: int
+    - max_staleness_days: int
+  relations:
+    - part_of: EvaluationTrace
+  notes: Ages are measured against the run's DOMAIN date (as_of), never a wall clock (I-7).
+
+- entity: Snapshot
+  context: decision
+  classification: derived_read_model
+  code: src/financeos/core/decision/snapshot.py:50
+  table: snapshot
+  authority: [RFC-0004 §2.3, RFC-0009 §5.1, RFC-0010 V1.0, ADR-0029]
+  invariants: [I-16]
+  attributes:
+    - id: SnapshotId
+    - portfolio_id: PortfolioId
+    - as_of: date
+    - run_id: EvaluationRunId | None     # None only for an on-demand checkpoint
+    - total_value: MoneyAmount
+    - currency: Currency
+    - allocation: Mapping[AssetClass, SnapshotClassLine]
+    - by_bucket: Mapping[str, SnapshotBucketLine]   # Bucket id as str, or UNASSIGNED
+    - recorded_at: Instant
+  relations:
+    - shares_run_id_with: EvaluationRun and its Alerts
+    - checkpoints: Portfolio
+    - series_source_for: drift_history, severity_history (read side)
+  notes: >
+    IMMUTABLE (I-16) but a CHECKPOINT and a SERIES SOURCE, never a source of truth: rebuildable
+    from facts, may be dropped and regenerated. Written on every `evaluate` run, sharing run_id
+    with that run's Alerts, so "what did the Portfolio look like when this Recommendation
+    appeared" is a single JOIN rather than a reconstruction. Uses ONLY core.shared vocabulary
+    (never AllocationLine/Money from core.portfolio) because core.decision may not import
+    another bounded context (C3). by_bucket weight may be NEGATIVE for UNASSIGNED.
+
+- entity: SnapshotClassLine
+  context: decision
+  classification: value_object
+  code: src/financeos/core/decision/snapshot.py:32
+  table: null
+  authority: [RFC-0009 §5.1]
+  invariants: []
+  attributes: [value: MoneyAmount, weight: WeightAmount]
+  relations: [part_of: Snapshot]
+  notes: One AssetClass's value and share of Snapshot.total_value.
+
+- entity: SnapshotBucketLine
+  context: decision
+  classification: value_object
+  code: src/financeos/core/decision/snapshot.py:39
+  table: null
+  authority: [ADR-0025, ADR-0029, RFC-0010:123]
+  invariants: []
+  attributes: [value: MoneyAmount, weight: WeightAmount]
+  relations: [part_of: Snapshot]
+  notes: >
+    weight may be NEGATIVE for the UNASSIGNED key — the same signed reading over_apportioned
+    and unassigned_residual_above give it. Not a defect.
+
+# =====================================================================================
+# SHARED KERNEL — src/financeos/core/shared/  (the ONLY core package a context may import, C3)
+# =====================================================================================
+
+- entity: Bound
+  context: shared
+  classification: value_object
+  code: src/financeos/core/shared/bound.py:43
+  table: null
+  authority: [RFC-0006 §4, ADR-0004, RFC-0012 ADR-0034]
+  invariants: [I-6, I-7]
+  attributes:
+    - value: T                       # generic — Bound[DriftLine], Bound[LeafTarget], Bound[Money], ...
+    - source: SourceRef              # REQUIRED — a fact with no source cannot be constructed
+    - observed_at: Instant | None
+  relations:
+    - element_of: FactSet
+    - flattens_into: Binding (in the trace)
+  notes: >
+    EVERY fact entering an evaluation is a Bound. That is the mechanism which makes the trace
+    UNAVOIDABLE rather than diligent: `value` is what Stage A replays, `source` is what Stage B
+    resolves (ADR-0004), `observed_at` is the staleness input. Because source has no default, a
+    binding can never appear in a trace WITHOUT provenance. `.age(as_of)` measures against the
+    run's DOMAIN date — the core holds no Clock (I-7) and a replay must not depend on when it
+    is replayed.
+
+- entity: SourceRef
+  context: shared
+  classification: value_object
+  code: src/financeos/core/shared/bound.py:16
+  table: null
+  authority: [RFC-0009 §4.1, ADR-0004]
+  invariants: []
+  attributes:
+    - kind: str                      # "strategy_version" | "derived" | "seed" | "price" | "params" | ...
+    - ref: str | None                # the single originating row, when there is exactly one
+    - engine: str | None             # for derived values, which engine computed them
+    - path: str | None               # path inside the origin, e.g. "drift.current_weight"
+    - inputs: tuple[str, ...]        # references a derived value was computed FROM (Stage B)
+  relations:
+    - carried_by: Bound, Binding
+  notes: >
+    IGNORED BY REPLAY (RFC-0009 §4.1). Reference strings are rendered by entity_ref(), e.g.
+    "op:0194...", "price:...", "sv:...", "apportionment:..." (REF_* constants in shared/ids.py).
+
+- entity: Scope
+  context: shared
+  classification: value_object
+  code: src/financeos/core/shared/ids.py:62
+  table: null                        # evaluation_run.scope_kind + scope_id (ERR-2)
+  authority: [RFC-0011 ERR-2, ADR-0020, RFC-0006 §4, RFC-0008 §4]
+  invariants: []
+  attributes:
+    - kind: ScopeKind                # PORTFOLIO | BUCKET
+    - id: UUID                       # a BucketId or a PortfolioId
+  relations:
+    - scopes: EvaluationRun, FactSet
+    - keyed_into: finding_key (scope_id is the SECOND hash component)
+  notes: >
+    BUCKET scope is the NORMAL case (ADR-0020: a Strategy is a policy, applied per Bucket).
+    `.ref` renders "bucket:<uuid>" / "portfolio:<uuid>". scope_id is a GUARANTEED finding_key
+    component even though most kinds also carry scope in params — the redundancy is deliberate
+    (R-2), so a future kind whose params omit scope cannot silently merge findings across
+    Buckets. evaluation_run.scope_id carries NO foreign key (it may be either entity).
+
+- entity: Outcome
+  context: shared
+  classification: enum
+  code: src/financeos/core/shared/enums.py:59
+  table: null                        # alert.outcome VARCHAR with a 4-value CHECK
+  authority: [ADR-0016, RFC-0006 §5, RFC-0009 §3.2]
+  invariants: []
+  attributes:
+    - members: FIRED | NOT_FIRED | SKIPPED | ERROR
+  relations:
+    - carried_by: RuleFiring, EvaluationTrace, Alert
+    - gates: Recommendation (FIRED only)
+    - feeds: run health panel (SKIPPED, ERROR)
+  semantics:
+    FIRED: the predicate held. Produces exactly one Recommendation (ACTUAL runs only).
+    NOT_FIRED: the predicate was evaluated and did NOT hold. Still persisted, still traced.
+    SKIPPED: the rule COULD NOT BE EVALUATED. Carries a SkipReason. severity is NULL.
+    ERROR: evaluation raised. Carries `error`. The run CONTINUES. severity is NULL.
+  notes: >
+    SKIPPED != NOT_FIRED (ADR-0016). This is the single most important distinction in the
+    system and the easiest to get wrong. A rule that could not be evaluated is NOT a rule that
+    found nothing: conflating them REPORTS COMPLIANCE EXACTLY WHEN THE SYSTEM KNOWS LEAST about
+    the portfolio. Both SKIPPED and ERROR are excluded from findings and routed to run health.
+
+- entity: SkipReason
+  context: shared
+  classification: enum
+  code: src/financeos/core/shared/enums.py:73
+  table: null                        # inside alert.trace JSON
+  authority: [RFC-0006 §5, RFC-0007 §4.1, RFC-0007 §5, ADR-L06]
+  invariants: []
+  attributes:
+    - members: disabled | missing_fact | stale_fact | zero_denominator | zero_portfolio_value | heterogeneous_strategies
+  relations:
+    - carried_by: RuleFiring, EvaluationTrace, FactUnavailable
+    - labelled_by: P22 (Italian skip-reason labels + teaching glosses)
+  semantics:
+    disabled: Rule.enabled is False. A disabled rule is SKIPPED, never NOT_FIRED.
+    missing_fact: a keyed fact the kind needed is simply absent.
+    stale_fact: the fact was older than max_staleness. See StaleFactNote.
+    zero_denominator: a divide_safe hit a zero denominator.
+    zero_portfolio_value: an empty scope — a legitimate onboarding state, not an error.
+    heterogeneous_strategies: >
+      a PORTFOLIO-scope evaluation cannot resolve one target tree because its governed Buckets
+      follow DIFFERENT StrategyVersions (RFC-0007 §5). NEVER AVERAGED — mixed governance
+      produces this skip, and an average would invent a policy nobody declared.
+  notes: heterogeneous_strategies is the newest member (ADR-L06 / commit 2dd7346).
+
+- entity: Priority
+  context: shared
+  classification: enum
+  code: src/financeos/core/shared/enums.py:20
+  table: null                        # alert.priority / recommendation ordering
+  authority: [RFC-0008 §3]
+  invariants: []
+  attributes:
+    - members: CRITICAL | HIGH | MEDIUM | LOW | INFO
+    - ordinal_via: priority_rank() at src/financeos/core/shared/enums.py:39   # CRITICAL=4 .. INFO=0
+  relations:
+    - authored_on: Rule
+    - promoted_to_column_on: Alert
+    - first_clause_of: the ordering triple
+  notes: >
+    AUTHOR-DECLARED importance, NEVER overridden by computation (RFC-0008 §3). Priority
+    DOMINATES severity in the ordering — a CRITICAL rule at severity 1.01 outranks an INFO rule
+    at severity 40. Note: mv_finding's inline CASE uses 5..1 while priority_rank() uses 4..0.
+    Both are monotonic and only ever compared within their own expression, so the offset is
+    harmless — but do not assume the two literals match.
+
+- entity: SuggestionClass
+  context: shared
+  classification: enum
+  code: src/financeos/core/shared/enums.py:44
+  table: null                        # recommendation.suggestion_class
+  authority: [E7, RFC-0006 §7.2, I-12, P21]
+  invariants: [I-12]
+  attributes:
+    - members: REVIEW_ALLOCATION | CONSIDER_REBALANCE | REVIEW_BUCKET_ASSIGNMENT | REVIEW_STRATEGY | REVIEW_LIQUIDITY | NO_ACTION
+  relations:
+    - authored_on: Rule
+    - copied_to: Recommendation
+  notes: >
+    A CATEGORY OF DELIBERATION — never a transaction (E7, I-12). NO MEMBER CAN CARRY an
+    instrument, a direction or a size, which is what makes a prescriptive Recommendation
+    UNREPRESENTABLE rather than merely discouraged. Italian surface forms are impersonal
+    infinitives, fixed verbatim by P21.
+
+- entity: RunMode
+  context: shared
+  classification: enum
+  code: src/financeos/core/shared/enums.py:86
+  table: null                        # evaluation_run.mode
+  authority: [RFC-0009 §3.2, RFC-0008 §8, RFC-0006 §6.2, ADR-0035]
+  invariants: []
+  attributes:
+    - members: ACTUAL | HYPOTHETICAL
+  relations:
+    - declared_on: EvaluationRun
+    - filters: mv_finding (WHERE run.mode = 'ACTUAL')
+  notes: >
+    HYPOTHETICAL runs persist Alerts and traces but produce ZERO Recommendations
+    (RFC-0008 §8) — two independent guards keep a candidate StrategyVersion out of the
+    findings list (that, plus I-22). Looks like a bug; is not.
+
+- entity: ScopeKind
+  context: shared
+  classification: enum
+  code: src/financeos/core/shared/enums.py:13
+  table: null
+  authority: [RFC-0011 ERR-2]
+  invariants: []
+  attributes: [members: PORTFOLIO | BUCKET]
+  relations: [part_of: Scope, part_of: RuleScopeGate]
+  notes: Only two scope kinds exist. Asset-level scope is not representable.
+
+- entity: Money
+  context: shared
+  classification: value_object
+  code: src/financeos/core/shared/money.py
+  table: null
+  authority: [RFC-0004 §2.1, I-15]
+  invariants: [I-15]
+  attributes:
+    - amount: MoneyAmount            # Decimal at MONEY_SCALE; float is BANNED
+    - currency: Currency
+  relations:
+    - siblings: Percentage, Quantity, Weight (same module, same discipline)
+  notes: >
+    I-15: Money arithmetic REQUIRES the same currency — a mismatch raises
+    CurrencyMismatchError. Decimal only: FloatNotAllowedError exists because float in the
+    domain is a defect, not a style choice. Scales are declared in shared/numbers.py
+    (MONEY_SCALE, PERCENTAGE_SCALE, PRICE_SCALE, QUANTITY_SCALE, SEVERITY_SCALE, WEIGHT_SCALE).
+    Stored with a DOT and localized in the view (P14).
+
+- entity: AssetClass
+  context: shared
+  classification: value_object
+  code: src/financeos/core/shared/ids.py:39
+  table: null                        # asset.asset_class VARCHAR
+  authority: [I-14, ADR-0033, E12]
+  invariants: [I-14, I-18, I-20]
+  attributes:
+    - form: Annotated[str, pattern ^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$]   # e.g. EQUITY_DEVELOPED
+  relations:
+    - owned_by: portfolio context
+    - consumed_by: strategy context as an OPAQUE TAXONOMY KEY
+    - keys: TargetNode (I-14 — never an AssetId)
+  notes: >
+    Lives in core/shared rather than core/portfolio precisely BECAUSE C3 forbids one bounded
+    context importing another: a shared OPAQUE KEY is what makes I-14 enforceable without an
+    import edge. The taxonomy is OPEN (E12), so a class the label registry does not know is not
+    a defect — label() degrades to asset_class_label()'s mechanical rendering.
+    RFC-0012 ADR-0033 restates I-14 to (axis, value) pairs; that is NOT implemented yet.
+
+# =====================================================================================
+# ENGINE ARTIFACTS — src/financeos/core/engines/
+# Pure functions. No engine holds a port (I-7 / C2). NO ENGINE CALLS ANOTHER ENGINE.
+# =====================================================================================
+
+- entity: FactSet
+  context: engine
+  classification: engine_artifact
+  code: src/financeos/core/engines/rule_engine.py:112
+  table: null
+  authority: [RFC-0006 §4, RFC-0005 §3, ADR-0016, ADR-L05 §5]
+  invariants: [I-7]
+  attributes:
+    - as_of: date
+    - scope: Scope
+    - drift: Mapping[AssetClass, Bound[DriftLine]]
+    - allocation: Mapping[AssetClass, Bound[AllocationLine]]
+    - targets: Mapping[AssetClass, Bound[LeafTarget]]
+    - residual: Bound[WeightAmount] | None
+    - bucket_value: Bound[Money] | None
+    - apportionment: Mapping[AssetId, Bound[ApportionmentLine]]
+    - unavailable: Mapping[str, SkipReason]      # family name -> why it could not be computed
+    - labels: Mapping[AssetClass, str]
+    - asset_labels: Mapping[AssetId, str]
+  fact_families:
+    - drift: FACT_DRIFT (rule_engine.py:76) — targeted leaves only
+    - allocation: FACT_ALLOCATION (rule_engine.py:80) — every HELD class, targeted or not
+    - residual: FACT_RESIDUAL (rule_engine.py:84) — UNASSIGNED weight, Portfolio-scoped by nature
+    - targets: FACT_TARGETS (rule_engine.py:90) — resolved leaves, independent of drift
+    - bucket_value: FACT_BUCKET_VALUE (rule_engine.py:96) — scope total (ERR-4 removed a phantom `prices` fact)
+    - apportionment: FACT_APPORTIONMENT (rule_engine.py:100) — committed units per Asset
+  relations:
+    - assembled_by: app/evaluate_strategy.py (the ONLY composition point, RFC-0005 §3)
+    - consumed_by: rule_engine.evaluate
+  notes: >
+    FROZEN and FULLY MATERIALIZED. NO LAZY LOADING IS POSSIBLE — engines hold no repository
+    (I-7) — so the application service assembles everything FIRST. `unavailable` carries a
+    whole family's failure reason to the trace, so a rule that could not be evaluated never
+    reads as NOT_FIRED (ADR-0016). THE RULE ENGINE PERFORMS NO FINANCIAL COMPUTATION: a new
+    fact must carry something ANOTHER engine already computed (RFC-0006 §3.1).
+
+- entity: ConditionKindSpec
+  context: engine
+  classification: engine_artifact
+  code: src/financeos/core/engines/rule_engine.py:562
+  table: null
+  authority: [ADR-0014, RFC-0006 §3, RFC-0006 §12, RFC-0011 ERR-10, ADR-L02, L05 §7.3]
+  invariants: [I-21]
+  attributes:
+    - kind: str
+    - kind_version: int
+    - params_model: type[BaseModel]      # validated at AUTHORING time, on freeze
+    - required_facts: frozenset[str]     # must be non-empty
+    - default_max_staleness: timedelta | None   # 8th component, added by ERR-10
+    - severity: SeverityDeclaration
+    - explanation_template: str
+    - numeric_bindings: frozenset[str]   # DECLARED, never inferred (L05 §7.3, C-L05-3)
+    - evaluate: Callable[[P, FactSet, TraceRecorder], ConditionResult]
+  relations:
+    - registered_in: ConditionRegistry (REGISTRY at rule_engine.py:637)
+    - referenced_by: LeafCondition (kind + kind_version)
+  notes: >
+    Every field is REQUIRED, so omitting any registration component is a CONSTRUCTION FAILURE —
+    RFC-0006 §12's completeness test enforced by the type system as well as by a test.
+    numeric_bindings is declared rather than inferred because a naming convention silently
+    misses a future binding, and regexing the stored VALUE would happily "localise" an ISIN.
+
+- entity: ConditionRegistry
+  context: engine
+  classification: engine_artifact
+  code: src/financeos/core/engines/rule_engine.py:600
+  table: null
+  authority: [ADR-0014, RFC-0006 §8]
+  invariants: []
+  attributes:
+    - keyed_by: (kind, kind_version)
+    - singleton: REGISTRY at src/financeos/core/engines/rule_engine.py:637
+  relations:
+    - holds: ConditionKindSpec
+    - injectable_into: rule_engine.evaluate (so a test can register a kind)
+  notes: >
+    THE CLOSED CATALOG. Adding a kind is a CODE CHANGE, deliberately (ADR-0014). Re-registering
+    the same (kind, kind_version) raises RegistryError: a kind's semantics NEVER change — a new
+    meaning is a NEW KIND (RFC-0006 §8).
+
+- entity: SeverityDeclaration
+  context: engine
+  classification: engine_artifact
+  code: src/financeos/core/engines/rule_engine.py:551
+  table: null
+  authority: [RFC-0007 §3.1, ADR-L02, ADR-L04, RFC-0011 ERR-1]
+  invariants: []
+  attributes:
+    - formula: str | None            # NO DEFAULT — a kind cannot be registered without deciding
+  relations:
+    - declared_on: ConditionKindSpec
+  notes: >
+    `formula` has no default, so registration FORCES a decision: either a formula in domain
+    terms — DIMENSIONLESS, reading 1.0 at the kind's OWN firing threshold and rising
+    monotonically — or an EXPLICIT None. An explicit None means "this kind cannot express
+    urgency", which is a REAL SEMANTIC, not missing data: hence severity = NULL, hence
+    NULLS LAST in every ordering.
+
+- entity: TraceRecorder
+  context: engine
+  classification: engine_artifact
+  code: src/financeos/core/engines/rule_engine.py:349
+  table: null
+  authority: [RFC-0006 §4.1, RFC-0009 §4.1, I-6]
+  invariants: [I-6]
+  attributes:
+    - threaded_through: every evaluator, as its third argument
+  relations:
+    - accumulates: EvaluationTrace
+    - executes: StepOp (via apply_op — the SAME implementation replay uses)
+  notes: >
+    THE TRACE IS NOT EMITTED, IT IS ACCUMULATED. Reading a fact appends a Binding; every
+    arithmetic step goes through the recorder and appends a Step. THERE IS NO CODE PATH THAT
+    EVALUATES WITHOUT PRODUCING A TRACE, because the values being evaluated ARE the trace
+    bindings. I-6 therefore cannot decay into decoration: decoration would require a second,
+    UNTRACED arithmetic path, and one does not exist. Do not create one.
+
+- entity: ConditionResult
+  context: engine
+  classification: engine_artifact
+  code: src/financeos/core/engines/rule_engine.py:544
+  table: null
+  authority: [RFC-0006 §5]
+  invariants: []
+  attributes: [fired: bool, severity: SeverityAmount | None]
+  relations: [returned_by: ConditionKindSpec.evaluate, becomes: RuleFiring]
+  notes: "What an evaluator concluded: whether the predicate held, and how badly."
+
+- entity: ReplayResult
+  context: engine
+  classification: engine_artifact
+  code: src/financeos/core/engines/rule_engine.py:1428
+  table: null
+  authority: [RFC-0009 §4.1]
+  invariants: [I-6]
+  attributes:
+    - returned_by: rule_engine.replay_trace (src/financeos/core/engines/rule_engine.py:1435)
+  relations:
+    - verifies: EvaluationTrace
+  notes: >
+    The executable form of the replay contract. Verified by a PROPERTY TEST over every outcome
+    the engine can produce (tests/test_trace_replay.py). Determinism is a GATE, not a hope.
+
+# =====================================================================================
+# READ SIDE — src/financeos/adapters/duckdb/queries/  (importable ONLY by web/, contract C4)
+# =====================================================================================
+
+- entity: Finding
+  context: read_side
+  classification: sql_view
+  code: src/financeos/adapters/duckdb/migrations/001_init.sql:413
+  table: mv_finding                  # a plain VIEW, NOT a materialized view
+  authority: [RFC-0008 §4, ADR-0021, RFC-0011 §4 R-2, RFC-0011 ERR-1]
+  invariants: []
+  attributes:
+    - finding_key: str               # GROUP BY key
+    - rule_id: str                   # GROUP BY key
+    - first_recommendation_id: arg_min(r.id, r.recorded_at)
+    - latest_recommendation_id: arg_max(r.id, r.recorded_at)
+    - first_seen: min(run.as_of)
+    - last_seen: max(run.as_of)
+    - occurrences: count(*)
+    - current_severity: arg_max(a.severity, r.recorded_at)
+    - current_priority: arg_max(a.priority, r.recorded_at)
+    - priority_rank: arg_max(CASE a.priority ... END, r.recorded_at)   # CRITICAL=5 .. INFO=1
+  ordering: priority_rank DESC, current_severity DESC NULLS LAST, rule_id ASC
+  filters: WHERE run.mode = 'ACTUAL'
+  relations:
+    - groups: Recommendation (by finding_key, rule_id)
+    - joins: alert (for severity/priority), evaluation_run (for as_of and mode)
+    - read_by: adapters/duckdb/queries/findings.py
+  notes: >
+    DEDUPLICATION IS READ-SIDE (ADR-0021). The Decision Engine deduplicates NOTHING: a mutable
+    Recommendation would be a row whose run_id no longer identifies the run that produced its
+    content. finding_key is a STORED COLUMN on recommendation (written at insert time), not
+    something this view derives — the view only GROUPs on it.
+    CORRELATED FINDINGS ARE NEVER COLLAPSED (RFC-0008 §4.1): equity-under and bonds-over are
+    two findings, because they have different finding_keys and are genuinely two facts.
+
+- entity: finding_key
+  context: read_side
+  classification: value_object
+  code: src/financeos/core/engines/decision_engine.py:158
+  table: recommendation.finding_key  # indexed: ix_recommendation_finding_key
+  authority: [RFC-0008 §4, ADR-0021, RFC-0011 §4 R-2]
+  invariants: []
+  formula: sha256_hex(str(rule.id), str(run.scope.id), canonical_json(dict(rule.condition.params)))
+  components:
+    - rule_id: which Rule
+    - scope_id: which Bucket or Portfolio
+    - canonical(condition.params): which exact parameterisation
+  deliberately_excluded:
+    - strategy_version_id: >
+        editing an UNRELATED rule freezes a new version and would otherwise RESET the finding's
+        history, making "this has been drifting for five months" unanswerable.
+  relations:
+    - identifies: Finding (across runs)
+    - groups: Recommendation
+    - resolved_against_by: Decision (SPECIFIED, NOT IMPLEMENTED)
+  danger: >
+    ANY resolution or dedup logic keying on LESS than the full finding_key SILENTLY HIDES LIVE
+    FINDINGS. THIS BUG HAS ALREADY SHIPPED ONCE. Pinned by
+    tests/test_finding_resolution.py::test_editing_rule_params_does_not_resolve_an_unrelated_finding.
+    scope_id is a guaranteed component even though most kinds also carry scope in params — the
+    redundancy is kept ON PURPOSE (R-2) so a future kind whose params omit scope cannot silently
+    merge findings across Buckets.
+  notes: >
+    A stored column written at recommendation-insert time, NOT derived by mv_finding — the view only
+    GROUPs on the already-hashed value. Indexed by ix_recommendation_finding_key. Identity is stable
+    ACROSS runs and ACROSS StrategyVersions, which is what makes "how long has this been true?"
+    answerable. See the `danger` field before writing anything that resolves or dedups a finding.
+
+- entity: Holding_read_view
+  context: read_side
+  classification: sql_view
+  code: src/financeos/adapters/duckdb/migrations/001_init.sql
+  table: mv_holding                  # a plain VIEW, NOT a materialized view
+  authority: [ADR-0003]
+  invariants: []
+  attributes: [asset_id, portfolio_id, quantity: SUM over operation]
+  relations:
+    - derived_from: operation
+    - read_by: adapters/duckdb/queries/holdings.py, allocation.py, buckets.py
+  notes: >
+    The SQL half of ADR-0003. Neither mv_ view is a real DuckDB materialized view — both are
+    plain views recomputed per query. The mv_ prefix records INTENT (a derived model), not a
+    storage mechanism.
+
+# =====================================================================================
+# SPECIFIED IN THE CORPUS, NOT IMPLEMENTED AT 2dd7346
+# A future agent WILL grep for these and find nothing. That absence is correct.
+# =====================================================================================
+
+- entity: Decision
+  context: decision
+  classification: not_implemented
+  code: null                         # NO class named Decision exists anywhere in src/
+  table: null                        # no decision table in 001_init.sql
+  authority: [RFC-0004 §7, ADR-0002, RFC-0008 §7, ADR-0022]
+  invariants: [I-17]
+  attributes_when_built:
+    - informedBy: Recommendation (MAY BE EMPTY — RFC-0008 §7.2)
+    - enactedBy: Operation (RFC-0008 §7.3)
+    - resolves_against: finding_key
+  relations:
+    - resolves: Finding (by finding_key — NOT by recommendation_id)
+    - references: Recommendation (I-17 — the edge points THIS way only)
+  notes: >
+    THE USER'S ACT, specified in RFC-0004 §7 (ADR-0002) and RFC-0008 §7, NOT YET BUILT.
+    When it lands: DISMISSAL IS RECORDED AS A Decision — nothing is mutated and there is NO
+    `dismissed` flag on Recommendation (ADR-0022). Resolution keys on the FULL finding_key; see
+    the finding_key `danger` field, because that is precisely the bug that has already shipped
+    once. I-17 forbids the reverse edge: a Recommendation cannot reference a Decision.
+
+- entity: Goal
+  context: strategy
+  classification: not_implemented
+  code: null                         # no Goal class in src/
+  table: goal                        # TABLE EXISTS in 001_init.sql, plus strategy_goal link
+  authority: [RFC-0007 §9, E9, ADR-0030, ADR-0036, RFC-0012 ERR-11, RFC-0012 ERR-12]
+  invariants: []
+  relations:
+    - linked_to: Strategy (via strategy_goal, OUTSIDE the freeze boundary — ADR-0030)
+  notes: >
+    The table and its link table exist; no domain type does. E9 (Goal vs Strategy.objective)
+    was escalated from V2 to V1.1 by RFC-0012 §5 and made a first-class object with a revision
+    audit by ADR-0036. ERR-12 corrected ADR-0030's false reconstructability claim. Today only
+    Strategy.objective (a free-text str) carries goal-shaped intent.
+
+- entity: Account
+  context: portfolio
+  classification: not_implemented
+  code: null                         # AccountId exists (shared/ids.py:21); no Account aggregate
+  table: account                     # TABLE EXISTS, plus portfolio_account link
+  authority: [RFC-0010 §4.1, ADR-0026, RFC-0011 ERR-8]
+  invariants: []
+  relations:
+    - referenced_by: Operation.account_id, Portfolio.accounts
+    - persisted_by: adapters/duckdb/repositories/account.py (returns an AccountInfo DTO)
+  notes: >
+    A REFERENCE ENTITY (ADR-0026 corrected RFC-0010 §4.1's "V1.0 has no Account"). The table,
+    the AccountId NewType and a repository DTO all exist; no core aggregate does. `cash_asset_id`
+    on the account table is what makes ADR-0026's auto-emitted cash legs addressable.
+
+- entity: IndicatorReading
+  context: market
+  classification: not_implemented
+  code: null
+  table: null
+  authority: [RFC-0004 §2.2, RFC-0006 §4.2, RFC-0007 §8.1, ADR-0031, I-16]
+  invariants: [I-16]
+  relations:
+    - would_feed: indicator_threshold, concentration_above (condition kinds, ERR-3 — V1.2)
+  notes: >
+    Market indicators are specified (RFC-0006 §4.2) and immutable when built (I-16), but no
+    reading type, table or condition kind exists. ERR-3 moved indicator_threshold and
+    concentration_above to V1.2. PriceView is the only Market type that exists today.
+
+- entity: ClassificationAxis
+  context: portfolio
+  classification: not_implemented
+  code: null
+  table: null                        # asset.asset_class is a single VARCHAR today
+  authority: [ADR-0033, E12, RFC-0012 §4, RFC-0012 ERR-14]
+  invariants: [I-19, I-20]
+  notes: >
+    RFC-0012 ADR-0033 introduces ORTHOGONAL classification axes with FRACTIONAL exposure, and
+    restates I-14 from AssetClass to (axis, value) pairs. NOT IMPLEMENTED: today an Asset carries
+    exactly one AssetClass string on an implicit single ASSET_CLASS axis, every weight is 1, and
+    I-19/I-20 are trivially satisfied. Sequenced at V1.2.
+
+- entity: Combinator
+  context: strategy
+  classification: not_implemented
+  code: null                         # only LeafCondition exists
+  table: null
+  authority: [RFC-0006 §2.1, RFC-0006 §12]
+  invariants: []
+  notes: >
+    all_of / any_of / not over flat leaves, COMPOSITION DEPTH EXACTLY 1 (RFC-0006 §2.1). Out of
+    skeleton scope (RFC-0006 §12) — no combinator type exists. Depth is 1 by DESIGN, not by
+    accident: deeper nesting is how a closed catalog turns into an expression language.
+    Rule.condition is a bare LeafCondition, not a union.
