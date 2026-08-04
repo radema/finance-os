@@ -1,4 +1,4 @@
-# ADR-L07 — `/dashboard`: a second landing page, alongside `/`, not instead of it
+# ADR-L08 — `/dashboard`: a second landing page, alongside `/`, not instead of it
 
 | | |
 |---|---|
