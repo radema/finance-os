@@ -65,9 +65,19 @@ def test_seed_demo_and_evaluate_matches_golden_file(tmp_path: Path) -> None:
     assert dict(skip_rows) == EXPECTED["skip_reasons"]
 
     # The one ERROR: a Bucket-specific rule authoring a USD target against a EUR Bucket on
-    # purpose (I-15, W2-rule-scope-partition.md §1's "1 Bucket-specific" slot).
-    error_row = con.execute("SELECT rule_id FROM alert WHERE outcome = 'ERROR'").fetchone()
-    assert error_row == (EXPECTED["error_rule_id"],)
+    # purpose (I-15, W2-rule-scope-partition.md §1's "1 Bucket-specific" slot). Pinned by
+    # rule_id, scope AND reason together — rule_id alone would still pass silently under a
+    # placement/scope regression that moved the same rule to fire (or error) elsewhere.
+    error_row = con.execute(
+        "SELECT a.rule_id, r.scope_kind, r.scope_id, json_extract_string(a.trace, '$.error') "
+        "FROM alert a JOIN evaluation_run r ON r.id = a.run_id WHERE a.outcome = 'ERROR'"
+    ).fetchone()
+    assert error_row is not None
+    error_rule_id, error_scope_kind, error_scope_id, error_message = error_row
+    assert error_rule_id == EXPECTED["error_rule_id"]
+    assert error_scope_kind == EXPECTED["error_scope_kind"]
+    assert error_scope_id == EXPECTED["error_scope_id"]
+    assert EXPECTED["error_message_contains"] in (error_message or "")
 
     # The ten FIRED findings, in RFC-0008 §3's own order: priority_rank DESC, severity DESC
     # NULLS LAST, rule_id ASC. All three ORDER BY clauses are exercised (UX-0001 §8.5): the

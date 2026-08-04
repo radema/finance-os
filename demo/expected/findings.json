@@ -9,6 +9,9 @@
     "heterogeneous_strategies": 1
   },
   "error_rule_id": "10000000-0000-0000-0000-000000000008",
+  "error_scope_kind": "BUCKET",
+  "error_scope_id": "44940ba1-0bfd-5d7c-ba07-4d80aefdd508",
+  "error_message_contains": "CurrencyMismatchError",
   "_comment": "Only structured/canonical values are pinned here — never observation/rationale prose or asset_class_label, which are Italian surface strings the label registry (L05) is about to change. Order is RFC-0008 §3: priority_rank DESC, severity DESC NULLS LAST, rule_id ASC (UX-0001 §8.5 / ADR-L04 §4.6).",
   "findings": [
     {
