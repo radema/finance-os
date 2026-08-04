@@ -4,16 +4,31 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date
 from pathlib import Path
+from uuid import UUID, uuid4
 
+import duckdb
 import pytest
 from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
+from financeos.adapters.system import SystemClock, UUIDv7IdGen
+from financeos.app.evaluate_strategy import evaluate_strategy
+from financeos.app.unit_of_work import DuckDBUnitOfWork
 from financeos.cli import app as cli
+from financeos.core.portfolio import Bucket
+from financeos.core.shared import BucketId, PortfolioId, Scope, StrategyId
 from financeos.web.main import create_app
 
 NET_WORTH = "€54.000,00"
+
+#: The demo fixture's own Portfolio/Strategy (`demo/portfolios.csv`, `demo/strategy.yaml`) —
+#: read here as fixed ids rather than queried, exactly as `test_queries.py`'s `DEMO_BUCKET_ID`
+#: does. `DEMO_AS_OF` is `_seed`'s own `--as-of`.
+DEMO_PORTFOLIO_ID = "a8283d57-9cc4-5376-8952-1cf4208fcbd7"
+DEMO_STRATEGY_ID = "237f27fd-8230-53be-8a8c-f30e6d53812c"
+DEMO_AS_OF = date(2026, 7, 24)
 
 OPTION_RE = re.compile(r'<script type="application/json" id="([^"]+)">([\s\S]*?)</script>')
 TOKEN_RE = re.compile(r'"token:(--[a-z0-9-]+)"')
@@ -42,6 +57,44 @@ def client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(_seed(tmp_path)))
 
 
+@pytest.fixture
+def con(client: TestClient) -> duckdb.DuckDBPyConnection:
+    shared: duckdb.DuckDBPyConnection = client.app.state.connection  # type: ignore[attr-defined]
+    return shared.cursor()
+
+
+def _add_bucket_with_no_rules_gated(con: duckdb.DuckDBPyConnection) -> str:
+    """A synthetic 2nd Bucket ("Libero"), sharing the demo Portfolio and Strategy but named by
+    no Rule's `condition.params` — built directly against the already-seeded store rather than
+    by mutating `demo/` (task #12 review SHOULD-FIX 4). `demo/` is a shared, product-owner-pinned
+    fixture (the six-class growth, pinned against `demo/expected/`) and must not carry test-only
+    Buckets.
+
+    `evaluate_strategy` runs directly against this one Bucket's scope, at the same `as_of` the
+    seeded demo run used, reproducing "a run but zero rules gated to it" (review BLOCKING)
+    without a second `financeos evaluate` pass over every Bucket.
+    """
+    uow = DuckDBUnitOfWork(con)
+    bucket_id = BucketId(uuid4())
+    uow.buckets.add(
+        Bucket(
+            id=bucket_id,
+            portfolio_id=PortfolioId(UUID(DEMO_PORTFOLIO_ID)),
+            strategy_id=StrategyId(UUID(DEMO_STRATEGY_ID)),
+            name="Libero",
+        )
+    )
+    evaluate_strategy(
+        uow,
+        UUIDv7IdGen(),
+        SystemClock(),
+        scope=Scope.for_bucket(bucket_id),
+        as_of=DEMO_AS_OF,
+        currency="EUR",
+    )
+    return str(bucket_id)
+
+
 def test_dashboard_carries_net_worth_and_composition(client: TestClient) -> None:
     body = client.get("/dashboard").text
     assert NET_WORTH in body
@@ -53,8 +106,8 @@ def test_dashboard_carries_net_worth_and_composition(client: TestClient) -> None
 def test_dashboard_composition_chart_segments_reconcile_to_net_worth(client: TestClient) -> None:
     """Guard 2 (ADR-0029), verified from the chart option's own JSON rather than a raw
     "€54.000,00" substring that happens to appear twice in the page (task #12 review SHOULD-FIX
-    4): the Bucket segments (Pensione, Libero, the unassigned residual) sum to the same net
-    worth the chart's own `markLine` states."""
+    4): the Bucket segments (Pensione, the unassigned residual) sum to the same net worth the
+    chart's own `markLine` states."""
     body = client.get("/dashboard").text
     options = dict(_options(body))
     option = json.loads(options["chart-dashboard-comp-option"])
@@ -65,14 +118,16 @@ def test_dashboard_composition_chart_segments_reconcile_to_net_worth(client: Tes
 
 
 def test_dashboard_bucket_card_never_shows_open_findings_without_unevaluated(
-    client: TestClient,
+    client: TestClient, con: duckdb.DuckDBPyConnection
 ) -> None:
     """The guard variation C stands or falls on (W2 plan doc).
 
     Both branches of the guard actually render here: Pensione has a run and one measured rule
-    (the full counts branch), Libero has a run but zero rules gated to it (task #12 review
-    BLOCKING) — and each card's own markup is checked in isolation, not "somewhere in the page",
-    so a bug that renders the two counts in *different* cards would still fail this."""
+    (the full counts branch), a synthetic "Libero" Bucket (built in-test, not via `demo/`) has a
+    run but zero rules gated to it (task #12 review BLOCKING) — and each card's own markup is
+    checked in isolation, not "somewhere in the page", so a bug that renders the two counts in
+    *different* cards would still fail this."""
+    _add_bucket_with_no_rules_gated(con)
     body = client.get("/dashboard").text
     blocks = _card_blocks(body)
     assert blocks, "no Bucket card markup found on /dashboard"
