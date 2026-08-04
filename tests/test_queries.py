@@ -29,40 +29,49 @@ def _seeded_and_evaluated(tmp_path: Path) -> Path:
     return db_path
 
 
-def test_list_findings_returns_the_one_canonical_finding(tmp_path: Path) -> None:
+def test_list_findings_returns_the_ux_0001_ten(tmp_path: Path) -> None:
+    """UX-0001 §8.5: the six-class fixture opens exactly ten findings, one per FIRED Rule."""
     con = duckdb.connect(str(_seeded_and_evaluated(tmp_path)))
     con.execute("SET TimeZone='UTC'")
     findings = list_findings(con)
-    assert len(findings) == 1
-    assert findings[0].current_priority == "HIGH"
-    assert findings[0].occurrences == 1
+    assert len(findings) == 10
+    assert all(f.occurrences == 1 for f in findings)
+    # The canonical row (RFC-0005 §8.3): Pensione's Equity/Developed drift, CRITICAL row
+    # aside the only one at severity 3.00.
+    canonical = next(f for f in findings if f.current_severity == Decimal("3.00000000"))
+    assert canonical.rule_id == "10000000-0000-0000-0000-000000000001"
+    assert canonical.current_priority == "HIGH"
 
 
-def test_list_holdings_returns_both_demo_assets(tmp_path: Path) -> None:
+def test_list_holdings_returns_the_demo_assets(tmp_path: Path) -> None:
     con = duckdb.connect(str(_seeded_and_evaluated(tmp_path)))
     con.execute("SET TimeZone='UTC'")
     holdings = list_holdings(con, DEMO_PORTFOLIO_ID)
     asset_classes = {h.asset_class for h in holdings}
-    # The demo fixture never funds the account (the skeleton importer is BUY-only, RFC-0005
-    # §8.1), so every BUY's auto cash leg (ADR-0026) leaves a negative CASH position at
-    # portfolio level — accepted per the fixture's own scope note (see the W1c report).
-    assert {"EQUITY_DEVELOPED", "BOND_GOV_EUR"} <= asset_classes
-    cash_row = next(h for h in holdings if h.asset_class == "CASH")
-    assert cash_row.quantity < 0
+    assert {"EQUITY_DEVELOPED", "BOND_GOV_EUR", "EQUITY_GLOBAL", "CASH"} <= asset_classes
+    # UX-0001 §8.1: every account is funded via TRANSFER_IN before its BUYs, so every
+    # holding — CASH included — is non-negative, unlike the BUY-only walking skeleton.
+    assert all(h.quantity >= 0 for h in holdings)
 
 
 def test_drift_history_reads_the_snapshot_written_on_evaluate(tmp_path: Path) -> None:
     """RFC-0009 §5.1/§6: `Snapshot` is written on `evaluate`, and the series reads it
-    as-recorded rather than recomputing under today's Strategy."""
+    as-recorded rather than recomputing under today's Strategy.
+
+    UX-0001 §8.4's two Strategies make the demo Portfolio's governance mixed, so
+    `target`/`drift` are `None` for every class at Portfolio scope (ADR-L06 §8.4) — `weight`
+    alone survives, because it is a fact about the Portfolio, not about which Strategy
+    governs it.
+    """
     con = duckdb.connect(str(_seeded_and_evaluated(tmp_path)))
     con.execute("SET TimeZone='UTC'")
     (point,) = drift_history(con, DEMO_PORTFOLIO_ID, "EQUITY_DEVELOPED")
-    assert point.weight == Decimal("0.34")
-    assert point.target == Decimal("0.40")
-    assert point.drift == Decimal("-0.06")
+    assert point.weight == Decimal("0.25496468")
+    assert point.target is None
+    assert point.drift is None
 
 
-def test_drift_history_is_empty_for_an_untargeted_class(tmp_path: Path) -> None:
+def test_drift_history_is_none_for_every_class_under_mixed_governance(tmp_path: Path) -> None:
     con = duckdb.connect(str(_seeded_and_evaluated(tmp_path)))
     con.execute("SET TimeZone='UTC'")
     (point,) = drift_history(con, DEMO_PORTFOLIO_ID, "CASH")

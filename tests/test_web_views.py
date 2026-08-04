@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 import duckdb
 import pytest
@@ -35,10 +36,12 @@ from financeos.web.main import create_app
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOKENS_CSS = REPO_ROOT / "src" / "financeos" / "web" / "static" / "css" / "tokens.css"
 
-#: The canonical fixture's net worth at portfolio scope: 183.6 + 356.4 units at 100,00 each.
-#: The CASH position carries no price row, so it is reported rather than valued — which is what
-#: `portfolio_engine.compute_allocation`'s own contract says an unpriced holding does.
-NET_WORTH = "€54.000,00"
+#: UX-0001 §8.3: the six-class fixture's Portfolio-wide net worth.
+NET_WORTH = "€107.586,33"
+
+#: UX-0001 §8.5 row 2 / RFC-0005 §8.3: the canonical finding — Pensione's Equity/Developed
+#: drift, the only one at severity 3.00000000.
+CANONICAL_RULE_ID = "10000000-0000-0000-0000-000000000001"
 
 OPTION_RE = re.compile(r'<script type="application/json" id="([^"]+)">([\s\S]*?)</script>')
 TOKEN_RE = re.compile(r'"token:(--[a-z0-9-]+)"')
@@ -55,7 +58,7 @@ def _seed(tmp_path: Path, *, evaluate: bool = True) -> Path:
             cli, ["--db-path", str(db_path), "evaluate", "--as-of", "2026-07-24"]
         )
         assert evaluated.exit_code == 0, evaluated.output
-        assert "1 Recommendation" in evaluated.output
+        assert "10 Recommendation" in evaluated.output
     return db_path
 
 
@@ -67,13 +70,21 @@ def client(tmp_path: Path) -> TestClient:
 
 @pytest.fixture
 def recommendation_id(client: TestClient) -> str:
-    """The one Recommendation the demo dataset produces, read from `client`'s own store.
+    """The canonical Recommendation (RFC-0005 §8.3): Pensione's Equity/Developed drift,
+    severity 3.00000000 — the only one of the fixture's ten at that exact severity.
 
     Derived from the client rather than seeded separately: ids are UUIDv7 generated per seed,
     so a second store would hand out an id the app under test has never heard of.
     """
     con: duckdb.DuckDBPyConnection = client.app.state.connection  # type: ignore[attr-defined]
-    row = con.cursor().execute("SELECT id FROM recommendation").fetchone()
+    row = (
+        con.cursor()
+        .execute(
+            "SELECT r.id FROM recommendation r JOIN alert a ON a.id = r.alert_id "
+            "WHERE a.rule_id = ? AND a.severity = 3"
+        , [CANONICAL_RULE_ID])
+        .fetchone()
+    )
     assert row is not None
     return str(row[0])
 
@@ -143,9 +154,8 @@ def test_explanation_surface_renders_all_nine_blocks(
     # Portfolio state now has a source: `evaluate_strategy` writes a `Snapshot` sharing this
     # run's id on every run (RFC-0009 §5.1), so the ledger renders instead of the absence note.
     assert "Nessuno snapshot per questa valutazione." not in body
-    assert "€54.000,00" in body
-    assert "0.66000000" in body
-    assert "0.34000000" in body
+    assert NET_WORTH in body
+    assert "0.25496468" in body
 
 
 def test_trace_is_a_lazy_htmx_fragment(client: TestClient, recommendation_id: str) -> None:
@@ -200,7 +210,14 @@ def test_allocation_targets_use_the_runs_frozen_version_not_current(
 
     Re-freezing the Strategy after the run must not change what `/allocation` shows: the
     targets on screen are the run's pinned `strategy_version_id`, never
-    `strategy.current_version_id`.
+    `strategy.current_version_id`. `latest_actual_run` for this fixture is always the
+    Portfolio-scope run (evaluated last, RFC-0007 §5), which is heterogeneous by construction
+    (UX-0001 §8.4's two Strategies) — `adapters/duckdb/queries/allocation.py` reports no
+    per-class target at all under mixed governance, so a specific target percentage is not
+    observable here either way. What *is* observable, and is what this test actually pins
+    down: the mutated 99.00% must never leak into the page, and the heterogeneous notice
+    itself must render unaffected by the re-freeze — proving the read reflects the run's own
+    pinned version rather than whatever `strategy.current_version_id` points at right now.
     """
     con: duckdb.DuckDBPyConnection = client.app.state.connection  # type: ignore[attr-defined]
     cur = con.cursor()
@@ -212,9 +229,14 @@ def test_allocation_targets_use_the_runs_frozen_version_not_current(
     assert row is not None
     strategy_id, version_id, definition = row
     changed = json.loads(str(definition))
-    for child in changed["targets"]["children"]:
-        if child["key"] == "EQUITY_DEVELOPED":
-            child["weight"]["value"] = "0.99000000"
+
+    def _mutate(nodes: list[dict[str, Any]]) -> None:
+        for node in nodes:
+            if node["key"] == "EQUITY_DEVELOPED":
+                node["weight"]["value"] = "0.99000000"
+            _mutate(node.get("children") or [])
+
+    _mutate(changed["targets"]["children"])
     new_version_id = "test-reversion-0001"
     cur.execute(
         "INSERT INTO strategy_version (id, strategy_id, parent_version_id, definition, "
@@ -226,23 +248,8 @@ def test_allocation_targets_use_the_runs_frozen_version_not_current(
     )
 
     body = client.get("/allocation").text
-    assert "contro un target del 40,00%" in body
+    assert "heterogeneous_strategies" in body
     assert "99,00%" not in body
-
-
-def test_allocation_reports_the_unpriced_position_rather_than_dropping_it(
-    client: TestClient,
-) -> None:
-    """The demo's CASH position has no price row, so Net Worth is a lower bound.
-
-    Mirrors `compute_allocation`'s contract: an unpriced holding contributes nothing and is
-    recorded. Silently excluding it would understate the total by an unknown amount while
-    reading as a complete answer.
-    """
-    body = client.get("/allocation").text
-    assert "senza prezzo" in body
-    assert "Questo totale è un minimo, non un totale." in body
-    assert "Liquidita EUR" in body
 
 
 def test_design_preview_still_serves(client: TestClient) -> None:

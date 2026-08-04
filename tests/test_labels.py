@@ -16,7 +16,7 @@ import csv
 import inspect
 from enum import StrEnum
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 import pytest
 import yaml  # type: ignore[import-untyped]
@@ -177,9 +177,23 @@ def test_every_demo_asset_class_has_a_domain_label() -> None:
     assert not missing, f"demo asset class(es) with no label: {missing}"
 
 
+def _tolerance_kinds(nodes: list[dict[str, Any]]) -> set[str]:
+    """Every `tolerance.kind` in a target tree, at any depth (ADR-0017: only leaves declare
+    one, but a node may nest `children` to any level)."""
+    kinds: set[str] = set()
+    for node in nodes:
+        tolerance = node.get("tolerance")
+        if tolerance:
+            kinds.add(tolerance["kind"])
+        kinds |= _tolerance_kinds(node.get("children") or [])
+    return kinds
+
+
 def test_every_demo_tolerance_kind_has_a_domain_label() -> None:
-    strategy = yaml.safe_load((REPO_ROOT / "demo" / "strategy.yaml").read_text(encoding="utf-8"))
-    kinds = {target["tolerance"]["kind"] for target in strategy["targets"]}
+    kinds: set[str] = set()
+    for strategy_path in (REPO_ROOT / "demo").glob("strategy*.yaml"):
+        strategy = yaml.safe_load(strategy_path.read_text(encoding="utf-8"))
+        kinds |= _tolerance_kinds(strategy["targets"])
     assert kinds, "the demo fixture should declare at least one target"
     missing = kinds - set(DOMAIN_LABELS)
     assert not missing, f"demo tolerance kind(s) with no label: {missing}"

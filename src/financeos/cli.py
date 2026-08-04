@@ -98,9 +98,11 @@ def seed(ctx: click.Context, fixture: str) -> None:
             PortfolioId(UUID(row["portfolio_id"])), AccountId(UUID(row["account_id"]))
         )
 
-    # Strategy first: `bucket.strategy_id` carries a REFERENCES strategy(id) (ERR-9).
-    strategy_path = fixture_dir / "strategy.yaml"
-    if strategy_path.exists():
+    # Strategy first: `bucket.strategy_id` carries a REFERENCES strategy(id) (ERR-9). A
+    # fixture may author more than one Strategy — `strategy.yaml` plus any
+    # `strategy-*.yaml` sibling, e.g. UX-0001 §8.4's two-strategy demo — imported in a
+    # deterministic (sorted) order, each freezing its own version.
+    for strategy_path in sorted(fixture_dir.glob("strategy*.yaml")):
         import_strategy(uow, id_gen, clock, read_yaml(strategy_path))
 
     for row in _read_csv_dicts(fixture_dir / "buckets.csv"):

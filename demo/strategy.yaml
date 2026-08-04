@@ -1,6 +1,11 @@
-# GENERATED FIXTURE — hand-maintained for the walking-skeleton demo (RFC-0005 §8).
+# GENERATED FIXTURE — hand-maintained for the UX-0001 §8.5 six-class demo (RFC-0005 §8.3).
 # Keys are English (ADR-L03 §5); name/objective/principles/change_note are the user's own
 # Italian prose, imported verbatim.
+#
+# "Crescita di lungo periodo" v3 (UX-0001 §8.4): governs Pensione, Figli, Personale.
+# 11 rules: 7 generic Bucket-scope (ADR-L06 §6.2 — `scope_gate: {kind: BUCKET}`, no
+# `bucket_id`, applying once per governed Bucket), 1 Bucket-specific (Pensione, deliberately
+# a EUR-vs-USD currency mismatch -> `ERROR`), 3 portfolio-scope.
 strategy_id: 237f27fd-8230-53be-8a8c-f30e6d53812c
 name: "Crescita di lungo periodo"
 description: null
@@ -12,35 +17,207 @@ risk:
   principles:
     - "preservare il potere d'acquisto senza fare market timing"
 targets:
-  - key: EQUITY_DEVELOPED
-    weight: "0.40"
+  - key: EQUITY
+    weight: "0.5000"
+    children:
+      - key: EQUITY_DEVELOPED
+        weight: "0.8000"
+        tolerance:
+          kind: ABSOLUTE
+          band: "0.0200"
+      - key: EQUITY_EMERGING
+        weight: "0.2000"
+        tolerance:
+          kind: RELATIVE
+          band: "0.25"
+  - key: BONDS
+    weight: "0.4000"
+    children:
+      - key: BOND_GOV_EUR
+        weight: "0.7500"
+        tolerance:
+          kind: ABSOLUTE
+          band: "0.0200"
+      - key: BOND_CORP_IG
+        weight: "0.2500"
+        tolerance:
+          kind: RELATIVE
+          band: "0.25"
+  - key: CASH
+    weight: "0.1000"
     tolerance:
       kind: ABSOLUTE
-      band: "0.02"
-  - key: BOND_GOV_EUR
-    weight: "0.60"
-    tolerance:
-      kind: ABSOLUTE
-      band: "0.05"
+      band: "0.0300"
 rules:
-  - id: 8e968a19-7229-5a9c-b2ad-9628229e77ae
-    name: "Equity/Developed fuori tolleranza — Pensione"
+  # -- 7 generic Bucket-scope rules (ADR-L06 §6.2): one Rule, evaluated once per governed
+  #    Bucket (Pensione, Figli, Personale), never at the Portfolio-scope call. `scope_gate`
+  #    is the sole applicability mechanism here; the condition's own `scope` param is a
+  #    non-committal label only ("any_bucket"), never a per-bucket ref.
+  - id: 10000000-0000-0000-0000-000000000001
+    name: "Equity/Developed fuori tolleranza"
     enabled: true
     priority: HIGH
     suggestion_class: CONSIDER_REBALANCE
-    # D10 / P25: the previous wording hardcoded "è" and used the bare
-    # {asset_class_label}, which is ungrammatical for every feminine-plural
-    # taxonomy head — "Azioni dei paesi sviluppati ... è". The role bindings
-    # carry the agreement instead (L05 §4.2), so one template is grammatical for
-    # every class, and the head noun keeps its capital mid-sentence per P25.
     message: >-
-      {asset_class_label_the_cap} nel bucket Pensione {asset_class_copula} al {current_pct}%
-      contro un target del {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di
-      {drift_pct}pp ({drift_value} {currency}).
+      {asset_class_label_the_cap} {asset_class_copula} al {current_pct}% contro un target del
+      {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di {drift_pct}pp
+      ({drift_value} {currency}).
     condition:
       kind: drift_outside_tolerance
       kind_version: 1
       params:
         asset_class: EQUITY_DEVELOPED
-        scope: "bucket:44940ba1-0bfd-5d7c-ba07-4d80aefdd508"
-change_note: "Prima versione importata per la demo."
+        scope: "any_bucket"
+    scope_gate:
+      kind: BUCKET
+  - id: 10000000-0000-0000-0000-000000000002
+    name: "Equity/Emerging fuori tolleranza"
+    enabled: true
+    priority: HIGH
+    suggestion_class: CONSIDER_REBALANCE
+    message: >-
+      {asset_class_label_the_cap} {asset_class_copula} al {current_pct}% contro un target del
+      {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di {drift_pct}pp
+      ({drift_value} {currency}).
+    condition:
+      kind: drift_outside_tolerance
+      kind_version: 1
+      params:
+        asset_class: EQUITY_EMERGING
+        scope: "any_bucket"
+    scope_gate:
+      kind: BUCKET
+  - id: 10000000-0000-0000-0000-000000000003
+    name: "Bond/Gov EUR fuori tolleranza"
+    enabled: true
+    priority: HIGH
+    suggestion_class: CONSIDER_REBALANCE
+    message: >-
+      {asset_class_label_the_cap} {asset_class_copula} al {current_pct}% contro un target del
+      {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di {drift_pct}pp
+      ({drift_value} {currency}).
+    condition:
+      kind: drift_outside_tolerance
+      kind_version: 1
+      params:
+        asset_class: BOND_GOV_EUR
+        scope: "any_bucket"
+    scope_gate:
+      kind: BUCKET
+  - id: 10000000-0000-0000-0000-000000000004
+    name: "Bond/Corporate IG fuori tolleranza"
+    enabled: true
+    priority: HIGH
+    suggestion_class: CONSIDER_REBALANCE
+    message: >-
+      {asset_class_label_the_cap} {asset_class_copula} al {current_pct}% contro un target del
+      {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di {drift_pct}pp
+      ({drift_value} {currency}).
+    condition:
+      kind: drift_outside_tolerance
+      kind_version: 1
+      params:
+        asset_class: BOND_CORP_IG
+        scope: "any_bucket"
+    scope_gate:
+      kind: BUCKET
+  - id: 10000000-0000-0000-0000-000000000005
+    name: "Liquidità fuori tolleranza"
+    enabled: true
+    priority: HIGH
+    suggestion_class: CONSIDER_REBALANCE
+    message: >-
+      {asset_class_label_the_cap} {asset_class_copula} al {current_pct}% contro un target del
+      {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di {drift_pct}pp
+      ({drift_value} {currency}).
+    condition:
+      kind: drift_outside_tolerance
+      kind_version: 1
+      params:
+        asset_class: CASH
+        scope: "any_bucket"
+    scope_gate:
+      kind: BUCKET
+  - id: 10000000-0000-0000-0000-000000000006
+    name: "Capitale privo di target"
+    enabled: true
+    priority: HIGH
+    suggestion_class: REVIEW_STRATEGY
+    message: "{asset_class_labels}: capitale privo di un target nella strategia in vigore, oltre la soglia di attenzione del {threshold_pct}%."
+    condition:
+      kind: untargeted_allocation
+      kind_version: 1
+      params:
+        scope: "any_bucket"
+        threshold_weight: "0.05"
+    scope_gate:
+      kind: BUCKET
+  - id: 10000000-0000-0000-0000-000000000007
+    name: "Equity/Developed assente"
+    enabled: true
+    priority: LOW
+    suggestion_class: REVIEW_ALLOCATION
+    message: "{asset_class_label_the_cap} {asset_class_copula} completamente assente dal portafoglio, contro un target del {target_pct}%."
+    condition:
+      kind: allocation_absent
+      kind_version: 1
+      params:
+        asset_class: EQUITY_DEVELOPED
+        scope: "any_bucket"
+    scope_gate:
+      kind: BUCKET
+  # -- 1 Bucket-specific rule: names Pensione explicitly and authors a USD target against a
+  #    EUR bucket on purpose, so `Money` raises under I-15 rather than converting (ERROR,
+  #    not counted among the 7 generic evaluations above, per W2-rule-scope-partition.md §1).
+  - id: 10000000-0000-0000-0000-000000000008
+    name: "Pensione sotto target (valuta errata, deliberato)"
+    enabled: true
+    priority: CRITICAL
+    suggestion_class: REVIEW_LIQUIDITY
+    message: "Il bucket {bucket} è sotto il target di {target_value} {currency}: {shortfall_value} {currency} di scostamento."
+    condition:
+      kind: bucket_below_target_value
+      kind_version: 1
+      params:
+        bucket: "bucket:44940ba1-0bfd-5d7c-ba07-4d80aefdd508"
+        target_amount: "50000.00"
+        target_currency: "USD"
+  # -- 3 portfolio-scope rules.
+  - id: 10000000-0000-0000-0000-000000000009
+    name: "Sovra-apportionment (portafoglio)"
+    enabled: true
+    priority: HIGH
+    suggestion_class: REVIEW_BUCKET_ASSIGNMENT
+    message: "Su {instrument_labels} risultano impegnate {apportioned_committed} quote contro {held_of_committed} effettivamente possedute: {deficit_committed} quote in eccesso di apportionment."
+    condition:
+      kind: over_apportioned
+      kind_version: 1
+      params:
+        scope: "portfolio:a8283d57-9cc4-5376-8952-1cf4208fcbd7"
+  - id: 10000000-0000-0000-0000-00000000000a
+    name: "Capitale non apportionato (portafoglio)"
+    enabled: true
+    priority: MEDIUM
+    suggestion_class: REVIEW_BUCKET_ASSIGNMENT
+    message: "Il capitale non apportionato è al {residual_pct}% del portafoglio, sopra la soglia di attenzione del {threshold_pct}%."
+    condition:
+      kind: unassigned_residual_above
+      kind_version: 1
+      params:
+        threshold_weight: "0.10"
+  - id: 10000000-0000-0000-0000-00000000000b
+    name: "Equity/Developed fuori tolleranza (portafoglio)"
+    enabled: true
+    priority: HIGH
+    suggestion_class: CONSIDER_REBALANCE
+    message: >-
+      {asset_class_label_the_cap} {asset_class_copula} al {current_pct}% contro un target del
+      {target_pct}% (tolleranza ±{tolerance_pct}pp): scostamento di {drift_pct}pp
+      ({drift_value} {currency}).
+    condition:
+      kind: drift_outside_tolerance
+      kind_version: 1
+      params:
+        asset_class: EQUITY_DEVELOPED
+        scope: "portfolio:a8283d57-9cc4-5376-8952-1cf4208fcbd7"
+change_note: "Cresciuta a fixture a sei classi (UX-0001 §8.5): quattro Bucket, due Strategy, tutti e quattro gli outcome."

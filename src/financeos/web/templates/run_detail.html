@@ -12,7 +12,11 @@
 {% block content %}
 
 {% if skip %}
-{% include "partials/skip_notice.html" %}
+{% with skipped_count = skip.skipped_count, error_count = skip.error_count,
+        total_count = skip.total_count, reasons = skip.reasons,
+        run_url = skip.run_url %}
+  {% include "partials/skip_notice.html" %}
+{% endwith %}
 {% endif %}
 
 <article class="record" style="margin-top: var(--sp-6)">
