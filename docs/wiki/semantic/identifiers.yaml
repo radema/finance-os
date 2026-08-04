@@ -1,0 +1,516 @@
+# Finance OS — identifier-family index
+#
+# Every named identifier family in the corpus, what it means, where its registry lives, and
+# what it constrains. Point-in-time map, base commit 2dd7346.
+#
+# QUERY RECIPES
+#   grep -A6 '^ *- id: I-12$'          identifiers.yaml   # one identifier
+#   grep -A8 '^- family: I$'           identifiers.yaml   # a family's header (registry location)
+#   grep -n  '^ *- id: '               identifiers.yaml   # every identifier, with line numbers
+#   grep -B4 'finding_key'             identifiers.yaml   # which identifiers touch a concept
+#
+# Note: member records are indented 4 spaces (`    - id: I-12`). The recipes above use `^ *-`
+# so they keep working if nesting depth ever changes.
+#
+# CITE THE NUMBER, DO NOT PARAPHRASE. Statements below are trimmed for indexing; the registry
+# location named in each family header is normative.
+
+schema_version: 1
+base_commit: 2dd7346
+
+# =====================================================================================
+families:
+
+# -------------------------------------------------------------------------------------
+- family: I
+  name: Invariants
+  range: I-1 .. I-22
+  registry: docs/seed/rfcs/RFC-0000-index.md §6
+  registry_caveat: >
+    RFC-0000 §6 lists ONLY I-1..I-18. I-19..I-22 were added by RFC-0012 §4, which also RESTATES
+    I-14; RFC-0000 was never updated on disk. This is a live staleness the corpus flags through
+    its own precedence mechanism. CLAUDE.md's "I-1..I-18" reflects RFC-0000, not the current set.
+  defined_in: RFC-0004 §6.1 (from RFC-0003) and §6.2 (added), plus RFC-0012 §4 (deltas)
+  enforcement: mixed — model validators, repository checks, import-linter, named property tests
+  members:
+    - id: I-1
+      statement: A Holding belongs to exactly one Asset.
+      constrains: [Holding, Asset]
+      enforced_by: Holding.asset_id (single field)
+    - id: I-2
+      statement: An Asset may belong to many Buckets.
+      constrains: [Asset, Bucket, VirtualHolding]
+      enforced_by: bucket_apportionment (many rows per asset)
+    - id: I-3
+      statement: A Bucket is governed by exactly one Strategy.
+      constrains: [Bucket, Strategy]
+      enforced_by: bucket.strategy_id non-nullable (ERR-9)
+      note: >
+        This is what makes SkipReason.HETEROGENEOUS_STRATEGIES necessary: each Bucket has one
+        Strategy, so a PORTFOLIO-scope evaluation over Buckets with different StrategyVersions
+        has no single target tree to resolve. Never averaged (RFC-0007 §5).
+    - id: I-4
+      statement: A Strategy contains at least one Rule.
+      constrains: [StrategyDefinition, Rule]
+      enforced_by: StrategyDefinition._at_least_one_rule (core/strategy/strategy.py:97)
+    - id: I-5
+      statement: Every Recommendation derives from a Rule.
+      constrains: [Recommendation, Provenance, Rule]
+      enforced_by: >
+        Provenance.rule_id and .run_id are NON-NULLABLE — structural, no construction path exists
+        for a Recommendation without a Rule (core/decision/artifacts.py:102).
+    - id: I-6
+      statement: Every Alert is explainable — replayable back to the numbers that produced it.
+      constrains: [Alert, EvaluationTrace, TraceRecorder]
+      enforced_by: >
+        Alert._is_explainable (artifacts.py:87) requires a bound, stepped trace for FIRED and
+        NOT_FIRED; the TraceRecorder makes the trace ACCUMULATED not emitted, so no untraced
+        arithmetic path exists. Verified by tests/test_trace_replay.py.
+    - id: I-7
+      statement: No engine writes to storage.
+      constrains: [core.engines, FactSet, Bound]
+      enforced_by: >
+        import-linter contract C2 (core.engines may not import financeos.ports). Consequences:
+        no lazy fact loading, no Clock in the core, ages measured against the run's as_of.
+    - id: I-8
+      statement: All mutations pass through the domain.
+      constrains: [adapters, app]
+      enforced_by: repository layer; no raw-SQL write path outside adapters
+    - id: I-9
+      statement: >
+        Per Asset at any as_of, Σ apportioned <= Holding; a violation is REPORTABLE, not
+        rejectable.
+      constrains: [ApportionmentLine, ApportionmentRecord, ResidualComputation, over_apportioned]
+      revised_by: ADR-0025 (from a rejection rule to an evaluation-time finding)
+      enforced_by: the over_apportioned condition kind
+      note: OVER-APPORTIONMENT WARNS, NEVER BLOCKS. Looks like a bug; is deliberate.
+    - id: I-10
+      statement: Operations are append-only; corrections compensate.
+      constrains: [Operation, ApportionmentRecord, Alert, Recommendation, EvaluationRun]
+      revised_by: RFC-0005 §5.2 (enforcement), ADR-0028 (CORRECTION type)
+      enforced_by: >
+        contract C6 — tests/test_c6_append_only.py::test_no_update_or_delete_against_append_only_tables
+        and ::test_append_only_table_list_matches_migration_001; plus
+        tests/test_operation_repository_invariants.py::test_w10_the_repository_exposes_no_update_or_delete_method
+    - id: I-11
+      statement: Every Alert pins (strategy, version, rule) plus its inputs.
+      constrains: [Alert, EvaluationRun, StrategyVersion]
+      revised_by: RFC-0011 ERR-6 (wording — the pin moved to EvaluationRun)
+      enforced_by: >
+        evaluation_run.strategy_version_id FK, one join from every Alert, so the pin cannot dangle.
+    - id: I-12
+      statement: A Recommendation is never prescriptive.
+      constrains: [Recommendation, SuggestionClass]
+      enforced_by: >
+        STRUCTURAL — there is no instrument, action, direction or quantity field to populate, and
+        no SuggestionClass member can carry one. Verified by tests/test_i12_structural.py.
+      note: The MiFID suitability firewall expressed as a SCHEMA rather than as a policy.
+    - id: I-13
+      statement: The children of every target-tree node sum to 1 within an explicit Decimal epsilon.
+      constrains: [TargetAllocation, TargetNode]
+      revised_by: ADR-0017 (hierarchical, relative weights), RFC-0011 ERR-5
+      enforced_by: >
+        _check_sum_to_one against WEIGHT_SUM_EPSILON, in the CONSTRUCTOR
+        (core/strategy/targets.py:113). Effective leaf targets therefore sum to 1 BY
+        CONSTRUCTION — there is no separate global check, and adding one would be redundant.
+    - id: I-14
+      statement: Targets are keyed by AssetClass, never by AssetId.
+      constrains: [TargetNode, LeafTarget, AssetClass]
+      revised_by: RFC-0012 §4 / ADR-0033 (restated to (axis, value) pairs — NOT IMPLEMENTED)
+      rescoped_by: RFC-0012 ERR-14 (the "no AssetId" claim applies to target/drift conditions, not per-asset ones)
+      enforced_by: TargetNode.key is typed AssetClass
+      note: >
+        ERR-14 matters: over_apportioned already keys facts by AssetId, and that is NOT a
+        violation — I-14 governs the TARGET TREE, not every condition.
+    - id: I-15
+      statement: Money arithmetic requires the same currency.
+      constrains: [Money]
+      enforced_by: CurrencyMismatchError, core/shared/money.py
+    - id: I-16
+      statement: Snapshot and IndicatorReading are immutable.
+      constrains: [Snapshot, IndicatorReading]
+      enforced_by: frozen DomainModel; snapshot rows written once per evaluate run
+      note: Immutable but REBUILDABLE and DROPPABLE — a checkpoint, not a source of truth.
+    - id: I-17
+      statement: A Recommendation cannot reference a Decision.
+      constrains: [Recommendation, Decision]
+      enforced_by: absence of the field — the edge points Decision -> Recommendation only
+    - id: I-18
+      statement: The category hierarchy is acyclic.
+      constrains: [AssetClass, ClassificationAxis]
+      enforced_by: not yet — no category hierarchy type exists (V1.2)
+    - id: I-19
+      statement: Per Asset per axis, classification weights sum to 1 within an explicit Decimal epsilon.
+      added_by: RFC-0012 §4 (ADR-0033)
+      constrains: [ClassificationAxis]
+      enforced_by: NOT IMPLEMENTED — trivially satisfied today (one axis, every weight 1)
+    - id: I-20
+      statement: Every Asset carries a classification on the ASSET_CLASS axis.
+      added_by: RFC-0012 §4 (ADR-0033)
+      constrains: [Asset, AssetClass]
+      enforced_by: asset.asset_class NOT NULL (the degenerate single-axis case)
+    - id: I-21
+      statement: Every registered condition_kind declares its epistemic class (A/B/C).
+      added_by: RFC-0012 §4 (originates in RFC-0010 ADR-0032)
+      constrains: [ConditionKindSpec]
+      enforced_by: NOT IMPLEMENTED — ConditionKindSpec has no epistemic-class field
+    - id: I-22
+      statement: A CANDIDATE strategy_version is never referenced by strategy.current_version_id.
+      added_by: RFC-0012 §4 (ADR-0035)
+      constrains: [Strategy, StrategyVersion]
+      enforced_by: NOT IMPLEMENTED — lineage_kind does not exist yet
+      note: >
+        When built, this is the SECOND of two independent guards keeping a candidate out of the
+        findings list; the first is RunMode.HYPOTHETICAL producing zero Recommendations.
+
+# -------------------------------------------------------------------------------------
+- family: C
+  name: Architecture contracts
+  range: C1 .. C6
+  registry: pyproject.toml [tool.importlinter] (C1-C5) + tests/ (C4 positive half, C6)
+  enforcement: "`uv run lint-imports` for C1-C5; pytest for C4's positive half and C6"
+  members:
+    - id: C1
+      statement: Core purity — core may not import adapters, web, app, duckdb, fastapi, pandas, polars, or any HTTP client.
+      type: import-linter forbidden
+      constrains: [core]
+      note: Zero I/O, zero framework, Decimal only. float is BANNED (FloatNotAllowedError).
+    - id: C2
+      statement: core.engines may not import financeos.ports (I-7 made structural).
+      type: import-linter forbidden
+      constrains: [core.engines]
+      note: >
+        This is why FactSet must be fully materialized, why next_id is passed as a VALUE into
+        decision_engine.materialize, and why RuleScopeGate is read by app/ not by the engine.
+    - id: C3
+      statement: >
+        The five bounded contexts (cashflow, portfolio, strategy, market, decision) are mutually
+        independent — no sibling may import another.
+      type: import-linter independence
+      constrains: [core.cashflow, core.portfolio, core.strategy, core.market, core.decision]
+      note: >
+        core/shared/ is the ONLY shared vocabulary. This is ARCHITECTURALLY LOAD-BEARING and
+        explains several placements that otherwise look arbitrary — see
+        ../ontology/bounded-contexts.md.
+    - id: C4
+      statement: >
+        Read/write split — app may not import adapters.duckdb.queries; only web may import them.
+      type: import-linter forbidden (negative half) + test (positive half)
+      constrains: [app, adapters.duckdb.queries, web]
+      enforced_by: tests/test_c4_read_write_split.py::test_only_web_imports_the_read_side_query_modules
+    - id: C5
+      statement: No egress in core or app — httpx, httpx2, requests are forbidden.
+      type: import-linter forbidden
+      constrains: [core, app]
+      note: >
+        httpx2 is listed BECAUSE that is the real module name adapters/market/http_price_provider.py
+        imports (`import httpx2 as httpx`). import-linter matches the imported module, not the
+        alias, so a C5 naming only "httpx" could not see the one HTTP client this project ships.
+    - id: C6
+      statement: No UPDATE or DELETE against append-only tables.
+      type: test only — NOT an import-linter contract
+      constrains: [operation, bucket_apportionment, price, evaluation_run, alert, recommendation, strategy_version]
+      enforced_by: tests/test_c6_append_only.py
+      note: >
+        The table list itself is pinned by
+        test_append_only_table_list_matches_migration_001, so adding an append-only table without
+        registering it fails the suite.
+
+# -------------------------------------------------------------------------------------
+- family: P
+  name: Product-owner ratifications
+  range: P1 .. P33
+  registry_split:
+    - P1..P15: docs/handoff/HANDOFF-2026-07-26.md §(ratifications table)
+    - P16..P20: docs/handoff/HANDOFF-2026-07-28.md §2.1
+    - P21..P33: docs/plans/RATIFICATIONS-2026-07-30.md
+  enforcement: convention + review; a few have code consequences (P31/P32 on RiskLevel)
+  rule: >
+    PRODUCT-DEFINITION QUESTIONS GO TO THE PRODUCT OWNER. AN AGENT NEVER INVENTS ONE. These are
+    ratified decisions, not implementer defaults — cite the number where the wording or scale is
+    quoted.
+  members_of_note:
+    - id: P1
+      statement: Scope is S + V1.0; V1.1-V1.3 are sketched only, not built.
+    - id: P2
+      statement: UI language Italian for user-facing copy, English for code objects and identifiers.
+      note: Overrides UX-0001 §6.1's provisional English. See also ADR-L03.
+    - id: P5
+      statement: Method is direct orchestration against the RFCs — no Speckit scaffold.
+      note: The RFCs already ARE the spec. Do not initialize .specify/ here.
+    - id: P7
+      statement: Provenance carrier requirement (Recommendation records what it was produced from).
+      constrains: [Provenance]
+    - id: P10
+      statement: No brand constraint — independent identity; OpenEconomics brand skills deliberately NOT applied.
+    - id: P14
+      statement: Decimals are STORED with a dot and LOCALIZED in the view.
+      constrains: [Money, adapters/duckdb/queries/it_locale.py]
+    - id: P17
+      statement: Impersonal register for all Italian copy — "La strategia richiede...", never "La tua strategia".
+      constrains: [all user-facing copy, core/shared/labels.py]
+    - id: P18
+      statement: Use `target`, not `obiettivo`.
+    - id: P19
+      statement: Asset-class heads render as Italian PROSE forms (le Azioni dei paesi sviluppati).
+      constrains: [core/shared/labels.py]
+      note: This is what makes L05's grammatical-agreement machinery worth building.
+    - id: P20
+      statement: demo/ fixture data is Italianised; instrument names stay as they really are.
+    - id: P21
+      statement: SuggestionClass surface forms are impersonal infinitives, per L05 §5.7 VERBATIM.
+      constrains: [SuggestionClass]
+      note: None names an instrument, direction or size (I-12, E7).
+    - id: P22
+      statement: Skip-reason labels and teaching glosses per L05 §5.6 verbatim, incl. heterogeneous_strategies.
+      constrains: [SkipReason]
+    - id: P23
+      statement: Asset-class `short` forms per L05 §5.2 verbatim.
+      note: Used ONLY in non-syntactic positions (axis, legend, cell, rail).
+    - id: P24
+      statement: Chart-axis taxonomy heads render as Italian SHORT forms, not English.
+    - id: P25
+      statement: Capitalisation — head noun capitalised, qualifiers lowercase; capitals appear mid-sentence BY DESIGN.
+    - id: P26
+      statement: UNASSIGNED surface is "Capitale non assegnato", short "Non assegnato".
+      constrains: [Snapshot.by_bucket, ResidualComputation]
+    - id: P27
+      statement: '"non targettizzato" (a calque) replaced by "non compreso nella strategia", short "senza target".'
+    - id: P28
+      statement: >
+        Instrument naming — frame noun `posizione` carries agreement; instrument names are opaque
+        proper nouns quoted in «...», never inflected; full name + ISIN where one exists.
+      note: The discriminator is a DECLARED asset field, never inferred from id-string shape.
+    - id: P29
+      statement: over_apportioned is reported PER-SCOPE, not per-asset, for V1.0.
+      constrains: [over_apportioned]
+    - id: P30
+      statement: untargeted_allocation's threshold_weight <= 0 is REJECTED AT IMPORT TIME, not skipped at runtime.
+      constrains: [UntargetedAllocationParams]
+    - id: P31
+      statement: >
+        RiskLevel is the ordinal 1-7 UCITS KIID (SRRI) / PRIIPs KID (SRI) scale — NOT the invented
+        5-member enum. Owner-declared, expressed on the regulatory scale.
+      constrains: [RiskLevel]
+      note: >
+        This codebase does NOT compute SRRI/SRI from volatility or risk bands, and no field,
+        docstring, ADR line or UI string may imply otherwise. The gloss is WITHDRAWN.
+    - id: P32
+      statement: RiskLevel's seven steps are named, with Italian surface forms; members keep English identifiers.
+      constrains: [RiskLevel, risk_level_rank]
+    - id: P33
+      statement: A COMPUTED portfolio/bucket risk level is a separate feature, OUT of V1.0.
+      note: >
+        The declared profile is an input the system RESTATES; a computed level is arithmetic
+        performed against it, and collapsing them would let a computed number overwrite a user
+        declaration. Recorded at docs/features-candidates/portfolio-risk-level.md.
+
+# -------------------------------------------------------------------------------------
+- family: ADR
+  name: Corpus architecture decision records
+  range: ADR-0001 .. ADR-0036
+  registry: >
+    Full text lives in the OWNING RFC's Appendix A. Cumulative index: RFC-0010 v0.2 Appendix A
+    (current authority per RFC-0012 §8); RFC-0000 §5 (summary by range); RFC-0011 Appendix A
+    (historical snapshot through 0031).
+  gaps: none — all 36 exist
+  members:
+    - {id: ADR-0001, title: Bucket apportionment model, owner: RFC-0004, note: amended by ADR-0025}
+    - {id: ADR-0002, title: Definition of Decision, owner: RFC-0004}
+    - {id: ADR-0003, title: Holding as derived read model, owner: RFC-0004}
+    - {id: ADR-0004, title: Scope of reconstructability (Stage A / Stage B), owner: RFC-0009}
+    - {id: ADR-0005, title: "Local store: DuckDB single file", owner: RFC-0005}
+    - {id: ADR-0006, title: Pydantic v2 in the domain core, owner: RFC-0005}
+    - {id: ADR-0007, title: "UI: FastAPI + Jinja2 + HTMX", owner: RFC-0005}
+    - {id: ADR-0008, title: Single process, on-demand ingestion, owner: RFC-0005, note: "127.0.0.1 only"}
+    - {id: ADR-0009, title: Strategy files as derived artifacts, owner: RFC-0005}
+    - {id: ADR-0010, title: Defer commercialization posture, owner: RFC-0005}
+    - {id: ADR-0011, title: Corrections as append-only supersession, owner: RFC-0009}
+    - {id: ADR-0012, title: Reclassification as correction, owner: RFC-0009, note: amended by RFC-0012 (per-axis)}
+    - {id: ADR-0013, title: Trace stored as JSON, not STRUCT, owner: RFC-0009, note: amended by ERR-1}
+    - {id: ADR-0014, title: Conditions as a closed typed catalog, owner: RFC-0006}
+    - {id: ADR-0015, title: No forward chaining, owner: RFC-0006}
+    - {id: ADR-0016, title: SKIPPED distinct from NOT_FIRED, owner: RFC-0006}
+    - {id: ADR-0017, title: Hierarchical TargetAllocation with relative weights, owner: RFC-0007}
+    - {id: ADR-0018, title: Tolerance semantics (ABSOLUTE pp / RELATIVE proportional), owner: RFC-0007}
+    - {id: ADR-0019, title: Dual valuation basis for bonds, owner: RFC-0007}
+    - {id: ADR-0020, title: Strategy as policy, applied per Bucket, owner: RFC-0007}
+    - {id: ADR-0021, title: Findings as a derived read model, owner: RFC-0008}
+    - {id: ADR-0022, title: Dismissal is a Decision, owner: RFC-0008}
+    - {id: ADR-0023, title: rationale assembled from StrategyVersion, owner: RFC-0008}
+    - {id: ADR-0024, title: Cash Flow deferred to V1.1, owner: RFC-0010, note: amended by ADR-0026}
+    - {id: ADR-0025, title: VirtualHolding derived; I-9 as evaluation-time finding, owner: RFC-0011}
+    - {id: ADR-0026, title: Cash legs auto-emitted as paired Operations, owner: RFC-0011}
+    - {id: ADR-0027, title: Rule definitions embedded in StrategyVersion, owner: RFC-0011}
+    - {id: ADR-0028, title: OperationType widened; transfers as pairs (E10), owner: RFC-0011}
+    - {id: ADR-0029, title: UNASSIGNED in denominators fixed, owner: RFC-0011}
+    - {id: ADR-0030, title: Goal links outside the freeze boundary, owner: RFC-0011, note: amended by ADR-0036 / ERR-12}
+    - {id: ADR-0031, title: "Market owns all external observations, prices included (E11)", owner: RFC-0011}
+    - {id: ADR-0032, title: "Increment classes: observation, projection, generation", owner: RFC-0010 v0.2}
+    - {id: ADR-0033, title: Orthogonal classification axes with fractional exposure, owner: RFC-0012}
+    - {id: ADR-0034, title: Valuation and return series as derived read models, owner: RFC-0012}
+    - {id: ADR-0035, title: Candidate StrategyVersion evaluation via draft lineage, owner: RFC-0012}
+    - {id: ADR-0036, title: Goal as a first-class object with a revision audit, owner: RFC-0012}
+
+# -------------------------------------------------------------------------------------
+- family: ADR-L
+  name: Local architecture decision records (build blockers)
+  range: ADR-L01 .. ADR-L06
+  registry: docs/plans/adr/
+  distinction: >
+    A SEPARATE SERIES from corpus ADRs. Local ADRs resolve BUILD blockers the frozen corpus does
+    not decide. They may override a corpus ADR's clause where the corpus is silent or wrong in
+    practice — cite both when they do (e.g. "overrides ADR-0025's severity clause").
+  members:
+    - id: ADR-L01
+      title: "`operation` link-flag truth table: corrects_id x transfer_pair_id x cash_leg_of"
+      file: docs/plans/adr/ADR-L01-operation-flags-truth-table.md
+      constrains: [Operation]
+      note: The row-local rules Operation's validator and 001_init.sql's CHECKs both encode.
+    - id: ADR-L02
+      title: "Severity declarations for unassigned_residual_above, allocation_absent, bucket_below_target_value"
+      file: docs/plans/adr/ADR-L02-severity-declarations.md
+      constrains: [SeverityDeclaration]
+    - id: ADR-L03
+      title: "Charting library (ECharts, vendored) and UI language (Italian copy, English code)"
+      file: docs/plans/adr/ADR-L03-chart-lib-and-ui-language.md
+      constrains: [web]
+      note: ECharts and htmx are VENDORED — no CDN. Chart colours are "token:--name", never literals.
+    - id: ADR-L04
+      title: "over_apportioned severity under the uniform anchor"
+      file: docs/plans/adr/ADR-L04-over-apportioned-severity.md
+      constrains: [over_apportioned, ApportionmentLine]
+      note: §4.4 D5 is why ApportionmentLine asserts apportioned_quantity > 0 in the MODEL.
+    - id: ADR-L05
+      title: "untargeted_allocation reduction over multiple classes"
+      file: docs/plans/adr/ADR-L05-untargeted-allocation-reduction.md
+      constrains: [untargeted_allocation, FACT_TARGETS, core/shared/labels.py]
+      note: §5 is why FACT_TARGETS exists separately from FACT_DRIFT. See also L05 label registry.
+    - id: ADR-L06
+      title: "Rule scope gating: which evaluation call a Rule applies to"
+      file: docs/plans/adr/ADR-L06-rule-scope-gating.md
+      constrains: [RuleScopeGate, app/evaluate_strategy.py, SkipReason.HETEROGENEOUS_STRATEGIES]
+      note: The newest decision at 2dd7346. §4.1 sets scope_gate=None as the compatibility default.
+
+# -------------------------------------------------------------------------------------
+- family: ERR
+  name: Errata
+  range: ERR-1 .. ERR-15
+  registry_split:
+    - ERR-1..ERR-10: docs/seed/rfcs/RFC-0011-repairs-errata.md §2
+    - ERR-11..ERR-15: docs/seed/rfcs/RFC-0012-classification-measurement-goals.md §2
+  gaps: none
+  members:
+    - {id: ERR-1,  repairs: "alert.severity column missing; mv_finding query fails without it", amends: RFC-0009 §3.2, constrains: [Alert, Finding]}
+    - {id: ERR-2,  repairs: "evaluation_run has no scope; the resolution rule is scope-dependent", amends: RFC-0009 §3.2, constrains: [EvaluationRun, Scope, ScopeKind]}
+    - {id: ERR-3,  repairs: "condition-catalog Avail column contradicts roadmap sequencing", amends: RFC-0006 §3, constrains: [indicator_threshold, concentration_above]}
+    - {id: ERR-4,  repairs: "bucket_below_target_value declares a phantom `prices` fact", amends: RFC-0006 §3, constrains: [FACT_BUCKET_VALUE]}
+    - {id: ERR-5,  repairs: "RFC-0004's TargetAllocation / I-13 silently superseded by ADR-0017", amends: "RFC-0004 §2.1, §6.2", constrains: [TargetAllocation, I-13]}
+    - {id: ERR-6,  repairs: "I-11 enforcement wording stale (Alert.strategyVersion field)", amends: RFC-0004 class diagram, constrains: [EvaluationRun, Alert, I-11]}
+    - {id: ERR-7,  repairs: "the walking skeleton predates EvaluationRun (seven to eight aggregates)", amends: RFC-0005 §8, constrains: [EvaluationRun]}
+    - {id: ERR-8,  repairs: "missing DDL: portfolio, account, bucket, strategy, strategy_version, portfolio_account", amends: RFC-0009 §3, constrains: [Portfolio, Bucket, Strategy, StrategyVersion, Account]}
+    - {id: ERR-9,  repairs: "Bucket field lists disagree across RFC-0004 and RFC-0009", amends: RFC-0004 §2.2, constrains: [Bucket]}
+    - {id: ERR-10, repairs: "RFC-0006 §9 YAML example incomplete (enabled, max_staleness defaults)", amends: RFC-0006 §9, constrains: [ConditionKindSpec.default_max_staleness, Rule.enabled]}
+    - {id: ERR-11, repairs: "goal table has no DDL; strategy_goal FK dangles", amends: RFC-0011 ERR-8, constrains: [Goal]}
+    - {id: ERR-12, repairs: "ADR-0030's reconstructability claim is false (Goal is mutable and unaudited)", amends: ADR-0030, constrains: [Goal]}
+    - {id: ERR-13, repairs: "candidate-StrategyVersion evaluation is used in the UI mock but never specified", amends: "RFC-0006 §6.2, RFC-0008 §8", constrains: [RunMode, StrategyVersion], resolved_by: ADR-0035}
+    - {id: ERR-14, repairs: "concentration_above already contradicts RFC-0006 §7.1's 'no AssetId' claim", amends: RFC-0006 §7.1, constrains: [I-14], note: "the claim is RESCOPED — target/drift conditions vs per-asset conditions"}
+    - {id: ERR-15, repairs: "RFC-0011's DOCUMENT-scoped precedence inverts against RFC-0010 v0.2", amends: "RFC-0011 §1, §6", constrains: [governance], note: "replaced by RFC-0012 §8's SECTION-scoped, recency-ordered precedence"}
+
+# -------------------------------------------------------------------------------------
+- family: E
+  name: Extension and ratification queue
+  range: E1 .. E11 (E12 .. E14 added by RFC-0012 §5)
+  registry: >
+    RFC-0011 §6 was the authoritative queue; RFC-0010 v0.2 §5 is now the actual location
+    (integrating RFC-0011 §6). RFC-0000 §7 carries a non-authoritative summary.
+  meaning: >
+    An extension BEYOND the source corpus, requiring product-track ratification. "Required"
+    items block a milestone; "Technical" items are implementer-side.
+  members:
+    - {id: E1,  description: "Ninth bounded context: Decision (owns Alert/Recommendation/Decision)", status: "Required, blocks Skeleton", implemented: yes}
+    - {id: E2,  description: "StrategyVersion as a first-class immutable aggregate", status: Technical, implemented: yes}
+    - {id: E3,  description: "VirtualHolding as a named entity", status: "Low risk", implemented: "yes, as DERIVED (amended by ADR-0025)"}
+    - {id: E4,  description: "EvaluationRun as a first-class aggregate", status: Technical, implemented: yes}
+    - {id: E5,  description: "Alert widened to a rule evaluation record (NOT_FIRED persisted)", status: "Required, V1.0", implemented: yes}
+    - {id: E6,  description: "asset_classification_audit table", status: Technical, implemented: "table exists"}
+    - {id: E7,  description: "SuggestionClass as a closed enum", status: "Required, V1.0", implemented: yes}
+    - {id: E8,  description: "the Strategy Engine is not a ninth Domain Service", status: Technical, implemented: yes}
+    - {id: E9,  description: "Goal vs Strategy.objective split", status: "Required — V2, ESCALATED to V1.1 by RFC-0012 §5 / ADR-0036", implemented: no}
+    - {id: E10, description: "OperationType widened to seven values (transfers as pairs, CORRECTION)", status: "Required, V1.0", implemented: yes}
+    - {id: E11, description: "Market context charter includes prices, not just indicators", status: "Low risk, V1.0", implemented: yes}
+    - {id: E12, description: "classification axes", status: "added by RFC-0012 §5", implemented: no}
+    - {id: E13, description: "per-asset metric conditions", status: "added by RFC-0012 §5", implemented: no}
+    - {id: E14, description: "risk-model assumptions", status: "added by RFC-0012 §5", implemented: no}
+
+# -------------------------------------------------------------------------------------
+- family: R
+  name: Resolutions / rejections recorded in RFC-0011 §4
+  range: R-1 .. R-3
+  registry: docs/seed/rfcs/RFC-0011-repairs-errata.md §4
+  members:
+    - {id: R-1, statement: "RFC-0008 §12.4 REJECTED", constrains: [Recommendation]}
+    - {id: R-2, statement: "scope_id is a deliberately REDUNDANT finding_key component", constrains: [finding_key], note: "so a future kind whose params omit scope cannot silently merge findings across Buckets"}
+    - {id: R-3, statement: "RFC-0006 §9 YAML defaults declared at schema level", constrains: [ConditionKindSpec], related: ERR-10}
+
+# -------------------------------------------------------------------------------------
+- family: L05
+  name: Italian label registry
+  registry: docs/plans/L05-italian-label-registry.md
+  code: src/financeos/core/shared/labels.py
+  meaning: >
+    The grammatical-agreement machinery for Italian copy — gender, number, article form, copula,
+    and the taxonomy term table. Sections cited in code as "L05 §N" and constraints as "C-L05-N".
+  constrains: [labels.py, ConditionKindSpec.numeric_bindings, SuggestionClass, SkipReason, AssetClass]
+  note: >
+    Ratified in pieces by P21-P28. §7.3 / C-L05-3 is why numeric_bindings is DECLARED rather than
+    inferred. §6.2 is why label() degrades to asset_class_label() for an unknown class (E12: the
+    taxonomy is OPEN, so a miss is not a defect).
+
+# -------------------------------------------------------------------------------------
+- family: W
+  name: Operation-repository property checks
+  range: W1 .. W10
+  registry: src/financeos/adapters/duckdb/repositories/operation.py (docstrings) + tests/test_operation_repository_invariants.py
+  meaning: >
+    The CROSS-ROW Operation invariants a single Operation cannot check for itself — leg totality,
+    pair cardinality, no correction chains, and W10 (the repository exposes no update or delete
+    method).
+  constrains: [Operation, C6, I-10]
+
+# =====================================================================================
+# GOVERNANCE RULES THAT ARE NOT AN IDENTIFIER FAMILY BUT GOVERN ALL OF THEM
+# =====================================================================================
+
+governance:
+  corpus_is_normative: >
+    docs/seed/rfcs/ is the specification and it OUTRANKS THE CODE. When they disagree, THE CODE IS
+    WRONG. Read the relevant RFC section before changing behaviour and cite it in the commit.
+
+  rfcs_are_never_edited_in_place: >
+    A correction is a NEW AMENDING DOCUMENT plus a row in RFC-0000-index.md §4. docs/seed/ is
+    READ-ONLY to an implementer. RFC-0000 §4 is the practical lookup table of what corrects what.
+
+  precedence: >
+    SECTION-SCOPED AND RECENCY-ORDERED (RFC-0012 §8), NOT document-scoped. RFC-0011's earlier
+    "this document wins" claim was found self-contradictory and replaced via ERR-15 — the corpus
+    documents its own governance bug and fixes it in-band. Practical consequence: to resolve a
+    conflict, find the LATEST document that speaks to THAT SECTION, not the latest document
+    overall.
+
+  two_adr_series: >
+    Corpus ADRs 0001-0036 live inside their owning RFC's Appendix A. LOCAL ADRs (ADR-L01...) live
+    in docs/plans/adr/ and resolve build blockers. Do not merge the numbering.
+
+  ux_mock_is_non_normative: >
+    docs/seed/ux/UX-0001-ui-reference.md is NON-NORMATIVE. If it drifts from the corpus, THE CORPUS
+    WINS. Same for docs/seed/ux/finance-os-ui-mock.html.
+
+  product_definition_questions: >
+    PRODUCT-DEFINITION QUESTIONS GO TO THE PRODUCT OWNER. AN AGENT NEVER INVENTS ONE. If a
+    behaviour is undecided, the answer is to ask, not to pick a default and ship it.
+
+  session_ledger: >
+    docs/handoff/HANDOFF-<date>.md is the session ledger — read the most recent before resuming.
+    It records what is UNREVIEWED, what is DELIBERATELY UNFINISHED, and what LOOKS LIKE A BUG BUT
+    ISN'T.
