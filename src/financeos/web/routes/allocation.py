@@ -81,9 +81,9 @@ def allocation_view(con: Store) -> HTMLResponse:
         "alloc_chart": _allocation_chart(view),
         "alloc_legend": _allocation_legend(view),
         "alloc_rows": _allocation_rows(view),
-        "bucket_chart": _bucket_chart(view),
-        "bucket_legend": _bucket_legend(view),
-        "bucket_rows": _bucket_rows(view),
+        "bucket_chart": bucket_chart(view),
+        "bucket_legend": bucket_legend(view),
+        "bucket_rows": bucket_rows(view),
     }
     template = build_environment().get_template("allocation.html")
     return HTMLResponse(template.render(**context))
@@ -220,7 +220,7 @@ def _allocation_rows(view: AllocationView) -> list[list[str]]:
     return rows
 
 
-def _bucket_chart(view: AllocationView) -> dict[str, Any] | None:
+def bucket_chart(view: AllocationView) -> dict[str, Any] | None:
     """The nested cane: Net Worth *is* its Buckets plus the unassigned residual.
 
     Segments are euro, not percentages, because this is the reconciliation and a percentage
@@ -230,6 +230,9 @@ def _bucket_chart(view: AllocationView) -> dict[str, Any] | None:
     A negative residual is legal (ADR-0025) and a stacked bar cannot draw it, so the chart is
     suppressed in that case and the ledger below carries the signed row instead. Drawing a
     deficit as if it were a holding would be the one misreading this screen must not permit.
+
+    Public (no leading underscore): `/dashboard` (task #12) reuses this exactly rather than
+    re-deriving the same reconciliation a second time.
     """
     if not view.buckets or view.net_worth <= 0:
         return None
@@ -250,7 +253,7 @@ def _bucket_chart(view: AllocationView) -> dict[str, Any] | None:
         "series": [
             {
                 "mark": "void" if bucket.residual else "segment",
-                "name": _bucket_label(bucket.name),
+                "name": bucket_label(bucket.name),
                 "data": [float(bucket.value)],
                 **(
                     {}
@@ -281,7 +284,7 @@ def _bucket_chart(view: AllocationView) -> dict[str, Any] | None:
     }
 
 
-def _bucket_label(name: str) -> str:
+def bucket_label(name: str) -> str:
     """A Bucket's own name, or the registry's surface form for the residual (P26).
 
     The branch is explicit rather than a registry lookup with a fallback: a Bucket name is a
@@ -292,10 +295,10 @@ def _bucket_label(name: str) -> str:
     return label_short(UNASSIGNED) if name == UNASSIGNED else name
 
 
-def _bucket_legend(view: AllocationView) -> list[dict[str, Any]]:
+def bucket_legend(view: AllocationView) -> list[dict[str, Any]]:
     return [
         {
-            "label": _bucket_label(bucket.name),
+            "label": bucket_label(bucket.name),
             "swatch": "void" if bucket.residual else str((index % 5) + 1),
             "value": format_money_it(bucket.value),
         }
@@ -303,10 +306,10 @@ def _bucket_legend(view: AllocationView) -> list[dict[str, Any]]:
     ]
 
 
-def _bucket_rows(view: AllocationView) -> list[list[str]]:
+def bucket_rows(view: AllocationView) -> list[list[str]]:
     return [
         [
-            _bucket_label(bucket.name),
+            bucket_label(bucket.name),
             format_money_it(bucket.value),
             format_percent_it(bucket.weight),
         ]

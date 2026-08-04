@@ -30,6 +30,7 @@ from financeos.web.preview import STATIC_DIR
 from financeos.web.routes import (
     allocation,
     buckets,
+    dashboard,
     design,
     findings,
     operations,
@@ -52,6 +53,7 @@ def create_app(db_path: Path) -> FastAPI:
     app.include_router(findings.router)
     app.include_router(recommendations.router)
     app.include_router(allocation.router)
+    app.include_router(dashboard.router)
     app.include_router(buckets.router)
     app.include_router(operations.router)
     app.include_router(strategies.router)
