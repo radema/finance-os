@@ -205,7 +205,13 @@
     <tr>
       <td class="ledger__ord">{{ '%02d' | format(loop.index) }}</td>
       <td>
-        <a href="{{ f.recommendation_url }}">{{ f.designation | label_short }}</a>
+        {# Not every rule kind carries an `asset_class` (untargeted_allocation,
+           unassigned_residual_above, bucket_below_target_value, over_apportioned):
+           `f.designation` is empty for those, and a link with no text is unreachable. The
+           observation sentence — already computed, RFC-0008 §3 — is what `/` links on too. #}
+        <a href="{{ f.recommendation_url }}">
+          {{- f.designation | label_short if f.designation else f.observation_it -}}
+        </a>
         <span class="record__ref" style="display: block">{{ f.rule_name }}</span>
       </td>
       <td>{{ f.scope_name }}</td>

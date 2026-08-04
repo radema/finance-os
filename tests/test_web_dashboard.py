@@ -50,16 +50,50 @@ def test_dashboard_carries_net_worth_and_composition(client: TestClient) -> None
     assert "Non assegnato" in body
 
 
+def test_dashboard_composition_chart_segments_reconcile_to_net_worth(client: TestClient) -> None:
+    """Guard 2 (ADR-0029), verified from the chart option's own JSON rather than a raw
+    "€54.000,00" substring that happens to appear twice in the page (task #12 review SHOULD-FIX
+    4): the Bucket segments (Pensione, Libero, the unassigned residual) sum to the same net
+    worth the chart's own `markLine` states."""
+    body = client.get("/dashboard").text
+    options = dict(_options(body))
+    option = json.loads(options["chart-dashboard-comp-option"])
+    segments = [series["data"][0] for series in option["series"]]
+    mark_line_value = option["series"][0]["markLine"]["data"][0]["xAxis"]
+    assert sum(segments) == pytest.approx(mark_line_value)
+    assert mark_line_value == option["xAxis"]["max"]
+
+
 def test_dashboard_bucket_card_never_shows_open_findings_without_unevaluated(
     client: TestClient,
 ) -> None:
-    """The guard variation C stands or falls on (W2 plan doc)."""
+    """The guard variation C stands or falls on (W2 plan doc).
+
+    Both branches of the guard actually render here: Pensione has a run and one measured rule
+    (the full counts branch), Libero has a run but zero rules gated to it (task #12 review
+    BLOCKING) — and each card's own markup is checked in isolation, not "somewhere in the page",
+    so a bug that renders the two counts in *different* cards would still fail this."""
     body = client.get("/dashboard").text
-    assert "Pensione" in body
-    assert "Rilievi aperti" in body
-    assert "Regole con un esito" in body
-    assert "Regole non valutate" in body
-    assert "Severità più alta" in body
+    blocks = _card_blocks(body)
+    assert blocks, "no Bucket card markup found on /dashboard"
+
+    measured = [b for b in blocks if "Pensione" in b]
+    assert measured, "the Pensione card is missing"
+    for block in measured:
+        assert "Rilievi aperti" in block
+        assert "Regole con un esito" in block
+        assert "Regole non valutate" in block
+        assert "Severità più alta" in block
+        assert "non è mai stato valutato" not in block
+
+    no_measure = [b for b in blocks if "Libero" in b]
+    assert no_measure, "the Libero card (zero rules gated to it) is missing"
+    for block in no_measure:
+        assert "non è mai stato valutato" in block
+        # ADR-0016: the caveat, never a bare zero beside it in the same card.
+        assert "Rilievi aperti" not in block
+        assert "Regole con un esito" not in block
+        assert "Regole non valutate" not in block
 
 
 def test_dashboard_ledger_is_mv_finding_order_never_resorted(client: TestClient) -> None:
@@ -100,6 +134,19 @@ def test_design_preview_still_serves_and_prototype_route_is_gone(client: TestCli
 
 def _options(body: str) -> list[tuple[str, str]]:
     return OPTION_RE.findall(body)
+
+
+#: One Bucket card's own `<article class="record...">...</article>` markup, isolated so a count
+#: pairing can be checked *within* one card rather than "somewhere in the page" (task #12 review
+#: SHOULD-FIX 4). No HTML parser dependency: each card starts at its own `<article` tag and ends
+#: exactly where the next one begins (or the region does), which holds for this template's flat,
+#: unnested card grid.
+def _card_blocks(body: str) -> list[str]:
+    grid_start = body.index("Dove stanno gli scostamenti")
+    grid_end = body.index("I rilievi registrati")
+    region = body[grid_start:grid_end]
+    parts = re.split(r'(?=<article class="record)', region)
+    return [p for p in parts if p.startswith('<article class="record')]
 
 
 def _declared_tokens() -> set[str]:

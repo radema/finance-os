@@ -12,14 +12,15 @@ replacement.
 anyway"):**
 
 1. **No Bucket card shows an open-findings count without its unevaluated count beside it.** A
-   Bucket that was never evaluated at all (`BucketFindingsState.run_id is None`) renders neither
-   count as a zero — that would be exactly the silent false reassurance `ADR-0016` forbids at
-   the presentation layer. An evaluated Bucket always shows both counts together, whatever their
-   values.
+   Bucket that was never evaluated at all (`BucketFindingsState.run_id is None`) — or one that
+   was evaluated but has literally zero rules gated to it (`rules_measured == 0`) — renders
+   neither count as a zero — that would be exactly the silent false reassurance `ADR-0016`
+   forbids at the presentation layer (review BLOCKING). An evaluated Bucket with at least one
+   measured rule always shows both counts together, whatever their values.
 2. **The whole reconciles in view.** The composition chart is the identical
-   `web.routes.allocation.bucket_chart`/`bucket_legend`/`bucket_rows` `/allocation` renders
-   (`ADR-0029`): the segments close on the net-worth tick and the `UNASSIGNED` residual is one
-   of them, so the hero number is checkable rather than asserted.
+   `web.charts.bucket_chart`/`bucket_legend`/`bucket_rows` `/allocation` renders (`ADR-0029`):
+   the segments close on the net-worth tick and the `UNASSIGNED` residual is one of them, so the
+   hero number is checkable rather than asserted.
 
 **The ledger keeps `mv_finding`'s order.** `list_findings_for_display` is consumed exactly as
 `web/routes/findings.py` consumes it — no `sorted()`, no re-grouping — so `RFC-0008 §3`'s
@@ -29,7 +30,9 @@ anyway"):**
 own counts come from *that Bucket's own* latest run and not from one page-wide run
 (`evaluate_strategy` is called once per Bucket and once more for the Portfolio scope, RFC-0007
 §5), the notice sums `aggregate_outcome_counts` over every run actually feeding the page rather
-than reading a single run picked arbitrarily.
+than reading a single run picked arbitrarily. Both the cards and the notice are restricted to
+this page's own `as_of` (review SHOULD-FIX 2): a scope's run at a different `as_of` counts as no
+run for this page, rather than reporting stale numbers beside a newer provenance date.
 """
 
 from __future__ import annotations
@@ -48,10 +51,10 @@ from financeos.adapters.duckdb.queries.dashboard import (
 from financeos.adapters.duckdb.queries.findings import FindingDisplayRow, list_findings_for_display
 from financeos.adapters.duckdb.queries.it_locale import format_money_it, format_percent_it
 from financeos.adapters.duckdb.queries.runs import latest_actual_run, latest_actual_run_for_scope
+from financeos.web.charts import bucket_chart, bucket_label, bucket_legend, bucket_rows
 from financeos.web.chrome import nav_of, provenance_of, skip_notice_context
 from financeos.web.dependencies import Store
 from financeos.web.preview import build_environment
-from financeos.web.routes.allocation import bucket_chart, bucket_label, bucket_legend, bucket_rows
 
 router = APIRouter()
 
@@ -77,11 +80,14 @@ def dashboard(con: Store) -> HTMLResponse:
 
     real_buckets = [b for b in view.buckets if not b.residual]
     residual = next((b for b in view.buckets if b.residual), None)
-    states = bucket_findings_states(con, [b.id for b in real_buckets])
+    states = bucket_findings_states(con, [b.id for b in real_buckets], as_of=run.as_of)
 
     run_ids = [s.run_id for s in states.values() if s.run_id is not None]
     portfolio_run = latest_actual_run_for_scope(con, "PORTFOLIO", run.portfolio_id)
-    if portfolio_run is not None:
+    # Restricted to the page's own `as_of` (review SHOULD-FIX 2): a Portfolio-scope run at a
+    # different `as_of` is not this page's run, so its counts do not belong in this page's
+    # skip notice.
+    if portfolio_run is not None and portfolio_run.as_of == run.as_of:
         run_ids.append(portfolio_run.id)
     counts = aggregate_outcome_counts(con, run_ids) if run_ids else None
 
@@ -121,7 +127,11 @@ def _card(bucket: BucketLine, state: BucketFindingsState) -> dict[str, Any]:
         "name": bucket.name,
         "value_it": format_money_it(bucket.value),
         "share_it": format_percent_it(bucket.weight),
-        "never_evaluated": state.run_id is None,
+        # A Bucket that was evaluated but has literally zero rules gated to it
+        # (`rules_measured == 0`) gets the same "no measure" notice as one never evaluated at
+        # all (`run_id is None`) — otherwise it would render "0 / 0 / 0" with no caveat, which
+        # is exactly the silent false reassurance ADR-0016 forbids (review BLOCKING).
+        "never_evaluated": state.run_id is None or not state.rules_measured,
         "open_findings": state.open_findings,
         "breach": bool(state.open_findings),
         "rules_measured": state.rules_measured,

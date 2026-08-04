@@ -14,6 +14,13 @@ place computing the same reconciliation is a second place for it to drift.
 usually returns *that* run, not any one Bucket's own. Each card therefore reads its own
 `latest_actual_run_for_scope('BUCKET', bucket_id)`.
 
+**Never a card's own latest run, unless it shares the page's `as_of`.** A Bucket evaluated at an
+earlier `as_of` than the page's own run (e.g. re-evaluated with `--bucket-id`, at a later date,
+after the page's other Buckets already moved on) would otherwise report stale counts beside a
+provenance bar naming a newer date. `as_of` is the caller's own run's date (task #12 review
+SHOULD-FIX 2): a Bucket run whose `as_of` disagrees is treated exactly like no run at all, rather
+than a silently mismatched one.
+
 **The two-counts guard (W2 plan doc, variation C — "Il patrimonio annotato").**
 `BucketFindingsState` always carries `open_findings` and `rules_unevaluated` together, and both
 are `None` together when the Bucket has never been evaluated at all — distinct from an evaluated
@@ -26,6 +33,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 
 import duckdb
@@ -55,14 +63,20 @@ class BucketFindingsState:
 
 
 def bucket_findings_states(
-    con: duckdb.DuckDBPyConnection, bucket_ids: Sequence[str]
+    con: duckdb.DuckDBPyConnection, bucket_ids: Sequence[str], *, as_of: date
 ) -> dict[str, BucketFindingsState]:
-    """Every id in `bucket_ids`, mapped to its own findings/coverage state.
+    """Every id in `bucket_ids`, mapped to its own findings/coverage state as of `as_of`.
 
     `open_findings` groups the same open-findings set `/` reads (`list_findings`, RFC-0008 §4's
     resolution rule already applied there) by each finding's own `scope_id` — never a second
     resolution check reimplemented here.
+
+    `as_of` is the page's own run's date: a Bucket run at a different `as_of` is treated as no
+    run at all (module docstring, task #12 review SHOULD-FIX 2).
     """
+    # `list_findings` also runs once more inside `list_findings_for_display` for this same
+    # request (the ledger below the cards) — fine at V1.0 scale (task #12 review NIT); a shared
+    # cache would be a second thing to keep in sync, not a saving, at today's row counts.
     by_scope: dict[str, list[FindingRow]] = defaultdict(list)
     for finding in list_findings(con):
         by_scope[finding.scope_id].append(finding)
@@ -70,7 +84,7 @@ def bucket_findings_states(
     states: dict[str, BucketFindingsState] = {}
     for bucket_id in bucket_ids:
         run = latest_actual_run_for_scope(con, "BUCKET", bucket_id)
-        if run is None:
+        if run is None or run.as_of != as_of:
             states[bucket_id] = BucketFindingsState(
                 run_id=None,
                 open_findings=None,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -80,7 +81,7 @@ def test_bucket_findings_states_carries_both_counts_together(tmp_path: Path) -> 
     """`/dashboard`'s guard (task #12): open findings and unevaluated always travel together."""
     con = duckdb.connect(str(_seeded_and_evaluated(tmp_path)))
     con.execute("SET TimeZone='UTC'")
-    states = bucket_findings_states(con, [DEMO_BUCKET_ID])
+    states = bucket_findings_states(con, [DEMO_BUCKET_ID], as_of=date(2026, 7, 24))
     state = states[DEMO_BUCKET_ID]
     assert state.run_id is not None
     assert state.open_findings == 1
@@ -96,7 +97,7 @@ def test_bucket_findings_states_reports_never_evaluated_rather_than_zero(
     con = duckdb.connect(str(_seeded_and_evaluated(tmp_path)))
     con.execute("SET TimeZone='UTC'")
     never_run_id = "00000000-0000-0000-0000-000000000000"
-    states = bucket_findings_states(con, [never_run_id])
+    states = bucket_findings_states(con, [never_run_id], as_of=date(2026, 7, 24))
     state = states[never_run_id]
     assert state.run_id is None
     assert state.open_findings is None
