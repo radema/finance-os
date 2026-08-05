@@ -28,6 +28,12 @@ imports/
 export/
 exports/
 
+# Real personal financial data — never committed, even the empty template once filled in.
+# real/README.md stays tracked; every data file under real/ does not.
+real/*.csv
+real/*.yaml
+real/*.yml
+
 # Agent worktrees — transient checkouts, never part of the project.
 # `.claude/skills/` IS tracked; only the worktree churn is excluded.
 .claude/worktrees/
