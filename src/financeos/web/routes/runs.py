@@ -85,7 +85,7 @@ def run_detail(run_id: str, con: Store) -> HTMLResponse:
         "nav": nav_of("runs"),
         "run": run,
         "counts": counts,
-        "skip": skip_notice_context(counts) if counts.skipped or counts.error else None,
+        "skip": skip_notice_context(counts, run) if counts.skipped or counts.error else None,
         "alerts": alerts,
     }
     template = build_environment().get_template("run_detail.html")

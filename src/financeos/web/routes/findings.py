@@ -64,7 +64,7 @@ def findings_list(con: Store) -> HTMLResponse:
         "nav": nav_of("findings", findings_count=len(findings)),
         "run": run,
         "findings": findings,
-        "skip": skip_notice_context(counts) if counts is not None else None,
+        "skip": skip_notice_context(counts, run) if counts is not None else None,
         "counts": counts,
     }
     template = build_environment().get_template("findings.html")

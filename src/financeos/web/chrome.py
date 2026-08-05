@@ -136,7 +136,7 @@ def _findings_count_label(count: int) -> str:
     return "1 aperto" if count == 1 else f"{count} aperti"
 
 
-def skip_notice_context(counts: OutcomeCounts) -> dict[str, Any]:
+def skip_notice_context(counts: OutcomeCounts, run: RunRow | None = None) -> dict[str, Any]:
     """`partials/skip_notice.html`'s context from an `OutcomeCounts`.
 
     Each reason carries an authored Italian explanation, taken from the label registry's gloss
@@ -149,6 +149,9 @@ def skip_notice_context(counts: OutcomeCounts) -> dict[str, Any]:
     is the explanation rather than the "no motive recorded" disclaimer, which is reserved for
     the genuinely-unknown `'unknown'` sentinel `run_outcome_counts` emits when even that is
     missing (task #12/#dashboard review SHOULD-FIX 2).
+
+    `run_url` is set to `/runs/{run.id}` when a single run is available, or `None` when the
+    notice aggregates counts across multiple runs (e.g., dashboard's per-bucket evaluations).
     """
     reasons = []
     for reason in counts.reasons:
@@ -175,5 +178,5 @@ def skip_notice_context(counts: OutcomeCounts) -> dict[str, Any]:
         "error_count": counts.error,
         "total_count": counts.total,
         "reasons": reasons,
-        "run_url": None,
+        "run_url": f"/runs/{run.id}" if run is not None else None,
     }

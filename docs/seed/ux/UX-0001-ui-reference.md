@@ -154,6 +154,8 @@ Screen count and grouping (Decide / Hold / Declare / Verify); the rail-and-marke
 
 ~~No net-worth hero number. P1 says the decisions are the product, so the landing screen is the findings list and net worth lives one click away on screen 3.~~ This was a reading of the Manifest, not a requirement, and the product owner overrode it on 2026-08-01 (task #12): see **ADR-L08** (`docs/plans/adr/ADR-L08-dashboard-landing-page.md`) for the decision and its reasoning. The owner picked variation C, «Il patrimonio annotato», and it is now a real route, **`/dashboard`** (`web/routes/dashboard.py`), sitting alongside `/` rather than replacing it. `/` (screen 1) is untouched: it stays the findings-first landing page this row describes, and P1 is unaffected — it is a scope ratification, not a landing-page rule. `/dashboard`'s own two guards (no open-findings count without its unevaluated count beside it; the composition reconciles on the net-worth tick, ADR-0029) are what keep it from being the false-reassurance dashboard this row originally warned against.
 
+**Note:** ADR-L08 is a **local build-blocker-resolution ADR** (per CLAUDE.md's convention, same class as ADR-L06 and ADR-L07), not a promotion to RFC — it resolves a build gap without changing the corpus, following the pattern established for earlier local ADRs in this project.
+
 ---
 
 ## 6. Open questions this mock has silently answered
