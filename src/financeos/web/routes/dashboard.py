@@ -100,7 +100,6 @@ def dashboard(con: Store) -> HTMLResponse:
         "static": "/static",
         "title": "Patrimonio",
         "page_title": "Patrimonio",
-        "page_kicker": "Detenere",
         "page_lede": (
             "Il patrimonio netto come registrato dall'ultima valutazione, e in quale parte di "
             "esso stanno gli scostamenti. Ogni Bucket dichiara insieme quanti rilievi sono "

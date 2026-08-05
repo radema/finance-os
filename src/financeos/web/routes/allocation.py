@@ -66,7 +66,6 @@ def allocation_view(con: Store) -> HTMLResponse:
         "static": "/static",
         "title": "Allocazione e patrimonio",
         "page_title": "Allocazione e patrimonio",
-        "page_kicker": "Detenere",
         "page_lede": (
             "Quanto vale il portafoglio alla data di valutazione, come è distribuito fra le "
             "classi di attivo e quanto si scosta dalla forma che la strategia congelata "

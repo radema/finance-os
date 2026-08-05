@@ -303,15 +303,6 @@ a:hover { text-decoration-color: var(--annot); }
   padding-bottom: var(--sp-4);
   border-bottom: 3px double var(--rule-strong);
 }
-/* One named kicker per page, not an eyebrow over every section. */
-.page__kicker {
-  font-size: var(--fs-micro);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tr-register);
-  text-transform: uppercase;
-  color: var(--ink-3);
-  margin-bottom: var(--sp-2);
-}
 h1, .page__title {
   font-size: var(--fs-xl);
   font-weight: var(--fw-semi);

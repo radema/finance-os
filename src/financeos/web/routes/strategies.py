@@ -88,7 +88,6 @@ def strategies_list(con: Store) -> HTMLResponse:
         "static": "/static",
         "title": "Strategie",
         "page_title": "Strategie",
-        "page_kicker": "Dichiarare",
         "page_lede": (
             "La strategia è un oggetto di primo livello, congelato: ogni rilievo è misurato "
             "contro una versione specifica, mai contro quella corrente."
@@ -112,7 +111,6 @@ def strategy_detail(strategy_id: str, con: Store, error: str | None = None) -> H
         "static": "/static",
         "title": detail.name,
         "page_title": detail.name,
-        "page_kicker": "Dichiarare",
         "page_lede": (
             "Il documento congelato: target, tolleranze e regole. Ogni modifica congela una "
             "nuova versione — non ne esiste una modificabile in-place — e richiede una nota di "

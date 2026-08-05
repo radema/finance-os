@@ -38,7 +38,6 @@ def operations_ledger(con: Store) -> HTMLResponse:
         "static": "/static",
         "title": "Operazioni",
         "page_title": "Operazioni",
-        "page_kicker": "Dichiarare",
         "page_lede": (
             "Il registro delle operazioni: il fatto finanziario unico da cui ogni posizione è "
             "derivata (ADR-0003). È un registro, non una tabella modificabile — non esiste qui "
