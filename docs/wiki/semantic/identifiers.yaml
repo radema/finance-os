@@ -355,7 +355,7 @@ families:
 # -------------------------------------------------------------------------------------
 - family: ADR-L
   name: Local architecture decision records (build blockers)
-  range: ADR-L01 .. ADR-L06
+  range: ADR-L01 .. ADR-L08
   registry: docs/plans/adr/
   distinction: >
     A SEPARATE SERIES from corpus ADRs. Local ADRs resolve BUILD blockers the frozen corpus does
@@ -391,6 +391,20 @@ families:
       file: docs/plans/adr/ADR-L06-rule-scope-gating.md
       constrains: [RuleScopeGate, app/evaluate_strategy.py, SkipReason.HETEROGENEOUS_STRATEGIES]
       note: The newest decision at 2dd7346. §4.1 sets scope_gate=None as the compatibility default.
+    - id: ADR-L07
+      title: "zero_portfolio_value also gates the allocation fact family"
+      file: docs/plans/adr/ADR-L07-zero-portfolio-value-gates-allocation.md
+      constrains: [FACT_ALLOCATION, app/evaluate_strategy.py, untargeted_allocation, allocation_absent]
+      note: >
+        Extends ADR-L06 §7.1's precedent to the zero-portfolio-value branch; the MISSING_FACT
+        (partial) case is deliberately untouched. Built for the UX-0001 §8.5 demo fixture.
+    - id: ADR-L08
+      title: "`/dashboard`: a second landing page, alongside `/`, not instead of it"
+      file: docs/plans/adr/ADR-L08-dashboard-landing-page.md
+      constrains: [web/routes/dashboard.py, web]
+      note: >
+        Variation C, «Il patrimonio annotato» (task #12). UX-0001 §5.3 is now a pointer to this
+        ADR; `/` is untouched.
 
 # -------------------------------------------------------------------------------------
 - family: ERR

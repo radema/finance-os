@@ -13,7 +13,7 @@ You will meet these numbers in code comments, docstrings, commit messages and AD
 | **C-** | C1 … C6 | `pyproject.toml` `[tool.importlinter]` + `tests/` | `uv run lint-imports`; `pytest` for C4-positive and C6 |
 | **P-** | P1 … P33 | **split across three files** — see below | convention + review; a few have code consequences |
 | **ADR-** | ADR-0001 … ADR-0036 | the **owning RFC's Appendix A**; cumulative index in RFC-0010 v0.2 Appendix A | n/a (decisions) |
-| **ADR-L** | ADR-L01 … ADR-L06 | `docs/plans/adr/` | n/a (decisions) |
+| **ADR-L** | ADR-L01 … ADR-L08 | `docs/plans/adr/` | n/a (decisions) |
 | **ERR-** | ERR-1 … ERR-15 | RFC-0011 §2 (1–10), RFC-0012 §2 (11–15) | n/a (corrections) |
 | **E-** | E1 … E11 (+ E12–E14) | RFC-0010 v0.2 §5 (was RFC-0011 §6) | product ratification |
 | **R-** | R-1 … R-3 | RFC-0011 §4 | n/a (resolutions) |
@@ -153,7 +153,7 @@ No gaps — all 36 exist. The **current cumulative index** is RFC-0010 v0.2 Appe
 RFC-0012 §8); RFC-0000 §5 is a summary by range; RFC-0011 Appendix A is a historical snapshot
 through 0031.
 
-**Local ADRs `ADR-L01` … `ADR-L06`** live in `docs/plans/adr/` and **resolve build blockers** the
+**Local ADRs `ADR-L01` … `ADR-L08`** live in `docs/plans/adr/` and **resolve build blockers** the
 frozen corpus does not decide. They may override a corpus ADR's clause where the corpus is silent or
 wrong in practice — cite both when they do, e.g.
 `feat(rules): over_apportioned v1 (ADR-L04 §4.1-§4.4, overrides ADR-0025's severity clause)`.
@@ -166,6 +166,8 @@ wrong in practice — cite both when they do, e.g.
 | **ADR-L04** | `over_apportioned` severity under the uniform anchor | `ApportionmentLine`'s own validator (§4.4 D5) |
 | **ADR-L05** | `untargeted_allocation` reduction over classes | `FACT_TARGETS` existing separately (§5) |
 | **ADR-L06** | rule scope gating | `RuleScopeGate`, `evaluate_strategy`, `HETEROGENEOUS_STRATEGIES` |
+| **ADR-L07** | `zero_portfolio_value` also gates `allocation` | `FACT_ALLOCATION`, `evaluate_strategy.py` |
+| **ADR-L08** | `/dashboard` landing page, alongside `/` | `web/routes/dashboard.py` |
 
 ---
 
