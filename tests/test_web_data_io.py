@@ -172,3 +172,88 @@ def test_export_downloads_a_real_zip_bundle(client: TestClient) -> None:
     # every entry is real, parseable YAML — not an empty placeholder
     for name in names:
         yaml.safe_load(archive.read(name))
+
+
+# -- Empty-state template ----------------------------------------------------
+
+_TEMPLATE_CSVS = (
+    "accounts.csv",
+    "assets.csv",
+    "portfolios.csv",
+    "portfolio_accounts.csv",
+    "buckets.csv",
+    "apportionment.csv",
+    "prices.csv",
+)
+
+_TEMPLATE_HEADERS = {
+    "accounts.csv": "id,name,type,currency,cash_asset_id",
+    "assets.csv": "id,name,asset_class,currency",
+    "portfolios.csv": "id,name",
+    "portfolio_accounts.csv": "portfolio_id,account_id",
+    "buckets.csv": "id,portfolio_id,strategy_id,name",
+    "apportionment.csv": "bucket_id,asset_id,quantity,effective_from",
+    "prices.csv": "asset_id,valid_date,close,currency,source",
+}
+
+
+def test_template_download_has_header_only_csvs_and_a_strategy_skeleton(
+    client: TestClient,
+) -> None:
+    response = client.get("/data-io/template")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/zip"
+    assert "financeos-template.zip" in response.headers["content-disposition"]
+
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    names = set(archive.namelist())
+    assert names == {*_TEMPLATE_CSVS, "strategy.yaml"}
+
+    for name in _TEMPLATE_CSVS:
+        lines = archive.read(name).decode("utf-8").splitlines()
+        assert lines == [_TEMPLATE_HEADERS[name]]  # header only, zero data rows
+
+    strategy_doc = yaml.safe_load(archive.read("strategy.yaml"))
+    assert strategy_doc["rules"], "template must satisfy I-4 (>=1 Rule)"
+    weights = sum(float(t["weight"]) for t in strategy_doc["targets"])
+    assert weights == pytest.approx(1.0), "template must satisfy I-13 (siblings sum to 1)"
+
+
+def test_template_actually_seeds(tmp_path: Path, client: TestClient) -> None:
+    """The real proof: fill the downloaded template with one minimal real row per structural
+    file and feed it through the actual `financeos seed <dir>` command, unmodified strategy.yaml
+    placeholders included — if this doesn't seed cleanly, the template is lying about its own
+    shape."""
+    archive = zipfile.ZipFile(io.BytesIO(client.get("/data-io/template").content))
+    fixture_dir = tmp_path / "my-data"
+    fixture_dir.mkdir()
+    archive.extractall(fixture_dir)
+
+    account_id = "b0000000-0000-0000-0000-000000000001"
+    cash_asset_id = "a0000000-0000-0000-0000-000000000001"
+    portfolio_id = "c0000000-0000-0000-0000-000000000001"
+    bucket_id = "d0000000-0000-0000-0000-000000000001"
+    strategy_id = "00000000-0000-0000-0000-000000000000"  # the template's own placeholder
+
+    (fixture_dir / "assets.csv").write_text(
+        f"id,name,asset_class,currency\n{cash_asset_id},Contanti,CASH,EUR\n"
+    )
+    (fixture_dir / "accounts.csv").write_text(
+        f"id,name,type,currency,cash_asset_id\n{account_id},Conto,CASH,EUR,{cash_asset_id}\n"
+    )
+    (fixture_dir / "portfolios.csv").write_text(f"id,name\n{portfolio_id},Il mio portafoglio\n")
+    (fixture_dir / "portfolio_accounts.csv").write_text(
+        f"portfolio_id,account_id\n{portfolio_id},{account_id}\n"
+    )
+    (fixture_dir / "buckets.csv").write_text(
+        f"id,portfolio_id,strategy_id,name\n{bucket_id},{portfolio_id},{strategy_id},Principale\n"
+    )
+    (fixture_dir / "apportionment.csv").write_text(
+        f"bucket_id,asset_id,quantity,effective_from\n{bucket_id},{cash_asset_id},1000,2026-01-01\n"
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli, ["--db-path", str(tmp_path / "my.duckdb"), "seed", str(fixture_dir)]
+    )
+    assert result.exit_code == 0, result.output
