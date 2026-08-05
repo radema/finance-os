@@ -140,10 +140,14 @@ exists (RFC-0001 *Vision*).
 - **Ingestion is a user-initiated act, never a background job** (ADR-0008 / RFC-0005 §5.5). There is
   no 3am fetch quietly changing what a Rule would have fired on, and no notification channel — so
   the user's arrival at the app is the only trigger for anything.
-- **CLI-first for the unglamorous half.** In V1.0, importing operations and running an evaluation
-  are CLI commands (`financeos seed`, `import-operations`, `import-strategy`, `evaluate`, `serve`).
-  The web surface is predominantly read-side; the only V1.0 write flows are saving a bucket
-  apportionment and freezing a strategy version (UX-0001 §2.2).
+- **CLI-first for the unglamorous half.** In V1.0, `seed` and `evaluate` are CLI-only
+  (`financeos seed`, `evaluate`, `serve`) — there is no browser path to bulk-seed a store or trigger
+  an evaluation run. Importing Operations/Strategy and exporting authored data also have a browser
+  mirror as of RFC-0010 v0.3 ADR-0037 (`/data-io`) — thin routes over the same `import_operations` /
+  `import_strategy` / `export_authored` use cases the CLI calls, no new domain logic. The web
+  surface's write flows are: saving a bucket apportionment, freezing a strategy version (UX-0001
+  §2.2), and the three `/data-io` actions. Entity CRUD (creating/editing `Portfolio`/`Bucket`/
+  `Account`/`Asset` themselves) has no UI in any form — CLI/fixture-seed only until V1.1 (ADR-0037).
 - **Time is part of the reading.** Under the correction model (ADR-0012) the same question has
   different true answers depending on which run you are reading, because a reclassification
   rewrites history. Screen 3's charts read the *as-recorded* series while the Reconcile block reads
