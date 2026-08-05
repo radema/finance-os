@@ -1,0 +1,94 @@
+{#
+  ===========================================================================
+  IMPORT/EXPORT DATI                          (RFC-0009 §7.1, RFC-0010 §3)
+  ===========================================================================
+  Three write actions mirroring the three CLI commands, unchanged: upload a
+  CSV of Operation, upload a YAML Strategy (freezes a new version, never
+  edits in place), export the authored bundle (the only recovery path for
+  apportionment and Strategy). No client-side validation anywhere on this
+  page — a malformed upload redirects back here with an inline error.
+#}
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if error %}
+<div class="notice" role="alert" style="margin-bottom: var(--sp-4)">
+  <div class="notice__margin" aria-hidden="true"></div>
+  <div class="notice__body"><p class="notice__lead">{{ error }}</p></div>
+</div>
+{% endif %}
+
+{% if ok %}
+<div class="notice notice--reference" role="status" style="margin-bottom: var(--sp-4)">
+  <div class="notice__margin" aria-hidden="true"></div>
+  <div class="notice__body"><p class="notice__lead">{{ ok }}</p></div>
+</div>
+{% endif %}
+
+<article class="record" style="margin-bottom: var(--sp-6)">
+  <div class="record__margin" aria-hidden="true"></div>
+  <div class="record__body">
+    <div class="record__head">
+      <span class="record__designation record__designation--minor">Operazioni</span>
+      <span class="record__ref push">ADR-0026, ADR-0028, ADR-L01</span>
+    </div>
+    <p class="note" style="margin-bottom: var(--sp-3)">
+      Un file CSV con colonne <span class="ident">account_id,asset_id,type,trade_date,quantity,price,fees,currency,ref</span>.
+      Ogni riga diventa una o più <span class="ident">Operation</span> nello stesso lotto di
+      importazione; il registro resta append-only, quindi una rettifica va importata come una
+      nuova riga <span class="ident">CORRECTION</span>, mai come una modifica.
+    </p>
+    <form method="post" action="/data-io/operations" enctype="multipart/form-data" class="row"
+          style="gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end">
+      <div>
+        <label class="field__label" for="operations-file">File CSV</label>
+        <input id="operations-file" type="file" name="file" class="field" accept=".csv" required>
+      </div>
+      <button type="submit" class="button">Importa operazioni</button>
+    </form>
+  </div>
+</article>
+
+<article class="record" style="margin-bottom: var(--sp-6)">
+  <div class="record__margin" aria-hidden="true"></div>
+  <div class="record__body">
+    <div class="record__head">
+      <span class="record__designation record__designation--minor">Strategia</span>
+      <span class="record__ref push">ADR-0027</span>
+    </div>
+    <p class="note" style="margin-bottom: var(--sp-3)">
+      Un file YAML canonico di <span class="ident">Strategy</span>. Se lo
+      <span class="ident">strategy_id</span> è già presente, l'importazione congela una nuova
+      versione della stessa strategia — non ne esiste una modificabile in-place — e richiede
+      comunque una <span class="ident">change_note</span> nel file stesso.
+    </p>
+    <form method="post" action="/data-io/strategy" enctype="multipart/form-data" class="row"
+          style="gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end">
+      <div>
+        <label class="field__label" for="strategy-file">File YAML</label>
+        <input id="strategy-file" type="file" name="file" class="field" accept=".yaml,.yml" required>
+      </div>
+      <button type="submit" class="button">Importa strategia</button>
+    </form>
+  </div>
+</article>
+
+<article class="record">
+  <div class="record__margin" aria-hidden="true"></div>
+  <div class="record__body">
+    <div class="record__head">
+      <span class="record__designation record__designation--minor">Esporta dati authored</span>
+      <span class="record__ref push">RFC-0009 §7.1</span>
+    </div>
+    <p class="note" style="margin-bottom: var(--sp-3)">
+      L'unico percorso di recupero per apportionment e Strategy: dati che non possono essere
+      ricostruiti dai raw importati, a differenza di Operation e prezzi. Il download è un archivio
+      zip con un file per la storia di apportionment di ciascun Bucket, un file per ogni versione
+      congelata di ogni Strategy, e un file per le classificazioni correnti degli asset.
+    </p>
+    <a class="button" href="/data-io/export">Scarica l'archivio (.zip)</a>
+  </div>
+</article>
+
+{% endblock %}
