@@ -48,7 +48,6 @@ def runs_list(con: Store) -> HTMLResponse:
         "static": "/static",
         "title": "Stato delle valutazioni",
         "page_title": "Stato delle valutazioni",
-        "page_kicker": "Verificare",
         "page_lede": (
             "Ogni valutazione registrata, con i suoi quattro esiti. Non valutato non significa "
             "conforme: una regola saltata o interrotta non dice nulla sul rispetto della tua "
@@ -76,7 +75,6 @@ def run_detail(run_id: str, con: Store) -> HTMLResponse:
         "static": "/static",
         "title": f"Valutazione run:{run.id[:8]}",
         "page_title": "Valutazione",
-        "page_kicker": "Verificare",
         "page_lede": (
             "Ogni regola valutata in questa run, con il proprio esito. Un esito SKIPPED o "
             "ERROR porta sempre il proprio motivo accanto."

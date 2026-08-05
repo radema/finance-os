@@ -59,7 +59,6 @@ def buckets_page(con: Store, error: str | None = None) -> HTMLResponse:
         "static": "/static",
         "title": "Bucket e apportionment",
         "page_title": "Bucket e apportionment",
-        "page_kicker": "Detenere",
         "page_lede": (
             "Come il patrimonio è ripartito fra i Bucket: quali asset sono stati assegnati a "
             "ciascuno e in quale quantità, alla data dell'ultima valutazione. Il residuo non "

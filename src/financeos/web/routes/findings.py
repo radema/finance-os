@@ -54,7 +54,6 @@ def findings_list(con: Store) -> HTMLResponse:
         "static": "/static",
         "title": "Rilievi",
         "page_title": "Rilievi",
-        "page_kicker": "Decidere",
         "page_lede": (
             "Ogni rilievo è uno scostamento fra quello che hai dichiarato nella tua strategia "
             "e quello che il portafoglio detiene alla data di valutazione. L'ordine è quello "
