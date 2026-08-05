@@ -1539,5 +1539,7 @@ class TestRunOutcomeCountsCoalesce:
             0,
             1,
         )
-        expected_reason = f"condition.params names a Bucket that does not exist: {foreign_bucket_id}"
+        expected_reason = (
+            f"condition.params names a Bucket that does not exist: {foreign_bucket_id}"
+        )
         assert counts.reasons == (SkipReasonCount(reason=expected_reason, count=1),)
