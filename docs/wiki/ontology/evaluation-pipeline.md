@@ -3,7 +3,7 @@
 Point-in-time map, base commit `2dd7346`. Ground truth: `docs/seed/rfcs/` then `src/`.
 
 `uv run financeos evaluate` runs this. The composition lives in **exactly one place**:
-`src/financeos/app/evaluate_strategy.py` (561 lines — the largest module in `app/`, and
+`src/financeos/app/evaluate_strategy.py` (573 lines — the largest module in `app/`, and
 legitimately so).
 
 ## Why composition is centralised
@@ -106,7 +106,7 @@ to *this* scope call. Three code paths, in precedence order:
    (`_parse_scope_ref`, `_named_scope_value`).
 3. Otherwise, `_default_scope_gate(rule)` infers one from the **condition kind** via the registry.
 
-`_applies_to_this_call` at `evaluate_strategy.py:429` is the decision point.
+`_applies_to_this_call` at `evaluate_strategy.py:441` is the decision point.
 
 > The engine **never** sees a gate. **C2** and RFC-0006 §3.1 put this in the application layer, and
 > `RuleScopeGate`'s docstring is explicit that a `LeafCondition`'s `scope` param is a **message
