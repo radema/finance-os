@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed · **revision v0.2** |
+| **Status** | Proposed · **revision v0.3** |
 | **Track** | Technical (0004–0012) |
 | **Depends on** | RFC-0004 through RFC-0009 |
 | **Supersedes** | RFC-0010 v0.1 (integrated, not amended — see §10) |
@@ -130,8 +130,9 @@ Fully specified in RFC-0005 §8. One `Asset` pair, ~10 `Operation`s, one `Bucket
 | Reporting | Allocation dashboard, Net Worth, `Snapshot` on every evaluate, drift-over-time from Snapshots |
 | Run hygiene | `evaluation_run.mode` and the mandatory `mode = 'ACTUAL'` read-side predicate — required from day one even though the candidate *flows* ship in V1.2 (§3 note below) |
 | Data | `financeos export --authored` (RFC-0009 §7.1) — **required before migration 002** |
+| UI (data I/O) | Web routes wiring `import_operations`, `import_strategy`, `export_authored` into the browser — CSV/YAML upload, bundle download. No new domain aggregate or write use case; apportionment and Strategy-authoring remain V1.0's only entity-*editing* UI (ADR-0037) |
 
-**Defers** Cash Flow (`Transaction`, `Category`, run rate), `Decision` capture, `MarketIndicator`, bonds/amortized cost, Forecast, Tax, Knowledge, `Goal`, multi-currency, tamper-evidence, interior-node tolerances, rebalancing calculator, classification axes, candidate flows.
+**Defers** Cash Flow (`Transaction`, `Category`, run rate), `Decision` capture, `MarketIndicator`, bonds/amortized cost, Forecast, Tax, Knowledge, `Goal`, multi-currency, tamper-evidence, interior-node tolerances, rebalancing calculator, classification axes, candidate flows, entity management UI (create/edit forms for `Portfolio`/`Bucket`/`Account`/`Asset`, ADR-0037).
 
 **Done when** you have imported your actual holdings, authored your actual Strategy, and the findings it produces are ones you recognize as true and would act on.
 
@@ -154,6 +155,7 @@ Fully specified in RFC-0005 §8. One `Asset` pair, ~10 `Operation`s, one `Bucket
 | **Goal — object only** | `goal` table (ERR-11), `strategy_goal` link (ADR-0030), `goal_revision_audit`, CRUD, display against Buckets. **No rule reads a Goal in this increment.** (RFC-0012 ADR-0036) |
 | Apportionment defaults | Per-`Bucket` default rules so new Operations do not all land `UNASSIGNED` (§6.1) |
 | Reporting | Monthly view, income/expense series |
+| **Entity management UI** | **Create/edit forms for `Portfolio`, `Bucket`, `Account`, `Asset` in the browser — the ongoing path for structural changes after initial fixture-seed setup, replacing direct CSV/DB editing for anything beyond apportionment and Strategy authoring. Needs new write-side use cases: none exist pre-V1.1 beyond `ApportionBucket` and Strategy-freeze (ADR-0037)** |
 
 **Defers** Forecast, Tax, multi-currency, bonds, `REJECTED` UI, Decision templates, `goal_funding_gap`, classification axes.
 
@@ -167,6 +169,8 @@ Fully specified in RFC-0005 §8. One `Asset` pair, ~10 `Operation`s, one `Bucket
 - **A funding gap next to a known savings rate is a live number.** Cash Flow arrives in this increment, which makes V1.1 the first increment where a Goal is worth looking at rather than merely stored.
 
 **Cost:** E9 (`objective` / `Goal` split) escalates from "blocks V2" to **"blocks V1.1"**. That is the real price of this move and it is a scheduling risk, not a technical one — see §5.
+
+**Why entity management UI is here, not V1.0 (ADR-0037).** §3 V1.0 never specified it — only the apportionment UI and Strategy-authoring UI are in scope there, and both existed as forms before this revision. A product-owner request asked for full create/edit UI plus import/export buttons for `Portfolio`, `Bucket`, `Account`, and `Asset`. Import/Export UI was in reach — it wires three use cases (`import_operations`, `import_strategy`, `export_authored`) that already existed for the CLI, so no new domain logic. Entity CRUD was not: no write-side use case exists today for `Portfolio`, `Bucket`, `Account`, or `Asset` creation (`ApportionBucket` mutates an existing Bucket's apportionment; Strategy-freeze mutates an existing Strategy's version — neither creates the entities themselves), and `Account` itself has no aggregate yet, only a reference-entity DTO (ADR-0026). Building it in V1.0 would mean improvising the write-side contract for four entities in one pass, ungoverned by any RFC. Landing it in V1.1 instead pairs it with `Account`'s already-scheduled promotion to a full aggregate.
 
 ---
 
@@ -463,7 +467,18 @@ One row changed status rather than target: RFC-0007 §12.2's `AssetClass` owners
 
 ## 10. Revision History
 
-### v0.2 — this document
+### v0.3 — this document
+
+Product-owner session working against the built V1.0 UI found a gap (no browser path to create/edit `Portfolio`/`Bucket`/`Account`/`Asset`) and asked for it plus Import/Export buttons. ADR-0037 splits the request. Changes from v0.2:
+
+| # | Change | Location |
+|---|---|---|
+| 1 | **Import/Export UI added**: web routes for `import_operations`, `import_strategy`, `export_authored` (ADR-0037) | §3 V1.0 |
+| 2 | **Entity management UI** (create/edit forms for `Portfolio`/`Bucket`/`Account`/`Asset`) added, deferred from V1.0 (ADR-0037) | §3 V1.1 |
+| 3 | `Defers` line for V1.0 gains entity management UI | §3 V1.0 |
+| 4 | ADR-0037 introduced | Appendix A, ADR body |
+
+### v0.2 — superseded
 
 Integrates all seven RFC-0011 §5 deltas and RFC-0011 §6's queue, and adds this session's decisions. Changes from v0.1:
 
@@ -540,6 +555,7 @@ Original. Increments S, V1.0, V1.1, V1.2, V2, V3. ADR-0024. Retained in version 
 | ADR-0034 | Valuation and return series as derived read models | Proposed | RFC-0012 |
 | ADR-0035 | Candidate `StrategyVersion` evaluation via draft lineage | Proposed | RFC-0012 |
 | ADR-0036 | `Goal` as a first-class object with a revision audit | Proposed | RFC-0012 |
+| **ADR-0037** | **Entity management UI deferred V1.0 → V1.1; V1.0 ships Import/Export UI only** | **Accepted** | **RFC-0010 v0.3** |
 
 ---
 
@@ -591,3 +607,20 @@ Option 2 is the intuitive answer and it is wrong in a specific, instructive way:
 - A new obligation lands on the UI: Class B findings must be distinguishable from Class A findings, and `severity` must not sort across classes (§6.4).
 - `V1.3` becomes a legitimate label rather than an ad-hoc one, and the increment count before V2 grows to five.
 - The criterion is a constraint on this project's future self, which is the point. It will at some stage forbid something convenient.
+
+---
+
+### ADR-0037 — Entity management UI deferred to V1.1; V1.0 ships Import/Export UI only
+
+**Context.** A product-owner session working against the built V1.0 UI (apportionment forms, Strategy-authoring forms, the new `/dashboard`) found it had no way to create or edit `Portfolio`, `Bucket`, `Account`, or `Asset` from the browser, and asked for both full create/edit forms for those four entities and Import/Export buttons wired into the UI.
+
+**Decision Drivers.** §3 V1.0's UI scope is exactly two forms (apportionment, Strategy authoring) and neither is a general entity editor; no write-side use case exists today for creating any of the four entities (`ApportionBucket` and Strategy-freeze both mutate an *existing* aggregate, they don't mint `Portfolio`/`Bucket`/`Account`/`Asset`); `Account` has no aggregate yet, only a reference-entity DTO (ADR-0026); Import/Export, by contrast, wires three use cases that already exist and ship with the CLI (`import_operations`, `import_strategy`, `export_authored`) — no new domain logic, no new invariant to enforce at write time.
+
+**Considered Options.**
+1. *Build both now* — full CRUD UI for all four entities plus Import/Export buttons, in V1.0.
+2. *Build neither* — leave the CLI/fixture-seed path as the only way in, until V1.1.
+3. *Build Import/Export UI now, defer entity CRUD UI to V1.1.*
+
+**Decision Outcome.** Option 3. Import/Export UI costs nothing architecturally — it is a thin web-route wrapper over use cases already proven by the CLI and its tests. Entity CRUD UI is real scope growth: it requires a write-side use case per entity, none of which exist, and for `Account` a domain aggregate that doesn't exist either. Building it ungoverned, mid-session, without an RFC would repeat the exact failure mode this corpus's governance rules exist to prevent.
+
+**Consequences.** V1.0 ships Import/Export UI (§3 V1.0, new row). Entity management UI moves to V1.1 (§3 V1.1, new row), where it is paired with `Account`'s already-scheduled promotion to a full aggregate — the two land together rather than `Account` being promoted twice. Until V1.1 ships, the only way to create a `Portfolio`, `Bucket`, `Account`, or `Asset` remains the fixture-seed CSV path (`financeos seed <dir>`), which is destructive (wipes the store) and was never intended as a repeating workflow — that gap is now on the record rather than silently worked around.

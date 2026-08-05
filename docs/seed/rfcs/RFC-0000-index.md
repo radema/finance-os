@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Living document — updated whenever any RFC changes status |
 | **Role** | Navigational entry point for the Finance OS RFC corpus. Points, never restates. |
-| **Last revised** | With RFC-0011 |
+| **Last revised** | With RFC-0010 v0.3 |
 
 ---
 
@@ -89,7 +89,7 @@ Where to look before trusting a section of an original RFC.
 | RFC-0009 ER `STRATEGY_VERSION ||--|{ RULE` | RFC-0011 ADR-0027 (document containment) |
 | RFC-0010 §4.1 "V1.0 has no `Account`" | RFC-0011 ADR-0026 (reference entity) |
 | RFC-0010 §5 ratification queue | RFC-0011 §6 (adds E10, E11) |
-| RFC-0010 §3 V1.0 scope | RFC-0011 §5 (four additions) |
+| RFC-0010 §3 V1.0 scope | RFC-0011 §5 (four additions); RFC-0010 v0.3 ADR-0037 (Import/Export UI added, entity CRUD UI moved to V1.1) |
 
 ---
 
@@ -108,8 +108,11 @@ Full details in each owning RFC; RFC-0011 Appendix A is the cumulative table.
 | ADR-0021…0023 | RFC-0008 | Findings derived · dismissal is a Decision · rationale from StrategyVersion |
 | ADR-0024 | RFC-0010 | Cash Flow deferred to V1.1 (amended: ADR-0026) |
 | ADR-0025…0031 | RFC-0011 | VirtualHolding derived · cash legs · rules embedded · OperationType widened · UNASSIGNED denominators · Goal links unfrozen · Market owns prices |
+| ADR-0037 | RFC-0010 v0.3 | Entity management UI deferred to V1.1; Import/Export UI confirmed as V1.0's data-I/O UI scope |
 
 Amended ADRs: **0001** (by 0025), **0013** (by ERR-1), **0024** (by 0026). None reversed.
+
+Not yet indexed here: ADR-0032…0036 (RFC-0010 v0.2, RFC-0012) — pre-existing gap, flagged not fixed.
 
 ---
 
@@ -196,8 +199,8 @@ Authoritative version: RFC-0010 §3, as amended by RFC-0011 §5.
 | Increment | Answers | Headline content |
 |---|---|---|
 | **S** | — | Spine + replay contract. One rule, one recommendation, inspectable trace. |
-| **V1.0** | *Sto rispettando la mia strategia? Quanto è cambiato il mio patrimonio?* | Strategy compliance, Net Worth via cash-as-Asset, apportionment UI, five+1 rules (`over_apportioned` added), findings, run health, Reconcile, Market price half |
-| **V1.1** | *Come sta andando il mese? Cosa dovrei fare oggi?* (loop closed) | Cash Flow context, `Transaction`↔cash-leg dedup, `Decision` capture, apportionment defaults |
+| **V1.0** | *Sto rispettando la mia strategia? Quanto è cambiato il mio patrimonio?* | Strategy compliance, Net Worth via cash-as-Asset, apportionment UI, five+1 rules (`over_apportioned` added), findings, run health, Reconcile, Market price half, Import/Export UI |
+| **V1.1** | *Come sta andando il mese? Cosa dovrei fare oggi?* (loop closed) | Cash Flow context, `Transaction`↔cash-leg dedup, `Decision` capture, apportionment defaults, entity management UI |
 | **V1.2** | *Quali rischi sto assumendo?* | Indicators, concentration, bonds/amortized cost, composite tolerances, hash chain, rebalancing calculator |
 | **V2** | *Cosa succederà nei prossimi mesi?* | Forecast, Planning, `Goal`, scheduled ingestion, notification |
 | **V3** | — | Knowledge context, AI assistant (read-only over traces/rationales/change notes) |
