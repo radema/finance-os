@@ -109,6 +109,12 @@ def nav_of(current: str, *, findings_count: int | None = None) -> list[dict[str,
                     "count": None,
                     "current": current == "strategies",
                 },
+                {
+                    "label": "Importa/esporta dati",
+                    "url": "/data-io",
+                    "count": None,
+                    "current": current == "data-io",
+                },
             ],
         },
         {
