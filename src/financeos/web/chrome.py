@@ -35,7 +35,13 @@ def provenance_of(run: RunRow | None) -> dict[str, Any] | None:
     return {
         "portfolio": run.portfolio_name,
         "as_of": format_date_it(run.as_of),
-        "run_id": f"run:{run.id[:8]}",
+        # [:13] — the two leading UUIDv7 groups (the full 48-bit millisecond timestamp), not
+        # `[:8]` (its high 32 bits alone): the demo fixture's 5 runs from one `evaluate`
+        # invocation all fall in the same ~49-day window `[:8]` covers and showed identically
+        # as `run:019fd0c9` on every page's provenance bar (task #12/#dashboard review
+        # SHOULD-FIX 3). The low 16 bits tick every millisecond, which sequential run writes
+        # always cross.
+        "run_id": f"run:{run.id[:13]}",
         "run_url": f"/runs/{run.id}",
         "mode": run.mode,
         "input_digest": f"sha256:{run.input_digest[:4]}…{run.input_digest[-4:]}",
@@ -137,20 +143,31 @@ def skip_notice_context(counts: OutcomeCounts) -> dict[str, Any]:
     for that `SkipReason` (P22) rather than derived from the identifier. ADR-0016 and ADR-L03
     §5.3 both require the reason to be said in words: a bare identifier beside a count is the
     "not evaluated, cause unknown" the notice exists to prevent.
+
+    An `ERROR` outcome's cause is not a catalogued `SkipReason` (it is the exception raised
+    during evaluation, RFC-0006 §5) so it carries no `ALL_LABELS` gloss; its own recorded text
+    is the explanation rather than the "no motive recorded" disclaimer, which is reserved for
+    the genuinely-unknown `'unknown'` sentinel `run_outcome_counts` emits when even that is
+    missing (task #12/#dashboard review SHOULD-FIX 2).
     """
     reasons = []
     for reason in counts.reasons:
         entry = ALL_LABELS.get(reason.reason)
         gloss = entry.gloss if entry is not None and entry.gloss else None
+        if gloss is not None:
+            explanation = gloss
+        elif reason.reason == "unknown":
+            explanation = (
+                "la valutazione non ha registrato un motivo per questo esito, che è "
+                "esso stesso un difetto da segnalare."
+            )
+        else:
+            explanation = reason.reason
         reasons.append(
             {
                 "reason": reason.reason,
                 "count": reason.count,
-                "explanation": gloss
-                or (
-                    "la valutazione non ha registrato un motivo per questo esito, che è "
-                    "esso stesso un difetto da segnalare."
-                ),
+                "explanation": explanation,
             }
         )
     return {

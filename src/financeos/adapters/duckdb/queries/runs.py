@@ -179,13 +179,16 @@ class AlertRow:
 def list_alerts(con: duckdb.DuckDBPyConnection, run_id: str) -> tuple[AlertRow, ...]:
     """Every Alert of `run_id`, in the same order the findings list uses (RFC-0008 §3).
 
-    `NOT_FIRED` and `FIRED` alerts carry no `skip_reason`/`error_kind` — `reason` is `None` for
+    `NOT_FIRED` and `FIRED` alerts carry no `skip_reason`/`error` — `reason` is `None` for
     those, and the outcome chip partial requires one only for `SKIPPED`/`ERROR` (ADR-0016).
+    `EvaluationTrace` names the `ERROR` field `error` (`core/decision/trace.py`), not
+    `error_kind` — reading the latter left every `ERROR` alert's `reason` `None` (task
+    #12/#dashboard review SHOULD-FIX 2).
     """
     rows = con.execute(
         """
         SELECT id, rule_id, outcome, priority, severity,
-               coalesce(trace ->> 'skip_reason', trace ->> 'error_kind')
+               coalesce(trace ->> 'skip_reason', trace ->> 'error')
         FROM alert
         WHERE run_id = ?
         ORDER BY
@@ -217,7 +220,11 @@ def run_outcome_counts(con: duckdb.DuckDBPyConnection, run_id: str) -> OutcomeCo
 
     The skip reason is read out of `alert.trace ->> 'skip_reason'` rather than from a column:
     the trace is the record of *why* (RFC-0009 §4.1), and ADR-0016 makes "not evaluated, cause
-    unknown" the one thing a skip notice may never say.
+    unknown" the one thing a skip notice may never say. An `ERROR` alert carries no
+    `skip_reason` — its cause lives in `trace ->> 'error'` instead (`EvaluationTrace.error`,
+    `core/decision/trace.py`) — so that is the second fallback, ahead of the `'unknown'`
+    sentinel for the case where truly neither was recorded (task #12/#dashboard review
+    SHOULD-FIX 2).
     """
     row = con.execute(
         """
@@ -237,7 +244,7 @@ def run_outcome_counts(con: duckdb.DuckDBPyConnection, run_id: str) -> OutcomeCo
 
     reason_rows = con.execute(
         """
-        SELECT coalesce(trace ->> 'skip_reason', 'unknown') AS reason, count(*)
+        SELECT coalesce(trace ->> 'skip_reason', trace ->> 'error', 'unknown') AS reason, count(*)
         FROM alert
         WHERE run_id = ? AND outcome IN ('SKIPPED', 'ERROR')
         GROUP BY reason
