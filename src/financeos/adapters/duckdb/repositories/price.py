@@ -21,6 +21,7 @@ import duckdb
 from financeos.adapters.duckdb._time import parse_instant
 from financeos.core.market import PriceView
 from financeos.core.shared import AssetId, Currency, PriceId
+from financeos.ports.repositories import PriceRecord
 
 
 class DuckDBPriceRepository:
@@ -91,3 +92,21 @@ class DuckDBPriceRepository:
             )
             for row_id, row_asset_id, valid_date, close, currency, recorded_at in rows
         }
+
+    def all(self) -> tuple[PriceRecord, ...]:
+        rows = self._con.execute(
+            "SELECT asset_id, valid_date, close, currency, source, "
+            "CAST(recorded_at AS VARCHAR) FROM price "
+            "ORDER BY asset_id, valid_date, recorded_at"
+        ).fetchall()
+        return tuple(
+            PriceRecord(
+                asset_id=AssetId(UUID(row[0])),
+                valid_date=row[1],
+                close=str(row[2]),
+                currency=row[3],
+                source=row[4],
+                recorded_at=parse_instant(row[5]),
+            )
+            for row in rows
+        )

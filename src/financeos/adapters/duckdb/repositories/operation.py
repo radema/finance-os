@@ -113,6 +113,15 @@ class DuckDBOperationRepository:
             raise KeyError(f"no operation {operation_id}")
         return _operation_from_row(row)
 
+    def all_primary(self) -> tuple[Operation, ...]:
+        rows = self._con.execute(
+            "SELECT id, type, account_id, asset_id, trade_date, quantity, price, fees, "
+            "currency, import_batch_id, corrects_id, transfer_pair_id, cash_leg_of, "
+            "CAST(recorded_at AS VARCHAR) FROM operation WHERE cash_leg_of IS NULL "
+            "ORDER BY trade_date, id"
+        ).fetchall()
+        return tuple(_operation_from_row(row) for row in rows)
+
     def leg_of(self, operation_id: OperationId) -> Operation | None:
         row = self._con.execute(
             "SELECT id FROM operation WHERE cash_leg_of = ?", [str(operation_id)]

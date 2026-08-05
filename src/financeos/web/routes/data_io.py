@@ -19,6 +19,14 @@ the domain constructors and repository `write()` do not already enforce themselv
 apportionment history, one per frozen `StrategyVersion`, one for asset classifications) — there
 is no single artifact to stream. A zip bundle is the one download a browser can retrieve in one
 request without the operator picking files off a served directory listing one at a time.
+
+**`/data-io/backup`: a second, separate export action (product-owner decision, 2026-08-05).**
+`export_authored`'s bundle round-trips through nothing but itself (apportionment/assets are
+export-only); this one is a zip mirroring `demo/`'s fixture-directory shape — CSV/YAML the
+*existing* `financeos seed <dir>` command already reads back, unchanged. See
+`app.export_backup`'s module docstring for what it covers that `export --authored` does not
+(and the reverse), and PRODUCT.md's "One DuckDB file; backup is `cp`" line this adds an
+alternative to.
 """
 
 from __future__ import annotations
@@ -39,6 +47,7 @@ from financeos.adapters.importers.csv_operations import read_csv
 from financeos.adapters.importers.yaml_strategy import read_yaml
 from financeos.adapters.system import SystemClock, UUIDv7IdGen
 from financeos.app.export_authored import export_authored
+from financeos.app.export_backup import export_backup
 from financeos.app.import_operations import import_operations
 from financeos.app.import_strategy import import_strategy
 from financeos.app.unit_of_work import DuckDBUnitOfWork
@@ -60,16 +69,17 @@ _IMPORT_ERRORS = (ValueError, KeyError, InvalidOperation, ValidationError, yaml.
 def data_io_page(
     con: Store, error: str | None = None, ok: str | None = None
 ) -> HTMLResponse:
-    """Two upload forms (Operations CSV, Strategy YAML) and one export trigger."""
+    """Two upload forms (Operations CSV, Strategy YAML) and two export triggers."""
     context = {
         "static": "/static",
         "title": "Importa ed esporta dati",
         "page_title": "Importa ed esporta dati",
         "page_lede": (
-            "Le tre operazioni di scrittura da file offerte finora solo dalla riga di comando: "
+            "Le operazioni di scrittura da file offerte finora solo dalla riga di comando: "
             "importare un file CSV di Operation, importare un file YAML di Strategy (congela "
-            "una nuova versione), ed esportare i dati authored — l'unico percorso di recupero "
-            "per apportionment e Strategy (RFC-0009 §7.1)."
+            "una nuova versione), esportare i dati authored — l'unico percorso di recupero "
+            "per apportionment e Strategy (RFC-0009 §7.1) — ed esportare un backup completo, "
+            "ricaricabile con «financeos seed»."
         ),
         "provenance": provenance_of(latest_actual_run(con)),
         "nav": nav_of("data-io"),
@@ -155,6 +165,39 @@ def export_bundle(con: Store) -> Response:
         content=content,
         media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="financeos-authored-export.zip"'},
+    )
+
+
+@router.get("/data-io/backup", include_in_schema=False)
+def backup_bundle(con: Store) -> Response:
+    """`export_backup`: the whole store, zipped in `demo/`'s fixture-directory shape —
+    reloadable with the existing `financeos seed <unzipped-dir>` command, unchanged."""
+    uow = DuckDBUnitOfWork(con)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        out_dir = Path(tmp_dir)
+        result = export_backup(uow, out_dir)
+        all_files = (
+            result.accounts_file,
+            result.assets_file,
+            result.portfolios_file,
+            result.portfolio_accounts_file,
+            result.buckets_file,
+            result.apportionment_file,
+            result.prices_file,
+            result.operations_file,
+            *result.strategy_files,
+        )
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for path in all_files:
+                zf.write(path, arcname=path.relative_to(out_dir))
+        content = buffer.getvalue()
+
+    return Response(
+        content=content,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="financeos-backup.zip"'},
     )
 
 

@@ -7,7 +7,7 @@ from uuid import UUID
 import duckdb
 
 from financeos.core.shared import AccountId, AssetId
-from financeos.ports.repositories import AccountInfo
+from financeos.ports.repositories import AccountInfo, AccountRecord
 
 
 class DuckDBAccountRepository:
@@ -28,4 +28,19 @@ class DuckDBAccountRepository:
             raise KeyError(f"no account {account_id}")
         return AccountInfo(
             id=AccountId(UUID(row[0])), cash_asset_id=AssetId(UUID(row[1])), currency=row[2]
+        )
+
+    def all(self) -> tuple[AccountRecord, ...]:
+        rows = self._con.execute(
+            "SELECT id, name, type, currency, cash_asset_id FROM account ORDER BY id"
+        ).fetchall()
+        return tuple(
+            AccountRecord(
+                id=AccountId(UUID(row[0])),
+                name=row[1],
+                type=row[2],
+                currency=row[3],
+                cash_asset_id=AssetId(UUID(row[4])),
+            )
+            for row in rows
         )
