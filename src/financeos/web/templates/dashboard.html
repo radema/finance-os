@@ -6,13 +6,13 @@
   findings hang off it as an annotation layer, one card per Bucket. The ordered
   list of findings is a compact ledger below, not the subject. `/` (screen 1)
   is untouched and stays the findings-first landing page (P1, UX-0001 §5.3 —
-  now a pointer to this route).
+  now a pointer to `docs/plans/adr/ADR-L08-dashboard-landing-page.md`).
 
   TWO GUARDS, HELD FOR REAL:
   1. No Bucket card shows an open-findings count without its unevaluated count
      beside it. A Bucket that was never evaluated shows neither as a zero.
   2. The composition chart is the SAME reconciliation `/allocation` renders
-     (`web.routes.allocation.bucket_chart`) — the segments close on the
+     (`web.charts.bucket_chart`) — the segments close on the
      net-worth tick and the residual is one of them (ADR-0029).
 #}
 {% extends "base.html" %}
@@ -139,7 +139,24 @@
         </div>
       </dl>
 
-      {% if c.rules_unevaluated and not c.open_findings %}
+      {% if c.rules_measured == 0 %}
+      {# A run exists for this Bucket, but every one of its rules landed on SKIPPED — a
+         different state from "never evaluated": a measurement was attempted and resolved
+         nothing, rather than none being attempted at all (task #12/#dashboard review
+         BLOCKING-1). Its own copy, not the never-evaluated string above. #}
+      <div class="notice" role="note" style="margin-top: var(--sp-3)">
+        <div class="notice__margin" aria-hidden="true"></div>
+        <div class="notice__body">
+          <p class="notice__lead">
+            Una valutazione è stata registrata, ma nessuna regola ha raggiunto un esito.
+          </p>
+          <p>Tutte le <span class="value">{{ c.rules_unevaluated }}</span>
+          {{ 'regola di questo Bucket è stata saltata' if c.rules_unevaluated == 1
+             else 'regole di questo Bucket sono state saltate' }}: l'assenza di rilievi qui
+          non è un esito, è l'assenza di una misura.</p>
+        </div>
+      </div>
+      {% elif c.rules_unevaluated and not c.open_findings %}
       <p class="note" style="margin-top: var(--sp-3)">
         Zero rilievi con <span class="value">{{ c.rules_unevaluated }}</span>
         {{ 'regola non valutata' if c.rules_unevaluated == 1 else 'regole non valutate' }}:

@@ -24,7 +24,12 @@
   <div class="record__body">
     <div class="record__head">
       <span class="record__designation record__designation--minor">
-        run:{{ run.id[:8] }} · {{ run.strategy_name }}
+        {# [:13] — the two leading UUIDv7 groups, i.e. the full 48-bit millisecond timestamp.
+           `[:8]` (the timestamp's high 32 bits alone) does not discriminate: the demo fixture's
+           5 runs from one `evaluate` invocation all land in the same ~49-day window and showed
+           identically as `run:019fd0c9` (task #12/#dashboard review SHOULD-FIX 3). The low 16
+           bits tick every millisecond, which sequential run writes always cross. #}
+        run:{{ run.id[:13] }} · {{ run.strategy_name }}
       </span>
       <span class="record__ref push">
         {{ run.scope_kind | label }}:{{ run.scope_id[:8] }}
@@ -49,7 +54,11 @@
       <tbody>
         {% for a in alerts %}
         <tr>
-          <td><span class="ident">{{ a.rule_id[:8] }}</span></td>
+          {# [-4:], not a prefix: the demo fixture's rule ids
+             (`10000000-0000-0000-0000-00000000000N`) are identical up to the last hex digit, so
+             no prefix length discriminates them — only the random/varying tail does (task
+             #12/#dashboard review SHOULD-FIX 3). #}
+          <td><span class="ident">{{ a.rule_id[-4:] }}</span></td>
           <td>{{ a.priority | label }}</td>
           <td>
             {% with outcome = a.outcome, reason = a.reason %}

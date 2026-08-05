@@ -28,6 +28,14 @@ NET_WORTH = "€54.000,00"
 #: does. `DEMO_AS_OF` is `_seed`'s own `--as-of`.
 DEMO_PORTFOLIO_ID = "a8283d57-9cc4-5376-8952-1cf4208fcbd7"
 DEMO_STRATEGY_ID = "237f27fd-8230-53be-8a8c-f30e6d53812c"
+#: "Preservazione del capitale" (`demo/strategy-capital-preservation.yaml`) — its 3 rules are
+#: all Bucket-specific to Emergenza by id, with no `scope_gate` (unlike `DEMO_STRATEGY_ID`'s 7
+#: generic `scope_gate: {kind: BUCKET}` rules, which apply to *every* Bucket the growth
+#: Strategy governs — including a new one). A synthetic Bucket placed under this Strategy is
+#: genuinely ungated: zero alerts of any outcome, not the 7 `SKIPPED(zero_portfolio_value)`
+#: `DEMO_STRATEGY_ID` would produce (task #12/#dashboard review BLOCKING-1 — that 7-skip state
+#: is Personale's own, tested separately below, and is not "never evaluated").
+DEMO_STRATEGY_ID_UNGATED = "337f27fd-8230-53be-8a8c-f30e6d53812d"
 DEMO_AS_OF = date(2026, 7, 24)
 
 OPTION_RE = re.compile(r'<script type="application/json" id="([^"]+)">([\s\S]*?)</script>')
@@ -64,11 +72,19 @@ def con(client: TestClient) -> duckdb.DuckDBPyConnection:
 
 
 def _add_bucket_with_no_rules_gated(con: duckdb.DuckDBPyConnection) -> str:
-    """A synthetic 2nd Bucket ("Libero"), sharing the demo Portfolio and Strategy but named by
-    no Rule's `condition.params` — built directly against the already-seeded store rather than
-    by mutating `demo/` (task #12 review SHOULD-FIX 4). `demo/` is a shared, product-owner-pinned
-    fixture (the six-class growth, pinned against `demo/expected/`) and must not carry test-only
-    Buckets.
+    """A synthetic 2nd Bucket ("Libero"), sharing the demo Portfolio but placed under the
+    "Preservazione del capitale" Strategy (`DEMO_STRATEGY_ID_UNGATED`) — whose rules all name
+    Emergenza specifically, none of them — built directly against the already-seeded store
+    rather than by mutating `demo/` (task #12 review SHOULD-FIX 4). `demo/` is a shared,
+    product-owner-pinned fixture (the six-class growth, pinned against `demo/expected/`) and
+    must not carry test-only Buckets.
+
+    Placing it under the growth Strategy (`DEMO_STRATEGY_ID`) instead would not do this: that
+    Strategy's 7 rules are `scope_gate: {kind: BUCKET}` and apply to *every* Bucket it governs,
+    so a new Bucket there gets the same 7 `SKIPPED(zero_portfolio_value)` alerts Personale
+    carries — a run that settled nothing, not a run with zero rules gated to it at all (task
+    #12/#dashboard review BLOCKING-1; the former is exercised by
+    `test_dashboard_bucket_with_all_rules_skipped_is_not_reported_never_evaluated` below).
 
     `evaluate_strategy` runs directly against this one Bucket's scope, at the same `as_of` the
     seeded demo run used, reproducing "a run but zero rules gated to it" (review BLOCKING)
@@ -80,7 +96,7 @@ def _add_bucket_with_no_rules_gated(con: duckdb.DuckDBPyConnection) -> str:
         Bucket(
             id=bucket_id,
             portfolio_id=PortfolioId(UUID(DEMO_PORTFOLIO_ID)),
-            strategy_id=StrategyId(UUID(DEMO_STRATEGY_ID)),
+            strategy_id=StrategyId(UUID(DEMO_STRATEGY_ID_UNGATED)),
             name="Libero",
         )
     )
@@ -149,6 +165,27 @@ def test_dashboard_bucket_card_never_shows_open_findings_without_unevaluated(
         assert "Rilievi aperti" not in block
         assert "Regole con un esito" not in block
         assert "Regole non valutate" not in block
+
+
+def test_dashboard_bucket_with_all_rules_skipped_is_not_reported_never_evaluated(
+    client: TestClient,
+) -> None:
+    """The demo fixture's own "Personale" Bucket (`demo/buckets.csv`) is empty and every one of
+    its 7 rules is `SKIPPED(zero_portfolio_value)` (task #12/#dashboard review BLOCKING-1) — a
+    run *was* recorded, unlike a Bucket that was truly never evaluated. The old
+    `not state.rules_measured` condition conflated the two and rendered the false "mai stato
+    valutato" / "nessuna esecuzione registrata" copy, silently dropping the
+    `rules_unevaluated == 7` count ADR-0016's guard-1 exists to surface."""
+    body = client.get("/dashboard").text
+    blocks = _card_blocks(body)
+    personale = [b for b in blocks if "Personale" in b]
+    assert personale, "the Personale card is missing"
+    for block in personale:
+        assert "non è mai stato valutato" not in block
+        assert "Nessuna esecuzione registrata" not in block
+        assert "nessuna regola ha raggiunto un esito" in block
+        assert "Regole non valutate" in block
+        assert "7" in block
 
 
 def test_dashboard_ledger_is_mv_finding_order_never_resorted(client: TestClient) -> None:

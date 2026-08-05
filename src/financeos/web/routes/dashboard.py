@@ -4,7 +4,7 @@
 the page; findings hang off it as an annotation layer, one card per Bucket. This is exactly the
 page `UX-0001 §5.3` argued against — see `docs/seed/ux/UX-0001-ui-reference.md §5.3`, now a
 pointer to this route and to the product-owner decision this route implements
-(`docs/plans/W2-dashboard-variations.md`, 2026-08). `/` (screen 1, `web/routes/findings.py`) is
+(`docs/plans/adr/ADR-L08-dashboard-landing-page.md`). `/` (screen 1, `web/routes/findings.py`) is
 untouched and stays the findings-first landing page: this is a second, sibling route, not a
 replacement.
 
@@ -13,10 +13,13 @@ anyway"):**
 
 1. **No Bucket card shows an open-findings count without its unevaluated count beside it.** A
    Bucket that was never evaluated at all (`BucketFindingsState.run_id is None`) — or one that
-   was evaluated but has literally zero rules gated to it (`rules_measured == 0`) — renders
-   neither count as a zero — that would be exactly the silent false reassurance `ADR-0016`
-   forbids at the presentation layer (review BLOCKING). An evaluated Bucket with at least one
-   measured rule always shows both counts together, whatever their values.
+   was evaluated but has literally zero rules gated to it at all (`rules_measured == 0` and
+   `rules_unevaluated == 0`) — renders neither count as a zero — that would be exactly the
+   silent false reassurance `ADR-0016` forbids at the presentation layer (review BLOCKING). A
+   Bucket with a recorded run whose rules were all `SKIPPED` (`rules_measured == 0` but
+   `rules_unevaluated > 0`) is a distinct, third state, with its own copy in `dashboard.html`.
+   An evaluated Bucket with at least one measured rule always shows both counts together,
+   whatever their values.
 2. **The whole reconciles in view.** The composition chart is the identical
    `web.charts.bucket_chart`/`bucket_legend`/`bucket_rows` `/allocation` renders (`ADR-0029`):
    the segments close on the net-worth tick and the `UNASSIGNED` residual is one of them, so the
@@ -127,11 +130,17 @@ def _card(bucket: BucketLine, state: BucketFindingsState) -> dict[str, Any]:
         "name": bucket.name,
         "value_it": format_money_it(bucket.value),
         "share_it": format_percent_it(bucket.weight),
-        # A Bucket that was evaluated but has literally zero rules gated to it
-        # (`rules_measured == 0`) gets the same "no measure" notice as one never evaluated at
-        # all (`run_id is None`) — otherwise it would render "0 / 0 / 0" with no caveat, which
-        # is exactly the silent false reassurance ADR-0016 forbids (review BLOCKING).
-        "never_evaluated": state.run_id is None or not state.rules_measured,
+        # A Bucket that was evaluated but has literally zero rules gated to it at all
+        # (`rules_measured == 0` AND `rules_unevaluated == 0`) gets the same "no measure"
+        # notice as one never evaluated at all (`run_id is None`) — otherwise it would render
+        # "0 / 0 / 0" with no caveat, which is exactly the silent false reassurance ADR-0016
+        # forbids (review BLOCKING). A Bucket with a recorded run whose rules were all SKIPPED
+        # (`rules_measured == 0` but `rules_unevaluated > 0`) is a *different* state — a run
+        # was recorded, it just settled nothing — and gets its own copy in the template rather
+        # than reusing "mai stato valutato" (task #12/#dashboard review BLOCKING-1).
+        "never_evaluated": (
+            state.run_id is None or (state.rules_measured == 0 and state.rules_unevaluated == 0)
+        ),
         "open_findings": state.open_findings,
         "breach": bool(state.open_findings),
         "rules_measured": state.rules_measured,

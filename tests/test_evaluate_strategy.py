@@ -1486,7 +1486,10 @@ class TestRunOutcomeCountsCoalesce:
     ) -> None:
         """A run whose sole rule is an unplaceable-scope defect (§4.2's inference path,
         review SHOULD-FIX 4) must count as `error`, never disappear from the counts entirely
-        or read as `skipped` (ADR-0016: SKIPPED != ERROR != silence)."""
+        or read as `skipped` (ADR-0016: SKIPPED != ERROR != silence). `reasons` carries the
+        actual `trace.error` text, not the `'unknown'` sentinel: `run_outcome_counts` now falls
+        back to `trace ->> 'error'` before that sentinel (task #12/#dashboard review
+        SHOULD-FIX 2), and this Rule's placement error has a real, recorded cause."""
         portfolio_id = PortfolioId(uuid4())
         strategy_id = StrategyId(uuid4())
         bucket_id = BucketId(uuid4())
@@ -1536,4 +1539,5 @@ class TestRunOutcomeCountsCoalesce:
             0,
             1,
         )
-        assert counts.reasons == (SkipReasonCount(reason="unknown", count=1),)
+        expected_reason = f"condition.params names a Bucket that does not exist: {foreign_bucket_id}"
+        assert counts.reasons == (SkipReasonCount(reason=expected_reason, count=1),)
