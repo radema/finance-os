@@ -91,4 +91,22 @@
   </div>
 </article>
 
+<article class="record" style="margin-top: var(--sp-6)">
+  <div class="record__margin" aria-hidden="true"></div>
+  <div class="record__body">
+    <div class="record__head">
+      <span class="record__designation record__designation--minor">Backup completo</span>
+      <span class="record__ref push">PRODUCT.md</span>
+    </div>
+    <p class="note" style="margin-bottom: var(--sp-3)">
+      Un secondo archivio, distinto dall'esportazione dei dati authored: uno zip con la stessa
+      struttura della cartella di seme che <span class="ident">financeos seed</span> legge già
+      (account, asset, portfolio, bucket, apportionment corrente, prezzi, operazioni, e uno YAML
+      per ciascuna strategia in vigore). Ricaricabile con lo stesso comando, senza alcun nuovo
+      importer.
+    </p>
+    <a class="button" href="/data-io/backup">Scarica il backup (.zip)</a>
+  </div>
+</article>
+
 {% endblock %}

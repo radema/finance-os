@@ -9,6 +9,7 @@ from financeos.ports.ids import IdGen
 from financeos.ports.market import PriceProvider, PriceQuote
 from financeos.ports.repositories import (
     AccountInfo,
+    AccountRecord,
     AccountRepository,
     ApportionmentRepository,
     AssetRepository,
@@ -16,12 +17,14 @@ from financeos.ports.repositories import (
     EvaluationRepository,
     OperationRepository,
     PortfolioRepository,
+    PriceRecord,
     PriceRepository,
     StrategyRepository,
 )
 
 __all__ = [
     "AccountInfo",
+    "AccountRecord",
     "AccountRepository",
     "ApportionmentRepository",
     "AssetRepository",
@@ -33,6 +36,7 @@ __all__ = [
     "PortfolioRepository",
     "PriceProvider",
     "PriceQuote",
+    "PriceRecord",
     "PriceRepository",
     "StrategyRepository",
 ]

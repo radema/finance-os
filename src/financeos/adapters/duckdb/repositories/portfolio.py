@@ -43,6 +43,17 @@ class DuckDBPortfolioRepository:
         ).fetchall()
         return tuple(AccountId(UUID(row[0])) for row in rows)
 
+    def all(self) -> tuple[Portfolio, ...]:
+        rows = self._con.execute("SELECT id, name FROM portfolio ORDER BY id").fetchall()
+        return tuple(
+            Portfolio(
+                id=PortfolioId(UUID(row[0])),
+                name=row[1],
+                accounts=self.accounts_of(PortfolioId(UUID(row[0]))),
+            )
+            for row in rows
+        )
+
 
 class DuckDBBucketRepository:
     def __init__(self, con: duckdb.DuckDBPyConnection) -> None:

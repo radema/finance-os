@@ -50,6 +50,29 @@ class AccountInfo(NamedTuple):
     currency: Currency
 
 
+class AccountRecord(NamedTuple):
+    """The full `account` row: `AccountInfo` plus `name`/`type`, the two columns the
+    cash-leg writer never needed but a full-backup export (`accounts.csv`'s shape,
+    `financeos seed` reads it back) does."""
+
+    id: AccountId
+    name: str
+    type: str
+    currency: Currency
+    cash_asset_id: AssetId
+
+
+class PriceRecord(NamedTuple):
+    """One raw `price` row, full-backup export shape (`prices.csv`'s columns)."""
+
+    asset_id: AssetId
+    valid_date: date
+    close: str
+    currency: Currency
+    source: str
+    recorded_at: datetime
+
+
 class AssetRepository(Protocol):
     """`asset` — definition, mutable in place (ADR-0012)."""
 
@@ -65,6 +88,10 @@ class AccountRepository(Protocol):
     def add(self, info: AccountInfo, *, name: str, type_: str) -> None: ...
     def get(self, account_id: AccountId) -> AccountInfo: ...
 
+    def all(self) -> tuple[AccountRecord, ...]:
+        """Every `account` row, full shape (full-backup export)."""
+        ...
+
 
 class PortfolioRepository(Protocol):
     """`portfolio` and its `portfolio_account` link (ERR-8)."""
@@ -73,6 +100,10 @@ class PortfolioRepository(Protocol):
     def get(self, portfolio_id: PortfolioId) -> Portfolio: ...
     def link_account(self, portfolio_id: PortfolioId, account_id: AccountId) -> None: ...
     def accounts_of(self, portfolio_id: PortfolioId) -> tuple[AccountId, ...]: ...
+
+    def all(self) -> tuple[Portfolio, ...]:
+        """Every `portfolio` row, `accounts` populated (full-backup export)."""
+        ...
 
 
 class BucketRepository(Protocol):
@@ -150,6 +181,12 @@ class PriceRepository(Protocol):
         """As above, additionally bounded by `recorded_at <= known_at` — "as known then"."""
         ...
 
+    def all(self) -> tuple[PriceRecord, ...]:
+        """Every `price` row, raw (full-backup export) — not a `price_latest`/
+        `price_as_known_at` resolution, so this is not a third named accessor RFC-0009 §9's
+        rule ("no query module may inline a `price` join") is about; it does no join at all."""
+        ...
+
 
 class OperationRepository(Protocol):
     """`operation` — the one true fact table (I-10), written through ADR-L01's shapes.
@@ -164,6 +201,13 @@ class OperationRepository(Protocol):
     def for_accounts(
         self, account_ids: Collection[AccountId], *, as_of: date
     ) -> tuple[Operation, ...]: ...
+
+    def all_primary(self) -> tuple[Operation, ...]:
+        """Every non-leg `operation` row (`cash_leg_of IS NULL`), across every Account —
+        the CSV-reimportable subset `financeos seed`/`import-operations` reads (full-backup
+        export). Auto-emitted cash legs are excluded on purpose: `import_operations` mints
+        them again on reseed, exactly as it did on first import."""
+        ...
 
     def get(self, operation_id: OperationId) -> Operation:
         """The one `Operation` with `id = operation_id`. Raises `KeyError` if absent."""
