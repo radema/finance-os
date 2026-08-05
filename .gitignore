@@ -25,6 +25,7 @@ htmlcov/
 *.duckdb.wal
 data/
 imports/
+export/
 exports/
 
 # Agent worktrees — transient checkouts, never part of the project.

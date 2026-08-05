@@ -100,7 +100,7 @@ all readers.
 - Two ADR series: corpus ADRs 0001–0036 live inside their owning RFC's Appendix A; **local** ADRs
   (`ADR-L01`…) live in `docs/plans/adr/` and resolve build blockers.
 - Named identifier families you will meet in code comments and commits — cite the number, don't
-  paraphrase: **I-1..I-18** invariants (registry in RFC-0000 §), **C1..C6** architecture contracts,
+  paraphrase: **I-1..I-22** invariants (registry in RFC-0000 §), **C1..C6** architecture contracts,
   **P1..P33** product-owner ratifications (`docs/plans/RATIFICATIONS-2026-07-30.md` and the handoffs),
   **ERR-1..ERR-15** errata, **E1..E11** extension queue.
 - `docs/seed/ux/UX-0001` mock is **non-normative**. If it drifts from the corpus, the corpus wins.
