@@ -44,6 +44,7 @@ Settled at charting (2026-10-29, with the user):
   critically, never as ground truth. Do not commit it or its personal figures.
 - **Stack:** TypeScript end to end, see ticket 05.
 - **Mock:** `reference/mock-app.html` — its JS engine is the reference implementation of the formulas.
+- **v2 backlog:** anything a ticket defers goes to the spec's "v2 candidates" section (ticket 10); ticket 15 publishes it as one issue "GBI v2 backlog".
 - Skills: `/grilling` and `/domain-modeling` (default), `/prototype` (UI), `/research`, `dataviz`,
   then `/to-spec` and `/to-tickets` at the end.
 
@@ -64,6 +65,7 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [06 — Keep/drop and new CLAUDE.md](issues/06-keep-drop.md) — tag `finance-os-legacy` then delete all old code/docs/design/demo; keep `.scratch/gbi-v1/` as source of truth during build; gate without Playwright; short CLAUDE.md drafted.
 - [07 — Financial-independence levels](issues/07-fi-levels.md) — multipliers on monthly expenses (300/200) confirmed; L1 = EF goal or months, measured without pension; pension counts by default (net, exit tax of year t); FI wealth net everywhere; targets grow with expenseGrowth; dashboard adds % of target per year.
 - [08 — Import: first broker format and multi-bucket trades](issues/08-import-rules.md) — Fineco XLSX preset only (ISIN match, `Operazione` date, A/V, fee column, Controvalore as check); multi-bucket rows: one bucket, split by weights or by units, always confirmed; opening via a "Current portfolio" form (fiscal PMC), rows before it skipped; new `coupon` type, recorded by default.
+- [10 — Tracking model](issues/10-tracking-model.md) — snapshots monthly auto (catch-up on first start) + manual; contribution plan versioned, plan vs actual cumulative with monthly series; R1 after N=3 months behind (configurable); per-product caps only; dismissal keys per rule; v2 backlog section + one GitHub issue.
 - [09 — Fineco export sample](issues/09-fineco-sample.md) — XLSX in real/ (gitignored): 5 metadata rows, header row 6, text dates DD/MM/YYYY, Segno A/V, coupons as 'Stacco Cedole'; match by Isin.
 
 ## Not yet specified

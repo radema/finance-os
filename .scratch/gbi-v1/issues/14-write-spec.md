@@ -8,3 +8,5 @@ Map: ../map.md
 ## Question
 
 AFK. Run `/to-spec` to write `.scratch/gbi-v1/spec.md` from `reference/source-spec.md` plus every resolved ticket, with `AC-` ids. Run a `spec-reviewer` pass (SPEC = spec.md, DECISION = map.md) and fix blocking findings.
+
+Input from ticket 10: the spec has a "v2 candidates" section, collected from every resolved ticket's deferred items.
