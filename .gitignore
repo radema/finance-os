@@ -33,6 +33,8 @@ exports/
 real/*.csv
 real/*.yaml
 real/*.yml
+real/*.xlsx
+real/*.xls
 
 # Agent worktrees — transient checkouts, never part of the project.
 # `.claude/skills/` IS tracked; only the worktree churn is excluded.
@@ -43,3 +45,6 @@ real/*.yml
 .idea/
 .vscode/
 *:Zone.Identifier
+
+# Prototype screenshots: regenerable, too large to commit
+.scratch/gbi-v1/prototypes/*/screens/

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Independence · GBI planner (prototype 11)</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<script src="theme-init.js"></script>
+</head>
+<body data-page="indep">
+<!-- PROTOTYPE, throwaway. Financial independence: three levels, how far along, and the projection. -->
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="content" style="min-width:0">
+    <header class="top" id="top"></header>
+    <main class="main" id="main"></main>
+  </div>
+</div>
+
+<script src="vendor/echarts.min.js"></script>
+<script src="data.js"></script>
+<script src="content.js"></script>
+<script src="app.js"></script>
+<script>
+window.PAGE = function () {
+  /* Ticket 07: FI wealth is net of tax; pension counts by default, shown as its own share; Level 1 is measured without pension;
+     targets are in today's euros and follow target(t) = target(0) x ((1 + expenseGrowth) / (1 + inflation))^t. */
+  const { $, $$, esc, eur, eurK, pct, dt, goal, term, mount, endLabel, G, gcol, gdot, gchip, prTag, legend, goalLegend, STACK, SHORT, bandOpacity, alpha } = U;
+  const LEG_FI = legend([['ln', 'var(--hl)', 'Level 2'], ['ln', 'var(--ctx)', 'Level 3'], ['ln dash', 'var(--ink2)', 'Target']]);
+  const legLevels = () => goalLegend(STACK.filter(id => ids.includes(id)));
+  const F = G.fi, lv = F.levels, rows = F.rows, n = rows.length - 1, PEN = 'g6';
+  const NAME = ['Safety', 'Barista FIRE', 'FIRE'];
+  const net = id => goal(id).fan.p50[0];                         /* net value today, after liquidation tax */
+  const counted = () => $$('input[name=count]').filter(i => i.checked).map(i => i.value);
+  const DEFAULT = ['g1', 'g5', 'g6'];
+  let ids = DEFAULT.slice();
+  const wTotal = () => ids.reduce((a, id) => a + net(id), 0);
+  const wPen = () => ids.includes(PEN) ? net(PEN) : 0;
+  const wAcc = () => wTotal() - wPen();
+  const measure = i => i === 0 ? wAcc() : wTotal();               /* Level 1 without pension */
+  const share = i => Math.min(1, measure(i) / lv[i].target);
+  const nextI = () => lv.findIndex((l, i) => measure(i) < l.target);
+  const isDefault = () => ids.length === 3 && DEFAULT.every(d => ids.includes(d));
+  const titleText = () => { const k = nextI(); if (k < 0) return 'All three levels are reached';
+    const yr = isDefault() && F.reached[k] ? `, expected in ${F.reached[k]} in the typical case` : `, ${eur(lv[k].target - measure(k))} to go`;
+    return (k === 0 ? '' : k === 1 ? 'Level 1 is reached; ' : 'Levels 1 and 2 are reached; ') + `Level ${k + 1} is ${pct(share(k))} funded${yr}`; };
+  const meaning = [
+    `The emergency fund goal (${eur(lv[0].target)}). Measured without pension money, which is not liquid.`,
+    `300 × your essential monthly spending of ${eur(G.cashflow.essential)}. Work only has to pay for the extras.`,
+    `Level 2 plus 200 × your optional monthly spending of ${eur(G.cashflow.optional)}. Work becomes a choice.`];
+  const termFor = ['', 'barista', 'fire'], p20 = rows[20].probs, pEnd = rows[n].probs;
+
+  const head = `<section class="exhibit card">
+      <div class="tag">Financial independence · ${dt(G.asOf)}</div>
+      <h1 class="title" id="hTitle">${titleText()}</h1>
+      <p class="unit">Share of each level’s target covered today, net of tax, in ${term('real')}. Each colour is a goal, listed under “What counts”; Retirement is the pension. ${term('fire', 'What is this?')}</p>
+      <div id="levelsLegend">${legLevels()}</div>
+      <div class="chart short" id="chLevels" role="img" aria-label="Funding of each level, accessible and pension"></div>
+      <p class="callout" id="hCall"></p>
+      <p class="source">Source: your holdings and prices to ${dt(G.asOf)}, after liquidation tax. Targets from your spending: essential ${eur(G.cashflow.essential)} and optional ${eur(G.cashflow.optional)} a month.</p></section>`;
+
+  const pctEx = `<section class="exhibit card">
+      <div class="tag">Progress per year</div>
+      <h2 class="title">In the typical case Level 2 is reached in ${F.reached[1]} and Level 3 in ${F.reached[2]}</h2>
+      <p class="unit">Projected independence wealth as a share of each target, % per year, net of tax, in ${term('real')}. The ${term('typical')}.</p>
+      ${LEG_FI}
+      <div class="chart" id="chPct" role="img" aria-label="Percent of target reached per year"></div>
+      <p class="callout">Level 1 is already above ${Math.floor(rows[0].ratio[0] * 100 / 100) * 100}% today and is not drawn. Targets follow your spending growth (${pct(F.expenseGrowth)}) against inflation (${pct(F.inflation)}), so with equal rates they stay flat.</p>
+      <p class="source">Source: ${G.settings.paths.toLocaleString('en-GB')} simulated markets, seed ${G.settings.seed}; contributions as planned; after tax and fund costs.</p></section>`;
+
+  const proj = `<section class="exhibit card full">
+      <div class="tag">Projection</div>
+      <h2 class="title">By ${rows[20].y}, Level 2 is reached in ${pct(p20[1])} of simulated markets and Level 3 in ${pct(p20[2])}</h2>
+      <p class="unit">Wealth that counts toward independence, ${n} years, net of tax, in ${term('real')}, €. Band: ${term('badcase')} to ${term('goodcase')}. Dashed: level targets.</p>
+      ${legend([['bd', 'var(--hl)', 'Bad to good case'], ['ln', 'var(--hl)', 'Typical case'], ['ln dash', 'var(--ink2)', 'Level targets']])}
+      <div class="chart tall" id="chProj" role="img" aria-label="Projected independence wealth against the level targets"></div>
+      <p class="callout">By ${rows[n].y} the chance rises to ${pct(pEnd[1])} for Level 2 and ${pct(pEnd[2])} for Level 3. Pension is included.</p>
+      <p class="source">Source: as above. The fan is the total; the pension share is shown in the first chart.</p></section>`;
+
+  const levelsBox = () => `<section class="sect card"><h2>The three levels</h2>
+      <ul class="lt">${lv.map((l, i) => `<li class="li"><span><b>Level ${l.n} · ${NAME[i]}</b>${termFor[i] ? ' ' + term(termFor[i], '(what is this?)') : ''}<small>${esc(meaning[i])}</small></span>
+        <span class="r"><b>${eur(l.target)}</b><small>${measure(i) >= l.target ? 'Reached' : pct(share(i)) + ' funded'}</small></span></li>`).join('')}</ul></section>`;
+
+  const countsBox = `<section class="sect card"><h2>What counts</h2><p class="lead">Tick the goals whose money counts toward independence. Values are net of tax. Pension counts by default.</p>
+      <ul class="lt">${G.goals.map(g => `<li class="li"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" name="count" value="${g.id}" ${DEFAULT.includes(g.id) ? 'checked' : ''} style="margin-top:3px;flex:none"><span>${gchip(g.id)}<small>${g.id === PEN ? 'Pension: counts for Levels 2 and 3, not for Level 1' : prTag(g.pri) + ' by ' + g.year}</small></span></label><span class="r">${eur(net(g.id))}</span></li>`).join('')}</ul>
+      <p class="help" id="countSum"></p></section>`;
+
+  $('#main').innerHTML = `<div class="page has-rail"><div class="col pair">${head}${pctEx}${proj}</div><div class="rail"><div id="levelsBox">${levelsBox()}</div>${countsBox}</div></div>`;
+
+  const callText = () => `${eur(wTotal())} counts today: ${eur(wAcc())} you can use${wPen() ? ` and ${eur(wPen())} in pension (net of exit tax)` : '; pension is not included'}.`;
+  const sum = () => { $('#countSum').textContent = `Counts now: ${eur(wTotal())}. The projections keep the default selection.`; $('#hCall').textContent = callText(); };
+  sum();
+  $$('input[name=count]').forEach(i => i.addEventListener('change', () => { ids = counted(); sum(); $('#hTitle').textContent = titleText(); $('#levelsLegend').innerHTML = legLevels(); $('#levelsBox').innerHTML = levelsBox(); U.redraw(); }));
+
+  mount('chLevels', (c, w) => {
+    const small = w < 520, ks = lv.map((l, i) => `Level ${l.n} · ${NAME[i]}`);
+    const seg = (id, i) => ids.includes(id) && !(id === PEN && i === 0) ? net(id) / lv[i].target : 0;          /* Level 1 is measured without pension */
+    const tot = i => STACK.reduce((a, id) => a + seg(id, i), 0), k = i => Math.min(1, 1 / (tot(i) || 1));      /* a bar stops at 100% */
+    return {
+      grid: { left: 0, right: small ? 100 : 170, top: 6, bottom: 4, containLabel: true },
+      tooltip: { trigger: 'item', formatter: p => `${esc(p.seriesName)}: ${eur(net(STACK.find(id => SHORT[id] === p.seriesName)))} net` },
+      xAxis: { type: 'value', min: 0, max: 100, show: false },
+      yAxis: { type: 'category', inverse: true, data: ks, axisTick: { show: false }, axisLine: { lineStyle: { color: c.base } },
+        axisLabel: { color: c.ink2, fontSize: 13, width: small ? 84 : 150, overflow: 'break', lineHeight: 16, margin: 10 } },
+      series: STACK.map(id => ({ name: SHORT[id], type: 'bar', stack: 'a', barWidth: 16, data: lv.map((l, i) => seg(id, i) * k(i) * 100),
+        itemStyle: { color: gcol(c, id), borderColor: c.surface, borderWidth: 1 } }))
+        .concat([{ type: 'scatter', symbol: 'circle', symbolSize: 0, silent: true, data: lv.map((l, i) => ({ value: [Math.min(1, tot(i)) * 100, ks[i]],
+          label: { show: true, position: 'right', distance: 8, fontSize: 13, color: i === nextI() ? c.ink : c.ink2, fontWeight: i === nextI() ? 600 : 400,
+            formatter: measure(i) >= l.target ? 'Reached' : `${pct(share(i))} · ${eurK(measure(i))} of ${eurK(l.target)}` } })) }])
+    };
+  });
+  mount('chPct', (c, w) => U.fiPctOption(c, w));
+  mount('chProj', (c, w) => {
+    const small = w < 520, years = rows.map(r => r.y);
+    const lab = (name, v) => small ? `${name}\n${eurK(v)}` : `${name} ${eurK(v)}`;
+    const L = (data, wd, col) => ({ type: 'line', data, symbol: 'none', lineStyle: { width: wd, color: col }, itemStyle: { color: col }, emphasis: { disabled: true } });
+    const p10 = rows.map(r => r.p10), p50 = rows.map(r => r.p50), p90 = rows.map(r => r.p90);
+    const tgt = i => rows.map((r, t) => Math.round(lv[i].target * Math.pow((1 + F.expenseGrowth) / (1 + F.inflation), t)));
+    const tline = (i, pos) => { const d = tgt(i); d[0] = { value: d[0], label: { show: true, position: pos, align: 'left', distance: 4, color: c.ink2, fontSize: 13, formatter: `Level ${lv[i].n} ${eurK(lv[i].target)}` } };
+      return Object.assign(L(d, 1, c.ink2), { symbol: 'circle', symbolSize: 1, showSymbol: true, lineStyle: { width: 1, color: c.ink2, type: 'dashed' }, z: 3, silent: true, tooltip: { show: false } }); };
+    return {
+      grid: { left: 4, right: small ? 76 : 128, top: 16, bottom: 4, containLabel: true },
+      tooltip: { trigger: 'axis', formatter: ps => { const t = ps[0].dataIndex; return `<b>${years[t]}</b><br>Good case ${eur(p90[t])}<br>Typical ${eur(p50[t])}<br>Bad case ${eur(p10[t])}<br>Level 2 reached in ${pct(rows[t].probs[1])} of markets<br>Level 3 in ${pct(rows[t].probs[2])}`; } },
+      xAxis: { type: 'category', data: years, boundaryGap: false, axisLabel: { color: c.muted, fontSize: 12, interval: small ? 12 : 7 } },
+      yAxis: { type: 'value', min: 0, max: U.niceMax(Math.max(...p90, lv[2].target)), axisLabel: { color: c.muted, fontSize: 12, formatter: v => v === 0 ? '€0' : eurK(v) } },
+      series: [
+        { type: 'line', data: p10, stack: 'band', symbol: 'none', lineStyle: { width: 0 }, areaStyle: { color: 'transparent' }, silent: true, tooltip: { show: false } },
+        { type: 'line', data: p90.map((v, i) => v - p10[i]), stack: 'band', symbol: 'none', lineStyle: { width: 0 }, areaStyle: { color: c.hl, opacity: bandOpacity() }, silent: true, tooltip: { show: false } },
+        Object.assign(L(p90, 1, alpha(c.hl, .55)), { endLabel: endLabel(lab('Good case', p90[n]), c, false), z: 2 }),
+        Object.assign(L(p10, 1, alpha(c.hl, .55)), { endLabel: endLabel(lab('Bad case', p10[n]), c, false), z: 2 }),
+        Object.assign(L(p50, 2.25, c.hl), { endLabel: endLabel(lab('Typical', p50[n]), c, true), z: 4 }),
+        tline(1, 'bottom'), tline(2, 'top')
+      ]
+    };
+  });
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Goals · GBI planner (prototype 11)</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<script src="theme-init.js"></script>
+</head>
+<body data-page="goals">
+<!-- PROTOTYPE, throwaway. Goals list: the same rows as the Overview, on their own page. Open a goal for its detail. -->
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="content" style="min-width:0">
+    <header class="top" id="top"></header>
+    <main class="main" id="main"></main>
+  </div>
+</div>
+
+<script src="vendor/echarts.min.js"></script>
+<script src="data.js"></script>
+<script src="content.js"></script>
+<script src="app.js"></script>
+<script>
+window.PAGE = function () {
+  const { $, esc, eur, pct, goal, statusHTML, term, gdot, G } = U;
+  const pva = id => G.pva.find(p => p.id === id);
+  const rows = G.goals.slice().sort((a, b) => (a.status === 'on') - (b.status === 'on') || a.year - b.year).map(g => {
+    const p = pva(g.id), gap = p.planned === 0 && p.actual === 0 ? 'No plan set' : p.gap < 0 ? `${eur(-p.gap)} behind plan` : `${eur(p.gap)} ahead of plan`;
+    return `<a class="goal ${g.status !== 'on' ? 'flag' : ''}" href="goal.html?g=${g.id}">
+      <span class="name">${gdot(g.id)}${esc(g.name)}<small>${g.pri} · by ${g.year}</small></span>
+      ${statusHTML(g.status)}
+      <span class="prob"><b>${pct(g.prob)}</b><span>needs ${pct(g.reqP)}</span></span>
+      <span class="money">${eur(g.value)} of ${eur(g.target)} target</span>
+      <span class="gap">${gap}</span></a>`;
+  }).join('');
+  $('#main').innerHTML = `<div class="tag">Goals</div><h1 class="title" style="margin-bottom:var(--s4)">${G.goals.length} goals, ${G.goals.filter(g => g.status !== 'on').length} to watch</h1>
+    <div class="goals-wrap"><div class="goals-head" aria-hidden="true"><span>Goal</span><span>Value, target</span><span>Chance of success</span><span>Against plan</span><span>Status</span></div>
+    <div class="goals">${rows}</div></div>
+    <p class="source">Open a goal for its range of outcomes and holdings. Targets are in ${term('real')}.</p>`;
+};
+</script>
+</body>
+</html>

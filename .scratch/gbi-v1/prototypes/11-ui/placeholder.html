@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Not built yet · GBI planner (prototype 11)</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<script src="theme-init.js"></script>
+</head>
+<body data-page="placeholder">
+<!-- PROTOTYPE, throwaway. One page for every screen that is in the navigation but not built: placeholder.html?s=<key>. -->
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="content" style="min-width:0">
+    <header class="top" id="top"></header>
+    <main class="main" id="main"></main>
+  </div>
+</div>
+
+<script src="vendor/echarts.min.js"></script>
+<script src="data.js"></script>
+<script src="content.js"></script>
+<script src="app.js"></script>
+<script>
+window.PAGE = function () {
+  const { $, esc, PLACEHOLDERS } = U;
+  const key = new URLSearchParams(location.search).get('s'), p = PLACEHOLDERS[key] || ['Unknown screen', 'There is no placeholder with this name.'];
+  document.title = p[0] + ' · GBI planner (prototype 11)';
+  $('#main').innerHTML = `<div class="tag">Not built yet</div>
+    <h1 class="title">${esc(p[0])}</h1>
+    <p class="unit">${esc(p[1])}</p>
+    <div class="drop" style="margin-top:24px;max-width:46em;border:1px dashed var(--base);border-radius:4px;padding:32px 20px;text-align:center;color:var(--ink2)">
+      This screen is not part of the prototype. It is in the navigation so you can see where it would live.</div>
+    <p class="source"><a href="dashboard.html">Back to the Overview</a></p>`;
+};
+</script>
+</body>
+</html>

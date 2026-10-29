@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>First run · GBI planner (prototype 11)</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<script src="theme-init.js"></script>
+<style>
+  .start { max-width: 760px; }
+  .start > .backlink { margin-top: 16px; }
+  .tasks { border-top: 1px solid var(--grid); counter-reset: t; }
+  .task { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 0 12px; padding: 18px 0; border-bottom: 1px solid var(--grid); }
+  .task .n { width: 28px; height: 28px; background: var(--tint-blue); border: 1px solid color-mix(in srgb, var(--blue) 40%, transparent); border-radius: 50%; display: grid; place-items: center; font-size: var(--t-label); color: var(--ink2); }
+  .task.done .n { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+  .task.done .n svg { width: 16px; height: 16px; }
+  .task h3 { font: 600 var(--t-body)/var(--lh-body) var(--font-text); }
+  .task p { font-size: var(--t-sub); line-height: var(--lh-sub); color: var(--ink2); margin: 2px 0 10px; max-width: 42em; }
+  .task .st { font-size: var(--t-label); color: var(--muted); margin-left: 8px; font-weight: 400; }
+  .task.lock { opacity: .55; }
+  .ghost-chart { border: 1px dashed var(--base); border-radius: 4px; padding: 20px 16px; color: var(--muted); font-size: var(--t-sub); line-height: var(--lh-sub); text-align: left; margin-top: 8px; }
+  .ghost-chart .bars { display: grid; gap: 8px; margin-bottom: 12px; }
+  .ghost-chart .bars i { display: block; height: 12px; background: var(--grid); border-radius: 0; }
+  .backlink { display: inline-block; margin-bottom: 16px; font-size: var(--t-sub); }
+  .made { margin-top: 24px; }
+  .made .li { grid-template-columns: minmax(0, 1fr) auto; }
+  .xbtn { background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: var(--t-label); text-decoration: underline; padding: 4px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .presets button { font: inherit; font-size: var(--t-label); border: 1px solid var(--base); background: transparent; color: var(--ink2); border-radius: 999px; padding: 7px 12px; cursor: pointer; min-height: 34px; }
+  .presets button:hover { border-color: var(--ink2); }
+</style>
+</head>
+<body data-page="start">
+<!-- PROTOTYPE, throwaway. First run: the empty Overview is a 3-task checklist, each task opens a short form.
+     State is in memory only. Deep links: #products #goals #positions #review. -->
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="content" style="min-width:0">
+    <header class="top" id="top"></header>
+    <main class="main" id="main"></main>
+  </div>
+</div>
+
+<script src="vendor/echarts.min.js"></script>
+<script src="data.js"></script>
+<script src="content.js"></script>
+<script src="app.js"></script>
+<script>
+window.PAGE = function () {
+  const { $, $$, esc, eur, term, ICON, glyph, G, prTag } = U;
+  const CLASSES = ['Equity', 'Govt bonds', 'Corp bonds', 'Multi-asset', 'Cash', 'Gold/Commodities'];
+  const REQ = { Need: .9, Want: .75, Wish: .5 };
+  const S = { products: [], goals: [], positions: [], view: 'home', preset: null };
+  const PRESETS = { 'Emergency fund': ['Emergency fund', 'Need', 15000, 2027, 200], 'Retirement': ['Retirement', 'Need', 250000, 2061, 300],
+    'Children': ['Children bucket', 'Want', 40000, 2046, 200], 'Something else': ['', 'Wish', '', '', ''] };
+  const view = () => { const h = location.hash.slice(1); return ['products', 'goals', 'positions', 'review'].includes(h) ? h : 'home'; };
+
+  function home() {
+    const nP = S.products.length, nG = S.goals.length, nO = S.positions.length;
+    const row = (n, id, t, p, count, done, lock, label) => `<li class="task ${done ? 'done' : ''} ${lock ? 'lock' : ''}"><span class="n">${done ? ICON.ok : n}</span><div>
+      <h3>${t}<span class="st">${count}</span></h3><p>${p}</p><a class="btn ${done ? 'ghost' : ''} small" href="#${id}" ${lock ? 'aria-disabled="true" tabindex="-1" style="pointer-events:none"' : ''}>${label}</a></div></li>`;
+    return `<section class="exhibit card start"><div class="tag">Welcome</div>
+      <h1 class="title">Add three things and your first answer appears</h1>
+      <p class="unit">The Overview is empty because the app knows nothing yet. Everything you add stays on this computer.</p>
+      <ol class="tasks" style="margin-top:20px">
+        ${row(1, 'products', 'Add the products you hold', `Funds, ETFs, bonds and pension funds. You need the ${term('isin')} for each; the app looks up the name when it knows the code.`, nP ? `${nP} added` : 'Not started', nP > 0, false, nP ? 'Add more' : 'Add products')}
+        ${row(2, 'goals', 'Create your goals', `One goal per purpose: a name, how much it matters (${term('need', 'Need, Want or Wish')}), the amount in ${term('real', 'today’s euros')}, the year and a monthly contribution.`, nG ? `${nG} added` : 'Not started', nG > 0, false, nG ? 'Add more' : 'Add goals')}
+        ${row(3, 'positions', 'Enter what you hold today', `Your ${term('opening', 'opening positions')}: how much of each product sits in each goal. Skip this if you start from zero.`, nO ? `${nO} added` : 'Optional', nO > 0, !(nP && nG), 'Add positions')}
+      </ol>
+      <div class="ghost-chart" aria-hidden="false"><div class="bars"><i style="width:84%"></i><i style="width:62%"></i><i style="width:92%"></i></div>
+        Your goals and their chance of success will show here, with what needs attention above them.</div>
+      <div class="row" style="margin-top:24px"><a class="btn" href="#review" ${nG ? '' : 'aria-disabled="true" style="opacity:.4;pointer-events:none"'}>Review and finish</a>
+        <a href="dashboard.html">Or look around with example data</a></div>
+      <p class="source">Already use a broker? You can also <a href="transactions.html#import">import a transaction export</a> and let it create the products.</p></section>`;
+  }
+
+  function products() {
+    return `<section class="exhibit card start"><a class="backlink" href="#home">← Back to the checklist</a><div class="tag">Step 1 of 3</div><h1 class="title">Which products do you hold?</h1>
+      <p class="unit">Type the ${term('isin')} first. If the app knows it, the rest fills in.</p>
+      <form id="pf" class="sect" style="margin-top:16px"><div class="fields">
+        <label class="f">ISIN<input id="pIsin" list="isins" autocomplete="off" placeholder="IE00BK5BQT80" maxlength="12"><span class="help" id="pHelp">12 characters, letters and digits.</span></label>
+        <label class="f">Name<input id="pName" required placeholder="VWCE (Vanguard FTSE All-World)"></label>
+        <label class="f">Type<select id="pCls">${CLASSES.map(c => `<option>${c}</option>`).join('')}</select></label>
+        <label class="f">Price comes from<select id="pSrc"><option value="yahoo">Online, by ticker</option><option value="manual">Typed by hand</option></select><span class="help">Bonds and pension funds are usually typed by hand.</span></label>
+        <label class="f">Ticker<input id="pTick" placeholder="VWCE.MI"></label></div>
+        <datalist id="isins">${G.catalogue.map(c => `<option value="${c.isin}">${esc(c.name)}</option>`).join('')}</datalist>
+        <div class="row" style="margin-top:16px"><button class="btn" type="submit">Add product</button><button class="btn ghost" type="button" id="pEx">Add the example products</button></div></form>
+      ${madeList(S.products, p => `${esc(p.name)}<small>${esc(p.isin || 'No ISIN')} · ${p.cls}</small>`, 'p')}
+      <div class="row" style="margin-top:20px"><a class="btn" href="#home">Done with products</a></div></section>`;
+  }
+  function goals() {
+    const f = S.preset ? PRESETS[S.preset] : ['', 'Need', '', '', ''];
+    return `<section class="exhibit card start"><a class="backlink" href="#home">← Back to the checklist</a><div class="tag">Step 2 of 3</div><h1 class="title">What are you saving for?</h1>
+      <p class="unit">Start from a common goal or write your own. You can change everything later.</p>
+      <div class="presets" style="margin-top:16px">${Object.keys(PRESETS).map(k => `<button type="button" data-preset="${k}">${k}</button>`).join('')}</div>
+      <form id="gf" class="sect"><div class="fields">
+        <label class="f">Name<input id="gName" required value="${esc(f[0])}" placeholder="Emergency fund"></label>
+        <label class="f"><span>How much it matters, ${term('need', 'Need · Want · Wish')}</span><select id="gPri">${Object.keys(REQ).map(k => `<option ${f[1] === k ? 'selected' : ''}>${k}</option>`).join('')}</select><span class="help" id="gReq">Required probability ${Math.round(REQ[f[1]] * 100)}%. You can change it later.</span></label>
+        <label class="f"><span>Target, in ${term('real', 'today’s euros')}</span><input id="gTgt" required inputmode="numeric" value="${f[2]}" placeholder="15000"></label>
+        <label class="f">Year you need it<input id="gYear" required inputmode="numeric" value="${f[3]}" placeholder="2027"></label>
+        <label class="f">Monthly contribution<input id="gCon" inputmode="numeric" value="${f[4]}" placeholder="200"><span class="help">0 if you add nothing regularly.</span></label></div>
+        <div class="row" style="margin-top:16px"><button class="btn" type="submit">Add goal</button></div></form>
+      ${madeList(S.goals, g => `${esc(g.name)}<small>${prTag(g.pri)} ${eur(g.target)} by ${g.year} · ${eur(g.con)} a month</small>`, 'g')}
+      <div class="row" style="margin-top:20px"><a class="btn" href="#home">Done with goals</a></div></section>`;
+  }
+  function positions() {
+    if (!S.products.length || !S.goals.length) return `<section class="exhibit card start"><a class="backlink" href="#home">← Back to the checklist</a><h1 class="title">Add a product and a goal first</h1><p class="unit">Opening positions say how much of a product sits in a goal, so both need to exist.</p></section>`;
+    return `<section class="exhibit card start"><a class="backlink" href="#home">← Back to the checklist</a><div class="tag">Step 3 of 3</div><h1 class="title">What do you hold today?</h1>
+      <p class="unit">One line per product and goal. These are ${term('opening', 'opening positions')}: they set the starting value and do not count as money you contributed.</p>
+      <form id="of" class="sect" style="margin-top:16px"><div class="fields">
+        <label class="f">Goal<select id="oGoal">${S.goals.map((g, i) => `<option value="${i}">${esc(g.name)}</option>`).join('')}</select></label>
+        <label class="f">Product<select id="oProd">${S.products.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join('')}</select></label>
+        <label class="f">Value today, €<input id="oVal" required inputmode="numeric" placeholder="8000"><span class="help">Units are worked out from the latest price.</span></label>
+        <label class="f">Holding since<input id="oDate" type="date" value="2024-01-02"></label></div>
+        <div class="row" style="margin-top:16px"><button class="btn" type="submit">Add position</button></div></form>
+      ${madeList(S.positions, o => `${esc(S.products[o.p].name)}<small>in ${esc(S.goals[o.g].name)} · since ${o.date}</small>`, 'o', o => eur(o.val))}
+      <div class="row" style="margin-top:20px"><a class="btn" href="#home">Done with positions</a></div></section>`;
+  }
+  function review() {
+    const tot = S.positions.reduce((a, o) => a + o.val, 0);
+    return `<section class="exhibit card start"><a class="backlink" href="#home">← Back to the checklist</a><div class="tag">Review</div>
+      <h1 class="title">${S.goals.length} goal${S.goals.length === 1 ? '' : 's'}, ${S.products.length} product${S.products.length === 1 ? '' : 's'}, ${tot ? eur(tot) + ' held today' : 'starting from zero'}</h1>
+      <p class="unit">${S.positions.length ? '' : 'With no opening positions, the first answer is based on your contributions only. '}Simulations run when you open the Overview.</p>
+      ${madeList(S.goals, g => `${esc(g.name)}<small>${prTag(g.pri)} ${eur(g.target)} by ${g.year}</small>`, null)}
+      <div class="row" style="margin-top:24px"><a class="btn" href="dashboard.html">Open the Overview</a><a class="btn ghost" href="#home">Back</a></div>
+      <p class="source">Prototype: this opens the example Overview. In the app it opens the one you just built.</p></section>`;
+  }
+  const madeList = (arr, fn, key, right) => arr.length ? `<div class="lt made">${arr.map((x, i) => `<div class="li"><span>${fn(x)}</span><span class="r">${right ? `<b>${right(x)}</b><br>` : ''}${key ? `<button class="xbtn" type="button" data-del="${key}${i}">Remove</button>` : ''}</span></div>`).join('')}</div>` : '';
+
+  function render() {
+    const v = view(); S.view = v;
+    $('#main').innerHTML = { home, products, goals, positions, review }[v]();
+    document.title = 'First run · GBI planner (prototype 11)';
+    const pf = $('#pf');
+    if (pf) {
+      const isin = $('#pIsin');
+      isin.addEventListener('input', () => { const c = G.catalogue.find(x => x.isin === isin.value.trim().toUpperCase());
+        if (c) { $('#pName').value = c.name; $('#pCls').value = c.cls; $('#pTick').value = c.ticker || ''; $('#pSrc').value = c.ticker ? 'yahoo' : 'manual'; $('#pHelp').textContent = 'Found: ' + c.name; }
+        else $('#pHelp').textContent = isin.value ? 'Not in the app’s list. Fill the name and type yourself.' : '12 characters, letters and digits.'; });
+      pf.addEventListener('submit', e => { e.preventDefault(); S.products.push({ isin: isin.value.trim().toUpperCase(), name: $('#pName').value, cls: $('#pCls').value }); render(); });
+      $('#pEx').addEventListener('click', () => { G.products.slice(0, 5).forEach(p => S.products.push({ isin: p.isin, name: p.name, cls: p.cls })); render(); });
+    }
+    const gf = $('#gf');
+    if (gf) {
+      $('#gPri').addEventListener('change', e => { $('#gReq').textContent = `Required probability ${Math.round(REQ[e.target.value] * 100)}%. You can change it later.`; });
+      gf.addEventListener('submit', e => { e.preventDefault(); S.goals.push({ name: $('#gName').value, pri: $('#gPri').value, target: +$('#gTgt').value, year: +$('#gYear').value, con: +$('#gCon').value || 0 }); S.preset = null; render(); });
+      $$('[data-preset]').forEach(b => b.addEventListener('click', () => { S.preset = b.dataset.preset; render(); }));
+    }
+    const of = $('#of');
+    if (of) of.addEventListener('submit', e => { e.preventDefault(); S.positions.push({ g: +$('#oGoal').value, p: +$('#oProd').value, val: +$('#oVal').value || 0, date: $('#oDate').value }); render(); });
+    $$('[data-del]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.del; ({ p: S.products, g: S.goals, o: S.positions })[k[0]].splice(+k.slice(1), 1); render(); }));
+  }
+  window.addEventListener('hashchange', () => { render(); scrollTo(0, 0); });
+  render();
+};
+</script>
+</body>
+</html>

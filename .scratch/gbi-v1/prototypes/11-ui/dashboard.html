@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Overview · GBI planner (prototype 11)</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<script src="theme-init.js"></script>
+</head>
+<body data-page="dashboard">
+<!-- PROTOTYPE, throwaway. Dashboard: one message first, then a grid of exhibits that uses the width (1 / 2 / 3 columns by content width).
+     Chart first (the old variant A); the "next step first" variant B was dropped. Goal colours are fixed per goal (app.js GOAL_SLOT). -->
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="content" style="min-width:0">
+    <header class="top" id="top"></header>
+    <main class="main" id="main"></main>
+  </div>
+</div>
+
+<script src="vendor/echarts.min.js"></script>
+<script src="data.js"></script>
+<script src="content.js"></script>
+<script src="app.js"></script>
+<script>
+window.PAGE = function () {
+  const { $, $$, esc, eur, eurK, pct, sgn, dt, dtShort, goal, prod, priceInfo, statusHTML, ICON, term, ageHTML, mount, endLabel, G,
+    gcol, STACK, SHORT, gdot, gchip, prTag, kindTag, legend, goalLegend, GOAL_SLOT, monthLabel, bandOpacity, alpha, spread } = U;
+  const chead = (ic, label) => `<div class="chead"><span class="cic">${ICON[ic]}</span>${label}</div>`;
+  const LEG_TARGET = ['ln dash', 'var(--ink2)', 'Target'];
+
+  const info = priceInfo();
+  const perf = G.perf.all, last = perf.rows[perf.rows.length - 1];
+  const flagged = G.goals.filter(g => g.status !== 'on').sort((a, b) => (a.prob - a.reqP) - (b.prob - b.reqP));
+  const worst = flagged[0];
+  const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
+  const onN = G.goals.filter(g => g.status === 'on').length;
+  const na = G.nextAction, naGoal = goal(na.goalId);
+  const lvl2 = G.fi.levels[1];
+  const pva = id => G.pva.find(p => p.id === id);
+  const SRC = `${G.settings.paths.toLocaleString('en-GB')} simulated markets, seed ${G.settings.seed}`;
+
+  /* ---------- page head ---------- */
+  const headline = worst
+    ? `${WORDS[onN]} of ${WORDS[G.goals.length].toLowerCase()} goals are on track. ${worst.name} is the one to watch.`
+    : `All ${G.goals.length} goals are on track.`;
+  const head = `<div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <div class="tag" style="margin:0">Overview · as of ${dt(G.asOf)}</div>
+      <a class="fresh-chip ${info.oldRows.length ? 'old' : ''}" href="#prices"><i></i>${info.oldRows.length
+        ? `${info.oldRows.length} of ${info.rows.length} prices are old (oldest ${info.oldest.age} days)` : 'All prices up to date'}</a></div>
+    <h1 class="title" style="margin-bottom:var(--s5)">${esc(headline)}</h1>`;
+
+  /* ---------- cells ---------- */
+  const keys = `<section class="cell keys-cell c-all"><div class="keys" style="margin:0">
+      <div><div class="k"><span class="kic">${ICON.wallet}</span>Net worth, all goals</div><div class="v">${eur(last[1])}</div>
+        <div class="n">${info.oldRows.length ? `<a href="#prices">${eur(info.oldValue)} of it (${pct(info.oldShare)}) uses prices up to ${info.oldest.age} days old</a>` : 'All prices up to date'}</div></div>
+      <div><div class="k"><span class="kic">${ICON.trend}</span>Return this year, ${term('twr', 'time-weighted')}</div><div class="v">${sgn(perf.ytd)}</div>
+        <div class="n">Since Jan 2024 ${sgn(perf.twr)}. Your own yearly return is ${pct(perf.xirr, 1)}, ${term('xirr', 'money-weighted')}. Before tax.</div></div>
+      <div><div class="k"><span class="kic">${ICON.flag}</span>Counts toward ${term('fire', 'independence')}</div><div class="v">${eur(G.fi.now.total)}</div>
+        <div class="n">Net of tax, ${eur(G.fi.now.pension)} of it pension. Level 1 reached; ${pct(G.fi.now.total / lvl2.target)} of Level 2. <a href="independence.html">See levels</a></div></div>
+    </div></section>`;
+
+  const hero = `<section class="cell card exhibit c-hero">
+      ${chead('goals', 'Chance of success')}
+      <h2 class="title">${worst ? `${esc(worst.name)} reaches its target in ${pct(worst.prob)} of simulated markets and needs ${pct(worst.reqP)}` : 'Every goal meets its required probability'}</h2>
+      <p class="unit">Chance of reaching each target, in ${term('simulated')}, %. The tick marks the ${term('required', 'required probability')}.</p>
+      ${legend([['tk', 'var(--ink)', 'Required probability']])}
+      <div class="chart" id="chHero" role="img" aria-label="Probability of success against required probability, per goal"></div>
+      ${worst ? `<p class="callout">About ${eur(worst.needMC - worst.contrib)} more a month (now ${eur(worst.contrib)}) closes the gap. <a href="goal.html?g=${worst.id}">See ${esc(worst.name)}</a></p>` : ''}
+      <p class="source">Source: your transactions and prices to ${dt(G.asOf)}; ${SRC}.</p></section>`;
+
+  const nwGap = last[1] - last[2];
+  const networth = `<section class="cell card exhibit c-nw c-w2">
+      ${chead('wallet', 'Net worth by goal')}
+      <h2 class="title">Net worth is ${eur(nwGap)} above the money put in</h2>
+      <p class="unit">Value by goal, € by month, since Jan 2024. Dashed: money put in (net of sales).</p>
+      ${goalLegend(STACK, [['ln dash', 'var(--ink2)', 'Money put in']])}
+      <div class="chart tall" id="chNw" role="img" aria-label="Net worth by goal against money put in"></div>
+      ${info.oldRows.length ? `<p class="callout">${eur(info.oldValue)} of the latest value is priced from ${dtShort(info.oldest.asOf)}, not from this month.</p>` : ''}
+      <p class="source">Source: your transactions and prices; gains are before tax.</p></section>`;
+
+  const todoItems = [];
+  if (worst) todoItems.push({ icon: 'risk', hl: true, t: `${worst.name} is ${worst.status === 'off' ? 'off track' : 'below its required probability'}`,
+    p: `${pct(worst.prob)} against ${pct(worst.reqP)}. Contributing ${eur(worst.needMC)} a month instead of ${eur(worst.contrib)} would reach ${pct(worst.reqP)}.`,
+    why: 'Shown because the probability of success is below the required probability for this goal.', act: [`goal.html?g=${worst.id}`, `Open ${worst.name}`] });
+  if (info.oldRows.length) todoItems.push({ icon: 'clock', hl: true, t: `${info.oldRows.length} prices are ${info.oldest.age} days old`,
+    p: `They value ${eur(info.oldValue)}, ${pct(info.oldShare)} of your net worth: ${info.oldRows.slice(0, 3).map(r => r.name.split(' (')[0]).join(', ')}${info.oldRows.length > 3 ? ' and ' + (info.oldRows.length - 3) + ' more' : ''}. Their last update was ${dtShort(info.oldest.asOf)}. They are still counted.`,
+    why: `Shown because a price is older than ${G.staleDays} days.`, act: ['#prices', 'See prices'] });
+  const gapP = pva(na.goalId);
+  todoItems.push({ icon: 'dash', t: `${naGoal.name} is ${eur(-gapP.gap)} behind plan`,
+    p: `Planned ${eur(gapP.planned)} since January, put in ${eur(gapP.actual)}. Putting ${eur(na.amount)} into ${esc(prod(na.split[0].productId).name.split(' (')[0])} costs no commission.`,
+    why: 'Shown because the gap is larger than the minimum efficient ticket.', act: ['transactions.html', 'Add a transaction'] });
+  todoItems.push({ icon: 'info', t: 'IVOA matures in 26 months (Dec 2028)',
+    p: 'The bond is held in Support for parents and MIP OpenEconomics. Decide where the money goes before then.', why: 'Shown because a held product matures within 36 months.' });
+  const todoLi = it => `<li>${`<span class="${it.hl ? 'ic-hl' : 'ic-ok'}">${ICON[it.icon]}</span>`}<div>
+      <b>${esc(it.t)}</b><p>${esc(it.p)}</p>
+      ${it.act ? `<a class="act" href="${it.act[0]}">${esc(it.act[1])}</a>` : ''}
+      <details><summary>Why am I seeing this?</summary><p>${esc(it.why)}</p></details></div></li>`;
+  const todo = `<section class="cell card sect c-todo"><h2>Needs attention</h2>
+      <ul class="todo">${todoItems.slice(0, 3).map(todoLi).join('')}</ul>
+      ${todoItems.length > 3 ? `<details class="more" style="border-top:0"><summary>${todoItems.length - 3} more</summary><ul class="todo" style="border-top:0">${todoItems.slice(3).map(todoLi).join('')}</ul></details>` : ''}</section>`;
+
+  /* chance-of-success trend per goal: quarter-end snapshots + today */
+  const S = G.snaps, tDates = S.dates.map(d => d.slice(0, 7)).concat(G.asOf.slice(0, 7));
+  const tProb = id => S.prob[id].concat(G.goals.find(g => g.id === id).prob);
+  const tw = worst || G.goals[0], tp = tProb(tw.id).map(v => v * 100), tLo = Math.round(Math.min(...tp)), tHi = Math.round(Math.max(...tp));
+  const trend = `<section class="cell card exhibit c-trend">
+      ${chead('trend', 'Chance of success over time')}
+      <h2 class="title">${esc(tw.name)} has moved between ${tLo}% and ${tHi}% since ${monthLabel(tDates[0])}</h2>
+      <p class="unit">Chance of success per goal at each quarter end, %. Grey: the other three goals.</p>
+      ${legend(STACK.filter(id => [1, 2, 5].includes(GOAL_SLOT[id])).map(id => ['ln', `var(--slot${GOAL_SLOT[id]})`, SHORT[id]]).concat([['ln', 'var(--ctx)', 'Other goals']]))}
+      <div class="chart" id="chTrend" role="img" aria-label="Chance of success per goal over time"></div>
+      <p class="source">Source: the goal analysis recomputed at each quarter end from your transactions and prices; ${SRC}.</p></section>`;
+
+  /* range at each goal's date, as % of its target */
+  const rg = G.goals.slice().sort((a, b) => a.year - b.year), pc = (v, g) => Math.round(v / g.targetNom * 100);
+  const below = rg.filter(g => g.p10 < g.targetNom);
+  const range = `<section class="cell card exhibit c-range">
+      ${chead('chart', 'Range of outcomes')}
+      <h2 class="title">${below.length ? `In the ${term('badcase')} ${below.length === 1 ? esc(below[0].name) + ' ends' : below.map(g => esc(g.name)).join(' and ') + ' end'} below the target` : 'Even in the bad case every goal reaches its target'}</h2>
+      <p class="unit">Bad case to good case (band) and typical case (tick), as % of each goal’s target at its date. Dashed: target.</p>
+      ${legend([['bd', 'var(--ink2)', 'Bad to good case'], ['tk', 'var(--ink2)', 'Typical case'], LEG_TARGET])}
+      <div class="chart" id="chRange" role="img" aria-label="Range of outcomes against target per goal"></div>
+      <p class="source">Source: ${SRC}; amounts in ${term('nominal')}, after tax and fund costs.</p></section>`;
+
+  /* savings capacity against planned contributions */
+  const cap = G.capacity, c0 = cap[0], cN = cap[cap.length - 1];
+  const capacity = `<section class="cell card exhibit c-cap">
+      ${chead('wallet', 'Savings capacity')}
+      <h2 class="title">Planned saving takes ${pct(c0.planned / c0.capacity)} of what you can save in ${c0.y}, ${pct(cN.planned / cN.capacity)} by ${cN.y}</h2>
+      <p class="unit">Planned contributions by goal (bars) and savings capacity (line), € a year, next ${cap.length} years.</p>
+      ${goalLegend(STACK, [['ln', 'var(--ink)', 'Savings capacity']])}
+      <div class="chart" id="chCap" role="img" aria-label="Planned contributions against savings capacity"></div>
+      <p class="source">Capacity is income minus essential and optional spending, plus one-off events and the pension refund. Source: your cash-flow assumptions.</p></section>`;
+
+  const goalRows = G.goals.slice().sort((a, b) => (a.status === 'on') - (b.status === 'on') || a.year - b.year).map(g => {
+    const p = pva(g.id), gap = p.planned === 0 && p.actual === 0 ? 'No plan set' : p.gap < 0 ? `${eur(-p.gap)} behind plan` : `${eur(p.gap)} ahead of plan`;
+    return `<a class="goal ${g.status !== 'on' ? 'flag' : ''}" href="goal.html?g=${g.id}">
+      <span class="name">${gchip(g.id)}<small>${prTag(g.pri)} by ${g.year}</small></span>
+      ${statusHTML(g.status)}
+      <span class="prob"><b>${pct(g.prob)}</b><span>needs ${pct(g.reqP)}</span></span>
+      <span class="money">${eur(g.value)} of ${eur(g.target)} target</span>
+      <span class="gap">${gap}</span></a>`;
+  }).join('');
+  const goals = `<section class="cell card sect c-goals c-g2"><h2>Goals</h2>
+      <div class="goals-wrap"><div class="goals-head" aria-hidden="true"><span>Goal</span><span>Value, target</span><span>Chance of success</span><span>Against plan</span><span>Status</span></div>
+      <div class="goals">${goalRows}</div></div>
+      <p class="source">Open a goal for its range of outcomes and holdings. Targets are in ${term('real')}.</p></section>`;
+
+  const indep = `<section class="cell card exhibit c-fi">
+      ${chead('flag', 'Independence')}
+      <h2 class="title">Level 2 is expected in ${G.fi.reached[1]} and Level 3 in ${G.fi.reached[2]}</h2>
+      <p class="unit">Projected wealth as a share of each target, % per year, net of tax, typical case, in ${term('real')}. ${term('fire', 'What are the levels?')}</p>
+      ${legend([['ln', 'var(--hl)', 'Level 2'], ['ln', 'var(--ctx)', 'Level 3'], LEG_TARGET])}
+      <div class="chart" id="chFi" role="img" aria-label="Percent of independence target reached per year"></div>
+      <p class="callout">Level 1 is reached. Pension counts toward Levels 2 and 3. <a href="independence.html">See the projection</a></p>
+      <p class="source">Source: ${SRC}.</p></section>`;
+
+  const priceLi = r => `<li><span>${esc(r.name.split(' (')[0])} ${kindTag(prod(r.pid))}</span><span class="right">${eur(r.value)}</span><span style="grid-column:1/-1">${ageHTML(r)} <small>· ${G.sourceLabel[r.source]}</small></span></li>`;
+  const fresh = info.rows.filter(r => !r.old);
+  const prices = `<section class="cell card sect c-prices c-w2" id="prices"><h2>Price freshness</h2>
+      <p class="lead">${info.oldRows.length ? `${info.oldRows.length} of ${info.rows.length} prices are older than ${G.staleDays} days.` : 'All prices are current.'} They are flagged here, and the values that use them are still counted in net worth. See ${term('stale', 'old price')}.</p>
+      <ul class="ptable">${info.oldRows.map(priceLi).join('')}</ul>
+      <details class="more" style="margin-top:12px;border-top:0"><summary>${fresh.length} up to date</summary><ul class="ptable" style="border-top:0">${fresh.map(priceLi).join('')}</ul></details>
+      <div class="row" style="margin-top:16px"><button class="btn ghost small" type="button">Enter prices by hand</button><button class="btn ghost small" type="button">Fetch online prices</button></div></section>`;
+
+  $('#main').innerHTML = `${head}<div class="dgrid">${keys}${hero}${networth}${todo}${trend}${range}${capacity}${goals}${indep}${prices}</div>`;
+
+  /* ---------- charts ---------- */
+  const order = G.goals.slice().sort((a, b) => (a.prob - a.reqP) - (b.prob - b.reqP));
+  mount('chHero', (c, w) => {
+    const small = w < 520, names = order.map(g => small ? SHORT[g.id] : g.name);
+    return {
+      grid: { left: 0, right: small ? 118 : 150, top: 8, bottom: 4, containLabel: true },
+      tooltip: { trigger: 'item', formatter: p => { const g = order[p.dataIndex] || order.find(x => x.name === p.name); return `${esc(g.name)}<br>${pct(g.prob)} chance, ${pct(g.reqP)} required`; } },
+      xAxis: { type: 'value', min: 0, max: 100, show: false },
+      yAxis: { type: 'category', inverse: true, data: names, axisTick: { show: false }, axisLine: { lineStyle: { color: c.base } },
+        axisLabel: { color: c.ink2, fontSize: 13, width: small ? 84 : 140, overflow: 'break', lineHeight: 16, margin: 10 } },
+      series: [
+        { type: 'bar', barWidth: 14, data: order.map(g => ({ value: g.prob * 100, itemStyle: { color: gcol(c, g.id) } })), z: 2 },
+        { type: 'scatter', symbol: 'rect', symbolSize: [2, 26], z: 5, tooltip: { show: false }, itemStyle: { color: c.ink },
+          data: order.map((g, i) => [g.reqP * 100, names[i]]) },
+        { type: 'scatter', symbol: 'circle', symbolSize: 0, z: 1, silent: true, data: order.map((g, i) => ({ value: [Math.max(g.prob, g.reqP) * 100, names[i]],
+          label: { show: true, position: 'right', distance: 8, fontSize: 13, color: g.status !== 'on' ? c.ink : c.ink2, fontWeight: g.status !== 'on' ? 600 : 400,
+            formatter: g.status !== 'on' ? `${pct(g.prob)} · needs ${pct(g.reqP)}` : pct(g.prob) } })) }
+      ]
+    };
+  });
+
+  mount('chNw', (c, w) => {
+    const rows = perf.rows, small = w < 520, labels = rows.map(r => r[0]);
+    return {
+      grid: { left: 4, right: small ? 92 : 100, top: 12, bottom: 4, containLabel: true },
+      tooltip: { trigger: 'axis', valueFormatter: v => eur(v) },
+      xAxis: { type: 'category', data: labels, boundaryGap: false, axisLabel: { interval: small ? 11 : 5, color: c.muted, fontSize: 12, formatter: monthLabel } },
+      yAxis: { type: 'value', min: 0, axisLabel: { formatter: v => v === 0 ? '€0' : eurK(v), color: c.muted, fontSize: 12 } },
+      series: STACK.map(id => ({ name: SHORT[id], type: 'line', stack: 'nw', symbol: 'none', data: G.perf[id].rows.map(r => r[1]), z: 2,
+        lineStyle: { width: 1, color: c.surface }, areaStyle: { color: gcol(c, id), opacity: .92 }, itemStyle: { color: gcol(c, id) }, emphasis: { disabled: true } }))
+        .concat([{ name: 'Money put in', type: 'line', data: rows.map(r => r[2]), symbol: 'none', z: 5, lineStyle: { width: 1.5, color: c.ink2, type: 'dashed' }, itemStyle: { color: c.ink2 },
+          emphasis: { disabled: true }, endLabel: Object.assign(endLabel(`Put in ${eurK(last[2])}`, c, false), { offset: [0, 10] }) },
+          { name: 'Value', type: 'line', data: rows.map(r => r[1]), symbol: 'none', z: 0, silent: true, tooltip: { show: false }, lineStyle: { width: 0 }, itemStyle: { color: 'transparent' },
+            endLabel: Object.assign(endLabel(`Value ${eurK(last[1])}`, c, true), { offset: [0, -4] }) }])
+    };
+  });
+
+  mount('chTrend', (c, w, h) => {
+    const small = w < 520, ids = STACK.slice(), ppu = (h - 34) / 100;
+    const colored = ids.filter(id => [1, 2, 5].includes(U.GOAL_SLOT[id]));
+    const ends = colored.map(id => tProb(id)[tProb(id).length - 1] * 100), off = spread(ends, ppu, small ? 30 : 15);
+    return {
+      grid: { left: 4, right: small ? 84 : 108, top: 12, bottom: 4, containLabel: true },
+      tooltip: { trigger: 'axis', valueFormatter: v => v + '%' },
+      xAxis: { type: 'category', data: tDates, boundaryGap: false, axisLabel: { color: c.muted, fontSize: 12, interval: small ? 3 : 1, formatter: monthLabel } },
+      yAxis: { type: 'value', min: 0, max: 100, interval: 25, axisLabel: { color: c.muted, fontSize: 12, formatter: v => v + '%' } },
+      series: ids.slice().sort((a, b) => colored.includes(a) - colored.includes(b)).map(id => {
+        const k = colored.indexOf(id), col = gcol(c, id, true), hot = k >= 0;
+        return Object.assign({ name: SHORT[id], type: 'line', data: tProb(id).map(v => Math.round(v * 1000) / 10), symbol: 'none', z: hot ? 4 : 2, emphasis: { disabled: true },
+          lineStyle: { width: hot ? 2.25 : 1.5, color: col }, itemStyle: { color: col } },
+          hot ? { endLabel: Object.assign(endLabel(`${SHORT[id]}${small ? '\n' : ' '}${Math.round(ends[k])}%`, c, id === tw.id), { offset: [0, off[k]] }) } : {});
+      })
+    };
+  });
+
+  mount('chRange', (c, w) => {
+    const small = w < 520, names = rg.map(g => small ? SHORT[g.id] : g.name), mx = U.niceMax(Math.max(...rg.map(g => pc(g.p90, g)))) ;
+    const lab = (g, i, key, pos, txt) => ({ value: [key, names[i]], label: { show: true, position: pos, distance: 6, fontSize: 13, lineHeight: 16, color: c.ink2, formatter: txt, rich: { b: { color: c.ink, fontWeight: 600, fontSize: 13, lineHeight: 16 } } } });
+    return {
+      grid: { left: 0, right: small ? 86 : 104, top: 22, bottom: 4, containLabel: true },
+      tooltip: { trigger: 'item', formatter: p => { const g = rg.find(x => (small ? SHORT[x.id] : x.name) === p.name) || rg[p.dataIndex]; return `${esc(g.name)}, ${g.year}<br>Good case ${pc(g.p90, g)}% of target<br>Typical ${pc(g.median, g)}%<br>Bad case ${pc(g.p10, g)}%`; } },
+      xAxis: { type: 'value', min: 50, max: mx, interval: 50, axisLabel: { color: c.muted, fontSize: 12, formatter: v => small && v % 100 ? '' : v + '%' }, splitLine: { lineStyle: { color: c.grid } } },
+      yAxis: { type: 'category', inverse: true, data: names, axisTick: { show: false }, axisLine: { lineStyle: { color: c.base } },
+        axisLabel: { color: c.ink2, fontSize: 13, width: small ? 74 : 130, overflow: 'break', lineHeight: 16, margin: 10 } },
+      series: [
+        { type: 'bar', stack: 'r', barWidth: 16, silent: true, itemStyle: { color: 'transparent' }, data: rg.map(g => Math.max(50, pc(g.p10, g))) },
+        { type: 'bar', stack: 'r', barWidth: 16, z: 2, data: rg.map(g => ({ value: pc(g.p90, g) - Math.max(50, pc(g.p10, g)),
+          itemStyle: { color: alpha(gcol(c, g.id), bandOpacity() + .08), borderColor: gcol(c, g.id), borderWidth: 1 } })) },
+        { type: 'scatter', symbol: 'rect', symbolSize: [3, 22], z: 6, tooltip: { show: false }, data: rg.map((g, i) => ({ value: [pc(g.median, g), names[i]], itemStyle: { color: gcol(c, g.id) } })),
+          markLine: { silent: true, symbol: 'none', animation: false, lineStyle: { color: c.ink2, type: 'dashed', width: 1 },
+            label: { show: true, position: 'start', distance: 4, color: c.ink2, fontSize: 13, formatter: 'Target' }, data: [{ xAxis: 100 }] } },
+        { type: 'scatter', symbolSize: 0, silent: true, z: 1, data: rg.map((g, i) => lab(g, i, pc(g.p90, g), 'right',
+          g.p10 < g.targetNom ? `{b|bad case ${pc(g.p10, g)}%}\ntypical ${pc(g.median, g)}%` : `typical ${pc(g.median, g)}%`, false)) }
+      ]
+    };
+  });
+
+  mount('chCap', (c, w) => {
+    const small = w < 520, years = cap.map(r => r.y), cl = cap[cap.length - 1];
+    return {
+      grid: { left: 4, right: small ? 84 : 112, top: 12, bottom: 4, containLabel: true },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: v => eur(v) },
+      xAxis: { type: 'category', data: years, axisLabel: { color: c.muted, fontSize: 12, interval: small ? 1 : 0 } },
+      yAxis: { type: 'value', min: 0, axisLabel: { color: c.muted, fontSize: 12, formatter: v => v === 0 ? '€0' : eurK(v) } },
+      series: STACK.map(id => ({ name: SHORT[id], type: 'bar', stack: 'plan', barMaxWidth: 26, data: cap.map(r => r.per[id]), itemStyle: { color: gcol(c, id), borderColor: c.surface, borderWidth: 1 } }))
+        .concat([{ name: 'Savings capacity', type: 'line', data: cap.map(r => r.capacity), symbol: 'none', z: 5, emphasis: { disabled: true }, lineStyle: { width: 2.25, color: c.ink }, itemStyle: { color: c.ink },
+          endLabel: Object.assign(endLabel(`Capacity${small ? '\n' : ' '}${eurK(cl.capacity)}`, c, true), { offset: [0, -2] }) }])
+    };
+  });
+
+  mount('chFi', (c, w) => U.fiPctOption(c, w));
+};
+</script>
+</body>
+</html>

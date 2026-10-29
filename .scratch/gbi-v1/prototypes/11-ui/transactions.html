@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Transactions · GBI planner (prototype 11)</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<script src="theme-init.js"></script>
+<style>
+  /* page-local: transaction rows, import stepper */
+  .tx .li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "what amt" "date fee"; }
+  .tx .what { grid-area: what; } .tx .amt { grid-area: amt; text-align: right; }
+  .tx .date { grid-area: date; font-size: var(--t-label); color: var(--muted); } .tx .fee { grid-area: fee; font-size: var(--t-label); color: var(--muted); text-align: right; }
+  .tx .t, .tx .gl { display: none; } .tx .li small.m { display: block; }
+  @media (min-width: 760px) {
+    .tx .li, .tx .head { grid-template-columns: 104px minmax(0, 2fr) 160px minmax(0, 1.2fr) 110px 96px; grid-template-areas: "date what t gl amt fee"; column-gap: 16px; align-items: center; }
+    .tx .t, .tx .gl { display: block; } .tx .li small.m { display: none; } .tx .date, .tx .fee { font-size: var(--t-sub); color: var(--ink2); }
+    .tx .head > span:nth-child(n+5) { text-align: right; }
+  }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; counter-reset: s; }
+  .steps li { border-top: 2px solid var(--grid); padding-top: 8px; font-size: var(--t-label); line-height: var(--lh-label); color: var(--muted); }
+  .steps li b { display: block; font-weight: 400; font-size: var(--t-axis); font-family: var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+  .steps li.done { border-top-color: var(--ink2); color: var(--ink2); }
+  .steps li.cur { border-top-color: var(--ink); color: var(--ink); font-weight: 600; }
+  .drop { border: 1px dashed var(--base); border-radius: 4px; padding: 20px; text-align: center; color: var(--ink2); margin-bottom: 16px; }
+  .map .li { grid-template-columns: 1fr; gap: 6px; }
+  @media (min-width: 760px) { .map .li, .map .head { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 1.4fr); align-items: center; gap: 16px; } .map .li select { max-width: 280px; } }
+  .rowchk .li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .rowchk .li > .l1 { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
+  .rowchk .skip { opacity: .72; }
+  .rowchk .warn { font-size: var(--t-label); line-height: 18px; color: var(--ink2); display: flex; gap: 6px; align-items: flex-start; }
+  .rowchk .warn svg { width: 14px; height: 14px; flex: none; margin-top: 2px; color: var(--muted); }
+  .rowchk select { max-width: 320px; }
+  .rowchk .need select { border-color: var(--hl); border-width: 2px; }
+</style>
+</head>
+<body data-page="tx">
+<!-- PROTOTYPE, throwaway. Transactions list + Import flow (paste or upload > match columns > check rows > import).
+     Nothing is saved or sent: state is in memory. Sample rows are fabricated in the shape of a Fineco "Movimenti Dossier Titoli" export. -->
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="content" style="min-width:0">
+    <header class="top" id="top"></header>
+    <main class="main" id="main"></main>
+  </div>
+</div>
+
+<script src="vendor/echarts.min.js"></script>
+<script src="data.js"></script>
+<script src="content.js"></script>
+<script src="app.js"></script>
+<script>
+window.PAGE = function () {
+  window.addEventListener('hashchange', () => location.reload());   /* sidebar: Transactions / Import */
+  const { $, $$, esc, eur, eur2, dt, goal, prod, term, ICON, glyph, G, gchip, kindTag, slotVars } = U;
+  const chead = (ic, label, right) => `<div class="chead"><span class="cic">${ICON[ic]}</span>${label}${right ? `<span class="cright">${right}</span>` : ''}</div>`;
+  const TYPE = { open: ['Opening position', 'plus'], buy: ['Buy', 'inn'], sell: ['Sell', 'out'], pension: ['Pension contribution', 'inn'] };
+  let tab = location.hash === '#import' ? 'import' : 'list', goalFilter = 'all', showForm = false;
+  const imp = { step: 1, text: '', choice: {}, filter: 'all', file: '' };
+
+  $('#main').innerHTML = `<div class="tag">Records</div><h1 class="title" style="margin-bottom:20px" id="pageTitle"></h1>
+    <div class="tabs" role="tablist"><button role="tab" data-tab="list">Transactions</button><button role="tab" data-tab="import">Import</button></div><div id="body"></div>`;
+
+  const fee = t => { if (t.type !== 'buy' && t.type !== 'sell') return null; const p = prod(t.productId); if (p.zero) return 0;
+    const c = G.settings.commission; return Math.min(c.max, Math.max(c.min, c.rate * t.qty * t.price)); };
+
+  /* ---------------- list ---------------- */
+  function list() {
+    const rows = G.ledger.slice().reverse().filter(t => goalFilter === 'all' || t.goalId === goalFilter);
+    const goalsUsed = G.goals.filter(g => G.ledger.some(t => t.goalId === g.id));
+    return `${showForm ? addForm() : ''}
+      <div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="chips" style="margin:0;padding:0;overflow-x:auto;flex:1;min-width:0">
+        <button type="button" data-f="all" aria-pressed="${goalFilter === 'all'}">All goals</button>${goalsUsed.map(g => `<button type="button" class="gc" style="${slotVars(g.id)}" data-f="${g.id}" aria-pressed="${goalFilter === g.id}"><i class="gdot" style="background:var(--g)"></i>${esc(g.name)}</button>`).join('')}</div>
+        <button class="btn small" type="button" data-act="add">${glyph('plus')}Add transaction</button></div>
+      <div class="card">${chead('tx', 'Transactions', rows.length + ' shown')}<div class="lt tx"><div class="head li" aria-hidden="true"><span class="date">Date</span><span class="what">Product</span><span class="t">Type</span><span class="gl">Goal</span><span class="amt">Amount</span><span class="fee">Fee</span></div>
+      ${rows.map(t => { const p = prod(t.productId), ty = TYPE[t.type], f = fee(t), amt = t.qty * t.price;
+        return `<div class="li"><span class="what">${esc(p.name.split(' (')[0])} ${kindTag(p)}<small class="m">${glyph(ty[1])}${ty[0]} · ${gchip(t.goalId)}</small><small>${p.isin ? esc(p.isin) + ' · ' : ''}${t.qty.toLocaleString('en-GB')} × ${t.price.toLocaleString('en-GB', { maximumFractionDigits: 4 })}</small></span>
+          <span class="t">${glyph(ty[1])}${ty[0]}</span><span class="gl">${gchip(t.goalId)}</span>
+          <span class="amt"><b>${eur2(amt)}</b></span><span class="date">${dt(t.date)}</span>
+          <span class="fee">${f == null ? '' : f === 0 ? (p.zero ? 'Zero fee' : '') : '≈ ' + eur2(f)}</span></div>`; }).join('')}</div></div>
+      <p class="source">Last ${G.ledger.length} of 133 transactions. Fees are estimates from your commission settings (${(G.settings.commission.rate * 100).toFixed(2)}%, min ${eur2(G.settings.commission.min)}, max ${eur2(G.settings.commission.max)}) until you enter the real one. Every transaction belongs to one goal; the ${term('pmc', 'average cost')} is shared across goals.</p>`;
+  }
+  function addForm() {
+    return `<form class="sect card" id="addForm"><h2>Add a transaction</h2><div class="fields">
+      <label class="f">Date<input type="date" value="${G.asOf}"></label>
+      <label class="f">Type<select>${Object.entries(TYPE).map(([k, v]) => `<option>${v[0]}</option>`).join('')}</select></label>
+      <label class="f">Goal<select>${G.goals.map(g => `<option>${esc(g.name)}</option>`).join('')}</select></label>
+      <label class="f">Product<select>${G.products.map(p => `<option>${esc(p.name)}</option>`).join('')}</select></label>
+      <label class="f">Units<input inputmode="decimal" placeholder="0"></label>
+      <label class="f">Price per unit<input inputmode="decimal" placeholder="Latest: ${G.products[5].price}"><span class="help">Bonds: price ÷ 100.</span></label></div>
+      <div class="row" style="margin-top:16px"><button class="btn" type="submit">Save</button><button class="btn ghost" type="button" data-act="add">Cancel</button><span class="help" style="margin:0">Prototype: nothing is saved.</span></div></form>`;
+  }
+
+  /* ---------------- import ---------------- */
+  const parseDate = s => { const [d, m, y] = s.split('/'); return `${y}-${m}-${d}`; };
+  const sampleText = () => G.importMeta.map(r => r.join('\t')).join('\n') + '\n' + G.importHeader.join('\t') + '\n\n' + G.importRows.map(r => r.join('\t')).join('\n');
+  const STEPS = ['Paste or upload', 'Match columns', 'Check rows', 'Import'];
+  const stepper = () => `<ol class="steps" aria-label="Import steps">${STEPS.map((s, i) => `<li class="${i + 1 < imp.step ? 'done' : i + 1 === imp.step ? 'cur' : ''}" ${i + 1 === imp.step ? 'aria-current="step"' : ''}><b>Step ${i + 1}</b>${s}</li>`).join('')}</ol>`;
+
+  const FIELDS = ['Trade date', 'Value date (ignored)', 'Type of operation', 'Product name (ignored)', 'ISIN', 'Side: A = buy, V = sell', 'Units', 'Currency', 'Price per unit', 'FX rate', 'Amount (used as a check)', 'Fee'];
+  const REQ = [true, false, false, false, true, true, true, false, true, false, false, false];
+
+  function step1() {
+    return `<h2 class="title" style="font-size:20px;line-height:26px">Paste an export or upload a file</h2>
+      <p class="unit">Works with the broker’s own export. Files stay on this computer; nothing is sent anywhere. Rows are matched to products by ${term('isin')}.</p>
+      <div class="drop" style="margin-top:16px"><label class="btn ghost" style="cursor:pointer">Choose a file (.xlsx, .csv)<input type="file" accept=".xlsx,.xls,.csv" id="file" class="sr"></label>
+        <div class="help" id="fileName">${imp.file ? esc(imp.file) : 'or drop it here'}</div></div>
+      <label class="f">Or paste the rows<textarea id="paste" spellcheck="false" aria-label="Pasted rows">${esc(imp.text)}</textarea></label>
+      <div class="row" style="margin-top:16px"><button class="btn ghost" type="button" data-act="example">Load an example</button><button class="btn" type="button" data-act="to2" ${imp.text || imp.file ? '' : 'disabled'}>Continue</button></div>
+      <p class="help">Example rows are made up, in the column layout of a Fineco “Movimenti Dossier Titoli” export.</p>`;
+  }
+  function step2() {
+    return `<h2 class="title" style="font-size:20px;line-height:26px">The file looks like a Fineco securities export</h2>
+      <p class="unit">The header was found on row ${G.importMeta.length + 1}; ${G.importRows.length} rows follow. Dates are read as day/month/year. Check that each column is used the way you expect.</p>
+      <div class="lt map" style="margin-top:16px"><div class="head li" aria-hidden="true"><span>Column in the file</span><span>First row says</span><span>Used as</span></div>
+      ${G.importHeader.map((h, i) => `<div class="li"><span><b>${esc(h)}</b> ${REQ[i] ? '<span class="pill">Required</span>' : ''}</span><span class="muted">${esc(G.importRows[0][i] || '(empty)')}</span>
+        <label class="f"><span class="sr">Use ${esc(h)} as</span><select>${FIELDS.map((f, j) => `<option ${j === i ? 'selected' : ''}>${esc(f)}</option>`).join('')}<option>Ignore</option></select></label></div>`).join('')}</div>
+      <p class="help" style="display:flex;gap:6px;align-items:center">${glyph('ok')}All required fields are matched. The mapping is remembered for the next file of this kind.</p>
+      <div class="row" style="margin-top:16px"><button class="btn ghost" type="button" data-act="to1">Back</button><button class="btn" type="button" data-act="to3">Check rows</button></div>`;
+  }
+  /* classify each row: verdict from content.js, user choices from imp.choice */
+  function classify() {
+    return G.importRows.map((r, i) => {
+      const v = G.importVerdict[i], p = G.products.find(x => x.isin === r[4]), ch = imp.choice[i];
+      let state, goalId = ch || v.goalId || '';
+      if (v.kind === 'dup') state = 'skip';
+      else if (v.kind === 'unknown') state = 'unknown';
+      else if (v.kind === 'coupon') state = ch === 'out' ? 'left' : 'ready';       /* ticket 08: coupons are recorded by default */
+      else if (v.kind === 'bucket') state = goalId ? 'ready' : 'need';
+      else state = 'ready';
+      return { r, v, p, state, goalId, i };
+    });
+  }
+  const LBL = { ready: ['ok', 'Ready', 'ic-ok'], skip: ['dash', 'Already in your records', 'ic-ok'], need: ['risk', 'Needs a goal', 'ic-hl'], unknown: ['risk', 'Product not found', 'ic-hl'], left: ['dash', 'Left out by you', 'ic-ok'] };
+  function step3() {
+    const rs = classify(), n = k => rs.filter(r => r.state === k).length, need = n('need') + n('unknown'), ready = n('ready');
+    const shown = rs.filter(r => imp.filter === 'all' || (imp.filter === 'ready' && r.state === 'ready') || (imp.filter === 'you' && ['need', 'unknown'].includes(r.state)) || (imp.filter === 'skip' && r.state === 'skip'));
+    const f = (k, l) => `<button type="button" data-if="${k}" aria-pressed="${imp.filter === k}">${l}</button>`;
+    return `<h2 class="title" style="font-size:20px;line-height:26px">${ready} of ${rs.length} rows are ready; ${n('skip')} are already in your records and ${need} need a decision</h2>
+      <p class="unit">Nothing is imported until you press the button. Rows you leave out stay out. Every import can be undone.</p>
+      <div class="chips" style="margin:16px 0 8px;padding-inline:0">${f('all', `All ${rs.length}`)}${f('ready', `Ready ${ready}`)}${f('you', `Needs you ${need}`)}${f('skip', `Already imported ${n('skip')}`)}</div>
+      <div class="lt rowchk">${shown.map(({ r, v, p, state, goalId, i }) => { const L = LBL[state]; const side = r[5] === 'A' ? 'Buy' : r[5] === 'V' ? 'Sell' : 'Coupon';
+        return `<div class="li ${state === 'skip' || state === 'left' ? 'skip' : ''} ${state === 'need' ? 'need' : ''}"><div class="l1"><span><b>${esc(p ? p.name.split(' (')[0] : r[3])}</b><small>${esc(r[4])} · ${dt(parseDate(r[0]))}</small></span>
+          <span class="status ${state === 'need' || state === 'unknown' ? 'risk' : ''}"><span class="${L[2]}">${ICON[L[0]]}</span>${L[1]}</span></div>
+          <div>${side === 'Coupon' ? `Coupon on ${Number(r[6]).toLocaleString('en-GB')} nominal: <b>${eur2(Number(r[10]))}</b>` : `${side} ${Number(r[6]).toLocaleString('en-GB')} × ${r[8]} = <b>${eur2(Number(r[10]))}</b>${Number(r[11]) ? `, fee ${eur2(Number(r[11]))}` : ''}`}</div>
+          <div class="help" style="margin:0">${esc(v.note)}</div>
+          ${state === 'skip' ? '' : v.kind === 'coupon' ? `<label class="f">What to do with it<select data-row="${i}"><option value="">Record as coupon: cash received</option><option value="out" ${imp.choice[i] === 'out' ? 'selected' : ''}>Leave it out</option></select></label>`
+            : v.kind === 'unknown' ? `<div><button class="btn ghost small" type="button">Add this product</button></div>`
+            : `<label class="f">Goal<select data-row="${i}">${v.kind === 'bucket' ? '<option value="">Choose a goal</option>' : ''}${(v.options || [v.goalId]).map(id => `<option value="${id}" ${goalId === id ? 'selected' : ''}>${esc(goal(id).name)}</option>`).join('')}</select></label>`}
+          ${v.warn ? `<div class="warn">${ICON.info}<span>${esc(v.warn)} See ${term('minticket', 'minimum efficient ticket')}.</span></div>` : ''}</div>`; }).join('')}</div>
+      <div class="row" style="margin-top:20px"><button class="btn ghost" type="button" data-act="to2">Back</button><button class="btn" type="button" data-act="to4" ${ready ? '' : 'disabled'}>Import ${ready} row${ready === 1 ? '' : 's'}</button>
+        ${need ? `<span class="help" style="margin:0">${need} row${need === 1 ? '' : 's'} will be left out.</span>` : ''}</div>`;
+  }
+  function step4() {
+    const rs = classify().filter(r => r.state === 'ready');
+    return `<h2 class="title" style="font-size:20px;line-height:26px">${rs.length} transactions imported</h2>
+      <p class="unit">Prices, units and goals are updated. The import is saved as one batch, so you can undo it as a whole.</p>
+      <div class="lt" style="margin-top:16px">${rs.map(({ r, p, goalId }) => `<div class="li"><span>${esc(p ? p.name.split(' (')[0] : r[3])}<small>${gchip(goalId || 'g2')} ${dt(parseDate(r[0]))}</small></span><span class="r"><b>${eur2(Number(r[10]))}</b></span></div>`).join('')}</div>
+      <div class="row" style="margin-top:20px"><button class="btn" type="button" data-act="done">See transactions</button><button class="btn ghost" type="button" data-act="undo">Undo this import</button></div>`;
+  }
+  const importView = () => `<div class="card">${chead('inn', 'Import from your broker', 'Step ' + imp.step + ' of 4')}${stepper()}${[step1, step2, step3, step4][imp.step - 1]()}</div>`;
+
+  /* ---------------- shell of the page ---------------- */
+  function render() {
+    $('#pageTitle').textContent = tab === 'list' ? 'Every buy, sell and pension contribution' : 'Bring in transactions from your broker';
+    $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
+    $('#body').innerHTML = tab === 'list' ? list() : importView();
+    if (tab === 'import' && imp.step === 1) { const ta = $('#paste'); ta.addEventListener('input', () => { imp.text = ta.value; $('[data-act=to2]').disabled = !(imp.text || imp.file); });
+      $('#file').addEventListener('change', e => { imp.file = e.target.files[0] ? e.target.files[0].name : ''; render(); }); }
+  }
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-tab],[data-f],[data-act],[data-if]'); if (!t) return;
+    if (t.dataset.tab) { tab = t.dataset.tab; history.replaceState(null, '', tab === 'import' ? '#import' : '#'); }
+    if (t.dataset.f) goalFilter = t.dataset.f;
+    if (t.dataset.if) imp.filter = t.dataset.if;
+    const a = t.dataset.act;
+    if (a === 'add') showForm = !showForm;
+    if (a === 'example') { imp.text = sampleText(); imp.file = ''; }
+    if (a && /^to\d$/.test(a)) imp.step = +a[2];
+    if (a === 'undo') { imp.step = 1; imp.choice = {}; imp.text = ''; }
+    if (a === 'done') tab = 'list';
+    render();
+  });
+  document.addEventListener('change', e => { const s = e.target.closest('select[data-row]'); if (s) { imp.choice[s.dataset.row] = s.value; render(); } });
+  document.addEventListener('submit', e => { e.preventDefault(); showForm = false; render(); });
+  render();
+};
+</script>
+</body>
+</html>

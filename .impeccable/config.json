@@ -20,6 +20,18 @@
         ],
         "createdAt": "2026-07-26T21:32:34.964Z",
         "reason": "Standalone preview template; its 3 font faces are Archivo (system voice), IBM Plex Mono (values) and Faustina upright (the user's own words), declared in static/css/base.css (4 @font-face rules) and referenced via the --face-system/--face-value/--face-declared tokens. Detector cannot resolve CSS custom properties across files. Adding a display font would break the UX-0001 4.5 three-voices contract."
+      },
+      {
+        "rule": "overused-font",
+        "value": "geist",
+        "createdAt": "2026-10-29T21:22:35.456Z",
+        "reason": "User chose Geist (option A) for the GBI v1 app, 2026-10-29"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "geist",
+        "createdAt": "2026-10-29T21:22:35.463Z",
+        "reason": "User chose Geist; new DESIGN.md is pending (ticket 06/11)"
       }
     ]
   }

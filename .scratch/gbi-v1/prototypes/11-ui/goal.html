@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Goal · GBI planner (prototype 11)</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<script src="theme-init.js"></script>
+</head>
+<body data-page="goal">
+<!-- PROTOTYPE, throwaway. Goal detail. ?g=g1..g6 picks the goal (default: the one that is not on track). -->
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="content" style="min-width:0">
+    <header class="top" id="top"></header>
+    <main class="main" id="main"></main>
+  </div>
+</div>
+
+<script src="vendor/echarts.min.js"></script>
+<script src="data.js"></script>
+<script src="content.js"></script>
+<script src="app.js"></script>
+<script>
+window.PAGE = function () {
+  const { $, esc, eur, eurK, pct, sgn, dt, dtShort, days, goal, prod, statusHTML, ICON, term, ageHTML, mount, endLabel, G, gcol, gdot, gchip, prTag, kindTag, slotVars, legend, GOAL_SLOT, bandOpacity, alpha } = U;
+  const order = G.goals.slice().sort((a, b) => (a.status === 'on') - (b.status === 'on') || a.year - b.year);
+  const q = new URLSearchParams(location.search).get('g');
+  const g = goal(q) || order[0], gsl = GOAL_SLOT[g.id];
+  const startYear = +G.asOf.slice(0, 4);
+  const p = G.perf[g.id], last = p.rows[p.rows.length - 1], pv = G.pva.find(x => x.id === g.id);
+  const items = (G.holdings[g.id] || []).slice().sort((a, b) => b.value - a.value);
+  const ok = g.status === 'on';
+
+  const chips = `<nav class="chips" aria-label="Goals">${order.map(o =>
+    `<a class="gc" style="${U.slotVars(o.id)}" href="goal.html?g=${o.id}" ${o.id === g.id ? 'aria-current="true"' : ''}><span class="${o.status === 'on' ? 'ic-ok' : 'ic-hl'}" ${o.id === g.id ? 'style="color:inherit"' : ''}>${ICON[o.status === 'on' ? 'ok' : o.status]}</span>${gdot(o.id)}${esc(o.name)}</a>`).join('')}</nav>`;
+
+  const title = ok
+    ? `${g.name} reaches its target in ${pct(g.prob)} of simulated markets; ${pct(g.reqP)} is required`
+    : `${g.name} reaches its target in ${pct(g.prob)} of simulated markets, below the ${pct(g.reqP)} required`;
+
+  const fan = `<section class="exhibit card" style="--acc:var(--slot${gsl})">
+      <div class="tag">${gchip(g.id)}${prTag(g.pri)} by ${g.year}</div>
+      <h1 class="title">${esc(title)}</h1>
+      <p class="unit">Net value if sold that year, in ${term('nominal')}, €. The band runs from the ${term('badcase')} to the ${term('goodcase')}.</p>
+      ${legend([['bd', `var(--slot${gsl})`, 'Bad to good case'], ['ln', `var(--slot${gsl})`, 'Typical case'], ['ln dash', 'var(--ink2)', 'Target']])}
+      <div class="chart tall" id="chFan" role="img" aria-label="Range of outcomes for ${esc(g.name)}"></div>
+      <p class="callout">The target is ${eur(g.target)} in today’s money, ${eur(g.targetNom)} in ${g.year}. ${ok ? `The ${term('typical')} ends ${eurK(g.median)}.` : `The ${term('typical')} ends ${eurK(g.median)}, but the ${term('badcase')} stays at ${eurK(g.p10)}.`}</p>
+      <p class="source">Source: your holdings and prices to ${dt(G.asOf)}; ${G.settings.paths.toLocaleString('en-GB')} simulated markets, seed ${G.settings.seed}; after tax and fund costs.</p>
+    </section>`;
+
+  const keys = `<div class="keys" style="--acc:var(--slot${gsl});--kt:var(--tint${gsl})">
+      <div><div class="k"><span class="kic">${ICON.wallet}</span>Value now</div><div class="v">${eur(g.value)}</div><div class="n">${eur(last[1] - last[2])} ${last[1] - last[2] >= 0 ? 'above' : 'below'} the money put in (${eur(last[2])})</div></div>
+      <div><div class="k"><span class="kic">${ICON.flag}</span>Target in ${g.year}</div><div class="v">${eur(g.targetNom)}</div><div class="n">${eur(g.target)} in ${term('real', 'today’s euros')}</div></div>
+      <div><div class="k"><span class="kic">${ICON.inn}</span>You contribute</div><div class="v">${g.contrib ? eur(g.contrib) + ' a month' : 'Nothing'}</div><div class="n">${g.contrib ? '' : 'No monthly plan for this goal'}${g.id === 'g6' ? 'Payroll, pension fund and tax refund combined' : ''}</div></div>
+    </div>`;
+
+  const diff = g.needMC == null ? null : g.needMC - g.contrib;
+  const need = `<section class="sect card" style="--acc:var(--slot${gsl})"><h2>What it would take</h2>
+      <ul class="lt">
+        <li class="li"><span>Contribution needed for ${pct(g.reqP)}<small>The lowest monthly amount that meets the ${term('required', 'required probability')}</small></span>
+          <span class="r"><b>${g.needMC == null ? 'Not reachable' : eur(g.needMC) + ' a month'}</b><small>${diff == null ? '' : diff > 0 ? `${eur(diff)} more than now` : diff < 0 ? `${eur(-diff)} less than now` : 'Same as now'}</small></span></li>
+        <li class="li"><span>Planned since January<small>What your plan said you would put in</small></span><span class="r">${eur(pv.planned)}</span></li>
+        <li class="li"><span>Put in since January<small>Opening positions are not counted</small></span><span class="r"><b>${eur(pv.actual)}</b><small>${pv.planned ? (pv.gap < 0 ? eur(-pv.gap) + ' behind plan' : eur(pv.gap) + ' ahead of plan') : ''}</small></span></li>
+      </ul></section>`;
+
+  const perfEx = `<section class="exhibit card" style="--acc:var(--slot${gsl})"><div class="chead"><span class="cic">${ICON.trend}</span>Value and money put in</div>
+      <h2 class="title" style="font-size:20px;line-height:26px">${esc(g.name)} is worth ${eur(last[1])}, ${eur(Math.abs(last[1] - last[2]))} ${last[1] - last[2] >= 0 ? 'above' : 'below'} the money put in</h2>
+      <p class="unit">Value and money put in (net of sales), € by month</p>
+      ${legend([['ln', `var(--slot${gsl})`, 'Value'], ['ln', 'var(--ctx)', 'Money put in']])}
+      <div class="chart short" id="chPerf" role="img" aria-label="Value against money put in"></div>
+      <p class="source">Return since start ${sgn(p.twr)} (${term('twr', 'time-weighted')}); your own ${pct(p.xirr, 1)} a year (${term('xirr', 'money-weighted')}). Before tax.</p></section>`;
+
+  const hold = `<section class="sect card" style="--acc:var(--slot${gsl})"><h2>Holdings in this goal</h2>
+      <ul class="lt">${items.map(i => {
+        const pa = G.priceAsOf[i.pid], age = days(pa, G.asOf), inf = { old: age > G.staleDays, asOf: pa, age };
+        const gain = i.value - i.q * i.pmc;
+        return `<li class="li"><span>${esc(i.name)} ${kindTag(prod(i.pid))}<small>${i.isin ? esc(i.isin) + ' · ' : ''}${i.q.toLocaleString('en-GB')} units × ${i.price.toLocaleString('en-GB', { maximumFractionDigits: 4 })}</small></span>
+          <span class="r"><b>${eur(i.value)}</b><small>${pct(i.value / g.value)} of the goal</small></span>
+          <span style="grid-column:1/-1">${ageHTML(inf)}<small>${term('pmc', 'Average cost')} ${i.pmc.toLocaleString('en-GB', { maximumFractionDigits: 4 })} · ${gain >= 0 ? 'gain' : 'loss'} ${eur(Math.abs(gain))} before tax</small></span></li>`;
+      }).join('')}</ul></section>`;
+
+  const how = `<details class="more"><summary>How this is calculated</summary>
+      <p>The plan is run through ${G.settings.paths.toLocaleString('en-GB')} ${term('simulated', 'simulated markets')}. Each run grows your holdings and your monthly contributions to ${g.year}, takes off tax and fund costs, then compares the result with the target after ${pct(G.settings.inflation)} yearly inflation.</p>
+      <p>The share of runs that reach the target is the ${term('prob')}. The same seed gives the same answer, so changes you see come from your data and not from luck.</p></details>`;
+
+  $('#main').innerHTML = `${chips}<div class="page has-rail"><div class="col">${fan}${keys}${perfEx}</div><div class="rail">${need}${hold}${how}</div></div>`;
+
+  mount('chFan', (c, w) => {
+    const small = w < 520, f = g.fan, col = gcol(c, g.id), years = f.p50.map((_, t) => startYear + t);
+    const max = U.niceMax(Math.max(f.p90[f.p90.length - 1], g.targetNom));
+    const lab = (name, v) => small ? `${name}\n${eurK(v)}` : `${name} ${eurK(v)}`;
+    const L = (data, wd, col) => ({ type: 'line', data, symbol: 'none', lineStyle: { width: wd, color: col }, itemStyle: { color: col }, emphasis: { disabled: true } });
+    const n = f.p50.length - 1;
+    return {
+      grid: { left: 4, right: small ? 76 : 128, top: 16, bottom: 4, containLabel: true },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: c.base } },
+        formatter: ps => { const t = ps[0].dataIndex; return `<b>${years[t]}</b><br>Good case ${eur(f.p90[t])}<br>Typical ${eur(f.p50[t])}<br>Bad case ${eur(f.p10[t])}`; } },
+      xAxis: { type: 'category', data: years, boundaryGap: false, axisLabel: { color: c.muted, fontSize: 12, interval: n <= 3 ? 0 : (small ? Math.ceil(n / 3) - 1 : Math.ceil(n / 6) - 1) } },
+      yAxis: { type: 'value', min: 0, max, axisLabel: { color: c.muted, fontSize: 12, formatter: v => v === 0 ? '€0' : eurK(v) } },
+      series: [
+        { type: 'line', data: f.p10, stack: 'band', symbol: 'none', lineStyle: { width: 0 }, areaStyle: { color: 'transparent' }, silent: true, tooltip: { show: false } },
+        { type: 'line', data: f.p90.map((v, i) => v - f.p10[i]), stack: 'band', symbol: 'none', lineStyle: { width: 0 }, areaStyle: { color: col, opacity: bandOpacity() }, silent: true, tooltip: { show: false } },
+        Object.assign(L(f.p90, 1, alpha(col, .6)), { endLabel: endLabel(lab('Good case', f.p90[n]), c, false), z: 2 }),
+        Object.assign(L(f.p10, 1, alpha(col, .6)), { endLabel: endLabel(lab('Bad case', f.p10[n]), c, false), z: 2 }),
+        Object.assign(L(f.p50, 2.5, col), { endLabel: endLabel(lab('Typical', f.p50[n]), c, true), z: 4,
+          markLine: { silent: true, symbol: 'none', animation: false, lineStyle: { color: c.ink2, type: 'dashed', width: 1 },
+            label: { show: true, position: 'insideStartTop', color: c.ink2, fontSize: 13, formatter: `Target ${eurK(g.targetNom)}` },
+            data: [{ yAxis: g.targetNom }] } })
+      ]
+    };
+  });
+  mount('chPerf', (c, w) => {
+    const small = w < 520, rows = p.rows;
+    return {
+      grid: { left: 4, right: small ? 92 : 108, top: 12, bottom: 4, containLabel: true },
+      tooltip: { trigger: 'axis', valueFormatter: v => eur(v) },
+      xAxis: { type: 'category', data: rows.map(r => r[0]), boundaryGap: false, axisLabel: { interval: small ? 11 : 5, color: c.muted, fontSize: 12,
+        formatter: v => { const [y, m] = v.split('-'); return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+m - 1] + ' ' + y.slice(2); } } },
+      yAxis: { type: 'value', min: 0, axisLabel: { color: c.muted, fontSize: 12, formatter: v => v === 0 ? '€0' : eurK(v) } },
+      series: [
+        { name: 'Value', type: 'line', data: rows.map(r => r[1]), symbol: 'none', lineStyle: { width: 2.5, color: gcol(c, g.id) }, itemStyle: { color: gcol(c, g.id) }, z: 3, emphasis: { disabled: true },
+          endLabel: Object.assign(endLabel(`Value ${eurK(last[1])}`, c, true), { offset: [0, -8] }) },
+        { name: 'Put in', type: 'line', data: rows.map(r => r[2]), symbol: 'none', lineStyle: { width: 1.5, color: c.ctx }, itemStyle: { color: c.ctx }, z: 2, emphasis: { disabled: true },
+          endLabel: Object.assign(endLabel(`Put in ${eurK(last[2])}`, c, false), { offset: [0, 8] }) }
+      ]
+    };
+  });
+};
+</script>
+</body>
+</html>
