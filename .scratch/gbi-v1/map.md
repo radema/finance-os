@@ -68,11 +68,10 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [10 — Tracking model](issues/10-tracking-model.md) — snapshots monthly auto (catch-up on first start) + manual; contribution plan versioned, plan vs actual cumulative with monthly series; R1 after N=3 months behind (configurable); per-product caps only; dismissal keys per rule; v2 backlog section + one GitHub issue.
 - [11 — UI direction](issues/11-ui-direction.md) — approved prototype in prototypes/11-ui: desktop-first fluid grid, 7-section sidebar, palette D with per-goal colours + tints, chips/tags, legends, sticky table headers, Geist, larger type, no card outlines.
 - [09 — Fineco export sample](issues/09-fineco-sample.md) — XLSX in real/ (gitignored): 5 metadata rows, header row 6, text dates DD/MM/YYYY, Segno A/V, coupons as 'Stacco Cedole'; match by Isin.
+- [12 — Engine reference when Excel, spec and mock disagree](issues/12-engine-reference.md) — spec/mock win over Excel (E1-E8, M1 fixed); pro-rata stub year, BTP `couponRate`, commissions in basis, yearly pension mix; pension valued in full with a 50%-capital warning; no Excel parity: golden cases + mock differential + synthetic JSON fixture.
 
 ## Not yet specified
 
-- Excel discrepancies: each one the audit finds may need its own decision, beyond the engine-reference
-  ticket.
 - Perf budgets in the source spec (dashboard < 2 s, optimizer < 3 s): confirm or trim.
 - Glossary content (Italian terms, plain explanations) and method notes.
 
