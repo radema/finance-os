@@ -36,6 +36,8 @@ Settled at charting (2026-10-29, with the user):
   tickets go to GitHub issues on `radema/finance-os` (ticket-loop reads GitHub parent issues).
 - **GitHub account:** personal `radema`. Run `gh auth switch -u radema` before any `gh` call (the
   active account may be the work one). Git email `rauldemaio@gmail.com`.
+- **Install and data:** the app is installed on the user's personal MacBook, with a fitting install
+  mode (ticket 05). Data always stays local; nothing goes to a cloud service.
 - **Excel v2:** `/mnt/c/Users/RaulDeMaio/Downloads/gbi-planner-v2.xlsx` (sha256 prefix
   `e94d5394c637673b`). The source spec's parity baseline, but it may contain errors: read it
   critically, never as ground truth. Do not commit it or its personal figures.
@@ -58,8 +60,6 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 
 ## Not yet specified
 
-- Packaging and running: one Docker image vs `uv run` only; how the monthly job (prices + snapshot)
-  runs on a local app with no daemon. Depends on the stack ticket.
 - Excel discrepancies: each one the audit finds may need its own decision, beyond the engine-reference
   ticket.
 - Test tooling beyond the engine (Playwright smoke, perf budgets in the source spec): confirm or trim
