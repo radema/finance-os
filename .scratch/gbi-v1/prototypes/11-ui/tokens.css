@@ -1,0 +1,92 @@
+/* PROTOTYPE tokens (ticket 11). Palette D (palette-substack-d.md) + OE Data Viz type scale and spacing.
+   Colour roles:
+   --hl      the one message (highlight). Marks only: bars, lines, dots, icons, rules. Never text, never buttons.
+   --hl2/--hl3  slot 2 orange / slot 5 teal. --slot1..6  the six palette slots, one fixed colour per goal (app.js GOAL_SLOT).
+   Lines use at most 3 goal colours (slots 1, 2, 5); slots 3, 4, 6 appear only in stacked bars and areas, in slot order.
+   --ctx     context series grey.   --ink/--ink2/--muted  text greys.   --rule/--grid/--base  hairlines. */
+:root {
+  --surface: #f8fafb;      /* page */
+  --raised: #ffffff;       /* inputs, popovers, mobile cards */
+  --ink: #171b1f;
+  --ink2: #494e52;
+  --muted: #6a6f74;
+  --ctx: #a0a5ab;
+  --base: #bfc5ca;         /* baseline, ticks, control borders */
+  --grid: #e0e5eb;         /* hairline gridlines and row rules */
+  --hl: #b75a26;
+  --hl2: #f19d6b;
+  --hl3: #226061;
+  /* palette slots 1-6 in slot order; slot 1 = --hl, slot 2 = --hl2, slot 5 = --hl3. Goal colours come from these (see GOAL_SLOT in app.js). */
+  --slot1: #b75a26; --slot2: #f19d6b; --slot3: #4d734d; --slot4: #c09036; --slot5: #226061; --slot6: #828231;
+  --wash: #eef1f4;        /* quiet fill: table header, hover */
+  /* soft tints for chips, tags, card headers: the slot colour mixed into the page surface (light 12%, dark 18%); text on them stays --ink */
+  --tint1: #f0e7e1;
+  --tint2: #f7efea;
+  --tint3: #e3eae6;
+  --tint4: #f1ede3;
+  --tint5: #dee8e9;
+  --tint6: #eaece3;
+  --tint1-strong: #e8d4c8;
+  --blue: #116496;
+  --tint-blue-faint: #eaf1f5;
+  --tint-blue: #dce8ef;
+  --tint-blue-strong: #c1d6e3;
+  --tint-sand: #efe0d7;
+  --tint-pink: #fadedf;
+  --shadow: 0 6px 24px rgba(23, 27, 31, .14);
+  color-scheme: light;
+
+  /* Type: Geist for everything, Geist Mono for the tag line. */
+  --font-display: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-text: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --w-display: 500; --ls-display: -.02em;
+
+  /* OE type scale, raised one step after review: body 16, tables and sub 15, labels 13, axis and small labels 12 */
+  --t-title: 26px;  --lh-title: 32px;
+  --t-sub: 15px;    --lh-sub: 22px;
+  --t-label: 13px;  --lh-label: 18px;
+  --t-axis: 12px;   --lh-axis: 16px;
+  --t-callout: 14px; --lh-callout: 20px;
+  --t-body: 16px;   --lh-body: 24px;
+
+  --s1: 4px; --s2: 8px; --s3: 16px; --s4: 24px; --s5: 32px; --s6: 48px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface: #14181c; --raised: #1a1f24; --ink: #e6ecf2; --ink2: #b3b8be; --muted: #8e9398;
+    --ctx: #494e52; --base: #393e42; --grid: #23272b; --wash: #1b2025;
+    --shadow: 0 6px 24px rgba(0, 0, 0, .5); color-scheme: dark;
+  --tint1: #31241e;
+    --tint2: #3c302a;
+    --tint3: #1e2825;
+    --tint4: #332e21;
+    --tint5: #172528;
+    --tint6: #282b20;
+    --tint1-strong: #4b2e1f;
+    --blue: #5496b7;
+    --tint-blue-faint: #1a252c;
+    --tint-blue: #202f38;
+    --tint-blue-strong: #28404e;
+    --tint-sand: #3d3836;
+    --tint-pink: #43373a;
+  }
+}
+:root[data-theme="dark"] {
+  --surface: #14181c; --raised: #1a1f24; --ink: #e6ecf2; --ink2: #b3b8be; --muted: #8e9398;
+  --ctx: #494e52; --base: #393e42; --grid: #23272b; --wash: #1b2025;
+  --shadow: 0 6px 24px rgba(0, 0, 0, .5); color-scheme: dark;
+  --tint1: #31241e;
+  --tint2: #3c302a;
+  --tint3: #1e2825;
+  --tint4: #332e21;
+  --tint5: #172528;
+  --tint6: #282b20;
+  --tint1-strong: #4b2e1f;
+  --blue: #5496b7;
+  --tint-blue-faint: #1a252c;
+  --tint-blue: #202f38;
+  --tint-blue-strong: #28404e;
+  --tint-sand: #3d3836;
+  --tint-pink: #43373a;
+}

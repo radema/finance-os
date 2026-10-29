@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GBI planner · UI prototype (ticket 11)</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<script src="theme-init.js"></script>
+<style>
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  .scr { border-top: 1px solid var(--grid); padding: 14px 0; display: grid; gap: 2px; }
+  .scr a { font: var(--w-display) 18px/24px var(--font-display); }
+  .scr span { font-size: var(--t-sub); line-height: var(--lh-sub); color: var(--ink2); }
+  .scr small { font-size: var(--t-label); color: var(--muted); }
+</style>
+</head>
+<body>
+<!-- PROTOTYPE, throwaway: ticket 11 of the GBI v1 map. Static files, no build. Open any page directly. -->
+<div class="wrap">
+  <div class="tag">Prototype · ticket 11 · throwaway</div>
+  <h1 class="title" style="margin-bottom:8px">Goal-based investing: UI direction</h1>
+  <p class="unit">Screens built on palette D and the OE exhibit rules, with the mock’s sample data (valuation date 31 Oct 2026). Nothing is saved. Add <code>?theme=dark</code> or use the toggle. The layout is fluid from 390 to 1920 px: sidebar from 960 px, a menu on phones. Notes: <code>NOTES.md</code>.</p>
+  <div style="margin-top:24px">
+    <div class="scr"><a href="dashboard.html">1 · Overview (Dashboard)</a><span>One message first, then a grid of charts: chance of success, net worth by goal, trend, range of outcomes, savings capacity, independence.</span><small>One colour per goal, price freshness, plain-word status, jargon popovers.</small></div>
+    <div class="scr"><a href="goal.html">2 · Goal detail</a><span>Range of outcomes, what it would take, holdings with price age. Switch goals with the chips, or <a href="goal.html?g=g5">open Long-term investment</a>. The <a href="goals.html">goals list</a> is its own page.</span></div>
+    <div class="scr"><a href="transactions.html">3 · Transactions and import</a><span>The list as rows on phones, and the import in four steps: <a href="transactions.html#import">paste or upload, match columns, check rows, import</a>.</span></div>
+    <div class="scr"><a href="start.html">4 · First run</a><span>The empty Overview as a checklist: products, goals, what you hold today. Deep links: <a href="start.html#products">products</a>, <a href="start.html#goals">goals</a>.</span></div>
+    <div class="scr"><a href="independence.html">5 · Financial independence</a><span>Three levels, how far along you are, and the projection. Tick the goals that count.</span></div>
+    <div class="scr"><a href="placeholder.html?s=optimizer">6 · Placeholder</a><span>Screens in the navigation that are not built (Optimizer, Pension, Prices, Setup, …) lead to one placeholder page.</span></div>
+  </div>
+  <p class="source" style="margin-top:24px">Screenshots (1440 and 1920 px light, dashboard dark, dashboard at 390 px) are in <code>screens/</code>. Fonts are bundled in <code>fonts/</code> (OFL licences inside).</p>
+</div>
+</body>
+</html>

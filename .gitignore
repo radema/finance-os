@@ -45,3 +45,6 @@ real/*.xls
 .idea/
 .vscode/
 *:Zone.Identifier
+
+# Prototype screenshots: regenerable, too large to commit
+.scratch/gbi-v1/prototypes/*/screens/

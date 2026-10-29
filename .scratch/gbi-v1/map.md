@@ -66,6 +66,7 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [07 — Financial-independence levels](issues/07-fi-levels.md) — multipliers on monthly expenses (300/200) confirmed; L1 = EF goal or months, measured without pension; pension counts by default (net, exit tax of year t); FI wealth net everywhere; targets grow with expenseGrowth; dashboard adds % of target per year.
 - [08 — Import: first broker format and multi-bucket trades](issues/08-import-rules.md) — Fineco XLSX preset only (ISIN match, `Operazione` date, A/V, fee column, Controvalore as check); multi-bucket rows: one bucket, split by weights or by units, always confirmed; opening via a "Current portfolio" form (fiscal PMC), rows before it skipped; new `coupon` type, recorded by default.
 - [10 — Tracking model](issues/10-tracking-model.md) — snapshots monthly auto (catch-up on first start) + manual; contribution plan versioned, plan vs actual cumulative with monthly series; R1 after N=3 months behind (configurable); per-product caps only; dismissal keys per rule; v2 backlog section + one GitHub issue.
+- [11 — UI direction](issues/11-ui-direction.md) — approved prototype in prototypes/11-ui: desktop-first fluid grid, 7-section sidebar, palette D with per-goal colours + tints, chips/tags, legends, sticky table headers, Geist, larger type, no card outlines.
 - [09 — Fineco export sample](issues/09-fineco-sample.md) — XLSX in real/ (gitignored): 5 metadata rows, header row 6, text dates DD/MM/YYYY, Segno A/V, coupons as 'Stacco Cedole'; match by Isin.
 
 ## Not yet specified
