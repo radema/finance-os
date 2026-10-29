@@ -1,0 +1,506 @@
+{
+ "name": "OE Data Viz",
+ "version": 1,
+ "color": {
+  "themes": [
+   {
+    "id": "light",
+    "name": "White (reports)"
+   },
+   {
+    "id": "dark",
+    "name": "Black"
+   }
+  ],
+  "tokens": [
+   {
+    "name": "brand-bluette",
+    "value": {
+     "light": "#4400B3",
+     "dark": "#4400B3"
+    },
+    "usage": "OE primary (Brand Manual 2025). Fixed in both themes. Use for brand surfaces, not as a chart fill on black (Bluette on black is not an official pairing)."
+   },
+   {
+    "name": "brand-lime",
+    "value": {
+     "light": "#B9FF69",
+     "dark": "#B9FF69"
+    },
+    "usage": "OE accent. Fixed in both themes. Never on white: 1.2:1. Fine on black (17.6:1) and on Bluette (9.3:1)."
+   },
+   {
+    "name": "brand-bluette-900",
+    "value": {
+     "light": "#270065",
+     "dark": "#270065"
+    },
+    "usage": "Bluette scale, darkest step. Sequential maps end here in the light theme."
+   },
+   {
+    "name": "brand-bluette-800",
+    "value": {
+     "light": "#340088",
+     "dark": "#340088"
+    },
+    "usage": "Bluette scale."
+   },
+   {
+    "name": "brand-bluette-500",
+    "value": {
+     "light": "#6E1AFF",
+     "dark": "#6E1AFF"
+    },
+    "usage": "Bluette scale."
+   },
+   {
+    "name": "brand-bluette-400",
+    "value": {
+     "light": "#8742FF",
+     "dark": "#8742FF"
+    },
+    "usage": "Bluette scale. 4.9:1 on white, 4.3:1 on black."
+   },
+   {
+    "name": "surface",
+    "value": {
+     "light": "#FFFFFF",
+     "dark": "#000000"
+    },
+    "usage": "Exhibit background. White for reports (operative mode), black for dark pages."
+   },
+   {
+    "name": "surface-alt",
+    "value": {
+     "light": "#F3F2F6",
+     "dark": "#16141B"
+    },
+    "usage": "Panels and table banding behind charts. Proposed (not in the Brand Manual)."
+   },
+   {
+    "name": "ink",
+    "value": {
+     "light": "#000000",
+     "dark": "#FFFFFF"
+    },
+    "usage": "Action titles, highlighted labels, values. 21:1."
+   },
+   {
+    "name": "ink-muted",
+    "value": {
+     "light": "#55525E",
+     "dark": "#A9A6B3"
+    },
+    "usage": "Subtitles, axis labels, sources, context labels. 7.6:1 on white, 8.8:1 on black. Proposed grey."
+   },
+   {
+    "name": "rule",
+    "value": {
+     "light": "#E4E2EA",
+     "dark": "#2C2A33"
+    },
+    "usage": "Gridlines and the footer hairline. Decorative only; never carries data."
+   },
+   {
+    "name": "axis",
+    "value": {
+     "light": "#8F8C99",
+     "dark": "#6B6876"
+    },
+    "usage": "Zero baselines and reference lines. 3.3:1 on white, 3.9:1 on black."
+   },
+   {
+    "name": "tag-ink",
+    "value": {
+     "light": "#4400B3",
+     "dark": "#B9FF69"
+    },
+    "usage": "TAG text (Atkinson Mono, uppercase): Bluette on light, Lime on dark, as the Brand Manual requires."
+   },
+   {
+    "name": "viz-highlight",
+    "value": {
+     "light": "#4400B3",
+     "dark": "#B9FF69"
+    },
+    "usage": "The ONE series, bar or point that proves the action title. Also its label colour. 11.1:1 on white, 17.6:1 on black."
+   },
+   {
+    "name": "viz-highlight-soft",
+    "value": {
+     "light": "#C4ADFF",
+     "dark": "#4E7A1C"
+    },
+    "usage": "Ranges, bands and confidence areas around the highlighted series. Decorative: never the only carrier of a value."
+   },
+   {
+    "name": "viz-context",
+    "value": {
+     "light": "#8F8C99",
+     "dark": "#6B6876"
+    },
+    "usage": "Every series that is NOT the message. 3.3:1 on white, 3.9:1 on black, so it still reads as data."
+   },
+   {
+    "name": "viz-context-2",
+    "value": {
+     "light": "#B5B2BE",
+     "dark": "#4A4753"
+    },
+    "usage": "Second context shade in stacked bars and Mekko. Below 3:1: only use where each segment is directly labelled."
+   },
+   {
+    "name": "viz-context-3",
+    "value": {
+     "light": "#D5D3DC",
+     "dark": "#33313A"
+    },
+    "usage": "Third context shade. Below 3:1: only with direct labels."
+   },
+   {
+    "name": "viz-up",
+    "value": {
+     "light": "#4400B3",
+     "dark": "#B9FF69"
+    },
+    "usage": "Waterfall increases. Same as highlight on purpose: growth is the usual story."
+   },
+   {
+    "name": "viz-down",
+    "value": {
+     "light": "#C400C4",
+     "dark": "#FF4EFF"
+    },
+    "usage": "Waterfall decreases. Magenta from the secondary palette (darkened on white: 5.1:1). Avoids red/green."
+   },
+   {
+    "name": "viz-total",
+    "value": {
+     "light": "#55525E",
+     "dark": "#A9A6B3"
+    },
+    "usage": "Waterfall start and end totals."
+   },
+   {
+    "name": "cat-1",
+    "value": {
+     "light": "#4400B3",
+     "dark": "#B9FF69"
+    },
+    "usage": "Categorical 1 when every series matters equally. Use at most 3 categorical colours at once."
+   },
+   {
+    "name": "cat-2",
+    "value": {
+     "light": "#9A7F00",
+     "dark": "#FFF300"
+    },
+    "usage": "Categorical 2. Yellow from the secondary palette, darkened to ochre on white (3.9:1; original is 1.2:1)."
+   },
+   {
+    "name": "cat-3",
+    "value": {
+     "light": "#00849A",
+     "dark": "#61FFFF"
+    },
+    "usage": "Categorical 3. Cyan, darkened to teal on white (4.4:1; original is 1.2:1)."
+   },
+   {
+    "name": "cat-4",
+    "value": {
+     "light": "#C400C4",
+     "dark": "#FF4EFF"
+    },
+    "usage": "Categorical 4. Magenta, darkened on white (5.1:1; original is 2.7:1). Only with direct labels."
+   },
+   {
+    "name": "cat-5",
+    "value": {
+     "light": "#00965A",
+     "dark": "#00FF88"
+    },
+    "usage": "Categorical 5. Green, darkened on white (3.8:1; original is 1.3:1). Similar lightness to cat-2 and cat-3: never next to them without labels."
+   },
+   {
+    "name": "seq-1",
+    "value": {
+     "light": "#F1ECFF",
+     "dark": "#1A2410"
+    },
+    "usage": "Sequential scale, lowest class. Maps and heatmaps."
+   },
+   {
+    "name": "seq-2",
+    "value": {
+     "light": "#D6C7FF",
+     "dark": "#34501C"
+    },
+    "usage": "Sequential scale."
+   },
+   {
+    "name": "seq-3",
+    "value": {
+     "light": "#B394FF",
+     "dark": "#557F2B"
+    },
+    "usage": "Sequential scale."
+   },
+   {
+    "name": "seq-4",
+    "value": {
+     "light": "#8742FF",
+     "dark": "#7DB33D"
+    },
+    "usage": "Sequential scale."
+   },
+   {
+    "name": "seq-5",
+    "value": {
+     "light": "#4400B3",
+     "dark": "#B9FF69"
+    },
+    "usage": "Sequential scale."
+   },
+   {
+    "name": "seq-6",
+    "value": {
+     "light": "#270065",
+     "dark": "#E2FFC0"
+    },
+    "usage": "Sequential scale, highest class."
+   },
+   {
+    "name": "div-a3",
+    "value": {
+     "light": "#6B5A00",
+     "dark": "#FFF300"
+    },
+    "usage": "Diverging scale, far below the reference (ochre side). Ochre vs Bluette stays distinct for red-green colour blindness."
+   },
+   {
+    "name": "div-a2",
+    "value": {
+     "light": "#A68A00",
+     "dark": "#B3A800"
+    },
+    "usage": "Diverging scale, below the reference."
+   },
+   {
+    "name": "div-a1",
+    "value": {
+     "light": "#E8DA8A",
+     "dark": "#5C5600"
+    },
+    "usage": "Diverging scale, slightly below the reference."
+   },
+   {
+    "name": "div-mid",
+    "value": {
+     "light": "#EEEDF2",
+     "dark": "#2C2A33"
+    },
+    "usage": "Diverging midpoint (the reference: Italy, regional average, target)."
+   },
+   {
+    "name": "div-b1",
+    "value": {
+     "light": "#C4ADFF",
+     "dark": "#3A1680"
+    },
+    "usage": "Diverging scale, slightly above the reference."
+   },
+   {
+    "name": "div-b2",
+    "value": {
+     "light": "#6E1AFF",
+     "dark": "#8742FF"
+    },
+    "usage": "Diverging scale, above the reference."
+   },
+   {
+    "name": "div-b3",
+    "value": {
+     "light": "#340088",
+     "dark": "#C4ADFF"
+    },
+    "usage": "Diverging scale, far above the reference (Bluette side)."
+   },
+   {
+    "name": "viz-nodata",
+    "value": {
+     "light": "#FFFFFF",
+     "dark": "#000000"
+    },
+    "usage": "Map areas with no data: surface fill with an axis-colour outline, labelled n.d. / n.a."
+   }
+  ]
+ },
+ "type": {
+  "fonts": [],
+  "families": {
+   "display": "\"Hedvig Letters Serif\", Georgia, serif",
+   "sans": "\"Atkinson Hyperlegible Next\", \"Atkinson Hyperlegible\", Arial, sans-serif",
+   "mono": "\"Atkinson Hyperlegible Mono\", \"Courier New\", monospace"
+  },
+  "groups": [
+   {
+    "name": "Titles",
+    "family": "display",
+    "styles": [
+     {
+      "name": "action-title",
+      "fontSize": "24px",
+      "lineHeight": "30px",
+      "fontWeight": 400,
+      "sample": "Ogni 100 € investiti generano 146 € di valore aggiunto",
+      "usage": "The exhibit's action title: one complete sentence stating the finding. Max two lines. Report pages."
+     },
+     {
+      "name": "action-title-slide",
+      "fontSize": "32px",
+      "lineHeight": "38px",
+      "fontWeight": 400,
+      "sample": "Southern GVA is still below its 2008 level",
+      "usage": "Action title when the exhibit fills a slide."
+     }
+    ]
+   },
+   {
+    "name": "Chart text",
+    "family": "sans",
+    "styles": [
+     {
+      "name": "exhibit-subtitle",
+      "fontSize": "14px",
+      "lineHeight": "20px",
+      "fontWeight": 300,
+      "sample": "Tasso di occupazione 20–64 anni, 2024, %",
+      "usage": "Unit line under the title: measure, unit, period. No interpretation here."
+     },
+     {
+      "name": "data-label",
+      "fontSize": "12px",
+      "lineHeight": "16px",
+      "fontWeight": 400,
+      "sample": "Lombardia 75,0",
+      "usage": "Category and value labels on context series (ink-muted)."
+     },
+     {
+      "name": "data-label-strong",
+      "fontSize": "12px",
+      "lineHeight": "16px",
+      "fontWeight": 600,
+      "sample": "Calabria 50,8",
+      "usage": "Label of the highlighted element (viz-highlight or ink)."
+     },
+     {
+      "name": "axis-label",
+      "fontSize": "11px",
+      "lineHeight": "14px",
+      "fontWeight": 300,
+      "sample": "2008 2012 2016",
+      "usage": "Tick labels. Only when values are not labelled directly."
+     },
+     {
+      "name": "callout",
+      "fontSize": "13px",
+      "lineHeight": "18px",
+      "fontWeight": 400,
+      "sample": "Il divario si è ridotto di 4 punti dal 2019",
+      "usage": "The so-what annotation: one short phrase pointing at one place in the chart."
+     },
+     {
+      "name": "source-note",
+      "fontSize": "11px",
+      "lineHeight": "16px",
+      "fontWeight": 300,
+      "sample": "Fonte: Istat; elaborazioni OpenEconomics",
+      "usage": "Source and notes under every exhibit. Mandatory."
+     }
+    ]
+   },
+   {
+    "name": "Tags",
+    "family": "mono",
+    "styles": [
+     {
+      "name": "tag",
+      "fontSize": "11px",
+      "lineHeight": "16px",
+      "fontWeight": 500,
+      "letterSpacing": "0.08em",
+      "sample": "ANALISI TERRITORIALE",
+      "usage": "Exhibit TAG above the title, always uppercase, in tag-ink (Brand Manual rule)."
+     }
+    ]
+   }
+  ]
+ },
+ "spacing": {
+  "tokens": [
+   {
+    "name": "space-1",
+    "value": "4px",
+    "usage": "Gap between a bar end and its value label."
+   },
+   {
+    "name": "space-2",
+    "value": "8px",
+    "usage": "Gap between TAG, title and subtitle; label to axis."
+   },
+   {
+    "name": "space-3",
+    "value": "16px",
+    "usage": "Gap between subtitle and chart; chart and footer."
+   },
+   {
+    "name": "space-4",
+    "value": "24px",
+    "usage": "Exhibit padding in reports."
+   },
+   {
+    "name": "space-5",
+    "value": "32px",
+    "usage": "Exhibit padding on slides."
+   },
+   {
+    "name": "space-6",
+    "value": "48px",
+    "usage": "Gap between stacked exhibits on a page."
+   }
+  ]
+ },
+ "radius": {
+  "tokens": [
+   {
+    "name": "radius-0",
+    "value": "0px",
+    "usage": "Bars, columns, Mekko cells, heatmap cells: square, as the brand's geometric blocks."
+   },
+   {
+    "name": "radius-1",
+    "value": "2px",
+    "usage": "Map tiles and legend swatches."
+   }
+  ]
+ },
+ "stroke": {
+  "tokens": [
+   {
+    "name": "stroke-hairline",
+    "value": "1px",
+    "usage": "Gridlines, footer rule, connectors."
+   },
+   {
+    "name": "stroke-context",
+    "value": "1.5px",
+    "usage": "Context lines in line charts and slopegraphs."
+   },
+   {
+    "name": "stroke-highlight",
+    "value": "3px",
+    "usage": "The highlighted line."
+   }
+  ]
+ }
+}

@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Goal-based investing app (mock)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#EEF1EF;--surface:#FFFFFF;--sunk:#F5F7F6;--ink:#17222B;--muted:#56636E;--line:#D3DAD7;
+  --primary:#0D5257;--primary-ink:#FFFFFF;--brass:#A7801B;--on:#2D7A4E;--risk:#B0741A;--off:#B03A3A;
+  --g1:#0D5257;--g2:#7A4FA0;--g3:#C2691B;--g4:#2F6DB0;--g5:#7C8524;--g6:#B0475E;--g7:#4E7C6A;--g8:#8A5A3C;
+  color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1519;--surface:#172026;--sunk:#131B20;--ink:#E4EAE8;--muted:#97A5AD;--line:#2A3740;--primary:#5DB8B3;--primary-ink:#0F1519;--brass:#D6B24A;
+  --on:#5DBB85;--risk:#E0A33E;--off:#E57373;--g1:#5DB8B3;--g2:#B08AD6;--g3:#E8954A;--g4:#6FA4E0;--g5:#B9C35A;--g6:#E07D93;--g7:#86B8A4;--g8:#C99472;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F1519;--surface:#172026;--sunk:#131B20;--ink:#E4EAE8;--muted:#97A5AD;--line:#2A3740;--primary:#5DB8B3;--primary-ink:#0F1519;--brass:#D6B24A;
+  --on:#5DBB85;--risk:#E0A33E;--off:#E57373;--g1:#5DB8B3;--g2:#B08AD6;--g3:#E8954A;--g4:#6FA4E0;--g5:#B9C35A;--g6:#E07D93;--g7:#86B8A4;--g8:#C99472;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums;min-height:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3{font-family:"Source Serif 4",Georgia,serif;font-weight:600;letter-spacing:-.01em;margin:0}
+h1{font-size:1.15rem;line-height:1.2}h2{font-size:1.55rem;margin-bottom:.2rem}h3{font-size:1.08rem;margin-bottom:.55rem}
+p{margin:.25rem 0 .8rem;max-width:75ch}
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+aside{background:var(--surface);border-right:1px solid var(--line);padding:1rem .8rem;position:sticky;top:0;height:100vh;overflow:auto}
+aside .brand{padding:.2rem .5rem 1rem}
+aside .brand small{display:block;color:var(--muted);font-size:.78rem;margin-top:.2rem}
+nav .grp{color:var(--muted);font-size:.78rem;margin:.9rem .5rem .25rem}
+nav button{display:flex;align-items:center;gap:.55rem;width:100%;text-align:left;background:none;border:0;border-radius:7px;padding:.45rem .6rem;font:inherit;font-size:.92rem;color:var(--ink);cursor:pointer}
+nav button:hover{background:var(--sunk)}
+nav button[aria-current="page"]{background:var(--primary);color:var(--primary-ink);font-weight:600}
+nav .badge{margin-left:auto;font-size:.72rem;background:var(--off);color:#fff;border-radius:999px;padding:0 .45rem}
+main{padding:1.3rem 1.6rem 3rem;max-width:1360px;width:100%}
+.top{display:flex;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.top .spacer{flex:1}
+.lede{color:var(--muted);max-width:80ch}
+.asof{font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem}
+.asof input{width:auto}
+section[hidden]{display:none}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1rem;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,500px),1fr));gap:1rem}
+.grid-dash{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:1rem}
+@media (max-width:1050px){.grid-dash{grid-template-columns:minmax(0,1fr)}}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-bottom:1rem}
+.strip>div{padding:.8rem 1rem;border-right:1px solid var(--line)}
+.strip>div:last-child{border-right:0}
+.strip .l{color:var(--muted);font-size:.82rem}.strip .v{font-size:1.4rem;font-weight:600}.strip .n{font-size:.8rem}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:.42rem .5rem;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle;white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:.78rem;background:var(--sunk)}
+th:first-child,td:first-child,.l{text-align:left}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--sunk)}
+input,select{font:inherit;font-size:.88rem;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:.28rem .42rem;width:100%;min-width:64px}
+input[type=number]{text-align:right}
+td input,td select{max-width:150px}td input.w{max-width:none;min-width:200px}
+.btn{font:inherit;font-size:.86rem;font-weight:600;border-radius:7px;padding:.42rem .8rem;cursor:pointer;border:1px solid var(--primary);background:var(--primary);color:var(--primary-ink)}
+.btn.ghost{background:transparent;color:var(--primary)}.btn.small{padding:.2rem .5rem;font-size:.78rem}.btn.del{background:transparent;border-color:var(--line);color:var(--muted)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.pill{display:inline-block;padding:.05rem .5rem;border-radius:999px;font-size:.76rem;font-weight:600;border:1px solid currentColor}
+.on{color:var(--on)}.risk{color:var(--risk)}.off{color:var(--off)}.muted{color:var(--muted)}
+.dot{display:inline-block;width:.65rem;height:.65rem;border-radius:50%;margin-right:.45rem;vertical-align:-.03rem}
+.chart{position:relative;height:290px}.chart.tall{height:340px}.chart.short{height:220px}
+.note{font-size:.82rem;color:var(--muted)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:.7rem 1.1rem}
+.form label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:.15rem}
+.alert{border:1px solid var(--line);border-left:4px solid var(--risk);border-radius:8px;padding:.6rem .8rem;margin-bottom:.6rem;background:var(--surface)}
+.alert.hi{border-left-color:var(--off)}.alert.info{border-left-color:var(--primary)}
+.alert b{display:block;margin-bottom:.1rem}
+.alert .why{font-size:.78rem;color:var(--muted);margin-top:.25rem}
+.alert .why code{font-family:inherit;font-weight:600;color:var(--ink)}
+.action{border:1px solid var(--primary);border-radius:10px;padding:.9rem 1rem;background:var(--sunk)}
+.subtabs{display:flex;gap:.3rem;flex-wrap:wrap;margin:.2rem 0 1rem}
+.subtabs button{font:inherit;font-size:.86rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:.25rem .8rem;cursor:pointer}
+.subtabs button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.ladder svg{width:100%;height:auto;display:block}
+.ladder text{font-family:"Public Sans",system-ui,sans-serif;fill:var(--ink)}
+.spark{display:inline-block;vertical-align:middle}
+dl.gloss{display:grid;grid-template-columns:minmax(160px,250px) 1fr;gap:0 1.3rem;margin:0}
+dl.gloss dt{font-weight:600;padding:.55rem 0;border-top:1px solid var(--line)}dl.gloss dt span{display:block;font-weight:400;color:var(--muted);font-size:.84rem}
+dl.gloss dd{margin:0;padding:.55rem 0;border-top:1px solid var(--line);max-width:80ch}
+.mockbar{background:var(--brass);color:#fff;font-size:.8rem;padding:.3rem 1.6rem}
+.mockbar b{font-weight:700}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  aside{position:sticky;top:env(safe-area-inset-top,0px);height:auto;z-index:5;border-right:0;border-bottom:1px solid var(--line);padding:.5rem .6rem}
+  aside .brand{padding:.1rem .3rem .4rem}aside .brand small{display:none}
+  nav{display:flex;overflow-x:auto;gap:.2rem}nav .grp{display:none}nav button{width:auto;white-space:nowrap}
+  main{padding:1rem}
+  .strip>div{border-right:0;border-bottom:1px solid var(--line)}
+  dl.gloss{grid-template-columns:1fr}dl.gloss dd{border-top:0;padding-top:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="mockbar"><b>Mock</b>: sample data, stored only in this browser. Built as a reference for the real app.</div>
+<div class="app">
+<aside>
+  <div class="brand"><h1>Goal-based investing</h1><small>Buckets, levels and performance</small></div>
+  <nav id="nav" aria-label="Sections">
+    <div class="grp">Overview</div>
+    <button data-p="dashboard">Dashboard<span class="badge" id="alertBadge"></span></button>
+    <button data-p="goals">Goals</button>
+    <button data-p="levels">Financial independence</button>
+    <button data-p="optimizer">Mix optimizer</button>
+    <div class="grp">Track</div>
+    <button data-p="performance">Performance</button>
+    <button data-p="history">Goal history</button>
+    <button data-p="plan">Plan vs actual</button>
+    <div class="grp">Records</div>
+    <button data-p="transactions">Transactions</button>
+    <button data-p="import">Import</button>
+    <button data-p="prices">Prices</button>
+    <button data-p="pension">Pension</button>
+    <div class="grp">Configure</div>
+    <button data-p="setup">Setup</button>
+    <button data-p="help">Glossary &amp; method</button>
+  </nav>
+</aside>
+<main>
+  <div class="top">
+    <div><h2 id="pageTitle">Dashboard</h2><div class="lede" id="pageLede"></div></div>
+    <span class="spacer"></span>
+    <div class="asof"><label for="asOf">Valuation date</label><input type="date" id="asOf"><span id="busy"></span></div>
+  </div>
+
+  <section id="p-dashboard">
+    <div class="strip" id="dashStrip"></div>
+    <div class="grid-dash">
+      <div class="panel ladder"><h3>Financial independence levels</h3><div id="ladder"></div><p class="note" id="ladderNote"></p></div>
+      <div class="panel"><h3>What needs attention</h3><div id="alerts"></div></div>
+    </div>
+    <div class="panel"><h3>Goals</h3><div class="tablewrap"><table id="dashGoals"></table></div>
+      <p class="note">Trend = probability of success across stored snapshots. Click a goal for details.</p></div>
+    <div class="grid2">
+      <div class="panel"><h3>Net worth by bucket</h3><div class="chart"><canvas id="chNet"></canvas></div><p class="note">Dashed line: money you put in (net of sales).</p></div>
+      <div class="panel"><h3>Savings capacity vs plan, next 10 years</h3><div class="chart"><canvas id="chCashDash"></canvas></div><p class="note">Bars: what each goal takes from savings (pension: voluntary part only). Line: capacity incl. tax refunds.</p></div>
+    </div>
+  </section>
+
+  <section id="p-goals" hidden>
+    <div class="panel"><div class="tablewrap"><table id="goalsTable"></table></div></div>
+    <div class="row" style="margin-bottom:.8rem"><label for="goalSel" class="muted">Goal</label><select id="goalSel" style="width:auto"></select></div>
+    <div class="strip" id="goalStrip"></div>
+    <div class="grid2">
+      <div class="panel"><h3>Range of outcomes</h3><div class="chart tall"><canvas id="chFan"></canvas></div><p class="note">Net value if liquidated that year. Band: 10th–90th percentile.</p></div>
+      <div class="panel"><h3>Probability of success over time</h3><div class="chart tall"><canvas id="chGoalHist"></canvas></div><p class="note">From goal history snapshots; dashed line = required probability.</p></div>
+      <div class="panel"><h3>Holdings in this bucket</h3><div class="tablewrap"><table id="goalHold"></table></div></div>
+      <div class="panel"><h3>Value vs money put in</h3><div class="chart"><canvas id="chGoalPerf"></canvas></div></div>
+    </div>
+  </section>
+
+  <section id="p-levels" hidden>
+    <div class="panel ladder"><h3>Where you are</h3><div id="ladder2" style="max-width:820px"></div></div>
+    <div class="grid2">
+      <div class="panel"><h3>Levels</h3><div class="tablewrap"><table id="levelsTable"></table></div></div>
+      <div class="panel"><h3>Definitions</h3><div class="form" id="levelsForm"></div></div>
+    </div>
+    <div class="panel"><h3>Projected wealth that counts toward independence (today’s €)</h3><div class="chart tall"><canvas id="chFire"></canvas></div>
+      <p class="note" id="fireNote"></p></div>
+  </section>
+
+  <section id="p-optimizer" hidden>
+    <div class="panel"><h3>Set up</h3><div class="form" id="optForm"></div>
+      <div style="margin-top:.8rem"><div class="note" style="margin-bottom:.3rem">Products the optimizer may use</div><div class="row" id="optUniverse"></div></div>
+      <div class="row" style="margin-top:.9rem"><button class="btn" id="btnOpt">Run optimizer</button><span class="note" id="optHint"></span></div></div>
+    <div class="panel"><h3>How the optimizer chooses</h3>
+      <ol style="margin:.2rem 0 .6rem;padding-left:1.2rem;max-width:85ch">
+        <li>It builds every mix of the products you tick, in steps of 10% (20% with 5–6 products), respecting the maximum per product.</li>
+        <li>It runs each mix through the same 300 simulated markets, so differences come from the mix, not from luck.</li>
+        <li>It keeps the mixes that reach the goal’s required probability, then picks one with the criterion below. If none reach it, it shows the mix with the highest probability.</li></ol>
+      <div class="tablewrap"><table><thead><tr><th>Criterion</th><th class="l">Picks the mix that…</th><th class="l">Good for</th></tr></thead><tbody>
+        <tr><td>Protect the bad case</td><td class="l">has the highest P10: in 9 markets out of 10 you end up with at least this</td><td class="l">Need goals (default)</td></tr>
+        <tr><td>Grow the typical outcome</td><td class="l">has the highest median: half the markets end above it</td><td class="l">Want and Wish goals (default)</td></tr>
+        <tr><td>Spend least</td><td class="l">reaches the required probability with the lowest monthly contribution</td><td class="l">a tight budget</td></tr>
+        <tr><td>Maximise the chance</td><td class="l">has the highest probability of reaching the target, whatever the median</td><td class="l">goals that are behind</td></tr></tbody></table></div>
+      <p class="note" style="margin-top:.5rem">The result is only as good as your return and volatility assumptions: optimizers exaggerate their errors. Cap the weight per product to avoid extreme mixes.</p></div>
+    <div id="optOut"></div>
+  </section>
+
+  <section id="p-performance" hidden>
+    <div class="row" style="margin-bottom:.8rem"><label for="perfSel" class="muted">Scope</label><select id="perfSel" style="width:auto"></select></div>
+    <div class="strip" id="perfStrip"></div>
+    <div class="grid2">
+      <div class="panel"><h3>Value vs money put in</h3><div class="chart"><canvas id="chPerfVal"></canvas></div></div>
+      <div class="panel"><h3>Growth of €100 (time-weighted)</h3><div class="chart"><canvas id="chPerfTwr"></canvas></div></div>
+      <div class="panel"><h3>Drawdown</h3><div class="chart short"><canvas id="chPerfDD"></canvas></div></div>
+      <div class="panel"><h3>Monthly returns</h3><div class="chart short"><canvas id="chPerfMon"></canvas></div></div>
+    </div>
+    <div class="panel"><h3>All buckets</h3><div class="tablewrap"><table id="perfTable"></table></div>
+      <p class="note">Time-weighted return measures the investments; money-weighted (XIRR) also reflects when you added money. Gains are before tax.</p></div>
+  </section>
+
+  <section id="p-history" hidden>
+    <div class="row" style="margin-bottom:.8rem">
+      <div class="subtabs" id="histMetric"></div><span style="flex:1"></span>
+      <button class="btn" id="btnSnap">Save snapshot</button>
+    </div>
+    <div class="panel"><div class="chart tall"><canvas id="chHist"></canvas></div><p class="note" id="histNote"></p></div>
+    <div class="panel"><h3>Snapshots</h3><div class="tablewrap"><table id="histTable"></table></div></div>
+  </section>
+
+  <section id="p-plan" hidden>
+    <div class="grid-dash">
+      <div class="panel"><h3>Since <span id="trackStart"></span></h3><div class="tablewrap"><table id="planTable"></table></div>
+        <p class="note">Planned = monthly contribution × months since tracking started. Opening positions don’t count as contributions.</p></div>
+      <div class="panel"><h3>Next contribution</h3><div id="nextAction"></div></div>
+    </div>
+    <div class="panel"><div class="row" style="justify-content:space-between"><h3>Cumulative contributions</h3><select id="planSel" style="width:auto"></select></div>
+      <div class="chart"><canvas id="chPlan"></canvas></div></div>
+  </section>
+
+  <section id="p-transactions" hidden>
+    <div class="panel"><h3>Add a transaction</h3><div class="form" id="txForm"></div>
+      <div class="row" style="margin-top:.8rem"><button class="btn" id="btnAddTx">Add transaction</button><span class="note" id="txHint"></span></div></div>
+    <div class="panel"><div class="row" style="margin-bottom:.6rem"><select id="txFilterGoal" style="width:auto"></select><select id="txFilterYear" style="width:auto"></select></div>
+      <div class="tablewrap"><table id="txTable"></table></div></div>
+  </section>
+
+  <section id="p-import" hidden>
+    <div class="subtabs" id="impTabs"></div>
+    <div class="panel"><h3 id="impTitle"></h3><p class="note" id="impHelp"></p>
+      <textarea id="impText" rows="8" style="width:100%;font:12.5px/1.45 Menlo,Consolas,monospace;background:var(--sunk);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:.5rem" aria-label="CSV to import"></textarea>
+      <div class="row" style="margin-top:.6rem"><button class="btn ghost" id="btnImpSample">Load example</button><button class="btn" id="btnImpPreview">Check rows</button></div></div>
+    <div id="impMap"></div>
+    <div id="impPreview"></div>
+    <div class="panel"><h3>Past imports</h3><div class="tablewrap"><table id="impBatches"></table></div></div>
+  </section>
+
+  <section id="p-prices" hidden>
+    <div class="panel"><h3>Where prices come from</h3>
+      <p class="note">Per product: an online provider (by ticker), CSV import, or manual entry. Bonds and pension funds usually stay manual or CSV.</p>
+      <div class="row" style="margin-bottom:.6rem"><button class="btn" id="btnFetch">Fetch latest prices</button><span class="note" id="fetchMsg"></span></div>
+      <div class="tablewrap"><table id="srcTable"></table></div></div>
+    <div class="panel"><h3>Month-end prices</h3><p class="note">One price per unit and month (bonds: price / 100; pension funds: unit value). The real app can fetch ETF prices; bonds and pension funds stay manual.</p>
+      <div class="row" style="margin-bottom:.6rem"><button class="btn" id="btnNewMonth">Add next month</button></div>
+      <div class="tablewrap"><table id="priceTable"></table></div></div>
+    <div class="panel"><h3>Positions by product (account level)</h3><div class="tablewrap"><table id="posTable"></table></div>
+      <p class="note">PMC is computed from your transactions, like your broker does: one average cost per product, shared by all buckets.</p></div>
+  </section>
+
+  <section id="p-pension" hidden>
+    <div class="strip" id="penStrip"></div>
+    <div class="grid2">
+      <div class="panel"><h3>Inputs</h3><div class="form" id="penForm"></div></div>
+      <div class="panel"><h3>Where the money goes</h3><div class="tablewrap"><table id="penFlows"></table></div>
+        <p class="note">Work flows (TFR, your and your employer’s contributions) come from payroll. The voluntary part comes from savings and gives a tax refund the year after.</p></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>Yearly flows vs deductible amount</h3><div class="chart"><canvas id="chPen"></canvas></div></div>
+      <div class="panel"><h3>Next 10 years</h3><div class="tablewrap"><table id="penTable"></table></div></div>
+    </div>
+  </section>
+
+  <section id="p-setup" hidden>
+    <div class="subtabs" id="setupTabs"></div>
+    <div id="setupBody"></div>
+  </section>
+
+  <section id="p-help" hidden>
+    <div class="panel"><h3>Glossary</h3><p class="note">Italian term first, English below.</p><dl class="gloss" id="gloss"></dl></div>
+    <div class="panel" id="method"></div>
+  </section>
+</main>
+</div>
+
+<script>
+/* ===== GBI app mock engine v2 ===== */
+const CLASSES = ['Equity', 'Govt bonds', 'Corp bonds', 'Multi-asset', 'Cash', 'Gold/Commodities'];
+const REGIMES = { etf: 'ETF / fund', direct: 'Direct 26% (ETC, stocks)', govt: 'Govt bond 12.5%', cash: 'Cash / deposit', pension: 'Pension fund' };
+const TX_TYPES = { open: 'Opening', buy: 'Buy', sell: 'Sell', pension: 'Pension contribution' };
+
+function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function gauss(rnd) { let u = 0; while (u === 0) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()); }
+function cholesky(A) { const n = A.length, L = A.map(() => new Array(n).fill(0)); for (let i = 0; i < n; i++) for (let j = 0; j <= i; j++) { let s = A[i][j]; for (let k = 0; k < j; k++) s -= L[i][k] * L[j][k]; if (i === j) { if (s <= 1e-10) return null; L[i][i] = Math.sqrt(s); } else L[i][j] = s / L[j][j]; } return L; }
+function safeCholesky(A) { let f = 1; for (let k = 0; k < 40; k++) { const B = A.map((r, i) => r.map((v, j) => (i === j ? 1 : (+v || 0) * f))); const L = cholesky(B); if (L) return { L, shrink: f }; f *= 0.9; } return { L: A.map((r, i) => r.map((_, j) => (i === j ? 1 : 0))), shrink: 0 }; }
+function pct(sorted, q) { if (!sorted.length) return 0; const p = (sorted.length - 1) * q, lo = Math.floor(p), hi = Math.ceil(p); return sorted[lo] + (sorted[hi] - sorted[lo]) * (p - lo); }
+const mkey = d => d.slice(0, 7);
+function addMonths(key, n) { let [y, m] = key.split('-').map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return `${y}-${String(m).padStart(2, '0')}`; }
+function monthsBetween(a, b) { const [y1, m1] = a.split('-').map(Number), [y2, m2] = b.split('-').map(Number); return (y2 - y1) * 12 + (m2 - m1); }
+function monthEnd(key) { const [y, m] = key.split('-').map(Number); const d = new Date(Date.UTC(y, m, 0)); return d.toISOString().slice(0, 10); }
+
+/* ---------- sample data ---------- */
+function sampleState() {
+  const st = {
+    version: 2, asOf: '2026-10-31',
+    settings: {
+      inflation: 0.02, taxStd: 0.26, taxGovt: 0.125, bollo: 0.002, pensionTax: 0.20, paths: 1000, seed: 42,
+      probNeed: 0.90, probWant: 0.75, probWish: 0.50, zainetto: { amount: 0, expiry: 2029, goalId: '' },
+      commission: { rate: 0.0019, min: 2.95, max: 19 }, trackingStart: '2026-01',
+      fire: { efFromGoal: 'g1', efMonths: 12, l2Mult: 300, l3Mult: 200, includePension: false }
+    },
+    corr: [[1, 0, .3, .85, 0, .1], [0, 1, .6, .4, 0, .2], [.3, .6, 1, .55, 0, .1], [.85, .4, .55, 1, 0, .15], [0, 0, 0, 0, 1, 0], [.1, .2, .1, .15, 0, 1]],
+    products: [
+      { id: 'p1', name: 'XEON (€STR)', isin: 'LU0290358497', cls: 'Cash', regime: 'etf', wl: 0, mu: 0.02, vol: 0.005, ter: 0.001, zero: true, maturity: '', p0: 140 },
+      { id: 'p2', name: 'GOLD (Amundi Physical Gold ETC)', isin: 'FR0013416716', cls: 'Gold/Commodities', regime: 'direct', wl: 0, mu: 0.04, vol: 0.15, ter: 0.0012, zero: false, maturity: '', p0: 180 },
+      { id: 'p3', name: '30IA (iBonds Dec 2030 € Corp)', isin: 'IE000Y2BJVK9', cls: 'Corp bonds', regime: 'etf', wl: 0, mu: 0.03, vol: 0.02, ter: 0.0012, zero: false, maturity: '2030-12', p0: 5 },
+      { id: 'p4', name: 'IVOA (iBonds Dec 2028 € Corp)', isin: 'IE0008UEVOE0', cls: 'Corp bonds', regime: 'etf', wl: 0, mu: 0.025, vol: 0.01, ter: 0.0012, zero: false, maturity: '2028-12', p0: 5 },
+      { id: 'p5', name: 'ALLW (Xtrackers FTSE All-World)', isin: 'IE000L6ZMMC4', cls: 'Equity', regime: 'etf', wl: 0, mu: 0.065, vol: 0.16, ter: 0.0012, zero: true, maturity: '', p0: 10, from: '2026-05' },
+      { id: 'p6', name: 'VWCE (Vanguard FTSE All-World)', isin: 'IE00BK5BQT80', cls: 'Equity', regime: 'etf', wl: 0, mu: 0.065, vol: 0.16, ter: 0.0019, zero: false, maturity: '', p0: 105 },
+      { id: 'p7', name: 'XDEV (Xtrackers MSCI World Value)', isin: 'IE00BL25JM42', cls: 'Equity', regime: 'etf', wl: 0, mu: 0.065, vol: 0.17, ter: 0.0025, zero: false, maturity: '', p0: 38 },
+      { id: 'p8', name: 'BTP Italia Sì 23/06/2031 (cum)', isin: 'IT0005713539', cls: 'Govt bonds', regime: 'govt', wl: 1, mu: 0.037, vol: 0.015, ter: 0, zero: false, maturity: '2031-06', p0: 1, from: '2026-06' },
+      { id: 'p9', name: 'BTP Valore Insieme 27/10/2031', isin: 'IT0005735227', cls: 'Govt bonds', regime: 'govt', wl: 1, mu: 0.042, vol: 0.01, ter: 0, zero: false, maturity: '2031-10', p0: 1, from: '2026-10' },
+      { id: 'p10', name: 'BTP Valore 28/10/2032 (cum)', isin: 'IT0005672024', cls: 'Govt bonds', regime: 'govt', wl: 1, mu: 0.032, vol: 0.015, ter: 0, zero: false, maturity: '2032-10', p0: 1, from: '2025-10' },
+      { id: 'p11', name: 'Allianz Insieme – Azionario', isin: '', cls: 'Equity', regime: 'pension', wl: 0, mu: 0.065, vol: 0.16, ter: 0.0088, zero: true, maturity: '', p0: 10 },
+      { id: 'p12', name: 'Allianz Insieme – Bilanciato', isin: '', cls: 'Multi-asset', regime: 'pension', wl: 0, mu: 0.05, vol: 0.11, ter: 0.0075, zero: true, maturity: '', p0: 10 },
+      { id: 'p13', name: 'Fon.Te. – Dinamico', isin: '', cls: 'Multi-asset', regime: 'pension', wl: 0, mu: 0.05, vol: 0.10, ter: 0.003, zero: true, maturity: '', p0: 12 }
+    ],
+    goals: [
+      { id: 'g1', name: 'Emergency fund', priority: 'Need', target: 15816, year: 2027, contrib: 200, cgrowth: 0.02, minProb: '', fire: true },
+      { id: 'g2', name: 'Support for parents', priority: 'Want', target: 60000, year: 2032, contrib: 500, cgrowth: 0.02, minProb: 0.9, fire: false },
+      { id: 'g3', name: 'Children bucket', priority: 'Want', target: 40000, year: 2046, contrib: 200, cgrowth: 0.02, minProb: 0.75, fire: false },
+      { id: 'g4', name: 'MIP OpenEconomics', priority: 'Need', target: 15000, year: 2029, contrib: 0, cgrowth: 0.02, minProb: '', fire: false },
+      { id: 'g5', name: 'Long-term investment', priority: 'Wish', target: 100000, year: 2056, contrib: 250, cgrowth: 0.02, minProb: 0.75, fire: true },
+      { id: 'g6', name: 'Retirement', priority: 'Need', target: 250000, year: 2061, contrib: 0, cgrowth: 0.02, minProb: '', fire: true, pension: true }
+    ],
+    weights: [
+      ['g1', 'p1', 1], ['g2', 'p3', .7], ['g2', 'p7', .2], ['g2', 'p2', .1], ['g2', 'p8', 0], ['g2', 'p9', 0], ['g2', 'p10', 0], ['g2', 'p4', 0],
+      ['g3', 'p5', .5], ['g3', 'p6', .5], ['g3', 'p7', 0], ['g4', 'p4', 0], ['g4', 'p3', 0], ['g5', 'p5', 1], ['g5', 'p6', 0], ['g5', 'p7', 0],
+      ['g6', 'p11', 0], ['g6', 'p12', 0], ['g6', 'p13', 0]
+    ].map(([goalId, productId, weight]) => ({ goalId, productId, weight })),
+    pension: { ral: 45000, ralGrowth: 0.02, tfrPct: 0.0691, workerPct: 0.01, employerPct: 0.014, voluntary: '', marginal: 0.33, firstYear: 2020, cap: 5300, extra: 0, goalId: 'g6',
+      flows: [{ productId: 'p11', flow: 'Work', pct: 0.8 }, { productId: 'p12', flow: 'Work', pct: 0.2 }, { productId: 'p13', flow: 'Voluntary', pct: 1 }] },
+    cashflow: { income: 35518, incomeGrowth: 0.02, essential: 975, optional: 300, expenseGrowth: 0.02,
+      events: [2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034].map(y => ({ year: y, label: 'Renovation tax refund', amount: 1000 })) },
+    prices: {}, ledger: [], snapshots: [], imports: []
+  };
+  const TK = { p1: 'XEON.MI', p2: 'GOLD.MI', p3: '30IA.MI', p4: 'IVOA.MI', p5: 'ALLW.MI', p6: 'VWCE.MI', p7: 'XDEV.MI' };
+  st.products.forEach(p => { p.ticker = TK[p.id] || ''; p.source = TK[p.id] ? 'yahoo' : 'manual'; });
+  /* prices: correlated monthly GBM, Dec 2023 → asOf */
+  const rnd = mulberry32(77), { L } = safeCholesky(st.corr), first = '2023-12', last = mkey(st.asOf), n = monthsBetween(first, last);
+  st.products.forEach(p => { st.prices[p.id] = {}; });
+  const lvl = {}; st.products.forEach(p => lvl[p.id] = p.p0);
+  for (let i = 0; i <= n; i++) {
+    const key = addMonths(first, i), e = CLASSES.map(() => gauss(rnd)), z = CLASSES.map((_, a) => L[a].reduce((s, l, b) => s + l * e[b], 0));
+    st.products.forEach(p => {
+      if (i > 0) { const s = p.vol / Math.sqrt(12), m = Math.log(1 + p.mu) / 12 - s * s / 2; let g = Math.exp(m + s * z[CLASSES.indexOf(p.cls)]) * Math.pow(1 - p.ter, 1 / 12); if (p.regime === 'pension') g = 1 + (g - 1) * (1 - 0.2); lvl[p.id] *= g; }
+      if (!p.from || key >= p.from) st.prices[p.id][key] = +lvl[p.id].toFixed(4);
+    });
+  }
+  /* ledger */
+  let id = 1; const P = (k, pid) => priceAt(st, pid, k);
+  const tx = (date, goalId, productId, type, eur) => { const k = mkey(date), pr = P(k, productId); if (!pr) return; st.ledger.push({ id: 't' + (id++), date, goalId, productId, type, qty: +(eur / pr).toFixed(4), price: pr, commission: null, note: '' }); };
+  tx('2024-01-02', 'g1', 'p1', 'open', 8000); tx('2024-01-02', 'g4', 'p4', 'open', 10000); tx('2024-01-02', 'g4', 'p3', 'open', 9500);
+  tx('2024-01-02', 'g5', 'p6', 'open', 9000); tx('2024-01-02', 'g3', 'p6', 'open', 4000); tx('2024-01-02', 'g2', 'p3', 'open', 12000); tx('2024-01-02', 'g2', 'p4', 'open', 6000);
+  tx('2024-01-02', 'g6', 'p11', 'open', 9000); tx('2024-01-02', 'g6', 'p12', 'open', 3000); tx('2024-01-02', 'g6', 'p13', 'open', 4000);
+  for (let i = 1; i <= n; i++) {
+    const k = addMonths('2023-12', i), d = k + '-15', mo = +k.slice(5);
+    if (mo % 3 === 0) {
+      if (k <= '2025-06') tx(d, 'g1', 'p1', 'buy', 900);
+      tx(d, 'g2', 'p3', 'buy', i < 30 ? 1050 : 900); tx(d, 'g2', 'p7', 'buy', 300); if (mo === 12 || mo === 6) tx(d, 'g2', 'p2', 'buy', 300);
+      tx(d, 'g5', k >= '2026-05' ? 'p5' : 'p6', 'buy', k === '2026-09' ? 450 : 750);
+    }
+    if (mo === 4 || mo === 10) tx(d, 'g3', k >= '2026-05' ? 'p5' : 'p6', 'buy', 1200);
+    tx(d, 'g6', 'p11', 'pension', 280); tx(d, 'g6', 'p12', 'pension', 70);
+    if (mo === 12) tx(k + '-20', 'g6', 'p13', 'pension', 4200);
+  }
+  tx('2025-10-30', 'g2', 'p10', 'buy', 10000); tx('2026-06-20', 'g2', 'p8', 'buy', 10000); tx('2026-10-27', 'g2', 'p9', 'buy', 10000);
+  tx('2026-10-27', 'g2', 'p4', 'sell', 3000);
+  st.ledger.sort((a, b) => a.date.localeCompare(b.date));
+  return st;
+}
+
+/* ---------- prices & holdings ---------- */
+function priceAt(st, pid, key) {
+  const ps = st.prices[pid] || {}; if (ps[key] != null) return ps[key];
+  let best = null, bk = ''; for (const k in ps) if (k <= key && k > bk) { bk = k; best = ps[k]; }
+  return best;
+}
+function lastPriceMonth(st, pid) { return Object.keys(st.prices[pid] || {}).sort().pop() || null; }
+/* positions per goal/product and account-level PMC, up to date (inclusive) */
+function holdingsAt(st, date) {
+  const pos = {}, pmc = {}, accQty = {};
+  for (const t of st.ledger) {
+    if (t.date > date) break;
+    const q = +t.qty || 0, pr = +t.price || 0;
+    (pos[t.goalId] = pos[t.goalId] || {})[t.productId] = ((pos[t.goalId] || {})[t.productId] || 0) + q;
+    const aq = accQty[t.productId] || 0;
+    if (q > 0) pmc[t.productId] = (aq * (pmc[t.productId] || 0) + q * pr) / (aq + q);
+    accQty[t.productId] = aq + q;
+  }
+  return { pos, pmc, accQty };
+}
+function txAmount(t) { return (+t.qty || 0) * (+t.price || 0); }
+function estCommission(st, t) {
+  if (t.type !== 'buy' && t.type !== 'sell') return 0;
+  const p = st.products.find(x => x.id === t.productId); if (p && p.zero) return 0;
+  const c = st.settings.commission, a = Math.abs(txAmount(t));
+  return Math.min(c.max, Math.max(c.min, c.rate * a));
+}
+
+/* ---------- pension ---------- */
+function pensionSchedule(st, startYear, years) {
+  const p = st.pension, out = [];
+  for (let t = 1; t <= years; t++) {
+    const ral = p.ral * Math.pow(1 + p.ralGrowth, t - 1), tfr = ral * p.tfrPct, w = ral * p.workerPct, e = ral * p.employerPct;
+    const room = Math.max(0, p.cap + (+p.extra || 0) - w - e);
+    const vol = p.voluntary === '' || p.voluntary == null ? room : +p.voluntary;
+    out.push({ t, year: startYear + t - 1, ral, tfr, worker: w, employer: e, voluntary: vol, work: tfr + w + e, total: tfr + w + e + vol,
+      deductible: Math.min(p.cap + (+p.extra || 0), w + e + vol), refund: Math.min(vol, room) * p.marginal });
+  }
+  return out;
+}
+function exitRate(st, year) { return Math.max(0.09, 0.15 - 0.003 * Math.max(0, year - st.pension.firstYear - 15)); }
+function pensionWeights(st) {
+  const s = pensionSchedule(st, 2000, 1)[0], w = {};
+  st.pension.flows.forEach(f => { const base = f.flow === 'Work' ? s.work : s.voluntary; w[f.productId] = (w[f.productId] || 0) + (s.total > 0 ? (+f.pct || 0) * base / s.total : 0); });
+  return w;
+}
+
+/* ---------- goal model ---------- */
+function prodParams(p, S) {
+  const mu = +p.mu || 0, sig = Math.max(0, +p.vol || 0), ter = +p.ter || 0;
+  const s = Math.sqrt(Math.log(1 + sig * sig / ((1 + mu) * (1 + mu)))), m = Math.log(1 + mu) - s * s / 2;
+  let t = 0;
+  if (p.regime === 'etf') t = S.taxStd - (S.taxStd - S.taxGovt) * Math.min(1, Math.max(0, +p.wl || 0));
+  else if (p.regime === 'govt') t = S.taxGovt; else if (p.regime === 'direct') t = S.taxStd;
+  return { mu, ter, m, s, t, regime: p.regime, cls: Math.max(0, CLASSES.indexOf(p.cls)) };
+}
+function requiredProb(g, S) { if (g.minProb !== '' && g.minProb != null && !isNaN(+g.minProb)) return +g.minProb; return g.priority === 'Need' ? S.probNeed : g.priority === 'Want' ? S.probWant : S.probWish; }
+function prepGoal(st, g, H, date) {
+  const S = st.settings, startYear = +date.slice(0, 4), key = mkey(date), T = Math.max(0, g.year - startYear);
+  const isP = st.pension.goalId === g.id, pw = isP ? pensionWeights(st) : null;
+  const prods = {}; st.products.forEach(p => prods[p.id] = p);
+  const ids = new Set(st.weights.filter(w => w.goalId === g.id).map(w => w.productId));
+  Object.keys(H.pos[g.id] || {}).forEach(pid => ids.add(pid));
+  const raw = [...ids].filter(pid => prods[pid]).map(pid => ({ pid, w: isP ? (pw[pid] || 0) : Math.max(0, +((st.weights.find(x => x.goalId === g.id && x.productId === pid) || {}).weight) || 0) }));
+  const wsum = raw.reduce((a, r) => a + r.w, 0);
+  const items = raw.map(r => {
+    const q = (H.pos[g.id] || {})[r.pid] || 0, pr = priceAt(st, r.pid, key) || 0;
+    return { pid: r.pid, pp: prodParams(prods[r.pid], S), w: wsum > 0 ? r.w / wsum : 0, v0: q * pr, b0: q * (H.pmc[r.pid] || pr) };
+  });
+  const sched = isP ? pensionSchedule(st, startYear, Math.max(1, T)).map(r => r.total) : null;
+  const contrib = (t, x) => isP ? sched[t - 1] * x : 12 * x * Math.pow(1 + (+g.cgrowth || 0), t - 1);
+  const z = S.zainetto || {};
+  return { g, T, items, wsum, isP, x0: isP ? 1 : (+g.contrib || 0), contrib, S, startYear,
+    targetNom: g.target * Math.pow(1 + S.inflation, T), reqP: requiredProb(g, S), exitR: exitRate(st, g.year),
+    credit0: (z.goalId === g.id && +z.amount > 0 && g.year <= +z.expiry) ? +z.amount * S.taxStd : 0 };
+}
+function liquidate(V, B, G) {
+  let tax = 0, div = 0, cred = G.credit0, gross = 0;
+  for (let i = 0; i < G.items.length; i++) {
+    const pp = G.items[i].pp, gain = V[i] - B[i]; gross += V[i];
+    if (pp.regime === 'cash') continue;
+    if (pp.regime === 'pension') { tax += G.exitR * Math.max(0, B[i]); continue; }
+    if (pp.regime === 'etf') { if (gain > 0) tax += gain * pp.t; else cred += -gain * pp.t; }
+    else { if (gain > 0) div += gain * pp.t; else cred += -gain * pp.t; }
+  }
+  const off = Math.min(cred, div); tax += div - off;
+  return { gross, net: gross - tax, tax };
+}
+function runPath(G, x, Z, base, NC, rec, extend) {
+  const n = G.items.length, S = G.S, V = new Float64Array(n), B = new Float64Array(n), T = G.T, TT = extend ? Math.max(T, extend) : T;
+  for (let i = 0; i < n; i++) { V[i] = G.items[i].v0; B[i] = G.items[i].b0; }
+  if (rec) rec[0] = liquidate(V, B, G).net;
+  let lastNet = 0;
+  for (let t = 1; t <= TT; t++) {
+    const C = t <= T ? G.contrib(t, x) : 0;
+    for (let i = 0; i < n; i++) {
+      const it = G.items[i], pp = it.pp;
+      let g = (Z ? Math.exp(pp.m + pp.s * Z[base + t * NC + pp.cls]) : 1 + pp.mu) * (1 - pp.ter);
+      if (pp.regime === 'cash' && g > 1) g = 1 + (g - 1) * (1 - S.taxStd);
+      if (pp.regime === 'pension') g = 1 + (g - 1) * (1 - S.pensionTax);
+      V[i] *= g;
+      if (pp.regime !== 'pension') { const b = S.bollo * V[i]; V[i] -= b; B[i] = Math.max(0, B[i] - b); }
+      if (pp.regime === 'cash') B[i] = V[i];
+      const a = C * it.w; V[i] += a; B[i] += a;
+    }
+    if (rec && t <= T) rec[t] = liquidate(V, B, G).net;
+    if (t === T) lastNet = liquidate(V, B, G).net;
+    if (rec && t > T) rec[t] = liquidate(V, B, G).net;
+  }
+  return T === 0 ? liquidate(V, B, G).net : (extend ? lastNet : liquidate(V, B, G).net);
+}
+function buildShocks(st, H, P) {
+  const NC = CLASSES.length, { L } = safeCholesky(st.corr), rnd = mulberry32(Math.round(+st.settings.seed || 1));
+  const Z = new Float64Array(P * (H + 1) * NC), e = new Float64Array(NC);
+  for (let p = 0; p < P; p++) for (let t = 0; t <= H; t++) {
+    for (let k = 0; k < NC; k++) e[k] = gauss(rnd);
+    const off = (p * (H + 1) + t) * NC;
+    for (let i = 0; i < NC; i++) { let s = 0; for (let k = 0; k <= i; k++) s += L[i][k] * e[k]; Z[off + i] = s; }
+  }
+  return { Z, P, H, NC };
+}
+function probOf(G, x, SH) { let k = 0; for (let p = 0; p < SH.P; p++) if (runPath(G, x, SH.Z, p * (SH.H + 1) * SH.NC, SH.NC, null) >= G.targetNom - 0.005) k++; return k / SH.P; }
+function solve(G, test) {
+  if (G.T < 1 || G.wsum <= 0) return test(0) ? 0 : null;
+  if (test(0)) return 0;
+  let lo = 0, hi = G.isP ? 2 : Math.max(50, G.targetNom / (12 * G.T)) * 1.2, k = 0;
+  while (!test(hi) && k < 12) { lo = hi; hi *= 2; k++; }
+  if (!test(hi)) return null;
+  for (let i = 0; i < 20 && (hi - lo) > (G.isP ? 0.002 : 0.5); i++) { const mid = (lo + hi) / 2; if (test(mid)) hi = mid; else lo = mid; }
+  return hi;
+}
+
+/* Full goal analysis at a date. opts: {paths, solve:boolean, fireYears} */
+function analyse(st, date, opts = {}) {
+  const P = opts.paths || st.settings.paths, H0 = holdingsAt(st, date), S = st.settings, startYear = +date.slice(0, 4);
+  const Gs = st.goals.map(g => prepGoal(st, g, H0, date));
+  const FY = opts.fireYears || 0;
+  const Hmax = Math.max(1, FY, ...Gs.map(G => G.T));
+  const SH = buildShocks(st, Hmax, P);
+  const fireIdx = Gs.map((G, i) => (G.g.fire && (!G.isP || S.fire.includePension)) ? i : -1).filter(i => i >= 0);
+  const fireNet = FY ? Array.from({ length: FY + 1 }, () => new Float64Array(P)) : null;
+  const results = Gs.map((G, gi) => {
+    const det = new Float64Array(Math.max(G.T, FY) + 1); const detEnd = runPath(G, G.x0, null, 0, SH.NC, det, FY && fireIdx.includes(gi) ? FY : 0);
+    const yearly = []; for (let t = 0; t <= G.T; t++) yearly.push(new Float64Array(P));
+    const finals = new Float64Array(P), tmp = new Float64Array(Math.max(G.T, FY) + 1), inFire = FY && fireIdx.includes(gi);
+    for (let p = 0; p < P; p++) {
+      finals[p] = runPath(G, G.x0, SH.Z, p * (Hmax + 1) * SH.NC, SH.NC, tmp, inFire ? FY : 0);
+      for (let t = 0; t <= G.T; t++) yearly[t][p] = tmp[t];
+      if (inFire) for (let t = 0; t <= FY; t++) fireNet[t][p] += tmp[Math.min(t, tmp.length - 1)];
+    }
+    const fan = { p10: [], p50: [], p90: [] };
+    for (let t = 0; t <= G.T; t++) { const s = Array.from(yearly[t]).sort((a, b) => a - b); fan.p10.push(pct(s, .1)); fan.p50.push(pct(s, .5)); fan.p90.push(pct(s, .9)); }
+    const sorted = Array.from(finals).sort((a, b) => a - b);
+    let k = 0; for (const f of finals) if (f >= G.targetNom - 0.005) k++;
+    const prob = k / P;
+    const r = { id: G.g.id, G, T: G.T, targetNom: G.targetNom, reqP: G.reqP, value: G.items.reduce((a, it) => a + it.v0, 0),
+      detNet: detEnd, detPath: Array.from(det).slice(0, G.T + 1), prob, fan, finals: sorted, median: pct(sorted, .5), p10: pct(sorted, .1), p90: pct(sorted, .9),
+      status: prob >= G.reqP ? 'on' : prob >= G.reqP - 0.15 ? 'risk' : 'off', reqDet: null, reqMC: null };
+    if (opts.solve) {
+      r.reqDet = solve(G, x => runPath(G, x, null, 0, SH.NC, null) >= G.targetNom - 0.005);
+      r.reqMC = solve(G, x => probOf(G, x, SH) >= G.reqP);
+      if (G.isP) { const y1 = G.contrib(1, 1) / 12; r.reqDet = r.reqDet == null ? null : r.reqDet * y1; r.reqMC = r.reqMC == null ? null : r.reqMC * y1; r.nowMonthly = y1; }
+      else r.nowMonthly = +G.g.contrib || 0;
+    }
+    return r;
+  });
+  let fire = null;
+  if (FY) {
+    const lv = fireLevels(st), real = t => Math.pow(1 + S.inflation, t), rows = [];
+    for (let t = 0; t <= FY; t++) { const s = Array.from(fireNet[t]).map(v => v / real(t)).sort((a, b) => a - b); rows.push({ t, year: startYear + t, p10: pct(s, .1), p50: pct(s, .5), p90: pct(s, .9), probs: lv.map(l => s.filter(v => v >= l.target).length / P) }); }
+    const detArr = fireIdx.map(i => { const G = results[i].G, arr = new Float64Array(Math.max(G.T, FY) + 1); runPath(G, G.x0, null, 0, SH.NC, arr, FY); return arr; });
+    const detRows = []; for (let t = 0; t <= FY; t++) detRows.push(detArr.reduce((a, arr) => a + arr[t], 0) / real(t));
+    fire = { levels: lv, rows, det: detRows, now: rows[0].p50, reach: lv.map((l, i) => { const a = rows.find(r => r.p50 >= l.target), d = detRows.findIndex(v => v >= l.target); return { median: a ? a.year : null, det: d >= 0 ? startYear + d : null }; }) };
+  }
+  return { date, startYear, results, fire, H: Hmax, holdings: H0 };
+}
+function fireLevels(st) {
+  const f = st.settings.fire, c = st.cashflow, ef = st.goals.find(g => g.id === f.efFromGoal);
+  const l1 = ef ? ef.target : f.efMonths * c.essential, l2 = f.l2Mult * c.essential, l3 = l2 + f.l3Mult * c.optional;
+  return [{ n: 1, name: 'Safety', desc: ef ? `Emergency fund goal (${ef.name})` : `${f.efMonths} months of essential expenses`, target: l1 },
+          { n: 2, name: 'Barista FIRE', desc: `${f.l2Mult} × essential monthly expenses`, target: l2 },
+          { n: 3, name: 'FIRE', desc: `Level 2 + ${f.l3Mult} × optional monthly expenses`, target: l3 }];
+}
+function fireWealthNow(st, date) {
+  const H = holdingsAt(st, date), key = mkey(date); let v = 0;
+  st.goals.forEach(g => { if (!g.fire) return; if (st.pension.goalId === g.id && !st.settings.fire.includePension) return; Object.entries(H.pos[g.id] || {}).forEach(([pid, q]) => v += q * (priceAt(st, pid, key) || 0)); });
+  return v;
+}
+
+/* ---------- performance ---------- */
+function performance(st, scope) {
+  const months = [], first = mkey(st.ledger[0].date), last = mkey(st.asOf);
+  for (let i = 0; i <= monthsBetween(first, last); i++) months.push(addMonths(first, i));
+  const inScope = t => scope === 'all' ? true : scope === 'all-ex-pension' ? t.goalId !== st.pension.goalId : t.goalId === scope;
+  const pos = {}; let li = 0; const rows = []; let idx = 1, peak = 1, cumFlow = 0, prevV = 0;
+  for (const m of months) {
+    let flow = 0;
+    while (li < st.ledger.length && mkey(st.ledger[li].date) <= m) { const t = st.ledger[li++]; if (!inScope(t)) continue; pos[t.productId] = (pos[t.productId] || 0) + (+t.qty || 0); flow += txAmount(t); }
+    let V = 0; for (const pid in pos) V += pos[pid] * (priceAt(st, pid, m) || 0);
+    const r = prevV > 0 ? (V - flow) / prevV - 1 : 0; idx *= 1 + r; peak = Math.max(peak, idx); cumFlow += flow;
+    rows.push({ m, value: V, flow, invested: cumFlow, twrIndex: idx, ret: r, dd: idx / peak - 1 }); prevV = V;
+  }
+  const flows = st.ledger.filter(inScope).map(t => ({ d: t.date, a: -txAmount(t) })); const end = rows[rows.length - 1];
+  flows.push({ d: st.asOf, a: end.value });
+  const xirr = XIRR(flows), yStart = rows.find(r => r.m === `${st.asOf.slice(0, 4)}-01`), prevDec = rows[rows.indexOf(yStart) - 1];
+  const ytd = prevDec ? end.twrIndex / prevDec.twrIndex - 1 : end.twrIndex - 1;
+  const y1 = rows[rows.length - 13]; const r12 = y1 ? end.twrIndex / y1.twrIndex - 1 : null;
+  return { rows, xirr, twr: end.twrIndex - 1, ytd, r12, maxDD: Math.min(...rows.map(r => r.dd)), value: end.value, invested: end.invested };
+}
+function XIRR(flows) {
+  if (flows.length < 2) return null; const t0 = Date.parse(flows[0].d);
+  const f = r => flows.reduce((s, c) => s + c.a / Math.pow(1 + r, (Date.parse(c.d) - t0) / 31557600000), 0);
+  let lo = -0.99, hi = 1; if (f(lo) * f(hi) > 0) return null;
+  for (let i = 0; i < 100; i++) { const mid = (lo + hi) / 2; if (f(lo) * f(mid) <= 0) hi = mid; else lo = mid; }
+  return (lo + hi) / 2;
+}
+
+/* ---------- plan vs actual & next action ---------- */
+function planVsActual(st) {
+  const ts = st.settings.trackingStart, now = mkey(st.asOf), months = monthsBetween(ts, now) + 1, startYear = +st.asOf.slice(0, 4);
+  return st.goals.map(g => {
+    const isP = st.pension.goalId === g.id; let planned = 0;
+    for (let i = 0; i < months; i++) { const k = addMonths(ts, i), y = +k.slice(0, 4);
+      if (y > g.year) continue;
+      planned += isP ? pensionSchedule(st, y, 1)[0].total / 12 : (+g.contrib || 0) * Math.pow(1 + (+g.cgrowth || 0), Math.max(0, y - +ts.slice(0, 4))); }
+    const actual = st.ledger.filter(t => t.goalId === g.id && t.type !== 'open' && mkey(t.date) >= ts).reduce((a, t) => a + txAmount(t), 0);
+    return { id: g.id, name: g.name, planned, actual, gap: actual - planned, pct: planned > 0 ? actual / planned : null };
+  });
+}
+function nextAction(st, pva) {
+  const c = st.settings.commission, minTicket = c.rate > 0 ? c.min / c.rate : 0;
+  const behind = pva.filter(r => r.gap < -1 && st.pension.goalId !== r.id).sort((a, b) => a.gap - b.gap)[0];
+  if (!behind) return { kind: 'none', minTicket };
+  const ws = st.weights.filter(w => w.goalId === behind.id && +w.weight > 0), sum = ws.reduce((a, w) => a + +w.weight, 0);
+  const amount = -behind.gap, zeroOnly = ws.length && ws.every(w => (st.products.find(p => p.id === w.productId) || {}).zero);
+  const split = ws.map(w => { const p = st.products.find(x => x.id === w.productId), a = amount * (+w.weight) / sum; return { productId: w.productId, name: p.name, amount: a, commission: p.zero ? 0 : Math.min(c.max, Math.max(c.min, c.rate * a)) }; });
+  return { kind: amount < minTicket && !zeroOnly ? 'wait' : 'invest', goal: behind, amount, split, minTicket };
+}
+
+/* ---------- cash flow ---------- */
+function cashflow(st, years) {
+  const c = st.cashflow, startYear = +st.asOf.slice(0, 4), ps = pensionSchedule(st, startYear, years), out = [];
+  for (let t = 1; t <= years; t++) {
+    const y = startYear + t - 1, inc = c.income * Math.pow(1 + c.incomeGrowth, t - 1), exp = 12 * (c.essential + c.optional) * Math.pow(1 + c.expenseGrowth, t - 1);
+    const ev = c.events.filter(e => +e.year === y).reduce((a, e) => a + +e.amount, 0), refund = t > 1 ? ps[t - 2].refund : 0;
+    const per = {}; let planned = 0;
+    st.goals.forEach(g => { let a = 0; if (y <= g.year) a = st.pension.goalId === g.id ? ps[t - 1].voluntary : 12 * (+g.contrib || 0) * Math.pow(1 + (+g.cgrowth || 0), t - 1); per[g.id] = a; planned += a; });
+    out.push({ t, year: y, income: inc, expenses: exp, events: ev, refund, capacity: inc - exp + ev + refund, per, planned, free: inc - exp + ev + refund - planned });
+  }
+  return out;
+}
+
+if (typeof module !== 'undefined') module.exports = { sampleState, analyse, performance, planVsActual, nextAction, cashflow, holdingsAt, fireLevels, fireWealthNow, pensionSchedule, priceAt, estCommission, txAmount };
+
+/* ---------- mix optimizer ---------- */
+function mixGrid(n, step) {
+  const units = Math.round(1 / step), out = [];
+  const rec = (i, left, acc) => { if (i === n - 1) { out.push([...acc, left * step]); return; } for (let k = 0; k <= left; k++) rec(i + 1, left - k, [...acc, k * step]); };
+  rec(0, units, []); return out;
+}
+function optimizeMix(st, goalId, opts = {}) {
+  const S = st.settings, g = st.goals.find(x => x.id === goalId), date = st.asOf, H0 = holdingsAt(st, date);
+  const base = prepGoal(st, g, H0, date), universe = opts.universe && opts.universe.length ? opts.universe : base.items.map(it => it.pid);
+  const prods = {}; st.products.forEach(p => prods[p.id] = p);
+  const key = mkey(date), n = universe.length; if (!n || base.T < 1) return { error: base.T < 1 ? 'The goal is due within a year: there is nothing to optimise.' : 'Choose at least one product.' };
+  const step = opts.step || (n <= 4 ? 0.1 : 0.2), P = opts.paths || 300, mode = opts.mode || 'new';
+  const SH = buildShocks(st, base.T, P);
+  /* starting positions */
+  const cur = universe.map(pid => { const it = base.items.find(x => x.pid === pid); return it ? { v0: it.v0, b0: it.b0, w: it.w } : { v0: 0, b0: 0, w: 0 }; });
+  const heldOutside = base.items.filter(it => !universe.includes(it.pid));
+  let switchTax = 0;
+  if (mode === 'rebalance') {
+    const tmpG = { ...base, credit0: 0 };
+    const all = base.items; const V = all.map(it => it.v0), B = all.map(it => it.b0);
+    const L = liquidate(V, B, { ...tmpG, items: all, exitR: base.exitR });
+    switchTax = L.tax; /* pension funds would not be sold in reality: shown as a warning in the UI */
+  }
+  const total = base.items.reduce((a, it) => a + it.v0, 0) - switchTax;
+  const build = w => {
+    const items = universe.map((pid, i) => {
+      const pp = prodParams(prods[pid], S);
+      if (mode === 'rebalance') return { pid, pp, w: w[i], v0: total * w[i], b0: total * w[i] };
+      return { pid, pp, w: w[i], v0: cur[i].v0, b0: cur[i].b0 };
+    });
+    if (mode !== 'rebalance') heldOutside.forEach(it => items.push({ ...it, w: 0 }));
+    return { ...base, items, wsum: 1 };
+  };
+  const evalMix = w => {
+    const G = build(w), f = new Float64Array(P);
+    for (let p = 0; p < P; p++) f[p] = runPath(G, G.x0, SH.Z, p * (SH.H + 1) * SH.NC, SH.NC, null);
+    const s = Array.from(f).sort((a, b) => a - b); let k = 0; for (const v of s) if (v >= G.targetNom - 0.005) k++;
+    let sf = 0, ns = 0; for (const v of s) if (v < G.targetNom) { sf += G.targetNom - v; ns++; }
+    const det = runPath(G, G.x0, null, 0, SH.NC, null);
+    return { w, prob: k / P, median: pct(s, .5), p10: pct(s, .1), p90: pct(s, .9), shortfall: ns ? sf / ns : 0, det };
+  };
+  const maxW = opts.maxW || 1, grid = mixGrid(n, step).filter(w => w.every(x => x <= maxW + 1e-9)).map(evalMix);
+  if (!grid.length) return { error: 'No mix satisfies the maximum weight per product: raise it or add products.' };
+  const curW = universe.map((pid, i) => cur[i].w); const cs = curW.reduce((a, b) => a + b, 0);
+  const current = evalMix(cs > 0 ? curW.map(x => x / cs) : universe.map(() => 1 / n));
+  const feasible = grid.filter(c => c.prob >= base.reqP);
+  const crit = opts.criterion && opts.criterion !== 'auto' ? opts.criterion : (g.priority === 'Need' ? 'p10' : 'median');
+  if (crit === 'cheapest') {
+    const conv = G => G.isP ? G.contrib(1, 1) / 12 : 1;
+    const need = c => { const G = build(c.w); const x = solve(G, y => probOf(G, y, SH) >= base.reqP); return x == null ? null : x * conv(G); };
+    grid.forEach(c => { c.need = need(c); }); current.need = need(current);
+    const ok = grid.filter(c => c.need != null);
+    if (ok.length) {
+      const best = ok.slice().sort((a, b) => a.need - b.need || b.median - a.median)[0];
+      return { goal: g, universe, step, mode, paths: P, reqP: base.reqP, targetNom: base.targetNom, T: base.T, grid, current, best, crit,
+        rule: 'O5 Spend least: the mix that reaches the required probability with the lowest monthly contribution.', switchTax, feasible: ok.length };
+    }
+  }
+  const RULES = { cheapest: 'O5 Spend least: no mix can reach the required probability with contributions; showing the highest probability instead.', p10: 'O1 Best bad case: among mixes reaching the required probability, the one with the highest P10.',
+    median: 'O2 Best median: among mixes reaching the required probability, the one with the highest median outcome.',
+    prob: 'O4 Highest probability of success (ties: higher median).' };
+  let best, rule;
+  if (crit === 'prob' || crit === 'cheapest') { best = grid.slice().sort((a, b) => b.prob - a.prob || b.median - a.median)[0]; rule = crit === 'cheapest' ? RULES.cheapest : RULES.prob; }
+  else if (feasible.length) {
+    best = crit === 'p10' ? feasible.slice().sort((a, b) => b.p10 - a.p10 || b.prob - a.prob)[0] : feasible.slice().sort((a, b) => b.median - a.median || b.prob - a.prob)[0];
+    rule = RULES[crit] + (opts.criterion === 'auto' || !opts.criterion ? ` (default for ${g.priority} goals)` : '');
+  } else {
+    best = grid.slice().sort((a, b) => b.prob - a.prob || b.median - a.median)[0];
+    rule = 'O3 No mix reaches the required probability: the one with the highest probability. Contributions or target need to change.';
+  }
+  return { goal: g, universe, step, mode, paths: P, reqP: base.reqP, targetNom: base.targetNom, T: base.T, grid, current, best, rule, crit, switchTax, feasible: feasible.length };
+}
+if (typeof module !== 'undefined') module.exports.optimizeMix = optimizeMix;
+
+</script>
+<script>
+(function(){'use strict';
+const KEY='gbi-app-mock-v3';
+const PAGES={dashboard:['Dashboard','Your buckets, independence levels and what to do next.'],goals:['Goals','One bucket per goal, each with its own date, target and risk.'],
+ optimizer:['Mix optimizer','Tests every mix of the chosen products for one bucket and suggests the best one for its priority.'],
+ levels:['Financial independence','Three levels: safety, Barista FIRE and FIRE, measured on the buckets you mark as counting.'],
+ performance:['Performance','How each bucket and the whole portfolio have done.'],history:['Goal history','The goal analysis repeated over time, to see whether plans are getting safer or riskier.'],
+ plan:['Plan vs actual','What you planned to put in since tracking started, against what you did.'],transactions:['Transactions','Every buy, sell and pension contribution, assigned to a bucket.'],
+ import:['Import','Bulk-load transactions or prices from a CSV export, check them, then import. Every import can be undone.'],
+ prices:['Prices','Month-end prices drive all valuations and performance.'],pension:['Pension','Payroll flows, voluntary contributions, deduction and tax refund.'],
+ setup:['Setup','Products, allocations, goals, cash flow and assumptions.'],help:['Glossary & method','Terms and how the numbers are computed.']};
+let st,A=null,PF={},OPT=null,optGoal='g5',charts={},timer=null,selGoal='g5',perfScope='all',histMetric='prob',setupTab='products',planGoal='g5';
+
+/* ---------- utils ---------- */
+const eur=new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+const eur2=new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2});
+const fE=v=>v==null||isNaN(v)?'–':eur.format(v), fE2=v=>v==null||isNaN(v)?'–':eur2.format(v);
+const fP=(v,d=0)=>v==null||isNaN(v)?'–':(v*100).toFixed(d)+'%';
+const fS=(v,d=1)=>v==null||isNaN(v)?'–':(v>=0?'+':'')+(v*100).toFixed(d)+'%';
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const gi=id=>st.goals.findIndex(g=>g.id===id), gCol=id=>css('--g'+((Math.max(0,gi(id))%8)+1));
+const prod=id=>st.products.find(p=>p.id===id)||{name:'?'}, goal=id=>st.goals.find(g=>g.id===id)||{name:'?'};
+const STATUS={on:'On track',risk:'At risk',off:'Off track'};
+function alpha(hex,a){const m=hex.replace('#','');const n=parseInt(m.length===3?m.split('').map(c=>c+c).join(''):m,16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
+function load(){try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);if(o&&o.version===2)return o;}}catch(e){}return null;}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
+function mk(id,cfg){if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(!el||typeof Chart==='undefined')return;charts[id]=new Chart(el,cfg);}
+function opts(extra={}){const m=css('--muted'),l=css('--line');return Object.assign({responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+ plugins:{legend:{labels:{color:m,boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fE(c.parsed.y)}`}}},
+ scales:{x:{ticks:{color:m,maxRotation:0,autoSkip:true},grid:{display:false}},y:{ticks:{color:m,callback:v=>fE(v)},grid:{color:l}}}},extra);}
+function spark(vals,col){if(!vals.length)return '';const w=90,h=22,mn=0,mx=1;const pts=vals.map((v,i)=>`${(i/(Math.max(1,vals.length-1)))*w},${h-((v-mn)/(mx-mn))*h}`).join(' ');
+ return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2"/></svg>`;}
+
+/* ---------- compute ---------- */
+function retroSnapshots(){
+  const q=[];const first=st.ledger[0].date.slice(0,7);let k=first;
+  while(k<=st.asOf.slice(0,7)){const m=+k.slice(5);if(m%3===0&&monthEndOf(k)<st.asOf)q.push(monthEndOf(k));k=nextKey(k);}
+  return q.map(d=>snapshotFrom(analyse(st,d,{paths:300}),'recomputed'));
+}
+function monthEndOf(k){const [y,m]=k.split('-').map(Number);return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);}
+function nextKey(k){let [y,m]=k.split('-').map(Number);m++;if(m>12){m=1;y++;}return `${y}-${String(m).padStart(2,'0')}`;}
+function snapshotFrom(a,source){return {date:a.date,source,goals:a.results.map(r=>({id:r.id,prob:r.prob,reqP:r.reqP,detNet:r.detNet,target:r.targetNom,median:r.median,value:r.value,status:r.status}))};}
+function recompute(){
+  clearTimeout(timer);document.getElementById('busy').textContent='Calculating…';
+  timer=setTimeout(()=>{
+    try{
+      A=analyse(st,st.asOf,{solve:true,fireYears:40});PF={};
+      ['all','all-ex-pension',...st.goals.map(g=>g.id)].forEach(s=>PF[s]=performance(st,s));
+      if(!st.snapshots.length){st.snapshots=retroSnapshots();save();}
+    }catch(e){console.error(e);document.getElementById('busy').textContent='Calculation failed: check inputs.';return;}
+    document.getElementById('busy').textContent='';renderAll();
+  },120);
+}
+
+/* ---------- alerts (each traces to a rule) ---------- */
+function alerts(){
+  const out=[],key=st.asOf.slice(0,7),pva=planVsActual(st),na=nextAction(st,pva),c=st.settings.commission,minT=c.rate>0?c.min/c.rate:0;
+  pva.forEach(r=>{if(st.pension.goalId!==r.id&&r.gap<-minT)out.push({sev:'mid',title:`${r.name} is ${fE(-r.gap)} behind plan`,body:`Planned ${fE(r.planned)} since tracking started, put in ${fE(r.actual)}.`,rule:'R1 Behind plan',cond:'cumulative gap < minimum efficient ticket'});});
+  const y=+st.asOf.slice(0,4),ps=pensionSchedule(st,y,1)[0],volYTD=st.ledger.filter(t=>t.goalId===st.pension.goalId&&t.type==='pension'&&t.date.slice(0,4)==String(y)&&st.pension.flows.some(f=>f.productId===t.productId&&f.flow==='Voluntary')).reduce((a,t)=>a+txAmount(t),0);
+  const room=Math.max(0,st.pension.cap+(+st.pension.extra||0)-ps.worker-ps.employer-volYTD);
+  if(room>1)out.push({sev:'info',title:`Pension: ${fE(room)} of deduction still available for ${y}`,body:`Paying it by 31 December gives a refund of about ${fE(room*st.pension.marginal)} next year.`,rule:'R2 Deduction room',cond:'cap − (worker + employer + voluntary YTD) > 0'});
+  const H=holdingsAt(st,st.asOf);
+  st.products.forEach(p=>{if(!p.maturity)return;const held=Object.values(H.pos).some(o=>(o[p.id]||0)>0.0001);const months=(+p.maturity.slice(0,4)-y)*12+(+p.maturity.slice(5)-+key.slice(5));
+    if(held&&months>=0&&months<=36)out.push({sev:'mid',title:`${p.name} matures in ${months} months`,body:'Decide now where the proceeds go; check that the goal date matches the maturity.',rule:'R3 Maturity ahead',cond:'held product with maturity ≤ 36 months'});});
+  const stale=st.products.filter(p=>{const lp=lastPriceMonth(st,p.id);return lp&&lp<key&&Object.values(H.pos).some(o=>(o[p.id]||0)>0.0001);});
+  if(stale.length)out.push({sev:'mid',title:`${stale.length} price(s) older than the valuation date`,body:stale.map(p=>p.name).join(', '),rule:'R5 Stale prices',cond:'last price month < valuation month'});
+  if(A){const last=st.snapshots[st.snapshots.length-1];A.results.forEach(r=>{const g=r.G.g;
+    if(r.status==='off'&&g.priority==='Need')out.push({sev:'hi',title:`${g.name} is off track`,body:`${fP(r.prob)} probability vs ${fP(r.reqP)} required. Needed: ${r.reqMC==null?'not reachable with contributions':fE(r.reqMC)+'/month'}.`,rule:'R6 Need off track',cond:'priority = Need and status = Off track'});
+    const prev=last&&last.goals.find(x=>x.id===r.id);const rank={on:0,risk:1,off:2};
+    if(prev&&rank[r.status]>rank[prev.status])out.push({sev:'mid',title:`${g.name} got riskier`,body:`From ${STATUS[prev.status]} (${fP(prev.prob)}) on ${prev?last.date:''} to ${STATUS[r.status]} (${fP(r.prob)}).`,rule:'R4 Status worsened',cond:'status worse than last snapshot'});
+    if(r.T<=1&&r.G.items.some(it=>it.pp.cls===0&&it.v0>0))out.push({sev:'mid',title:`${g.name} is due within a year but holds equities`,body:'Consider moving to low-risk assets before the goal date.',rule:'R8 Near goal, risky assets',cond:'horizon ≤ 1 year and equity value > 0'});});}
+  const yearAgo=String(y-1)+st.asOf.slice(4);
+  const pricey=st.ledger.filter(t=>t.date>yearAgo&&(t.type==='buy'||t.type==='sell')).filter(t=>{const cm=t.commission!=null&&t.commission!==''?+t.commission:estCommission(st,t);return Math.abs(txAmount(t))>0&&cm/Math.abs(txAmount(t))>c.rate*1.25;});
+  if(pricey.length)out.push({sev:'info',title:`${pricey.length} trade(s) in the last 12 months cost more than ${fP(c.rate*1.25,2)}`,body:`Below ${fE(minT)} the minimum commission dominates: batch smaller contributions.`,rule:'R7 Costly trades',cond:'commission / amount > 1.25 × rate'});
+  const order={hi:0,mid:1,info:2};return out.sort((a,b)=>order[a.sev]-order[b.sev]);
+}
+
+/* ---------- ladder ---------- */
+function ladderSVG(compact){
+  const lv=fireLevels(st),w=fireWealthNow(st,st.asOf),W=760,Hh=compact?250:290,step=(W-40)/3,base=Hh-40;
+  let s=`<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Financial independence levels">`;
+  lv.forEach((l,i)=>{
+    const lo=i===0?0:lv[i-1].target,frac=Math.max(0,Math.min(1,(w-lo)/(l.target-lo))),x=20+i*step,h=(i+1)*((base-12)/3),y=base-h;
+    s+=`<rect x="${x}" y="${y}" width="${step-8}" height="${h}" rx="4" fill="${css('--sunk')}" stroke="${css('--line')}"/>`;
+    s+=`<rect x="${x}" y="${base-h*frac}" width="${step-8}" height="${h*frac}" rx="4" fill="${alpha(css('--primary'),frac>=1?.85:.55)}"/>`;
+    s+=`<text x="${x+10}" y="${y+22}" font-size="15" font-weight="700">Level ${l.n}: ${esc(l.name)}</text>`;
+    s+=`<text x="${x+10}" y="${y+41}" font-size="12.5" style="fill:${css('--muted')}">${fE(l.target)}</text>`;
+    s+=`<text x="${x+10}" y="${base-10}" font-size="20" font-weight="700" style="fill:${frac>=1?css('--primary-ink'):css('--ink')}">${fP(frac)}</text>`;
+    const reach=A&&A.fire?A.fire.reach[i]:null;
+    s+=`<text x="${x+(step-8)/2}" y="${Hh-14}" text-anchor="middle" font-size="12.5" style="fill:${css('--muted')}">${frac>=1?'reached':reach&&reach.median?'median '+reach.median:'not within 40 years'}</text>`;
+  });
+  return s+'</svg>';
+}
+
+/* ---------- renderers ---------- */
+function renderAll(){renderImport();renderOptimizer();renderDashboard();renderGoals();renderLevels();renderPerformance();renderHistory();renderPlan();renderTx();renderPrices();renderPension();renderSetup();
+  const n=alerts().filter(a=>a.sev!=='info').length;document.getElementById('alertBadge').textContent=n||'';}
+
+function renderDashboard(){
+  const all=PF['all'],rows=all.rows,last=rows[rows.length-1],prev=rows[rows.length-2],fw=fireWealthNow(st,st.asOf),lv=fireLevels(st);
+  const nextLv=lv.find(l=>fw<l.target);
+  const on=A.results.filter(r=>r.status==='on').length;
+  document.getElementById('dashStrip').innerHTML=`
+   <div><div class="l">Net worth (all buckets)</div><div class="v">${fE(last.value)}</div><div class="n ${last.value-prev.value-last.flow>=0?'on':'off'}">${fE(last.value-prev.value-last.flow)} market change this month</div></div>
+   <div><div class="l">Return this year</div><div class="v">${fS(all.ytd)}</div><div class="n muted">time-weighted; since start ${fS(all.twr)}</div></div>
+   <div><div class="l">Counts toward independence</div><div class="v">${fE(fw)}</div><div class="n muted">${nextLv?fP(fw/nextLv.target)+' of level '+nextLv.n:'all levels reached'}</div></div>
+   <div><div class="l">Goals on track</div><div class="v">${on} of ${A.results.length}</div><div class="n muted">${A.results.filter(r=>r.status==='off').length} off track</div></div>`;
+  document.getElementById('ladder').innerHTML=ladderSVG(true);
+  document.getElementById('ladderNote').textContent=`Measured on ${st.goals.filter(g=>g.fire&&(st.pension.goalId!==g.id||st.settings.fire.includePension)).map(g=>g.name).join(', ')}, in today’s euros. Years are the median projection.`;
+  const al=alerts();
+  document.getElementById('alerts').innerHTML=al.length?al.map(a=>`<div class="alert ${a.sev==='hi'?'hi':a.sev==='info'?'info':''}"><b>${esc(a.title)}</b>${esc(a.body)}<div class="why">Why: <code>${esc(a.rule)}</code>, ${esc(a.cond)}</div></div>`).join(''):'<p class="note">Nothing needs attention.</p>';
+  const pva=planVsActual(st);
+  let h=`<thead><tr><th>Goal</th><th>Year</th><th>Value</th><th>Target at date</th><th>P(success)</th><th>Required</th><th class="l">Trend</th><th>Plan gap</th><th class="l">Status</th></tr></thead><tbody>`;
+  A.results.forEach(r=>{const g=r.G.g,hist=st.snapshots.map(s=>(s.goals.find(x=>x.id===r.id)||{}).prob).filter(v=>v!=null).concat([r.prob]),p=pva.find(x=>x.id===r.id);
+    h+=`<tr class="click" data-goal="${r.id}"><td><span class="dot" style="background:${gCol(r.id)}"></span>${esc(g.name)}</td><td>${g.year}</td><td>${fE(r.value)}</td><td>${fE(r.targetNom)}</td><td><b>${fP(r.prob)}</b></td><td>${fP(r.reqP)}</td><td class="l">${spark(hist,gCol(r.id))}</td><td class="${p.gap<0?'off':'on'}">${p.planned||p.actual?fE(p.gap):'–'}</td><td class="l"><span class="pill ${r.status}">${STATUS[r.status]}</span></td></tr>`;});
+  document.getElementById('dashGoals').innerHTML=h+'</tbody>';
+  /* net worth stacked */
+  const labels=rows.map(r=>r.m),ds=st.goals.map(g=>{const pr=PF[g.id].rows,map={};pr.forEach(r=>map[r.m]=r.value);return {label:g.name,data:labels.map(m=>map[m]||0),borderColor:gCol(g.id),backgroundColor:alpha(gCol(g.id),.55),fill:true,pointRadius:0,borderWidth:1,stack:'v'};});
+  ds.push({label:'Money put in',data:rows.map(r=>r.invested),borderColor:css('--ink'),borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false,stack:'inv'});
+  mk('chNet',{type:'line',data:{labels,datasets:ds},options:opts({scales:{x:{ticks:{color:css('--muted'),maxTicksLimit:8},grid:{display:false}},y:{stacked:true,ticks:{color:css('--muted'),callback:v=>fE(v)},grid:{color:css('--line')}}}})});
+  const cf=cashflow(st,10);
+  const cds=st.goals.map(g=>({type:'bar',label:g.name,data:cf.map(c=>c.per[g.id]),backgroundColor:alpha(gCol(g.id),.8),stack:'s'}));
+  cds.push({type:'line',label:'Savings capacity',data:cf.map(c=>c.capacity),borderColor:css('--ink'),borderWidth:2,pointRadius:0,stack:'cap'});
+  mk('chCashDash',{data:{labels:cf.map(c=>c.year),datasets:cds},options:opts({scales:{x:{stacked:true,ticks:{color:css('--muted')},grid:{display:false}},y:{stacked:true,ticks:{color:css('--muted'),callback:v=>fE(v)},grid:{color:css('--line')}}}})});
+}
+
+function renderGoals(){
+  let h=`<thead><tr><th>Goal</th><th class="l">Priority</th><th>Year</th><th>Target (today’s €)</th><th>Target at date</th><th>Value now</th><th>Deterministic</th><th>Median</th><th>P10 – P90</th><th>P(success)</th><th>Monthly now</th><th>Needed (det.)</th><th>Needed (prob.)</th><th class="l">Status</th></tr></thead><tbody>`;
+  A.results.forEach(r=>{const g=r.G.g;h+=`<tr class="click" data-goal="${r.id}"><td><span class="dot" style="background:${gCol(r.id)}"></span>${esc(g.name)}${r.G.isP?' <span class="note">(pension)</span>':''}</td><td class="l">${g.priority}</td><td>${g.year}</td><td>${fE(g.target)}</td><td>${fE(r.targetNom)}</td><td>${fE(r.value)}</td><td>${fE(r.detNet)}</td><td>${fE(r.median)}</td><td>${fE(r.p10)} – ${fE(r.p90)}</td><td><b>${fP(r.prob)}</b> <span class="note">/ ${fP(r.reqP)}</span></td><td>${fE(r.nowMonthly)}</td><td>${r.reqDet==null?'not reachable':fE(r.reqDet)}</td><td>${r.reqMC==null?'not reachable':fE(r.reqMC)}</td><td class="l"><span class="pill ${r.status}">${STATUS[r.status]}</span></td></tr>`;});
+  document.getElementById('goalsTable').innerHTML=h+'</tbody>';
+  const sel=document.getElementById('goalSel');sel.innerHTML=st.goals.map(g=>`<option value="${g.id}" ${g.id===selGoal?'selected':''}>${esc(g.name)}</option>`).join('');
+  const r=A.results.find(x=>x.id===selGoal)||A.results[0],g=r.G.g,pf=PF[r.id],col=gCol(r.id);
+  document.getElementById('goalStrip').innerHTML=`<div><div class="l">Value now</div><div class="v">${fE(r.value)}</div><div class="n muted">${fP(r.value/r.targetNom)} of target at date</div></div>
+   <div><div class="l">P(success)</div><div class="v ${r.status}">${fP(r.prob)}</div><div class="n muted">required ${fP(r.reqP)}</div></div>
+   <div><div class="l">Money-weighted return</div><div class="v">${fS(pf.xirr)}</div><div class="n muted">per year, before tax</div></div>
+   <div><div class="l">Monthly now / needed</div><div class="v">${fE(r.nowMonthly)}</div><div class="n muted">${r.reqMC==null?'not reachable by contributions':'needed '+fE(r.reqMC)}</div></div>`;
+  const y0=A.startYear,labels=r.fan.p50.map((_,t)=>y0+t);
+  mk('chFan',{type:'line',data:{labels,datasets:[{label:'P10',data:r.fan.p10,borderColor:'transparent',pointRadius:0,fill:false},{label:'P90',data:r.fan.p90,borderColor:'transparent',backgroundColor:alpha(col,.18),pointRadius:0,fill:'-1'},
+    {label:'Median',data:r.fan.p50,borderColor:col,borderWidth:2.5,pointRadius:0},{label:'Deterministic',data:r.detPath,borderColor:css('--brass'),borderDash:[6,4],borderWidth:2,pointRadius:0},
+    {label:'Target',data:labels.map((_,t)=>t===r.T?r.targetNom:null),borderColor:css('--off'),backgroundColor:css('--off'),pointRadius:7,pointStyle:'crossRot',pointBorderWidth:3,showLine:false}]},
+    options:opts({plugins:{legend:{labels:{color:css('--muted'),filter:i=>!['P10','P90'].includes(i.text)}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fE(c.parsed.y)}`}}}})});
+  const hs=st.snapshots.map(s=>({d:s.date,p:(s.goals.find(x=>x.id===r.id)||{}).prob})).filter(x=>x.p!=null).concat([{d:st.asOf,p:r.prob}]);
+  mk('chGoalHist',{type:'line',data:{labels:hs.map(x=>x.d),datasets:[{label:'P(success)',data:hs.map(x=>x.p),borderColor:col,borderWidth:2.5,pointRadius:2},{label:'Required',data:hs.map(()=>r.reqP),borderColor:css('--muted'),borderDash:[5,4],pointRadius:0}]},
+    options:opts({plugins:{legend:{labels:{color:css('--muted')}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fP(c.parsed.y)}`}}},scales:{x:{ticks:{color:css('--muted'),maxTicksLimit:6},grid:{display:false}},y:{min:0,max:1,ticks:{color:css('--muted'),callback:v=>fP(v)},grid:{color:css('--line')}}}})});
+  const H=A.holdings,key=st.asOf.slice(0,7);
+  let t=`<thead><tr><th>Product</th><th>Weight</th><th>Units</th><th>Price</th><th>PMC</th><th>Value</th><th>Gain</th><th>Tax if sold now</th></tr></thead><tbody>`;
+  r.G.items.forEach(it=>{const q=(H.pos[r.id]||{})[it.pid]||0,p=priceAt(st,it.pid,key)||0,pm=H.pmc[it.pid]||0,gain=q*(p-pm);
+    const tax=it.pp.regime==='pension'?r.G.exitR*q*pm:it.pp.regime==='cash'?0:Math.max(0,gain)*it.pp.t;
+    t+=`<tr><td>${esc(prod(it.pid).name)}</td><td>${fP(it.w)}</td><td>${q.toLocaleString('it-IT',{maximumFractionDigits:2})}</td><td>${p.toFixed(3)}</td><td>${pm.toFixed(3)}</td><td>${fE(q*p)}</td><td class="${gain>=0?'on':'off'}">${fE(gain)}</td><td>${fE(tax)}</td></tr>`;});
+  document.getElementById('goalHold').innerHTML=t+'</tbody>';
+  mk('chGoalPerf',{type:'line',data:{labels:pf.rows.map(x=>x.m),datasets:[{label:'Value',data:pf.rows.map(x=>x.value),borderColor:col,backgroundColor:alpha(col,.15),fill:true,pointRadius:0,borderWidth:2},{label:'Money put in',data:pf.rows.map(x=>x.invested),borderColor:css('--ink'),borderDash:[5,4],pointRadius:0,borderWidth:1.5}]},options:opts()});
+}
+
+function renderLevels(){
+  document.getElementById('ladder2').innerHTML=ladderSVG(false);
+  const lv=fireLevels(st),fw=fireWealthNow(st,st.asOf),f=A.fire;
+  let h=`<thead><tr><th>Level</th><th>Target (today’s €)</th><th>Progress</th><th>Reached (det.)</th><th>Reached (median)</th><th>P(reached by ${A.startYear+20})</th></tr></thead><tbody>`;
+  lv.forEach((l,i)=>{const row20=f.rows[20];h+=`<tr><td><b>${l.n}. ${esc(l.name)}</b><div class="note">${esc(l.desc)}</div></td><td>${fE(l.target)}</td><td>${fP(Math.min(1,fw/l.target))}</td><td>${fw>=l.target?'now':f.reach[i].det||'> '+(A.startYear+40)}</td><td>${fw>=l.target?'now':f.reach[i].median||'> '+(A.startYear+40)}</td><td>${row20?fP(row20.probs[i]):'–'}</td></tr>`;});
+  document.getElementById('levelsTable').innerHTML=h+'</tbody>';
+  const F=st.settings.fire;
+  document.getElementById('levelsForm').innerHTML=`
+   <div><label>Level 1 from goal</label><select data-p="settings.fire.efFromGoal"><option value="">(use months)</option>${st.goals.map(g=>`<option value="${g.id}" ${F.efFromGoal===g.id?'selected':''}>${esc(g.name)}</option>`).join('')}</select></div>
+   <div><label>Level 1 months (if no goal)</label><input type="number" data-p="settings.fire.efMonths" data-k="num" value="${F.efMonths}"></div>
+   <div><label>Level 2 multiplier (× essential / month)</label><input type="number" data-p="settings.fire.l2Mult" data-k="num" value="${F.l2Mult}"></div>
+   <div><label>Level 3 multiplier (× optional / month)</label><input type="number" data-p="settings.fire.l3Mult" data-k="num" value="${F.l3Mult}"></div>
+   <div><label>Essential expenses € / month</label><input type="number" data-p="cashflow.essential" data-k="num" value="${st.cashflow.essential}"></div>
+   <div><label>Optional expenses € / month</label><input type="number" data-p="cashflow.optional" data-k="num" value="${st.cashflow.optional}"></div>
+   <div><label>Count pension funds</label><select data-p="settings.fire.includePension" data-k="bool"><option value="false" ${!F.includePension?'selected':''}>No (not accessible before retirement)</option><option value="true" ${F.includePension?'selected':''}>Yes</option></select></div>`;
+  const labels=f.rows.map(r=>r.year),col=css('--primary');
+  const ds=[{label:'P10',data:f.rows.map(r=>r.p10),borderColor:'transparent',pointRadius:0,fill:false},{label:'P90',data:f.rows.map(r=>r.p90),borderColor:'transparent',backgroundColor:alpha(col,.16),pointRadius:0,fill:'-1'},
+    {label:'Median',data:f.rows.map(r=>r.p50),borderColor:col,borderWidth:2.5,pointRadius:0},{label:'Deterministic',data:f.det,borderColor:css('--brass'),borderDash:[6,4],borderWidth:2,pointRadius:0}];
+  lv.forEach((l,i)=>ds.push({label:`Level ${l.n}`,data:labels.map(()=>l.target),borderColor:[css('--muted'),css('--risk'),css('--off')][i],borderDash:[2,3],borderWidth:1.5,pointRadius:0}));
+  mk('chFire',{type:'line',data:{labels,datasets:ds},options:opts({plugins:{legend:{labels:{color:css('--muted'),filter:i=>!['P10','P90'].includes(i.text)}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fE(c.parsed.y)}`}}}})});
+  document.getElementById('fireNote').textContent='Sum of the buckets marked “counts toward independence”, net of exit taxes, in today’s euros. Contributions stop at each goal’s date; the bucket keeps growing afterwards.';
+}
+
+function renderOptimizer(){
+  const f=document.getElementById('optForm');
+  const prev={mode:(document.getElementById('optMode')||{}).value||'new',crit:(document.getElementById('optCrit')||{}).value||'auto',max:(document.getElementById('optMax')||{}).value||'1'};
+  f.innerHTML=`<div><label>Bucket</label><select id="optGoal">${st.goals.map(g=>`<option value="${g.id}" ${g.id===optGoal?'selected':''}>${esc(g.name)} (${g.priority})</option>`).join('')}</select></div>
+   <div><label>Apply the mix to</label><select id="optMode"><option value="new" ${prev.mode==='new'?'selected':''}>New money only (no selling)</option><option value="rebalance" ${prev.mode==='rebalance'?'selected':''}>Everything, selling today (taxed)</option></select></div>
+   <div><label>Criterion</label><select id="optCrit">${[['auto','Recommended for the goal’s priority'],['p10','Protect the bad case'],['median','Grow the typical outcome'],['cheapest','Spend least'],['prob','Maximise the chance']].map(([v,l])=>`<option value="${v}" ${prev.crit===v?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div><label>Maximum per product</label><select id="optMax">${[[1,'No limit'],[0.8,'80%'],[0.6,'60%'],[0.5,'50%'],[0.4,'40%']].map(([v,l])=>`<option value="${v}" ${String(prev.max)===String(v)?'selected':''}>${l}</option>`).join('')}</select></div>`;
+  const mapped=new Set(st.weights.filter(w=>w.goalId===optGoal).map(w=>w.productId));
+  document.getElementById('optUniverse').innerHTML=st.products.map(p=>`<label class="pill" style="cursor:pointer;color:var(--ink);border-color:var(--line);font-weight:500;padding:.2rem .6rem"><input type="checkbox" data-u="${p.id}" ${mapped.has(p.id)?'checked':''} style="width:auto;min-width:0;margin-right:.35rem">${esc(p.name)}</label>`).join('');
+  document.getElementById('optGoal').onchange=e=>{optGoal=e.target.value;OPT=null;renderOptimizer();};
+  optHintUpd();renderOptOut();
+}
+function optHintUpd(){const n=document.querySelectorAll('#optUniverse input:checked').length;
+  document.getElementById('optHint').textContent=n>6?'Pick at most 6 products.':`${n} products, steps of ${n<=4?10:20}%. “Spend least” takes a few seconds longer.`;}
+function renderOptOut(){
+  const o=document.getElementById('optOut');
+  if(!OPT){o.innerHTML='<div class="panel"><p class="note">Choose the products and run the optimizer. Suggestions apply to new contributions unless you choose to sell and rebuy.</p></div>';return;}
+  if(OPT.error){o.innerHTML=`<div class="panel"><p>${esc(OPT.error)}</p></div>`;return;}
+  const R=OPT,c=R.current,b=R.best,names=R.universe.map(id=>prod(id).name),isP=st.pension.goalId===R.goal.id;
+  const row=(l,a,bb,fmt,better)=>`<tr><td>${l}</td><td>${fmt(a)}</td><td><b>${fmt(bb)}</b></td><td class="${better(bb,a)?'on':bb===a?'':'off'}">${fmt===fP?fS(bb-a):fE(bb-a)}</td></tr>`;
+  o.innerHTML=`<div class="grid-dash"><div class="panel"><h3>Suggested mix for ${esc(R.goal.name)}</h3>
+   <table><thead><tr><th>Product</th><th>Current</th><th>Suggested</th><th>Change</th></tr></thead><tbody>${names.map((n,i)=>`<tr><td>${esc(n)}</td><td>${fP(c.w[i])}</td><td><b>${fP(b.w[i])}</b></td><td>${fS(b.w[i]-c.w[i],0)}</td></tr>`).join('')}</tbody></table>
+   <table style="margin-top:.8rem"><thead><tr><th>Outcome at ${R.goal.year}</th><th>Current</th><th>Suggested</th><th>Difference</th></tr></thead><tbody>
+   ${row('P(success)',c.prob,b.prob,fP,(x,y)=>x>y)}${row('Median',c.median,b.median,fE,(x,y)=>x>y)}${row('Bad case (P10)',c.p10,b.p10,fE,(x,y)=>x>y)}${row('Average shortfall when missed',c.shortfall,b.shortfall,fE,(x,y)=>x<y)}${R.crit==='cheapest'&&c.need!=null&&b.need!=null?row('Monthly needed',c.need,b.need,fE,(x,y)=>x<y):''}</tbody></table>
+   ${R.mode==='rebalance'?`<p class="note" style="margin-top:.6rem">Selling today costs about <b>${fE(R.switchTax)}</b> in tax, already deducted.${isP?' Pension funds cannot be sold: use “new money only” for this bucket.':''}</p>`:''}
+   <p class="why note" style="margin-top:.5rem">Rule <b>${esc(R.rule)}</b> Required probability ${fP(R.reqP)}; ${R.feasible} of ${R.grid.length} mixes reach it.</p>
+   <div class="row" style="margin-top:.6rem">${isP?'<span class="note">For the pension bucket, change the split in Pension → where the money goes.</span>':'<button class="btn" id="btnApplyMix">Use as contribution weights</button>'}</div></div>
+   <div class="panel"><h3>All tested mixes</h3><div class="chart tall"><canvas id="chOpt"></canvas></div><p class="note">Each dot is a mix. Green: reaches the required probability. Further right = safer, higher = more money in the median case.</p></div></div>
+   <div class="panel"><h3>Best 10 by the chosen criterion</h3><div class="tablewrap"><table><thead><tr>${names.map(n=>`<th>${esc(n)}</th>`).join('')}<th>P(success)</th><th>Median</th><th>P10</th><th>Avg shortfall</th>${R.crit==='cheapest'?'<th>Monthly needed</th>':''}</tr></thead><tbody>
+   ${R.grid.slice().sort((x,y)=>R.crit==='cheapest'?((x.need??1e12)-(y.need??1e12)):R.crit==='prob'?y.prob-x.prob:R.crit==='p10'?(y.prob>=R.reqP)-(x.prob>=R.reqP)||y.p10-x.p10:(y.prob>=R.reqP)-(x.prob>=R.reqP)||y.median-x.median).slice(0,10).map(m=>`<tr>${m.w.map(v=>`<td>${fP(v)}</td>`).join('')}<td class="${m.prob>=R.reqP?'on':'off'}">${fP(m.prob)}</td><td>${fE(m.median)}</td><td>${fE(m.p10)}</td><td>${fE(m.shortfall)}</td>${R.crit==='cheapest'?`<td>${m.need==null?'not reachable':fE(m.need)}</td>`:''}</tr>`).join('')}</tbody></table></div></div>`;
+  const pt=m=>({x:m.prob,y:m.median,w:m.w});
+  mk('chOpt',{type:'scatter',data:{datasets:[
+    {label:'Reaches required',data:R.grid.filter(m=>m.prob>=R.reqP).map(pt),backgroundColor:alpha(css('--on'),.55),pointRadius:4},
+    {label:'Below required',data:R.grid.filter(m=>m.prob<R.reqP).map(pt),backgroundColor:alpha(css('--off'),.45),pointRadius:4},
+    {label:'Current',data:[pt(c)],backgroundColor:css('--brass'),pointRadius:9,pointStyle:'rectRot'},
+    {label:'Suggested',data:[pt(b)],backgroundColor:css('--primary'),pointRadius:10,pointStyle:'star',borderColor:css('--primary'),borderWidth:2}]},
+    options:opts({interaction:{mode:'nearest',intersect:true},plugins:{legend:{labels:{color:css('--muted')}},tooltip:{callbacks:{label:x=>`${fP(x.raw.x)} / ${fE(x.raw.y)}: ${x.raw.w.map((v,i)=>names[i].split(' ')[0]+' '+fP(v)).join(', ')}`}}},
+      scales:{x:{type:'linear',min:Math.max(0,Math.min(...R.grid.map(m=>m.prob))-0.02),max:1,ticks:{color:css('--muted'),callback:v=>fP(v,(1-Math.min(...R.grid.map(m=>m.prob)))<0.06?1:0)},grid:{color:css('--line')},title:{display:true,text:'Probability of success',color:css('--muted')}},
+        y:{ticks:{color:css('--muted'),callback:v=>fE(v)},grid:{color:css('--line')},title:{display:true,text:'Median outcome',color:css('--muted')}}}})});
+}
+function renderPerformance(){
+  const sel=document.getElementById('perfSel');
+  sel.innerHTML=[['all','All buckets'],['all-ex-pension','All except pension'],...st.goals.map(g=>[g.id,g.name])].map(([v,l])=>`<option value="${v}" ${v===perfScope?'selected':''}>${esc(l)}</option>`).join('');
+  const p=PF[perfScope],rows=p.rows,col=perfScope.startsWith('all')?css('--primary'):gCol(perfScope);
+  document.getElementById('perfStrip').innerHTML=`<div><div class="l">Value</div><div class="v">${fE(p.value)}</div><div class="n muted">put in ${fE(p.invested)}</div></div>
+   <div><div class="l">Gain</div><div class="v ${p.value-p.invested>=0?'on':'off'}">${fE(p.value-p.invested)}</div><div class="n muted">before tax</div></div>
+   <div><div class="l">Time-weighted</div><div class="v">${fS(p.twr)}</div><div class="n muted">since ${rows[0].m}; YTD ${fS(p.ytd)}; 12m ${fS(p.r12)}</div></div>
+   <div><div class="l">Money-weighted (XIRR)</div><div class="v">${fS(p.xirr)}</div><div class="n muted">per year</div></div>
+   <div><div class="l">Max drawdown</div><div class="v off">${fS(p.maxDD)}</div><div class="n muted">from a previous peak</div></div>`;
+  const labels=rows.map(r=>r.m);
+  mk('chPerfVal',{type:'line',data:{labels,datasets:[{label:'Value',data:rows.map(r=>r.value),borderColor:col,backgroundColor:alpha(col,.15),fill:true,pointRadius:0,borderWidth:2},{label:'Money put in',data:rows.map(r=>r.invested),borderColor:css('--ink'),borderDash:[5,4],pointRadius:0,borderWidth:1.5}]},options:opts()});
+  mk('chPerfTwr',{type:'line',data:{labels,datasets:[{label:'Growth of €100',data:rows.map(r=>100*r.twrIndex),borderColor:col,pointRadius:0,borderWidth:2}]},options:opts({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fE2(c.parsed.y)}}},scales:{x:{ticks:{color:css('--muted'),maxTicksLimit:8},grid:{display:false}},y:{ticks:{color:css('--muted')},grid:{color:css('--line')}}}})});
+  mk('chPerfDD',{type:'line',data:{labels,datasets:[{label:'Drawdown',data:rows.map(r=>r.dd),borderColor:css('--off'),backgroundColor:alpha(css('--off'),.2),fill:true,pointRadius:0,borderWidth:1.5}]},options:opts({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fP(c.parsed.y,1)}}},scales:{x:{ticks:{color:css('--muted'),maxTicksLimit:8},grid:{display:false}},y:{max:0,ticks:{color:css('--muted'),callback:v=>fP(v)},grid:{color:css('--line')}}}})});
+  mk('chPerfMon',{type:'bar',data:{labels:labels.slice(1),datasets:[{label:'Monthly return',data:rows.slice(1).map(r=>r.ret),backgroundColor:rows.slice(1).map(r=>r.ret>=0?alpha(css('--on'),.75):alpha(css('--off'),.75))}]},options:opts({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fS(c.parsed.y,2)}}},scales:{x:{ticks:{color:css('--muted'),maxTicksLimit:8},grid:{display:false}},y:{ticks:{color:css('--muted'),callback:v=>fP(v)},grid:{color:css('--line')}}}})});
+  let h=`<thead><tr><th>Bucket</th><th>Value</th><th>Put in</th><th>Gain</th><th>TWR since start</th><th>YTD</th><th>12 months</th><th>XIRR</th><th>Max drawdown</th></tr></thead><tbody>`;
+  [['all','All buckets'],['all-ex-pension','All except pension'],...st.goals.map(g=>[g.id,g.name])].forEach(([k,n])=>{const q=PF[k];h+=`<tr class="click" data-perf="${k}"><td>${k.startsWith('all')?'<b>'+n+'</b>':`<span class="dot" style="background:${gCol(k)}"></span>`+esc(n)}</td><td>${fE(q.value)}</td><td>${fE(q.invested)}</td><td class="${q.value>=q.invested?'on':'off'}">${fE(q.value-q.invested)}</td><td>${fS(q.twr)}</td><td>${fS(q.ytd)}</td><td>${fS(q.r12)}</td><td>${fS(q.xirr)}</td><td>${fS(q.maxDD)}</td></tr>`;});
+  document.getElementById('perfTable').innerHTML=h+'</tbody>';
+}
+
+function renderHistory(){
+  const M={prob:'Probability of success',funded:'Funded ratio (deterministic / target)',median:'Median outcome / target'};
+  document.getElementById('histMetric').innerHTML=Object.entries(M).map(([k,l])=>`<button data-hm="${k}" aria-pressed="${k===histMetric}">${l}</button>`).join('');
+  const snaps=st.snapshots.concat([snapshotFrom(A,'current')]),labels=snaps.map(s=>s.date);
+  const val=(x)=>histMetric==='prob'?x.prob:histMetric==='funded'?x.detNet/x.target:x.median/x.target;
+  const ds=st.goals.map(g=>({label:g.name,data:snaps.map(s=>{const x=s.goals.find(y=>y.id===g.id);return x?val(x):null;}),borderColor:gCol(g.id),borderWidth:2,pointRadius:2,spanGaps:true}));
+  mk('chHist',{type:'line',data:{labels,datasets:ds},options:opts({plugins:{legend:{labels:{color:css('--muted'),boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fP(c.parsed.y)}`}}},scales:{x:{ticks:{color:css('--muted')},grid:{display:false}},y:{min:0,suggestedMax:histMetric==='prob'?1:1.5,ticks:{color:css('--muted'),callback:v=>fP(v)},grid:{color:css('--line')}}}})});
+  document.getElementById('histNote').textContent='Each snapshot stores the analysis as it was on that date. Sample snapshots were recomputed from your transactions and prices with today’s assumptions; snapshots you save are frozen with the assumptions of that day.';
+  let h=`<thead><tr><th>Date</th><th class="l">Source</th>${st.goals.map(g=>`<th>${esc(g.name)}</th>`).join('')}<th></th></tr></thead><tbody>`;
+  snaps.slice().reverse().forEach((s,i)=>{h+=`<tr><td>${s.date}</td><td class="l">${s.source}</td>${st.goals.map(g=>{const x=s.goals.find(y=>y.id===g.id);return `<td class="${x?x.status:''}">${x?fP(val(x)):'–'}</td>`;}).join('')}<td>${s.source==='saved'?`<button class="btn del small" data-delsnap="${s.date}">Delete</button>`:''}</td></tr>`;});
+  document.getElementById('histTable').innerHTML=h+'</tbody>';
+}
+
+function renderPlan(){
+  document.getElementById('trackStart').textContent=st.settings.trackingStart;
+  const pva=planVsActual(st);
+  let h=`<thead><tr><th>Goal</th><th>Planned</th><th>Put in</th><th>Gap</th><th>% of plan</th></tr></thead><tbody>`;
+  pva.forEach(r=>{h+=`<tr><td><span class="dot" style="background:${gCol(r.id)}"></span>${esc(r.name)}</td><td>${fE(r.planned)}</td><td>${fE(r.actual)}</td><td class="${r.gap<0?'off':'on'}">${fE(r.gap)}</td><td>${r.pct==null?'–':fP(r.pct)}</td></tr>`;});
+  document.getElementById('planTable').innerHTML=h+'</tbody>';
+  const na=nextAction(st,pva),c=st.settings.commission;
+  let a='';
+  if(na.kind==='none')a='<p>You are in line with the plan. Nothing to invest now.</p>';
+  else{a=`<div class="action"><b>${na.kind==='wait'?'Wait and batch':'Invest '+fE(na.amount)+' in '+esc(na.goal.name)}</b>
+    <p class="note" style="margin:.3rem 0 .6rem">${na.kind==='wait'?`The gap of ${fE(na.amount)} is below the minimum efficient ticket of ${fE(na.minTicket)}: the commission would cost more than ${fP(c.rate,2)}.`:`It is the bucket furthest behind plan. Split by its weights:`}</p>
+    <table><thead><tr><th>Product</th><th>Amount</th><th>Est. commission</th><th>Cost</th></tr></thead><tbody>${na.split.map(s=>`<tr><td>${esc(s.name)}</td><td>${fE(s.amount)}</td><td>${fE2(s.commission)}</td><td>${fP(s.amount?s.commission/s.amount:0,2)}</td></tr>`).join('')}</tbody></table>
+    <p class="why note" style="margin-top:.5rem">Rule <b>R1 Behind plan</b>: largest gap among non-pension buckets; minimum ticket = minimum commission / rate (${fE(na.minTicket)}); zero-commission ETFs are exempt.</p></div>`;}
+  document.getElementById('nextAction').innerHTML=a;
+  const ps=document.getElementById('planSel');ps.innerHTML=st.goals.map(g=>`<option value="${g.id}" ${g.id===planGoal?'selected':''}>${esc(g.name)}</option>`).join('');
+  const g=goal(planGoal),isP=st.pension.goalId===g.id,months=[];let k=st.settings.trackingStart;while(k<=st.asOf.slice(0,7)){months.push(k);k=nextKey(k);}
+  let cp=0,ca=0;const P=[],Q=[];
+  months.forEach(m=>{const y=+m.slice(0,4);cp+=y>g.year?0:isP?pensionSchedule(st,y,1)[0].total/12:(+g.contrib||0)*Math.pow(1+(+g.cgrowth||0),Math.max(0,y-+st.settings.trackingStart.slice(0,4)));
+    ca+=st.ledger.filter(t=>t.goalId===g.id&&t.type!=='open'&&t.date.slice(0,7)===m).reduce((a,t)=>a+txAmount(t),0);P.push(cp);Q.push(ca);});
+  mk('chPlan',{type:'line',data:{labels:months,datasets:[{label:'Planned',data:P,borderColor:css('--muted'),borderDash:[5,4],pointRadius:0,borderWidth:2},{label:'Put in',data:Q,borderColor:gCol(g.id),stepped:true,pointRadius:0,borderWidth:2.5}]},options:opts()});
+}
+
+function renderTx(){
+  const fg=document.getElementById('txFilterGoal'),fy=document.getElementById('txFilterYear'),cg=fg.value||'',cy=fy.value||'';
+  fg.innerHTML=`<option value="">All buckets</option>`+st.goals.map(g=>`<option value="${g.id}" ${g.id===cg?'selected':''}>${esc(g.name)}</option>`).join('');
+  const years=[...new Set(st.ledger.map(t=>t.date.slice(0,4)))].sort().reverse();
+  fy.innerHTML=`<option value="">All years</option>`+years.map(y=>`<option ${y===cy?'selected':''}>${y}</option>`).join('');
+  const f=document.getElementById('txForm');
+  if(!f.dataset.ready){f.dataset.ready=1;f.innerHTML=`
+   <div><label>Date</label><input type="date" id="txDate" value="${st.asOf}"></div>
+   <div><label>Bucket</label><select id="txGoal">${st.goals.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select></div>
+   <div><label>Product</label><select id="txProd">${st.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
+   <div><label>Type</label><select id="txType">${Object.entries(TX_TYPES).map(([k,v])=>`<option value="${k}" ${k==='buy'?'selected':''}>${v}</option>`).join('')}</select></div>
+   <div><label>Amount €</label><input type="number" id="txAmt" value="1000"></div>
+   <div><label>Price per unit</label><input type="number" id="txPrice" step="any"></div>
+   <div><label>Commission paid € (optional)</label><input type="number" id="txComm" step="any"></div>`;
+   const upd=()=>{const pid=document.getElementById('txProd').value,pr=priceAt(st,pid,document.getElementById('txDate').value.slice(0,7));if(document.activeElement.id!=='txPrice')document.getElementById('txPrice').value=pr||'';hint();};
+   ['txProd','txDate'].forEach(id=>document.getElementById(id).addEventListener('change',upd));['txAmt','txType','txPrice'].forEach(id=>document.getElementById(id).addEventListener('input',hint));upd();}
+  let rows=st.ledger.filter(t=>(!cg||t.goalId===cg)&&(!cy||t.date.slice(0,4)===cy)).slice().reverse();
+  let h=`<thead><tr><th>Date</th><th class="l">Bucket</th><th class="l">Product</th><th class="l">Type</th><th>Units</th><th>Price</th><th>Amount</th><th>Commission</th><th>Cost</th><th></th></tr></thead><tbody>`;
+  rows.slice(0,200).forEach(t=>{const a=txAmount(t),cm=t.commission!=null&&t.commission!==''?+t.commission:estCommission(st,t),cost=a?cm/Math.abs(a):0;
+    h+=`<tr><td>${t.date}</td><td class="l"><span class="dot" style="background:${gCol(t.goalId)}"></span>${esc(goal(t.goalId).name)}</td><td class="l">${esc(prod(t.productId).name)}</td><td class="l">${TX_TYPES[t.type]}</td><td>${(+t.qty).toLocaleString('it-IT',{maximumFractionDigits:3})}</td><td>${(+t.price).toFixed(3)}</td><td>${fE(a)}</td><td>${fE2(cm)}${t.commission==null||t.commission===''?' <span class="note">est.</span>':''}</td><td class="${cost>st.settings.commission.rate*1.25?'off':''}">${fP(cost,2)}</td><td><button class="btn del small" data-deltx="${t.id}">Delete</button></td></tr>`;});
+  document.getElementById('txTable').innerHTML=h+'</tbody>'+(rows.length>200?`<caption class="note">Showing latest 200 of ${rows.length}.</caption>`:'');
+}
+function hint(){const a=+document.getElementById('txAmt').value||0,pid=document.getElementById('txProd').value,type=document.getElementById('txType').value;
+  const cm=estCommission(st,{type,productId:pid,qty:a,price:1}),c=st.settings.commission,minT=c.rate>0?c.min/c.rate:0;
+  document.getElementById('txHint').textContent=(type==='buy'||type==='sell')?`Estimated commission ${fE2(cm)} (${fP(a?cm/a:0,2)}).${a<minT&&cm>0?' Below '+fE(minT)+' the minimum commission makes it costly.':''}`:'';}
+
+
+/* ---------- bulk import ---------- */
+let impKind='tx',IMP=null;
+const IMP_FIELDS={tx:[['date','Date',true],['product','ISIN, ticker or name',true],['side','Buy/sell column (A/V, Buy/Sell)',false],['qty','Quantity',true],['price','Price per unit',true],['commission','Commission €',false],['bucket','Bucket',false]],
+  px:[['date','Date or month',true],['product','ISIN, ticker or name',true],['price','Price per unit',true]]};
+const IMP_SAMPLE={tx:'Data operazione;Descrizione;ISIN;Segno;Quantità;Prezzo;Commissioni\n05/11/2026;VANGUARD FTSE ALL-WORLD;IE00BK5BQT80;A;8;135,20;2,95\n05/11/2026;XTRACKERS FTSE ALL-WORLD;IE000L6ZMMC4;A;40;12,85;0\n12/11/2026;ISHARES IBONDS DEC 2030;IE000Y2BJVK9;A;180;5,62;2,95\n12/11/2026;AMUNDI PHYSICAL GOLD;FR0013416716;A;1;245,10;2,95\n20/11/2026;XTRACKERS MSCI WORLD VALUE;IE00BL25JM42;V;5;49,90;2,95\n05/11/2026;VANGUARD FTSE ALL-WORLD;IE00BK5BQT80;A;8;135,20;2,95',
+  px:'date,ticker,price\n2026-11-28,VWCE.MI,136.10\n2026-11-28,ALLW.MI,12.92\n2026-11-28,XDEV.MI,49.40\n2026-11-28,GOLD.MI,247.30\n2026-11-28,IT0005672024,1.0125\n2026-11-28,UNKNOWN.MI,10'};
+const IMP_GUESS={date:/data|date|month|mese/i,product:/isin|ticker|simbolo|symbol|titolo|prodotto|product/i,side:/segno|^side$|^tipo$|^type$|buy|sell|verso/i,qty:/quant|qty|units|quote/i,price:/prezzo|price|corso|valore quota/i,commission:/commiss|fee|spese/i,bucket:/bucket|goal|obiettivo/i};
+function parseCSV(text){const lines=text.split(/\r?\n/).filter(l=>l.trim());if(!lines.length)return null;const d=(lines[0].match(/;/g)||[]).length>=(lines[0].match(/,/g)||[]).length?';':',';
+  const split=l=>{const out=[];let cur='',q=false;for(const ch of l){if(ch==='"'){q=!q;continue;}if(ch===d&&!q){out.push(cur.trim());cur='';}else cur+=ch;}out.push(cur.trim());return out;};
+  return {head:split(lines[0]),rows:lines.slice(1).map(split)};}
+function num(v){if(v==null||v==='')return NaN;let s=String(v).replace(/[€\s]/g,'');if(s.includes(',')){s=s.replace(/\./g,'').replace(',','.');}return +s;}
+function pdate(v){if(!v)return null;let m=v.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);if(m)return `${m[1]}-${m[2]}-${m[3]||'28'}`;m=v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m)return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;return null;}
+function findProd(v){const k=String(v||'').trim().toLowerCase();return st.products.find(p=>(p.isin||'').toLowerCase()===k||(p.ticker||'').toLowerCase()===k||p.name.toLowerCase()===k||p.name.toLowerCase().startsWith(k+' '))||null;}
+function autoBucket(pid){const gs=[...new Set(st.weights.filter(w=>w.productId===pid).map(w=>w.goalId))];return gs.length===1?gs[0]:'';}
+function renderImport(){
+  document.getElementById('impTabs').innerHTML=[['tx','Transactions'],['px','Prices']].map(([k,l])=>`<button data-imp="${k}" aria-pressed="${k===impKind}">${l}</button>`).join('');
+  document.getElementById('impTitle').textContent=impKind==='tx'?'Paste a broker export (CSV)':'Paste month-end prices (CSV)';
+  document.getElementById('impHelp').textContent=impKind==='tx'?'Semicolon or comma separated, Italian or English number format. Products are matched by ISIN, ticker or name. Rows already in your transactions are skipped. A product held in one bucket only is assigned to it; otherwise pick the bucket in the check below.':'One row per product and date (YYYY-MM-DD, DD/MM/YYYY or YYYY-MM). The month of the date is used. An existing price for that month is replaced.';
+  renderImpOut();
+  let b=`<thead><tr><th>When</th><th class="l">Type</th><th>Rows</th><th class="l">Note</th><th></th></tr></thead><tbody>`;
+  (st.imports||[]).slice().reverse().forEach(x=>{b+=`<tr><td>${x.at}</td><td class="l">${x.kind==='tx'?'Transactions':'Prices'}</td><td>${x.count}</td><td class="l">${esc(x.note||'')}</td><td>${x.undone?'<span class="note">undone</span>':`<button class="btn del small" data-undo="${x.id}">Undo</button>`}</td></tr>`;});
+  document.getElementById('impBatches').innerHTML=(st.imports||[]).length?b+'</tbody>':'<tbody><tr><td class="l note">No imports yet.</td></tr></tbody>';
+}
+function renderImpOut(){
+  const m=document.getElementById('impMap'),pv=document.getElementById('impPreview');
+  if(!IMP||IMP.kind!==impKind){m.innerHTML='';pv.innerHTML='';return;}
+  m.innerHTML=`<div class="panel"><h3>Columns</h3><div class="form">${IMP_FIELDS[impKind].map(([k,l,req])=>`<div><label>${l}${req?'':' (optional)'}</label><select data-map="${k}"><option value="-1">(none)</option>${IMP.head.map((h,i)=>`<option value="${i}" ${IMP.map[k]===i?'selected':''}>${esc(h)}</option>`).join('')}</select></div>`).join('')}</div></div>`;
+  const R=impRows(),ok=R.filter(r=>r.status==='ok');
+  let h=`<div class="panel"><h3>Check: ${ok.length} of ${R.length} rows ready</h3><div class="tablewrap"><table><thead><tr><th class="l">Status</th>${impKind==='tx'?'<th>Date</th><th class="l">Product</th><th class="l">Type</th><th>Units</th><th>Price</th><th>Amount</th><th class="l">Bucket</th>':'<th>Month</th><th class="l">Product</th><th>Price</th><th>Previous</th>'}</tr></thead><tbody>`;
+  R.forEach((r,i)=>{h+=`<tr><td class="l ${r.status==='ok'?'on':r.status==='skip'?'muted':'off'}">${esc(r.msg)}</td>`+(impKind==='tx'?`<td>${r.date||'?'}</td><td class="l">${esc(r.p?r.p.name:r.raw)}</td><td class="l">${r.qty<0?'Sell':'Buy'}</td><td>${isNaN(r.qty)?'?':r.qty}</td><td>${isNaN(r.price)?'?':r.price}</td><td>${fE(r.qty*r.price)}</td><td class="l">${r.p?`<select data-impbucket="${i}"><option value="">choose…</option>${st.goals.map(g=>`<option value="${g.id}" ${r.goal===g.id?'selected':''}>${esc(g.name)}</option>`).join('')}</select>`:''}</td>`
+      :`<td>${r.month||'?'}</td><td class="l">${esc(r.p?r.p.name:r.raw)}</td><td>${isNaN(r.price)?'?':r.price}</td><td>${r.prev??'–'}</td>`)+'</tr>';});
+  h+=`</tbody></table></div><div class="row" style="margin-top:.7rem">${impKind==='tx'&&R.some(r=>r.msg==='Choose a bucket')?`<select id="impAllBucket" style="width:auto"><option value="">Bucket for all rows still to assign…</option>${st.goals.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select>`:''}<button class="btn" id="btnImpGo" ${ok.length?'':'disabled'}>Import ${ok.length} ${ok.length===1?'row':'rows'}</button><span class="note">Rows with problems are left out. You can undo the whole import.</span></div></div>`;
+  pv.innerHTML=h;
+}
+function impRows(){
+  const M=IMP.map,col=(row,k)=>M[k]!=null&&M[k]>=0?row[M[k]]:'';
+  const seen=new Set(st.ledger.map(t=>`${t.date}|${t.productId}|${(+t.qty).toFixed(4)}|${(+t.price).toFixed(4)}`)),inFile=new Set();
+  return IMP.rows.map((row,i)=>{
+    const raw=col(row,'product'),p=findProd(raw);
+    if(impKind==='px'){const d=pdate(col(row,'date')),price=num(col(row,'price')),month=d?d.slice(0,7):null;
+      const r={raw,p,month,price,prev:p&&month?st.prices[p.id][month]:null};
+      if(!p)return {...r,status:'err',msg:'Unknown product'};if(!month)return {...r,status:'err',msg:'Unreadable date'};if(!(price>0))return {...r,status:'err',msg:'Price missing'};
+      return {...r,status:'ok',msg:r.prev!=null?'Replaces price':'New price'};}
+    const date=pdate(col(row,'date')),side=String(col(row,'side')||'').toUpperCase();let qty=num(col(row,'qty'));const price=num(col(row,'price')),cm=num(col(row,'commission'));
+    if(/^(V|S|SELL|VENDITA)/.test(side)&&qty>0)qty=-qty;
+    const bcol=col(row,'bucket');const goalSel=IMP.goals[i]!=null?IMP.goals[i]:(bcol&&st.goals.find(g=>g.id===bcol||g.name.toLowerCase()===bcol.toLowerCase())||{}).id||(p?autoBucket(p.id):'');
+    const r={raw,p,date,qty,price,cm,goal:goalSel};
+    if(!p)return {...r,status:'err',msg:'Unknown product'};if(!date)return {...r,status:'err',msg:'Unreadable date'};if(isNaN(qty)||isNaN(price)||!qty||!price)return {...r,status:'err',msg:'Quantity or price missing'};
+    const key=`${date}|${p.id}|${qty.toFixed(4)}|${price.toFixed(4)}`;if(seen.has(key))return {...r,status:'skip',msg:'Already imported'};if(inFile.has(key))return {...r,status:'skip',msg:'Duplicate in file'};inFile.add(key);
+    if(!goalSel)return {...r,status:'err',msg:'Choose a bucket'};
+    return {...r,status:'ok',msg:'Ready'};});
+}
+function doImport(){
+  const R=impRows().filter(r=>r.status==='ok'),id='i'+Date.now(),at=new Date().toISOString().slice(0,16).replace('T',' ');
+  if(impKind==='tx'){R.forEach((r,k)=>st.ledger.push({id:`${id}-${k}`,date:r.date,goalId:r.goal,productId:r.p.id,type:r.qty<0?'sell':'buy',qty:r.qty,price:r.price,commission:isNaN(r.cm)?null:r.cm,note:'import',batch:id}));st.ledger.sort((a,b)=>a.date.localeCompare(b.date));
+    st.imports.push({id,at,kind:'tx',count:R.length,note:`${R.length} transactions`});}
+  else{const prev=[];R.forEach(r=>{prev.push([r.p.id,r.month,st.prices[r.p.id][r.month]]);st.prices[r.p.id][r.month]=r.price;});st.imports.push({id,at,kind:'px',count:R.length,note:`${R.length} prices`,prev});}
+  IMP=null;document.getElementById('impText').value='';save();recompute();
+}
+function undoImport(id){const b=st.imports.find(x=>x.id===id);if(!b||b.undone)return;
+  if(b.kind==='tx')st.ledger=st.ledger.filter(t=>t.batch!==id);else b.prev.forEach(([pid,m,v])=>{if(v==null)delete st.prices[pid][m];else st.prices[pid][m]=v;});
+  b.undone=true;save();recompute();}
+
+/* ---------- price sources ---------- */
+function renderSources(){
+  const key=st.asOf.slice(0,7);
+  let h=`<thead><tr><th>Product</th><th class="l">Source</th><th class="l">Ticker</th><th>Last price</th><th class="l">Status</th></tr></thead><tbody>`;
+  st.products.forEach((p,i)=>{const lp=lastPriceMonth(st,p.id),stale=lp&&lp<key;
+    h+=`<tr><td>${esc(p.name)}</td><td class="l"><select data-p="products.${i}.source" data-k="txt">${[['yahoo','Yahoo Finance'],['csv','CSV import'],['manual','Manual']].map(([v,l])=>`<option value="${v}" ${p.source===v?'selected':''}>${l}</option>`).join('')}</select></td>
+    <td class="l"><input type="text" data-p="products.${i}.ticker" data-k="txt" value="${esc(p.ticker||'')}" placeholder="e.g. VWCE.MI" ${p.source==='yahoo'?'':'disabled'}></td><td>${lp||'–'}</td><td class="l ${stale?'risk':'on'}">${stale?'older than '+key:'up to date'}</td></tr>`;});
+  document.getElementById('srcTable').innerHTML=h+'</tbody>';
+}
+
+function renderPrices(){renderSources();
+  const key=st.asOf.slice(0,7),months=[];let k=key;for(let i=0;i<6;i++){months.unshift(k);const [y,m]=k.split('-').map(Number);k=m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`;}
+  let h=`<thead><tr><th>Product</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>Change 6m</th></tr></thead><tbody>`;
+  st.products.forEach(p=>{const a=st.prices[p.id][months[0]],b=st.prices[p.id][months[5]];
+    h+=`<tr><td>${esc(p.name)}</td>${months.map((m,i)=>i===5?`<td><input type="number" step="any" data-price="${p.id}|${m}" value="${st.prices[p.id][m]??''}"></td>`:`<td>${st.prices[p.id][m]!=null?(+st.prices[p.id][m]).toFixed(3):'–'}</td>`).join('')}<td class="${b>=a?'on':'off'}">${a&&b?fS(b/a-1):'–'}</td></tr>`;});
+  document.getElementById('priceTable').innerHTML=h+'</tbody>';
+  const H=A.holdings;
+  let t=`<thead><tr><th>Product</th><th>Units on account</th><th>PMC</th><th>Price</th><th>Value</th><th>Gain</th><th class="l">Buckets</th></tr></thead><tbody>`;
+  st.products.forEach(p=>{const q=H.accQty[p.id]||0;if(q<0.0001)return;const pr=priceAt(st,p.id,key)||0,pm=H.pmc[p.id]||0;
+    t+=`<tr><td>${esc(p.name)}</td><td>${q.toLocaleString('it-IT',{maximumFractionDigits:3})}</td><td>${pm.toFixed(3)}</td><td>${pr.toFixed(3)}</td><td>${fE(q*pr)}</td><td class="${pr>=pm?'on':'off'}">${fE(q*(pr-pm))}</td><td class="l">${Object.keys(H.pos).filter(g=>(H.pos[g][p.id]||0)>0.0001).map(g=>esc(goal(g).name)).join(', ')}</td></tr>`;});
+  document.getElementById('posTable').innerHTML=t+'</tbody>';
+}
+
+function renderPension(){
+  const y=+st.asOf.slice(0,4),ps=pensionSchedule(st,y,10),P=st.pension,now=ps[0];
+  const volYTD=st.ledger.filter(t=>t.goalId===P.goalId&&t.type==='pension'&&t.date.slice(0,4)==String(y)&&P.flows.some(f=>f.productId===t.productId&&f.flow==='Voluntary')).reduce((a,t)=>a+txAmount(t),0);
+  const room=Math.max(0,P.cap+(+P.extra||0)-now.worker-now.employer-volYTD);
+  document.getElementById('penStrip').innerHTML=`<div><div class="l">Deductible this year</div><div class="v">${fE(P.cap+(+P.extra||0))}</div><div class="n muted">TFR excluded</div></div>
+   <div><div class="l">Used so far (${y})</div><div class="v">${fE(now.worker+now.employer+volYTD)}</div><div class="n muted">payroll ${fE(now.worker+now.employer)} + voluntary ${fE(volYTD)}</div></div>
+   <div><div class="l">Still available</div><div class="v ${room>0?'risk':'on'}">${fE(room)}</div><div class="n muted">pay by 31 December</div></div>
+   <div><div class="l">Refund on full use</div><div class="v">${fE(Math.min(now.voluntary,Math.max(0,P.cap+(+P.extra||0)-now.worker-now.employer))*P.marginal)}</div><div class="n muted">received next year (730)</div></div>
+   <div><div class="l">Exit tax at goal date</div><div class="v">${fP(exitRateOf(),1)}</div><div class="n muted">15% → 9% after 35 years</div></div>`;
+  const F=(lab,path,kind,extra='')=>`<div><label>${lab}</label><input type="number" step="any" data-p="${path}" data-k="${kind}" value="${kind==='pct'?+(getP(path)*100).toFixed(3):getP(path)??''}" ${extra}></div>`;
+  document.getElementById('penForm').innerHTML=F('Gross salary (RAL) €','pension.ral','num')+F('Salary growth %/yr','pension.ralGrowth','pct')+F('TFR % of salary','pension.tfrPct','pct')+F('Your contribution %','pension.workerPct','pct')+F('Employer contribution %','pension.employerPct','pct')
+   +`<div><label>Voluntary €/yr (blank = up to the cap)</label><input type="number" data-p="pension.voluntary" data-k="numblank" value="${P.voluntary}"></div>`+F('Marginal income tax rate','pension.marginal','pct')+F('First year in a pension fund','pension.firstYear','num')+F('Deduction cap €','pension.cap','num')+F('Extra deduction €/yr','pension.extra','num');
+  let f=`<thead><tr><th>Product</th><th class="l">Flow</th><th>% of flow</th><th>Share of total</th></tr></thead><tbody>`;const pw=pensionWeightsOf();
+  P.flows.forEach((x,i)=>{f+=`<tr><td>${esc(prod(x.productId).name)}</td><td class="l"><select data-p="pension.flows.${i}.flow" data-k="txt"><option ${x.flow==='Work'?'selected':''}>Work</option><option ${x.flow==='Voluntary'?'selected':''}>Voluntary</option></select></td><td><input type="number" data-p="pension.flows.${i}.pct" data-k="pct" value="${+(x.pct*100).toFixed(2)}"></td><td>${fP(pw[x.productId]||0)}</td></tr>`;});
+  document.getElementById('penFlows').innerHTML=f+'</tbody>';
+  const cols=[['tfr','TFR','--muted'],['worker','Your contribution','--g2'],['employer','Employer','--g4'],['voluntary','Voluntary','--primary']];
+  const ds=cols.map(([k,l,c])=>({type:'bar',label:l,data:ps.map(r=>r[k]),backgroundColor:alpha(css(c),.8),stack:'s'}));
+  ds.push({type:'line',label:'Deductible',data:ps.map(r=>r.deductible),borderColor:css('--off'),borderDash:[5,4],pointRadius:0,borderWidth:2,stack:'d'});
+  mk('chPen',{data:{labels:ps.map(r=>r.year),datasets:ds},options:opts({scales:{x:{stacked:true,ticks:{color:css('--muted')},grid:{display:false}},y:{stacked:true,ticks:{color:css('--muted'),callback:v=>fE(v)},grid:{color:css('--line')}}}})});
+  let t=`<thead><tr><th>Year</th><th>TFR</th><th>Payroll contr.</th><th>Voluntary</th><th>Total</th><th>Deductible</th><th>Refund next year</th></tr></thead><tbody>`;
+  ps.forEach(r=>{t+=`<tr><td>${r.year}</td><td>${fE(r.tfr)}</td><td>${fE(r.worker+r.employer)}</td><td>${fE(r.voluntary)}</td><td><b>${fE(r.total)}</b></td><td>${fE(r.deductible)}</td><td>${fE(r.refund)}</td></tr>`;});
+  document.getElementById('penTable').innerHTML=t+'</tbody>';
+}
+function exitRateOf(){const g=goal(st.pension.goalId);return Math.max(0.09,0.15-0.003*Math.max(0,(g.year||0)-st.pension.firstYear-15));}
+function pensionWeightsOf(){const s=pensionSchedule(st,2000,1)[0],w={};st.pension.flows.forEach(f=>{const b=f.flow==='Work'?s.work:s.voluntary;w[f.productId]=(w[f.productId]||0)+(s.total>0?(+f.pct||0)*b/s.total:0);});return w;}
+function getP(path){return path.split('.').reduce((o,k)=>o==null?o:o[k],st);}
+function setP(path,v){const ks=path.split('.');let o=st;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;}
+
+function renderSetup(){
+  const T={products:'Products',allocation:'Allocation',goals:'Goals',cashflow:'Cash flow',assumptions:'Assumptions'};
+  document.getElementById('setupTabs').innerHTML=Object.entries(T).map(([k,l])=>`<button data-st="${k}" aria-pressed="${k===setupTab}">${l}</button>`).join('');
+  const I=(path,kind,extra='')=>{const v=getP(path);return kind==='pct'?`<input type="number" step="any" data-p="${path}" data-k="pct" value="${v===''||v==null?'':+(v*100).toFixed(4)}" ${extra}>`:kind==='num'?`<input type="number" step="any" data-p="${path}" data-k="num" value="${v??''}" ${extra}>`:`<input type="text" data-p="${path}" data-k="txt" value="${esc(v)}" ${extra}>`;};
+  const SEL=(path,opts)=>`<select data-p="${path}" data-k="txt">${opts.map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}" ${String(getP(path))===String(v)?'selected':''}>${esc(l)}</option>`;}).join('')}</select>`;
+  let h='';
+  if(setupTab==='products'){h=`<div class="panel"><div class="tablewrap"><table><thead><tr><th>Product</th><th class="l">ISIN</th><th class="l">Asset class</th><th class="l">Tax treatment</th><th>White-list %</th><th>Exp. return %</th><th>Volatility %</th><th>TER / ISC %</th><th class="l">Maturity</th><th class="l">Zero commission</th></tr></thead><tbody>`;
+    st.products.forEach((p,i)=>{h+=`<tr><td>${I(`products.${i}.name`,'txt','class="w"')}</td><td class="l">${I(`products.${i}.isin`,'txt')}</td><td class="l">${SEL(`products.${i}.cls`,CLASSES)}</td><td class="l">${SEL(`products.${i}.regime`,Object.entries(REGIMES))}</td><td>${I(`products.${i}.wl`,'pct')}</td><td>${I(`products.${i}.mu`,'pct')}</td><td>${I(`products.${i}.vol`,'pct')}</td><td>${I(`products.${i}.ter`,'pct')}</td><td class="l">${I(`products.${i}.maturity`,'txt','placeholder="YYYY-MM"')}</td><td class="l"><select data-p="products.${i}.zero" data-k="bool"><option value="false" ${!p.zero?'selected':''}>No</option><option value="true" ${p.zero?'selected':''}>Yes</option></select></td></tr>`;});
+    h+=`</tbody></table></div><p class="note">Pension funds: gross return and ISC; the model applies the 20% yearly tax. Maturity feeds the “maturity ahead” alert.</p></div>`;}
+  if(setupTab==='allocation'){const pw=pensionWeightsOf();st.goals.forEach(g=>{const isP=st.pension.goalId===g.id;h+=`<div class="panel"><h3><span class="dot" style="background:${gCol(g.id)}"></span>${esc(g.name)}</h3><table><thead><tr><th>Product</th><th>Weight of new money</th></tr></thead><tbody>`;
+    st.weights.forEach((w,i)=>{if(w.goalId!==g.id)return;h+=`<tr><td>${esc(prod(w.productId).name)}</td><td>${isP?fP(pw[w.productId]||0)+' <span class="note">from Pension</span>':I(`weights.${i}.weight`,'pct')}</td></tr>`;});
+    const sum=st.weights.filter(w=>w.goalId===g.id).reduce((a,w)=>a+(+w.weight||0),0);h+=`</tbody></table>${!isP&&Math.abs(sum-1)>0.001&&sum>0?`<p class="note off">Weights add up to ${fP(sum)}; they are rescaled to 100%.</p>`:''}</div>`;});}
+  if(setupTab==='goals'){h=`<div class="panel"><div class="tablewrap"><table><thead><tr><th>Goal</th><th class="l">Priority</th><th>Target (today’s €)</th><th>Year</th><th>Monthly €</th><th>Growth %/yr</th><th>Min prob. %</th><th class="l">Counts toward independence</th></tr></thead><tbody>`;
+    st.goals.forEach((g,i)=>{const isP=st.pension.goalId===g.id;h+=`<tr><td>${I(`goals.${i}.name`,'txt','class="w"')}</td><td class="l">${SEL(`goals.${i}.priority`,['Need','Want','Wish'])}</td><td>${I(`goals.${i}.target`,'num')}</td><td>${I(`goals.${i}.year`,'num')}</td><td>${isP?'<span class="note">from Pension</span>':I(`goals.${i}.contrib`,'num')}</td><td>${isP?'<span class="note">salary growth</span>':I(`goals.${i}.cgrowth`,'pct')}</td><td>${I(`goals.${i}.minProb`,'pct')}</td><td class="l"><select data-p="goals.${i}.fire" data-k="bool"><option value="false" ${!g.fire?'selected':''}>No</option><option value="true" ${g.fire?'selected':''}>Yes</option></select></td></tr>`;});
+    h+=`</tbody></table></div></div>`;}
+  if(setupTab==='cashflow'){const c=st.cashflow;h=`<div class="panel"><div class="form">
+    <div><label>Net household income €/yr</label>${I('cashflow.income','num')}</div><div><label>Income growth %/yr</label>${I('cashflow.incomeGrowth','pct')}</div>
+    <div><label>Essential expenses €/month</label>${I('cashflow.essential','num')}</div><div><label>Optional expenses €/month</label>${I('cashflow.optional','num')}</div><div><label>Expense growth %/yr</label>${I('cashflow.expenseGrowth','pct')}</div></div></div>
+    <div class="panel"><h3>One-off events</h3><table><thead><tr><th class="l">Year</th><th class="l">Description</th><th>Amount €</th></tr></thead><tbody>${c.events.map((e,i)=>`<tr><td class="l">${I(`cashflow.events.${i}.year`,'num')}</td><td class="l">${I(`cashflow.events.${i}.label`,'txt','class="w"')}</td><td>${I(`cashflow.events.${i}.amount`,'num')}</td></tr>`).join('')}</tbody></table></div>
+    <div class="panel"><h3>Next 10 years</h3><div class="tablewrap"><table><thead><tr><th>Year</th><th>Income</th><th>Expenses</th><th>Events</th><th>Pension refund</th><th>Capacity</th><th>Planned</th><th>Free</th></tr></thead><tbody>${cashflow(st,10).map(r=>`<tr><td>${r.year}</td><td>${fE(r.income)}</td><td>${fE(r.expenses)}</td><td>${fE(r.events)}</td><td>${fE(r.refund)}</td><td><b>${fE(r.capacity)}</b></td><td>${fE(r.planned)}</td><td class="${r.free>=0?'on':'off'}">${fE(r.free)}</td></tr>`).join('')}</tbody></table></div></div>`;}
+  if(setupTab==='assumptions'){const S=st.settings;h=`<div class="panel"><h3>Market and tax</h3><div class="form">
+    <div><label>Inflation %/yr</label>${I('settings.inflation','pct')}</div><div><label>Tax on financial income</label>${I('settings.taxStd','pct')}</div><div><label>Tax on white-list govt bonds</label>${I('settings.taxGovt','pct')}</div>
+    <div><label>Stamp duty %/yr</label>${I('settings.bollo','pct')}</div><div><label>Pension fund yearly tax</label>${I('settings.pensionTax','pct')}</div>
+    <div><label>Required prob.: Need</label>${I('settings.probNeed','pct')}</div><div><label>Want</label>${I('settings.probWant','pct')}</div><div><label>Wish</label>${I('settings.probWish','pct')}</div>
+    <div><label>Monte Carlo paths</label>${I('settings.paths','num')}</div><div><label>Tracking start (YYYY-MM)</label>${I('settings.trackingStart','txt')}</div></div></div>
+    <div class="panel"><h3>Commissions</h3><div class="form"><div><label>Rate</label>${I('settings.commission.rate','pct')}</div><div><label>Minimum €</label>${I('settings.commission.min','num')}</div><div><label>Maximum €</label>${I('settings.commission.max','num')}</div></div>
+    <p class="note">Minimum efficient ticket: ${fE(S.commission.rate>0?S.commission.min/S.commission.rate:0)}.</p></div>
+    <div class="panel"><h3>Correlations</h3><div class="tablewrap"><table><thead><tr><th></th>${CLASSES.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${CLASSES.map((c,i)=>`<tr><td><b>${c}</b></td>${CLASSES.map((_,j)=>j<i?`<td>${I(`corr.${i}.${j}`,'num','step="0.05"')}</td>`:j===i?'<td>1</td>':`<td class="note">${(+st.corr[i][j]).toFixed(2)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>
+    <div class="panel"><h3>Data</h3><div class="row"><button class="btn del" id="btnReset">Reset to sample data</button></div></div>`;}
+  document.getElementById('setupBody').innerHTML=h;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.price){const [pid,m]=t.dataset.price.split('|');st.prices[pid][m]=t.value===''?undefined:+t.value;save();recompute();return;}
+  if(!t.dataset.p)return;
+  let v=t.value;const k=t.dataset.k;
+  if(k==='pct')v=v===''?'':(+v)/100;else if(k==='num')v=v===''?0:+v;else if(k==='numblank')v=v===''?'':+v;else if(k==='bool')v=v==='true';
+  setP(t.dataset.p,v);
+  if(t.dataset.p.startsWith('corr.')){const [,i,j]=t.dataset.p.split('.');st.corr[j][i]=v;}
+  save();recompute();
+});
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button,tr');if(!t)return;const d=t.dataset;
+  if(d.p&&t.tagName==='BUTTON'&&t.closest('#nav')){go(d.p);return;}
+  if(d.goal){selGoal=d.goal;go('goals');return;}
+  if(d.perf){perfScope=d.perf;renderPerformance();return;}
+  if(d.hm){histMetric=d.hm;renderHistory();return;}
+  if(d.st){setupTab=d.st;renderSetup();return;}
+  if(d.deltx){if(!confirm('Delete this transaction?'))return;st.ledger=st.ledger.filter(x=>x.id!==d.deltx);save();recompute();return;}
+  if(d.delsnap){st.snapshots=st.snapshots.filter(s=>!(s.date===d.delsnap&&s.source==='saved'));save();renderHistory();return;}
+  if(t.id==='btnOpt'){const u=[...document.querySelectorAll('#optUniverse input:checked')].map(x=>x.dataset.u);if(u.length>6){optHintUpd();return;}
+    document.getElementById('optHint').textContent='Testing mixes…';setTimeout(()=>{const cr=document.getElementById('optCrit').value;OPT=optimizeMix(st,optGoal,{universe:u,mode:document.getElementById('optMode').value,criterion:cr,maxW:+document.getElementById('optMax').value,paths:cr==='cheapest'?200:Math.min(300,st.settings.paths)});optHintUpd();renderOptOut();},30);return;}
+  if(t.id==='btnApplyMix'&&OPT&&!OPT.error){OPT.universe.forEach((pid,i)=>{let w=st.weights.find(x=>x.goalId===OPT.goal.id&&x.productId===pid);if(!w){w={goalId:OPT.goal.id,productId:pid,weight:0};st.weights.push(w);}w.weight=OPT.best.w[i];});
+    st.weights.filter(x=>x.goalId===OPT.goal.id&&!OPT.universe.includes(x.productId)).forEach(x=>x.weight=0);save();t.textContent='Applied';recompute();return;}
+  if(d.imp){impKind=d.imp;IMP=null;renderImport();return;}
+  if(d.undo){if(confirm('Undo this import?'))undoImport(d.undo);return;}
+  if(t.id==='btnImpSample'){document.getElementById('impText').value=IMP_SAMPLE[impKind];return;}
+  if(t.id==='btnImpPreview'){const P=parseCSV(document.getElementById('impText').value);if(!P){return;}const map={},used=new Set();IMP_FIELDS[impKind].forEach(([k])=>{const i=P.head.findIndex((h,j)=>!used.has(j)&&IMP_GUESS[k].test(h));map[k]=i;if(i>=0)used.add(i);});IMP={kind:impKind,head:P.head,rows:P.rows,map,goals:{}};renderImpOut();return;}
+  if(t.id==='btnImpGo'){doImport();return;}
+  if(t.id==='btnFetch'){const key=st.asOf.slice(0,7);let n=0;st.products.forEach(p=>{if(p.source!=='yahoo'||!p.ticker)return;const v=priceAt(st,p.id,key);if(v==null)return;if(st.prices[p.id][key]==null){st.prices[p.id][key]=v;}n++;});
+    document.getElementById('fetchMsg').textContent=`Mock: ${n} prices marked as fetched for ${key}. The app calls the provider here; this page cannot reach the internet.`;save();recompute();return;}
+  if(t.id==='btnReset'){if(confirm('Replace everything with the sample data?')){st=sampleState();save();recompute();}return;}
+  if(t.id==='btnSnap'){st.snapshots=st.snapshots.filter(s=>s.date!==st.asOf);st.snapshots.push(snapshotFrom(A,'saved'));st.snapshots.sort((a,b)=>a.date.localeCompare(b.date));save();renderHistory();return;}
+  if(t.id==='btnAddTx'){const amt=+document.getElementById('txAmt').value,pr=+document.getElementById('txPrice').value,type=document.getElementById('txType').value;if(!amt||!pr){document.getElementById('txHint').textContent='Enter an amount and a price.';return;}
+    const cm=document.getElementById('txComm').value;st.ledger.push({id:'t'+Date.now(),date:document.getElementById('txDate').value,goalId:document.getElementById('txGoal').value,productId:document.getElementById('txProd').value,type,qty:+((type==='sell'?-1:1)*amt/pr).toFixed(4),price:pr,commission:cm===''?null:+cm,note:''});
+    st.ledger.sort((a,b)=>a.date.localeCompare(b.date));save();recompute();document.getElementById('txHint').textContent='Transaction added.';return;}
+  if(t.id==='btnNewMonth'){const k=st.asOf.slice(0,7),n=nextKey(k);st.products.forEach(p=>{const v=priceAt(st,p.id,k);if(v!=null)st.prices[p.id][n]=v;});st.asOf=monthEndOf(n);document.getElementById('asOf').value=st.asOf;save();recompute();return;}
+});
+['goalSel','perfSel','planSel','txFilterGoal','txFilterYear'].forEach(id=>document.getElementById(id).addEventListener('change',e=>{
+  if(id==='goalSel'){selGoal=e.target.value;renderGoals();}if(id==='perfSel'){perfScope=e.target.value;renderPerformance();}if(id==='planSel'){planGoal=e.target.value;renderPlan();}if(id.startsWith('txFilter'))renderTx();e.stopPropagation();}));
+document.getElementById('optUniverse').addEventListener('change',optHintUpd);
+document.getElementById('impMap').addEventListener('change',e=>{const k=e.target.dataset.map;if(k&&IMP){IMP.map[k]=+e.target.value;renderImpOut();}e.stopPropagation();});
+document.getElementById('impPreview').addEventListener('change',e=>{if(e.target.id==='impAllBucket'&&IMP){impRows().forEach((r,i)=>{if(r.msg==='Choose a bucket')IMP.goals[i]=e.target.value;});renderImpOut();e.stopPropagation();return;}const i=e.target.dataset.impbucket;if(i!=null&&IMP){IMP.goals[+i]=e.target.value;renderImpOut();}e.stopPropagation();});
+document.getElementById('asOf').addEventListener('change',e=>{if(e.target.value){st.asOf=e.target.value;save();recompute();}});
+
+/* ---------- navigation ---------- */
+function go(p){if(!PAGES[p])p='dashboard';Object.keys(PAGES).forEach(k=>document.getElementById('p-'+k).hidden=k!==p);
+  document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.p===p?'page':'false'));
+  document.getElementById('pageTitle').textContent=PAGES[p][0];document.getElementById('pageLede').textContent=PAGES[p][1];
+  try{if(location.hash.slice(1)!==p)history.replaceState(null,'','#'+p);}catch(_){}
+  Object.values(charts).forEach(c=>{try{c.resize();}catch(_){}});window.scrollTo(0,0);}
+window.addEventListener('hashchange',()=>go(location.hash.slice(1)));
+
+/* ---------- glossary & method ---------- */
+const GLOSS=[
+['Investimento per obiettivi','Goal-based investing','One bucket per life goal, each with its own date, amount, risk and required probability.'],
+['Livelli di indipendenza finanziaria','Financial independence levels','1: safety (emergency fund). 2: Barista FIRE = essential monthly expenses × 300. 3: FIRE = level 2 + optional monthly expenses × 200. A milestone system, not a plan.'],
+['Barista FIRE','Barista FIRE','Enough capital to cover essential expenses, so work only has to pay for the extras.'],
+['Probabilità di successo','Probability of success','Share of simulated market paths where the bucket reaches its inflated target, net of taxes and costs.'],
+['Rendimento ponderato per il tempo (TWR)','Time-weighted return','Return of the investments alone, removing the effect of when you added or withdrew money. Use it to judge products.'],
+['Rendimento ponderato per il capitale (XIRR)','Money-weighted return','Your personal annual return, including the timing of contributions. Use it to judge your results.'],
+['Drawdown','Drawdown','Fall from the previous peak. Shows how deep a loss you had to sit through.'],
+['Prezzo medio di carico (PMC)','Average cost','Average purchase price per unit across the whole account. One value per product, shared by all buckets.'],
+['Zainetto fiscale','Tax-loss carry-forward','Losses usable against “redditi diversi” gains for four years. ETF gains cannot use it.'],
+['Redditi di capitale / diversi','Capital income / other financial income','ETF gains are capital income (no offset). Gains on ETCs, stocks and direct bonds, and all losses, are other income (offsettable).'],
+['Imposta di bollo','Stamp duty','0.2% per year on securities and deposit accounts. Not on pension funds.'],
+['Deducibilità fondo pensione','Pension deduction','Up to €5,300 per year (2026) of your and your employer’s contributions; TFR excluded. Voluntary payments give a refund with next year’s tax return.'],
+['Tassa d’uscita','Pension exit tax','15% on TFR and deducted contributions, reduced by 0.3% per year of membership beyond 15, down to 9%.'],
+['Snapshot','Snapshot','The goal analysis saved on a date, so you can see how your plans evolved.'],
+['Ottimizzatore del mix','Mix optimizer','Tests every combination of the chosen products (steps of 10–20%) on the same simulated markets and picks the best for the bucket’s priority: Need = best bad case, Want/Wish = best median, both only among mixes that reach the required probability.'],
+['Fonte dei prezzi','Price source','Where a product’s price comes from: an online provider by ticker (e.g. Yahoo Finance, VWCE.MI), a CSV import, or manual entry.'],
+['Biglietto minimo efficiente','Minimum efficient ticket','Minimum commission ÷ rate. Below it, the minimum fee makes a trade proportionally expensive.']];
+document.getElementById('gloss').innerHTML=GLOSS.map(([a,b,c])=>`<dt>${esc(a)}<span>${esc(b)}</span></dt><dd>${esc(c)}</dd>`).join('');
+document.getElementById('method').innerHTML=`<h3>How the numbers are computed</h3><ul style="max-width:85ch">
+<li>Holdings come only from transactions: units per bucket and product; value = units × month-end price; average cost from all buys of the product.</li>
+<li>Goal projection: yearly steps; each product grows by its return minus TER; stamp duty yearly (not pension funds); contributions at year end, split by weights; no selling to rebalance.</li>
+<li>At the goal date every product is sold: ETF gains taxed (blended for white-list bonds), direct securities netted with losses and assigned zainetto, pension funds pay the exit tax on contributions.</li>
+<li>Monte Carlo: correlated lognormal returns by asset class, shared across buckets so totals are coherent. “Needed” contributions are solved by bisection.</li>
+<li>Independence levels: sum of buckets marked as counting, net of exit taxes, in today’s euros; contributions stop at each goal date, the money keeps growing.</li>
+<li>Performance: monthly valuation; flows assumed at month end; time-weighted chain-linked; XIRR on dated flows.</li>
+<li>Mix optimizer: grid of weights over the chosen products; every mix uses the same simulated markets, so differences come from the mix, not from luck. By default it changes only where new money goes; “selling today” deducts the tax on realised gains first.</li>
+<li>Goal history: snapshots store the analysis frozen on their date; the sample ones are recomputed from transactions and prices.</li></ul>`;
+
+/* ---------- boot ---------- */
+st=load()||sampleState();if(!st.imports)st.imports=[];st.products.forEach(p=>{if(p.source==null)p.source='manual';});
+document.getElementById('asOf').value=st.asOf;
+go(location.hash.slice(1)||'dashboard');
+recompute();
+if(window.matchMedia)window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(A)renderAll();});
+})();
+</script>
+</body>
+</html>
