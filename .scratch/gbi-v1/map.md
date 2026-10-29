@@ -71,11 +71,11 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [12 — Engine reference when Excel, spec and mock disagree](issues/12-engine-reference.md) — spec/mock win over Excel (E1-E8, M1 fixed); pro-rata stub year, BTP `couponRate`, commissions in basis, yearly pension mix; pension valued in full with a 50%-capital warning; no Excel parity: golden cases + mock differential + synthetic JSON fixture.
 - [13 — How v1 is cut into GitHub stories for ticket-loop](issues/13-delivery-slicing.md) — 7 parent issues S0–S6 cut vertically (wipe+scaffold first), labels `gbi-v1` + triage roles, `pnpm gate` per trail + CI workflow, tag gate in S0, one UI gate per story, Codex review on engine stories; Excel v2 importer and mobile layout move to v2; merge this branch to `main` before S0.
 - [16 — Working prototype](issues/16-working-prototype.md) — stack proven end to end (18 golden tests, analysis 230 ms); goal due 31 Dec, stub year proportional to time, per-kind price age, own XLSX reader; adds final story S7 UI/UX polish with an impeccable audit.
+- [14 — Write the v1 spec](issues/14-write-spec.md) — spec.md written and reviewed: AC-1…AC-93 under stories S0–S7, 31 December due date supersedes t12's golden 1,400 (now 2,600), v2 candidates and open-question table; R7 for flat fee model still open.
 
 ## Not yet specified
 
-- Perf budgets in the source spec (dashboard < 2 s, optimizer < 3 s): confirm or trim.
-- Glossary content (Italian terms, plain explanations) and method notes.
+- (none: perf budgets kept and glossary scope set in the spec, ticket 14)
 
 ## Out of scope
 
