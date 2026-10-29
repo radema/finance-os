@@ -340,7 +340,7 @@ alert and suggestion shows its rule (id, name, condition). No recommendation exi
 | R4 Status worsened | Medium | Goal status worse than in the latest snapshot | goal + new status |
 | R5 Stale prices | Medium | Held product whose price is old by the per-kind rule (t16) | set of products |
 | R6 Need off track | High | Priority Need and status Off track | goal + month |
-| R7 Costly trades | Info | Last 12 months: commission / amount > 1.25 × rate | id of the latest costly trade |
+| R7 Costly trades | Info | Last 12 months: commission / amount > 1.25 × rate; with `feeModel = flat`, rate = flatFee / minTicket (fires below minTicket / 1.25) | id of the latest costly trade |
 | R8 Near goal, risky assets | Medium | Horizon ≤ 1 year and equity value > 0 | goal |
 | R9 Units mismatch | High | Units per product across buckets ≠ brokerUnits (when entered) | product + (bucket units, broker units) |
 | R10 Price fetch failed | Medium | Provider error, non-EUR currency or move > 25% | set of products |

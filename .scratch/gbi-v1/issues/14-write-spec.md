@@ -28,7 +28,7 @@ Spec: [spec.md](../spec.md) (AFK, 2026-10-29). 93 acceptance criteria AC-1…AC-
 Spec-reviewer (one pass, verdict needs-rework): 2 blocking findings fixed — the mock differential domain (contributionGrowth 0, ralGrowth 0, named functions, cash flow from Y0+2, buy-only plan vs actual) and AC-32 undo (dump excludes ImportBatch). Should-fix findings also fixed: AC-25 limited to S1 columns, fixture extended in S3/S4, required contribution solved when r > 0, duplicate rule compares file vs stored totals (and is marked as an engineering refinement of t08), Y0 refund rule, coupon with no holder → "needs a goal", targetYear < Y0 clamped, plan vs actual from trackingStart, `fixtures/` path named, AC-90 made checkable.
 
 Still open (not fixed):
-- R7 and min efficient ticket with `feeModel = flat` (no rate; rate = 0 divides by zero) — define in S1/S5 briefs or ask the user.
+- ~~R7 and min efficient ticket with `feeModel = flat`~~ — decided by the user (2026-10-29): rate = flatFee / minTicket, so R7 fires below minTicket / 1.25; spec R7 row updated. The user also accepted all "choices made while writing" above.
 - Nits: AC-9 port not named; AC-14 does not state contributionGrowth 0; R1 "N months of plan" does not name the plan version (use the plan in force in the current month).
 - Outside this ticket: ticket 13's Check line and the map say 7 parents S0–S6; with S7 there are 8 — ticket 15's check must expect 8.
 
