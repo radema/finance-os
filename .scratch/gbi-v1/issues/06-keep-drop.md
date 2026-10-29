@@ -7,4 +7,4 @@ Map: ../map.md
 
 ## Question
 
-The repo is emptied and restarted. Using the inventory (old stack: Python, DuckDB, FastAPI, Jinja + htmx, vendored ECharts and fonts, design tokens, DESIGN.md, PRODUCT.md, RFC corpus, wiki, handoffs, demo data, real/ layout), decide per item: keep as is, keep adapted, or delete. Decide what the new `CLAUDE.md` says (commands, gate, architecture rules, design rules) so ticket-loop implementers follow the new rules, and how the old state is preserved (tag, archive folder). Includes archiving the old handoffs.
+The repo is emptied and restarted. Using the inventory (old stack: Python, DuckDB, FastAPI, Jinja + htmx, vendored ECharts and fonts, design tokens, DESIGN.md, PRODUCT.md, RFC corpus, wiki, handoffs, demo data, real/ layout), decide per item: keep as is, keep adapted, or delete. Decide what the new `CLAUDE.md` says (commands, gate, architecture rules, design rules) so ticket-loop implementers follow the new rules, and how the old state is preserved (tag, archive folder). (The old HANDOFF-* files are already in docs/archive/.)
