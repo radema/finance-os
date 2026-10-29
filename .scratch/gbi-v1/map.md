@@ -63,6 +63,7 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [05 — Stack](issues/05-stack.md) — all TypeScript: Node 24 local server + React/Vite + ECharts, SQLite via node:sqlite + Kysely, pnpm with supply-chain guards, configurable data folder, `gbi` command on the MacBook.
 - [06 — Keep/drop and new CLAUDE.md](issues/06-keep-drop.md) — tag `finance-os-legacy` then delete all old code/docs/design/demo; keep `.scratch/gbi-v1/` as source of truth during build; gate without Playwright; short CLAUDE.md drafted.
 - [07 — Financial-independence levels](issues/07-fi-levels.md) — multipliers on monthly expenses (300/200) confirmed; L1 = EF goal or months, measured without pension; pension counts by default (net, exit tax of year t); FI wealth net everywhere; targets grow with expenseGrowth; dashboard adds % of target per year.
+- [08 — Import: first broker format and multi-bucket trades](issues/08-import-rules.md) — Fineco XLSX preset only (ISIN match, `Operazione` date, A/V, fee column, Controvalore as check); multi-bucket rows: one bucket, split by weights or by units, always confirmed; opening via a "Current portfolio" form (fiscal PMC), rows before it skipped; new `coupon` type, recorded by default.
 - [09 — Fineco export sample](issues/09-fineco-sample.md) — XLSX in real/ (gitignored): 5 metadata rows, header row 6, text dates DD/MM/YYYY, Segno A/V, coupons as 'Stacco Cedole'; match by Isin.
 
 ## Not yet specified
