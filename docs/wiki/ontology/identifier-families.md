@@ -105,8 +105,8 @@ Two details that trip people:
 
 | Range | File |
 |---|---|
-| P1 … P15 | `docs/handoff/HANDOFF-2026-07-26.md` |
-| P16 … P20 | `docs/handoff/HANDOFF-2026-07-28.md` §2.1 |
+| P1 … P15 | `docs/archive/HANDOFF-2026-07-26.md` |
+| P16 … P20 | `docs/archive/HANDOFF-2026-07-28.md` §2.1 |
 | P21 … P33 | `docs/plans/RATIFICATIONS-2026-07-30.md` |
 
 To search all of them at once:
@@ -235,6 +235,6 @@ the commit.
 **`docs/seed/ux/UX-0001-ui-reference.md` is non-normative.** If the mock drifts from the corpus,
 **the corpus wins**. Same for `docs/seed/ux/finance-os-ui-mock.html`.
 
-**`docs/handoff/HANDOFF-<date>.md` is the session ledger.** Read the most recent before resuming
+**`docs/archive/HANDOFF-<date>.md` is the session ledger.** Read the most recent before resuming
 work: it records what is unreviewed, what is deliberately unfinished, and what looks like a bug but
 isn't.

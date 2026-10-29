@@ -200,7 +200,7 @@ independent.
 2. **Check the precedence chain.** Precedence is **section-scoped and recency-ordered**
    (RFC-0012 §8) — the latest document that speaks to *that section* wins, not the latest document
    overall. `RFC-0000-index.md` §4 is the lookup table of what corrects what.
-3. **Read the most recent `docs/handoff/HANDOFF-<date>.md`.** It records what is deliberately
+3. **Read the most recent `docs/archive/HANDOFF-<date>.md`.** It records what is deliberately
    unfinished — some of these gaps have context there that never reached an RFC.
 4. **Product-definition questions go to the product owner.** An agent never invents one. Several of
    these gaps are unbuilt *because a product question is open*, not because nobody got to them.

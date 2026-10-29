@@ -117,7 +117,7 @@ all readers.
   Commit once per deliverable; document deviations from the spec in the body.
 - Model routing when delegating: **Sonnet implements, Opus reviews.** Every real bug so far was caught
   by the review gate, not by the model that wrote the code.
-- `docs/handoff/HANDOFF-<date>.md` is the session ledger — read the most recent one before resuming
+- `docs/archive/HANDOFF-<date>.md` is the session ledger — read the most recent one before resuming
   work. It records what is unreviewed, what is deliberately unfinished, and what looks like a bug but
   isn't.
 
