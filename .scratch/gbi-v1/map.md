@@ -69,6 +69,7 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [11 — UI direction](issues/11-ui-direction.md) — approved prototype in prototypes/11-ui: desktop-first fluid grid, 7-section sidebar, palette D with per-goal colours + tints, chips/tags, legends, sticky table headers, Geist, larger type, no card outlines.
 - [09 — Fineco export sample](issues/09-fineco-sample.md) — XLSX in real/ (gitignored): 5 metadata rows, header row 6, text dates DD/MM/YYYY, Segno A/V, coupons as 'Stacco Cedole'; match by Isin.
 - [12 — Engine reference when Excel, spec and mock disagree](issues/12-engine-reference.md) — spec/mock win over Excel (E1-E8, M1 fixed); pro-rata stub year, BTP `couponRate`, commissions in basis, yearly pension mix; pension valued in full with a 50%-capital warning; no Excel parity: golden cases + mock differential + synthetic JSON fixture.
+- [13 — How v1 is cut into GitHub stories for ticket-loop](issues/13-delivery-slicing.md) — 7 parent issues S0–S6 cut vertically (wipe+scaffold first), labels `gbi-v1` + triage roles, `pnpm gate` per trail + CI workflow, tag gate in S0, one UI gate per story, Codex review on engine stories; Excel v2 importer and mobile layout move to v2; merge this branch to `main` before S0.
 
 ## Not yet specified
 
