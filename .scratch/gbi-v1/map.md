@@ -61,6 +61,7 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [03 — Fineco facts](issues/03-fineco-facts.md) — 0.19%/2.95/19 holds only on the Trading plan; bond min 2.95 or 5.95; zero-commission = per-product flag; export format not public (needs 09).
 - [04 — Excel v2 audit](issues/04-excel-v2-audit.md) — no cached values, so no parity baseline yet; deterministic tax logic agrees; Excel errors (typed PMC, unseeded MC…) and mock bug M1 listed; E9/S1/S4 go to ticket 12.
 - [05 — Stack](issues/05-stack.md) — all TypeScript: Node 24 local server + React/Vite + ECharts, SQLite via node:sqlite + Kysely, pnpm with supply-chain guards, configurable data folder, `gbi` command on the MacBook.
+- [06 — Keep/drop and new CLAUDE.md](issues/06-keep-drop.md) — tag `finance-os-legacy` then delete all old code/docs/design/demo; keep `.scratch/gbi-v1/` as source of truth during build; gate without Playwright; short CLAUDE.md drafted.
 - [09 — Fineco export sample](issues/09-fineco-sample.md) — XLSX in real/ (gitignored): 5 metadata rows, header row 6, text dates DD/MM/YYYY, Segno A/V, coupons as 'Stacco Cedole'; match by Isin.
 
 ## Not yet specified
