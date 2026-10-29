@@ -125,6 +125,6 @@ Collected here because each has a real cost, and each is easy to miss from the f
   be checked; an uncited assertion is worse than a gap.
 - **When you find drift, fix it here and note the base commit.** Do not adjust the code to match the
   wiki.
-- **Do not turn this into a changelog.** `docs/handoff/HANDOFF-<date>.md` is the session ledger and
+- **Do not turn this into a changelog.** `docs/archive/HANDOFF-<date>.md` is the session ledger and
   records what is unreviewed, deliberately unfinished, or only looks like a bug.
 - **Product-definition questions go to the product owner. An agent never invents one.**
