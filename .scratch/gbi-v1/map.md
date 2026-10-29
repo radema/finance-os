@@ -38,6 +38,7 @@ Settled at charting (2026-10-29, with the user):
   active account may be the work one). Git email `rauldemaio@gmail.com`.
 - **Install and data:** the app is installed on the user's personal MacBook, with a fitting install
   mode (ticket 05). Data always stays local; nothing goes to a cloud service.
+  Downloading public data (prices) from the internet is fine; user data is never sent out.
 - **Excel v2:** `/mnt/c/Users/RaulDeMaio/Downloads/gbi-planner-v2.xlsx` (sha256 prefix
   `e94d5394c637673b`). The source spec's parity baseline, but it may contain errors: read it
   critically, never as ground truth. Do not commit it or its personal figures.
