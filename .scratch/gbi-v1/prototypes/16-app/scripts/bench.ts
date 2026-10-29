@@ -1,0 +1,15 @@
+import { analyse } from '../src/engine/core.ts';
+import { optimizeMix } from '../src/engine/optimizer.ts';
+import { sampleState } from '../src/engine/sample.ts';
+const st = sampleState(); st.asOf = '2026-10-29';
+const time = <T>(label: string, f: () => T): T => { const t = performance.now(); const r = f(); console.log(label.padEnd(44), Math.round(performance.now() - t), 'ms'); return r; };
+time('analyse 1000 paths, no solve', () => analyse(st, st.asOf, { paths: 1000 }));
+const a = time('analyse 1000 paths + solve + FI 40y', () => analyse(st, st.asOf, { solve: true, fireYears: 40 }));
+time('analyse 300 paths (snapshot)', () => analyse(st, st.asOf, { paths: 300 }));
+a.results.forEach(r => console.log(r.id, 'T', r.T, 'prob', r.prob.toFixed(3), 'req', r.reqP, 'det', Math.round(r.detNet), 'needMC', r.reqMC && Math.round(r.reqMC)));
+console.log('FI', a.fire!.levels.map(l => Math.round(l.target)), a.fire!.reach, a.fire!.now);
+time('optimizer g2 (4 products, 286 mixes)', () => optimizeMix(st, 'g2', { universe: ['p3', 'p7', 'p2', 'p8'] }));
+time('optimizer g2 5 products 20% step', () => optimizeMix(st, 'g2', { universe: ['p3', 'p7', 'p2', 'p8', 'p9'] }));
+time('optimizer g5 cheapest 3 products', () => optimizeMix(st, 'g5', { universe: ['p5', 'p6', 'p7'], criterion: 'cheapest' }));
+time('optimizer g2 5 products step 10% (1001 mixes)', () => optimizeMix(st, 'g2', { universe: ['p3', 'p7', 'p2', 'p8', 'p9'], step: 0.1 }));
+time('optimizer g2 4 products, spend least (286 mixes)', () => optimizeMix(st, 'g2', { universe: ['p3', 'p7', 'p2', 'p8'], criterion: 'cheapest' }));

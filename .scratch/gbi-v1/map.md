@@ -70,6 +70,7 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [09 — Fineco export sample](issues/09-fineco-sample.md) — XLSX in real/ (gitignored): 5 metadata rows, header row 6, text dates DD/MM/YYYY, Segno A/V, coupons as 'Stacco Cedole'; match by Isin.
 - [12 — Engine reference when Excel, spec and mock disagree](issues/12-engine-reference.md) — spec/mock win over Excel (E1-E8, M1 fixed); pro-rata stub year, BTP `couponRate`, commissions in basis, yearly pension mix; pension valued in full with a 50%-capital warning; no Excel parity: golden cases + mock differential + synthetic JSON fixture.
 - [13 — How v1 is cut into GitHub stories for ticket-loop](issues/13-delivery-slicing.md) — 7 parent issues S0–S6 cut vertically (wipe+scaffold first), labels `gbi-v1` + triage roles, `pnpm gate` per trail + CI workflow, tag gate in S0, one UI gate per story, Codex review on engine stories; Excel v2 importer and mobile layout move to v2; merge this branch to `main` before S0.
+- [16 — Working prototype](issues/16-working-prototype.md) — stack proven end to end (18 golden tests, analysis 230 ms); goal due 31 Dec, stub year proportional to time, per-kind price age, own XLSX reader; adds final story S7 UI/UX polish with an impeccable audit.
 
 ## Not yet specified
 

@@ -12,3 +12,5 @@ AFK. Run `/to-spec` to write `.scratch/gbi-v1/spec.md` from `reference/source-sp
 Input from ticket 10: the spec has a "v2 candidates" section, collected from every resolved ticket's deferred items.
 
 Input from ticket 13: group the spec's `AC-` ids by story S0–S6 (story table in ticket 13), so ticket 15 can cut one parent per story; write each story's Definition of done. Dark mode is in v1; Playwright, the Excel v2 importer and mobile layout from 360 px are not (the last two go to "v2 candidates"); v1 layout is usable down to ~1024 px. Ticket 16's changes enter only through the spec, never as prototype code.
+
+Input from ticket 16 (2026-10-29): add a final story **S7 — UI/UX polish**, after S6: start with an impeccable audit of the built app, then fix its findings and the UI gaps listed in `prototypes/16-app/NOTES.md`. Copy the ticket 16 decisions (31 December goal date, proportional stub year, per-kind price age, own XLSX reader, pnpm pin) into the spec.

@@ -1,0 +1,4 @@
+/* PROTOTYPE fonts, bundled locally (no CDN). Latin subset, variable weight 100-900, SIL OFL 1.1 (licence next to each file).
+   Source: @fontsource-variable/{geist,geist-mono} 5.3.0. See NOTES.md. */
+@font-face { font-family: "Geist"; src: url("fonts/geist-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("fonts/geist-mono-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }

@@ -1,0 +1,4 @@
+# Supply-chain guards (ticket 05). This folder is its own pnpm root.
+packages: []
+minimumReleaseAge: 10080        # minutes = 7 days
+onlyBuiltDependencies: []       # no dependency install scripts
