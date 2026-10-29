@@ -58,6 +58,7 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [01 — Storage engine](issues/01-storage-engine.md) — SQLite (WAL, STRICT, money as cents/Decimal) recommended; DuckDB 2.0 server mode not useful for one local user; final call in 05.
 - [02 — Price providers](issues/02-price-providers.md) — yfinance for .MI ETFs only (tested, works); BTP and pension manual/CSV; no second adapter in v1, EODHD as later fallback.
 - [03 — Fineco facts](issues/03-fineco-facts.md) — 0.19%/2.95/19 holds only on the Trading plan; bond min 2.95 or 5.95; zero-commission = per-product flag; export format not public (needs 09).
+- [04 — Excel v2 audit](issues/04-excel-v2-audit.md) — no cached values, so no parity baseline yet; deterministic tax logic agrees; Excel errors (typed PMC, unseeded MC…) and mock bug M1 listed; E9/S1/S4 go to ticket 12.
 
 ## Not yet specified
 

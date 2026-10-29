@@ -1,7 +1,7 @@
 # 05 — Stack for an incremental build
 
 Type: grilling
-Status: open
+Status: claimed
 Blocked by: 01
 Map: ../map.md
 
