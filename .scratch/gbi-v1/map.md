@@ -42,6 +42,7 @@ Settled at charting (2026-10-29, with the user):
 - **Excel v2:** `/mnt/c/Users/RaulDeMaio/Downloads/gbi-planner-v2.xlsx` (sha256 prefix
   `e94d5394c637673b`). The source spec's parity baseline, but it may contain errors: read it
   critically, never as ground truth. Do not commit it or its personal figures.
+- **Stack:** TypeScript end to end, see ticket 05.
 - **Mock:** `reference/mock-app.html` — its JS engine is the reference implementation of the formulas.
 - Skills: `/grilling` and `/domain-modeling` (default), `/prototype` (UI), `/research`, `dataviz`,
   then `/to-spec` and `/to-tickets` at the end.
@@ -56,16 +57,16 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 <!-- one line per closed ticket -->
 
 - [01 — Storage engine](issues/01-storage-engine.md) — SQLite (WAL, STRICT, money as cents/Decimal) recommended; DuckDB 2.0 server mode not useful for one local user; final call in 05.
-- [02 — Price providers](issues/02-price-providers.md) — yfinance for .MI ETFs only (tested, works); BTP and pension manual/CSV; no second adapter in v1, EODHD as later fallback.
+- [02 — Price providers](issues/02-price-providers.md) — Yahoo for .MI ETFs only (tested, works; library is yahoo-finance2 per 05); BTP and pension manual/CSV; no second adapter in v1, EODHD as later fallback.
 - [03 — Fineco facts](issues/03-fineco-facts.md) — 0.19%/2.95/19 holds only on the Trading plan; bond min 2.95 or 5.95; zero-commission = per-product flag; export format not public (needs 09).
 - [04 — Excel v2 audit](issues/04-excel-v2-audit.md) — no cached values, so no parity baseline yet; deterministic tax logic agrees; Excel errors (typed PMC, unseeded MC…) and mock bug M1 listed; E9/S1/S4 go to ticket 12.
+- [05 — Stack](issues/05-stack.md) — all TypeScript: Node 24 local server + React/Vite + ECharts, SQLite via node:sqlite + Kysely, pnpm with supply-chain guards, configurable data folder, `gbi` command on the MacBook.
 
 ## Not yet specified
 
 - Excel discrepancies: each one the audit finds may need its own decision, beyond the engine-reference
   ticket.
-- Test tooling beyond the engine (Playwright smoke, perf budgets in the source spec): confirm or trim
-  once the stack is known.
+- Perf budgets in the source spec (dashboard < 2 s, optimizer < 3 s): confirm or trim.
 - Glossary content (Italian terms, plain explanations) and method notes.
 
 ## Out of scope
