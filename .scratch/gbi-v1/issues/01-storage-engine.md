@@ -1,7 +1,7 @@
 # 01 — Storage engine: SQLite or DuckDB 2.0
 
 Type: research
-Status: open
+Status: claimed
 Blocked by: —
 Map: ../map.md
 

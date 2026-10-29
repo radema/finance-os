@@ -52,6 +52,8 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 
 <!-- one line per closed ticket -->
 
+- [03 — Fineco facts](issues/03-fineco-facts.md) — 0.19%/2.95/19 holds only on the Trading plan; bond min 2.95 or 5.95; zero-commission = per-product flag; export format not public (needs 09).
+
 ## Not yet specified
 
 - Packaging and running: one Docker image vs `uv run` only; how the monthly job (prices + snapshot)

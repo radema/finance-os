@@ -1,7 +1,7 @@
 # 02 — Price providers: is yfinance enough, and what is the fallback
 
 Type: research
-Status: open
+Status: claimed
 Blocked by: —
 Map: ../map.md
 

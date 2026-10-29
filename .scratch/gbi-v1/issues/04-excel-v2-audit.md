@@ -1,7 +1,7 @@
 # 04 — Excel v2 audit against the spec and the mock engine
 
 Type: research
-Status: open
+Status: claimed
 Blocked by: —
 Map: ../map.md
 
