@@ -2,13 +2,12 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { SqliteDatabase } from "kysely";
-import { Kysely, SqliteDialect } from "kysely";
+import { CamelCasePlugin, Kysely, SqliteDialect } from "kysely";
 import { Migrator } from "kysely/migration";
 import { migrationProvider } from "./migrations.ts";
+import type { DB } from "./schema.ts";
 
-export interface DB {
-  meta: { key: string; value: string };
-}
+export type { DB };
 
 export const DATABASE_FILE = "gbi.sqlite";
 
@@ -29,8 +28,8 @@ function adapt(database: DatabaseSync): SqliteDatabase {
 }
 
 /**
- * Opens the SQLite file in `dataDir`, creating the folder if needed, turns on WAL and applies
- * every pending migration.
+ * Opens the SQLite file in `dataDir`, creating the folder if needed, turns on WAL and foreign keys
+ * and applies every pending migration.
  *
  * @param dataDir Folder that holds the database file.
  * @returns The Kysely handle; call `destroy()` to close the file.
@@ -39,7 +38,11 @@ export async function openDatabase(dataDir: string): Promise<Kysely<DB>> {
   mkdirSync(dataDir, { recursive: true });
   const database = new DatabaseSync(join(dataDir, DATABASE_FILE));
   database.exec("PRAGMA journal_mode = WAL");
-  const db = new Kysely<DB>({ dialect: new SqliteDialect({ database: adapt(database) }) });
+  database.exec("PRAGMA foreign_keys = ON");
+  const db = new Kysely<DB>({
+    dialect: new SqliteDialect({ database: adapt(database) }),
+    plugins: [new CamelCasePlugin()],
+  });
   const { error } = await new Migrator({ db, provider: migrationProvider }).migrateToLatest();
   if (error) {
     await db.destroy();
