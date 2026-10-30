@@ -80,35 +80,7 @@ const eventArb = fc.record({
 const isoDate = (day: number, year: number, daysBefore: number): string =>
   new Date(Date.UTC(year, 11, day) - daysBefore * MS_PER_DAY).toISOString().slice(0, 10);
 
-/** A goal due now (targetYear before the asOf year) that holds a pension product. */
-export function holdsPensionDueNow(scenario: Scenario): boolean {
-  const y0 = Number(scenario.asOf.slice(0, 4));
-  const pension = new Set(scenario.products.filter((p) => p.regime === "pension").map((p) => p.id));
-  const dueNow = new Set(scenario.goals.filter((g) => g.targetYear < y0).map((g) => g.id));
-  return scenario.ledger.some((row) => pension.has(row.productId) && dueNow.has(row.goalId));
-}
-
-/** A zainetto of a goal due now that expired in the goal year or later, but before the asOf year. */
-export function zainettoExpiredBeforeAsOf(scenario: Scenario): boolean {
-  const { zainetto } = scenario;
-  const y0 = Number(scenario.asOf.slice(0, 4));
-  const goal = scenario.goals.find((g) => g.id === zainetto?.goalId);
-  return (
-    zainetto !== undefined &&
-    goal !== undefined &&
-    goal.targetYear < y0 &&
-    goal.targetYear <= zainetto.expiryYear &&
-    zainetto.expiryYear < y0
-  );
-}
-
-/**
- * Random scenarios in the domain where v1 and the mock must agree.
- *
- * Two cases of a goal due now are left out, because the engines read the date differently there
- * (the known gaps in differential.test.ts): a pension position, and a zainetto that expired
- * before the asOf year.
- */
+/** Random scenarios in the domain where v1 and the mock must agree. */
 export const scenarioArb: fc.Arbitrary<Scenario> = fc
   .record({
     year: fc.integer({ min: MIN_YEAR, max: MAX_YEAR }),
@@ -183,5 +155,4 @@ export const scenarioArb: fc.Arbitrary<Scenario> = fc
       goals,
       ledger,
     };
-  })
-  .filter((scenario) => !holdsPensionDueNow(scenario) && !zainettoExpiredBeforeAsOf(scenario));
+  });

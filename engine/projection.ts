@@ -177,7 +177,7 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
       };
     }),
     {
-      goalDate: goal.targetYear < grid.y0 ? input.asOf : `${goal.targetYear}-12-31`,
+      goalDate: `${goal.targetYear}-12-31`,
       goalId: goal.id,
       zainetto: settings.zainetto,
       taxStd: settings.taxStd,
