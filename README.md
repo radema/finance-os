@@ -34,4 +34,5 @@ The server listens on `127.0.0.1:8716`.
 
 ## Develop
 
-See `CLAUDE.md` for the commands, the gate and the architecture rules.
+`pnpm dev` runs the API on `127.0.0.1:8716` and the Vite dev page on `127.0.0.1:8717` (it proxies `/api`).
+See `CLAUDE.md` for the other commands, the gate and the architecture rules.

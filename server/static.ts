@@ -5,6 +5,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
+  ".woff2": "font/woff2",
 };
 
 /** Serves a file from `webDir`: `/` is `index.html`; a missing file or a path outside `webDir` is 404. */
