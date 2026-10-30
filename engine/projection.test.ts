@@ -225,4 +225,34 @@ describe("projectGoal", () => {
     expect(result.tau).toBe(0);
     expect(result.tax).toBeCloseTo(500, 9);
   });
+
+  it("takes the pension exit rate at the goal year when the goal is due now (AC-13, AC-18)", () => {
+    // asOf 2024, goal year 2023, member since 1990: 18 extra years, rate 15% - 5.4% = 9.6%.
+    const result = projectGoal(
+      input({
+        asOf: "2024-12-01",
+        goal: { id: "g", targetYear: 2023, target: 0, contributionGrowth: 0 },
+        monthly: 0,
+        positions: [{ productId: "p", value: 10_000, basis: 10_000 }],
+        products: new Map([["p", { regime: "pension", mu: 0, ter: 0 }]]),
+        firstYear: 1990,
+      }),
+    );
+    expect(result.tax).toBeCloseTo(960, 9);
+  });
+
+  it("applies a zainetto that expires on the 31 December of the goal year of a goal due now (AC-13, AC-18)", () => {
+    const result = projectGoal(
+      input({
+        asOf: "2024-12-01",
+        goal: { id: "g", targetYear: 2023, target: 0, contributionGrowth: 0 },
+        monthly: 0,
+        positions: [{ productId: "p", value: 12_000, basis: 10_000 }],
+        products: new Map([["p", { regime: "direct", mu: 0, ter: 0 }]]),
+        settings: { ...settings, zainetto: { amount: 1_000, expiry: "2023", goalId: "g" } },
+      }),
+    );
+    // gain 2,000 x 26% = 520 tax, less the 260 credit
+    expect(result.tax).toBeCloseTo(260, 9);
+  });
 });
