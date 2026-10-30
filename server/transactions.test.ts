@@ -127,8 +127,11 @@ describe("Transactions API", () => {
       productId,
       type: "coupon",
       amountCents: 1_500,
+      price: 55,
     });
     expect(coupon.body).toMatchObject({ qty: 0, price: 0, amountCents: 1_500 });
+    const listed = (await call<Transaction[]>("GET", "/api/transactions")).body;
+    expect(listed).toContainEqual(coupon.body);
   });
 
   it("refuses a zero price, an unknown goal and a bad date", async () => {

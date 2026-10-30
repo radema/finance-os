@@ -72,6 +72,12 @@ export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void 
     };
   };
 
+  // The response carries what is stored, so it matches a later GET (a coupon is stored with price 0).
+  const stored = (columns: Awaited<ReturnType<typeof toColumns>>) => ({
+    qty: fromScaled(columns.qtyScaled),
+    price: fromScaled(columns.priceScaled),
+  });
+
   router.route("GET", "/api/transactions", listQuery, async ({ goalId, year }) => {
     let query = db.selectFrom("transaction").selectAll();
     if (goalId) query = query.where("goalId", "=", goalId);
@@ -88,7 +94,7 @@ export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void 
       .insertInto("transaction")
       .values({ id, ...columns })
       .execute();
-    return { id, ...input, qty: fromScaled(columns.qtyScaled) } satisfies Transaction;
+    return { id, ...input, ...stored(columns) } satisfies Transaction;
   });
 
   router.route(
@@ -104,7 +110,7 @@ export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void 
       if (!exists) throw new HttpError(404, "transaction not found");
       const columns = await toColumns(input);
       await db.updateTable("transaction").set(columns).where("id", "=", id).execute();
-      return { id, ...input, qty: fromScaled(columns.qtyScaled) } satisfies Transaction;
+      return { id, ...input, ...stored(columns) } satisfies Transaction;
     },
   );
 
