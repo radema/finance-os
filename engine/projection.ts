@@ -1,4 +1,5 @@
 import type { Regime } from "./holdings.ts";
+import { liquidate, type Zainetto } from "./tax.ts";
 
 const MONTHS_PER_YEAR = 12;
 
@@ -51,6 +52,8 @@ export type ProductParams = {
   ter: number;
   /** Govt bonds only; default 0. */
   couponRate?: number;
+  /** `etf` only; default 0. */
+  whiteListShare?: number;
 };
 
 export type Position = {
@@ -65,12 +68,14 @@ export type ProjectionSettings = {
   taxStd: number;
   taxGovt: number;
   pensionTax: number;
+  zainetto?: Zainetto;
 };
 
 export type ProjectionInput = {
   /** ISO date, YYYY-MM-DD. */
   asOf: string;
   goal: {
+    id: string;
     targetYear: number;
     /** In today's euros. */
     target: number;
@@ -84,6 +89,8 @@ export type ProjectionInput = {
   /** Contribution weights by product id, in any scale. */
   weights: ReadonlyMap<string, number>;
   settings: ProjectionSettings;
+  /** Year the pension membership started. Needed when the goal holds a `pension` product. */
+  firstYear?: number;
 };
 
 export type ProductProjection = {
@@ -92,18 +99,20 @@ export type ProductProjection = {
   basis: number;
 };
 
-/** The goal at its due date, before liquidation taxes. */
+/** The goal at its due date: gross value, liquidation tax and net value. */
 export type GoalProjection = {
   tau: number;
   targetAtGoalDate: number;
   perProduct: ProductProjection[];
   gross: number;
+  tax: number;
+  net: number;
 };
 
 /**
  * Project one goal to its due date along the deterministic path.
  *
- * Inside a step the net coupon is added after the growth and before the stamp duty, so the
+ * Liquidation taxes come from `liquidate`. Inside a step the net coupon is added after the growth and before the stamp duty, so the
  * stamp duty is taken on the value that includes the coupon.
  */
 export function projectGoal(input: ProjectionInput): GoalProjection {
@@ -157,10 +166,31 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
     value,
     basis,
   }));
+  const { gross, tax, net } = liquidate(
+    perProduct.map(({ productId, value, basis }) => {
+      const params = products.get(productId);
+      return {
+        regime: params?.regime ?? "etf",
+        value,
+        basis,
+        whiteListShare: params?.whiteListShare,
+      };
+    }),
+    {
+      goalDate: grid.tau === 0 ? input.asOf : `${goal.targetYear}-12-31`,
+      goalId: goal.id,
+      zainetto: settings.zainetto,
+      taxStd: settings.taxStd,
+      taxGovt: settings.taxGovt,
+      firstYear: input.firstYear,
+    },
+  );
   return {
     tau: grid.tau,
     targetAtGoalDate: goal.target * (1 + settings.inflation) ** grid.tau,
     perProduct,
-    gross: perProduct.reduce((sum, p) => sum + p.value, 0),
+    gross,
+    tax,
+    net,
   };
 }

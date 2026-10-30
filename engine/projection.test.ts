@@ -16,7 +16,7 @@ function input(
 ): ProjectionInput {
   return {
     asOf: "2026-10-31",
-    goal: { targetYear: 2028, target: 10_000, contributionGrowth: 0 },
+    goal: { id: "g", targetYear: 2028, target: 10_000, contributionGrowth: 0 },
     monthly: 100,
     positions: [],
     weights: new Map([["p", 1]]),
@@ -66,7 +66,7 @@ describe("projectGoal", () => {
   it("grows the yearly contribution by contributionGrowth from the second full year", () => {
     const result = projectGoal(
       input({
-        goal: { targetYear: 2028, target: 0, contributionGrowth: 0.1 },
+        goal: { id: "g", targetYear: 2028, target: 0, contributionGrowth: 0.1 },
         products: new Map([["p", etf]]),
       }),
     );
@@ -76,7 +76,7 @@ describe("projectGoal", () => {
   it("returns the value at asOf when the goal year is past (AC-14)", () => {
     const result = projectGoal(
       input({
-        goal: { targetYear: 2025, target: 10_000, contributionGrowth: 0 },
+        goal: { id: "g", targetYear: 2025, target: 10_000, contributionGrowth: 0 },
         positions: [{ productId: "p", value: 500, basis: 400 }],
         products: new Map([["p", { ...etf, mu: 0.05 }]]),
       }),
@@ -90,7 +90,7 @@ describe("projectGoal", () => {
     const result = projectGoal(
       input({
         asOf: "2026-12-31",
-        goal: { targetYear: 2027, target: 0, contributionGrowth: 0 },
+        goal: { id: "g", targetYear: 2027, target: 0, contributionGrowth: 0 },
         monthly: 0,
         positions: [{ productId: "p", value: 10_000, basis: 10_000 }],
         products: new Map([["p", { regime: "govt", mu: 0.04, ter: 0, couponRate: 0.04 }]]),
@@ -135,7 +135,7 @@ describe("projectGoal", () => {
     const result = projectGoal(
       input({
         asOf: "2026-12-31",
-        goal: { targetYear: 2027, target: 0, contributionGrowth: 0 },
+        goal: { id: "g", targetYear: 2027, target: 0, contributionGrowth: 0 },
         monthly: 0,
         positions: [{ productId: "p", value: 10_000, basis }],
         products: new Map([["p", etf]]),
@@ -152,7 +152,7 @@ describe("projectGoal", () => {
     const result = projectGoal(
       input({
         asOf: "2026-12-31",
-        goal: { targetYear: 2027, target: 0, contributionGrowth: 0 },
+        goal: { id: "g", targetYear: 2027, target: 0, contributionGrowth: 0 },
         monthly: 0,
         positions: [{ productId: "p", value: 10_000, basis: 5 }],
         products: new Map([["p", etf]]),
@@ -167,11 +167,12 @@ describe("projectGoal", () => {
       projectGoal(
         input({
           asOf: "2026-12-31",
-          goal: { targetYear: 2027, target: 0, contributionGrowth: 0 },
+          goal: { id: "g", targetYear: 2027, target: 0, contributionGrowth: 0 },
           monthly: 0,
           positions: [{ productId: "p", value: 1000, basis: 800 }],
           products: new Map([["p", { regime, mu: 0.1, ter: 0 }]]),
           settings: { ...settings, bollo: 0.002 },
+          firstYear: 2020,
         }),
       ).perProduct[0];
     expect(run("cash")?.value).toBeCloseTo(1000 * (1 + 0.1 * 0.74) * (1 - 0.002), 9);
@@ -194,5 +195,19 @@ describe("projectGoal", () => {
   it("gives the target at the goal date as target x (1 + inflation)^tau (AC-17)", () => {
     const result = projectGoal(input({ products: new Map([["p", etf]]) }));
     expect(result.targetAtGoalDate).toBeCloseTo(10_438.39, 2);
+  });
+
+  it("returns tax and net at the goal date (AC-13)", () => {
+    const result = projectGoal(
+      input({
+        asOf: "2026-12-31",
+        goal: { id: "g", targetYear: 2027, target: 0, contributionGrowth: 0 },
+        monthly: 0,
+        positions: [{ productId: "p", value: 10_000, basis: 8_000 }],
+        products: new Map([["p", { ...etf, whiteListShare: 0 }]]),
+      }),
+    );
+    expect(result.tax).toBeCloseTo(520, 9);
+    expect(result.net).toBeCloseTo(9_480, 9);
   });
 });

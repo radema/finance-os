@@ -16,3 +16,10 @@ export type {
   TimeGrid,
 } from "./projection.ts";
 export { normaliseWeights, projectGoal, timeGrid } from "./projection.ts";
+export type {
+  Liquidation,
+  LiquidationContext,
+  LiquidationPosition,
+  Zainetto,
+} from "./tax.ts";
+export { liquidate, pensionExitRate } from "./tax.ts";
