@@ -1,7 +1,11 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { z } from "zod";
+import { registerAllocationRoutes } from "./allocation.ts";
+import { registerAssumptionRoutes } from "./assumptions.ts";
 import { openDatabase } from "./db.ts";
+import { registerGoalRoutes } from "./goals.ts";
+import { registerProductRoutes } from "./products.ts";
 import { createRouter } from "./router.ts";
 import { serveStatic } from "./static.ts";
 
@@ -36,6 +40,10 @@ export async function startServer({
   const db = await openDatabase(dataDir);
   const router = createRouter();
   router.route("GET", "/api/health", z.object({}), () => ({ status: "ok" }));
+  registerProductRoutes(router, db);
+  registerGoalRoutes(router, db);
+  registerAllocationRoutes(router, db);
+  registerAssumptionRoutes(router, db);
 
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];

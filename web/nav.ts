@@ -45,6 +45,20 @@ export const NAV: readonly NavSection[] = [
 
 export const DEFAULT_ROUTE = "overview";
 
+/**
+ * The Setup tabs. Goals is a tab only: the sidebar's Goals section is for the Goals screens, so the
+ * Setup items of the sidebar keep the spec's list.
+ */
+export const SETUP_TABS: readonly NavItem[] = [
+  { key: "setup/products", label: "Products" },
+  { key: "setup/allocation", label: "Allocation" },
+  { key: "setup/goals", label: "Goals" },
+  { key: "setup/assumptions", label: "Assumptions" },
+];
+
+/** Route keys that have a screen. The sidebar shows "soon" on the others. */
+export const isBuilt = (key: string): boolean => SETUP_TABS.some((tab) => tab.key === key);
+
 /** The page behind a route key: an item, or a section that has no items. */
 export function findPage(key: string): NavItem | undefined {
   for (const s of NAV) {

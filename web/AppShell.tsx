@@ -1,4 +1,5 @@
-import { DEFAULT_ROUTE, findPage, NAV } from "./nav.ts";
+import { DEFAULT_ROUTE, findPage, isBuilt, NAV } from "./nav.ts";
+import { SetupScreen } from "./setup/SetupScreen.tsx";
 
 function Sidebar({ route }: { route: string }) {
   return (
@@ -29,7 +30,7 @@ function Sidebar({ route }: { route: string }) {
                     aria-current={route === item.key ? "page" : undefined}
                   >
                     {item.label}
-                    <span className="soon">soon</span>
+                    {isBuilt(item.key) ? null : <span className="soon">soon</span>}
                   </a>
                 ))}
               </>
@@ -71,7 +72,7 @@ export function AppShell({ route }: { route: string }) {
     <div className="shell">
       <Sidebar route={route} />
       <main className="main">
-        <SoonPage route={route} />
+        {isBuilt(route) ? <SetupScreen route={route} /> : <SoonPage route={route} />}
       </main>
     </div>
   );

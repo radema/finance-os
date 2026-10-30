@@ -2,6 +2,8 @@
 // snake_case columns of the migrations. `*Cents` columns are integer cents, `*Scaled` columns are
 // integers scaled by 10^6 (see engine/units.ts). Booleans are 0 | 1.
 type Flag = 0 | 1;
+
+export const toFlag = (value: boolean): Flag => (value ? 1 : 0);
 type PriceSource = "provider" | "csv" | "manual";
 type ImportKind = "transactions" | "prices" | "products" | "goals";
 

@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AppShell } from "./AppShell.tsx";
-import { findPage, NAV } from "./nav.ts";
+import { findPage, isBuilt, NAV, SETUP_TABS } from "./nav.ts";
 
 describe("NAV", () => {
   it("has the seven sections of the spec, in order", () => {
@@ -67,5 +67,33 @@ describe("AppShell", () => {
 
   it("tells the user when the route is unknown", () => {
     expect(render("nope")).toContain("Page not found");
+  });
+
+  it("shows the Setup tabs on a built Setup page, and no placeholder", () => {
+    const html = render("setup/goals");
+    expect(html).not.toContain("This page is not built yet");
+    for (const tab of SETUP_TABS) expect(html).toContain(`href="#/${tab.key}"`);
+    expect(html).toContain("Add goal");
+  });
+
+  it("keeps the soon tag on the Setup items without a screen", () => {
+    const html = render("setup/products");
+    const item = (label: string) =>
+      html.match(new RegExp(`class="nav-item"[^>]*>${label}(.*?)</a>`))?.[1] ?? "";
+    expect(item("Products")).not.toContain("soon");
+    expect(item("Cash flow")).toContain("soon");
+  });
+});
+
+describe("SETUP_TABS", () => {
+  it("lists the four Setup tabs, and the sidebar items keep the spec list", () => {
+    expect(SETUP_TABS.map((tab) => tab.label)).toEqual([
+      "Products",
+      "Allocation",
+      "Goals",
+      "Assumptions",
+    ]);
+    expect(isBuilt("setup/goals")).toBe(true);
+    expect(isBuilt("setup/cash-flow")).toBe(false);
   });
 });
