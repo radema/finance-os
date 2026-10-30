@@ -61,9 +61,11 @@ export function GoalsListScreen() {
                   ? "No goals yet"
                   : `${goals.length} ${goals.length === 1 ? "goal holds" : "goals hold"} ${formatAmount(value)} against ${formatAmount(target)} of targets`}
               </h1>
-              <p className="unit">
-                Value at the end of {asOf.slice(0, 7)}. Targets in today's euros.
-              </p>
+              {goals.length > 0 ? (
+                <p className="unit">
+                  Value at the end of {asOf.slice(0, 7)}. Targets in today's euros.
+                </p>
+              ) : null}
 
               {goals.length === 0 ? (
                 sampleAvailable ? (
