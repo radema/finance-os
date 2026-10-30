@@ -23,14 +23,21 @@ async function isEmpty(db: Kysely<DB>): Promise<boolean> {
       .executeTakeFirstOrThrow();
     if (row.n > 0) return false;
   }
-  return true;
+  // The loader writes these two documents, so a saved one would be overwritten.
+  const documents = await db
+    .selectFrom("document")
+    .select("kind")
+    .where("kind", "in", ["settings", "pensionPlan"])
+    .execute();
+  return documents.length === 0;
 }
 
 /**
  * Writes the synthetic fixture (products, prices, goals with plans, weights, ledger, settings and
  * the partial pension plan) in one transaction. It never touches existing data.
  *
- * @throws HttpError 409 when the data folder already has a product, a goal or a transaction.
+ * @throws HttpError 409 when the data folder already has a product, a goal, a transaction, or a saved settings or
+ * pension plan document.
  */
 export async function loadSampleData(db: Kysely<DB>): Promise<void> {
   await db.transaction().execute(async (trx) => {

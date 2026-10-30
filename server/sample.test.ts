@@ -5,7 +5,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { pensionPlanPartialSchema } from "../engine/fixture.ts";
 import { type DB, openDatabase } from "./db.ts";
-import { loadDocument } from "./documents.ts";
+import { loadDocument, saveDocument } from "./documents.ts";
 import { HttpError } from "./router.ts";
 import { loadSampleData } from "./sample.ts";
 
@@ -106,6 +106,18 @@ describe("loadSampleData", () => {
     await expect(loadSampleData(db)).rejects.toBeInstanceOf(HttpError);
     expect(await count(db, "goal")).toBe(1);
     expect(await count(db, "product")).toBe(0);
+  });
+
+  it("refuses over a saved settings document and writes nothing", async () => {
+    await saveDocument(db, "settings", { inflation: 0.03 });
+    await expect(loadSampleData(db)).rejects.toMatchObject({ status: 409 });
+    expect(await count(db, "product")).toBe(0);
+    const settings = await db
+      .selectFrom("document")
+      .select("value")
+      .where("kind", "=", "settings")
+      .executeTakeFirstOrThrow();
+    expect(JSON.parse(settings.value)).toEqual({ inflation: 0.03 });
   });
 
   it("is reachable as POST /api/sample-data", async () => {

@@ -1,5 +1,7 @@
 // The synthetic fixture (fixtures/sample.json): the engine's regression input and the app's sample
-// data. Money in the file is in euros as floats; the loader converts it to integer cents.
+// data. Ledger quantities, prices and commissions are in euros as floats; the loader converts them
+// to integer storage units. Goal targets, plan amounts and the zainetto amount are already in
+// integer cents (`targetCents`, `monthlyCents`, `amountCents`).
 import { z } from "zod";
 import {
   allocationWeightSchema,
