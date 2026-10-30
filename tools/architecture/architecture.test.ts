@@ -108,6 +108,21 @@ describe("checkArchitecture on planted violations", () => {
     ]);
   });
 
+  it("ignores ordinary prose that reads like SQL outside server/", () => {
+    plant(
+      "web/copy.ts",
+      'export const t = ["Select an account from the list", "Delete from history", "Update total set by you"];\n',
+    );
+    expect(checkArchitecture(root)).toEqual([]);
+  });
+
+  it("still flags upper-case DELETE FROM and UPDATE ... SET outside server/", () => {
+    const del = ["DELETE", "FROM", "goals"].join(" ");
+    const upd = ["UPDATE", "goals", "SET", "x"].join(" ");
+    plant("web/q.ts", `export const q = ["${del}", "${upd}"];\n`);
+    expect(checkArchitecture(root).map((v) => v.detail)).toEqual([del, upd]);
+  });
+
   it("allows kysely, node:* and SQL text inside server/", () => {
     const sql = ["INSERT", "INTO", "goals"].join(" ");
     plant(

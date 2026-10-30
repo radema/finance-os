@@ -23,9 +23,9 @@ const SOURCE_FILE = /\.(?:ts|tsx|mts|cts)$/;
 const IMPORT_SPECIFIER =
   /\b(?:import|export)\b[^'"`;]*?\bfrom\s*(['"])(.+?)\1|\bimport\s*(['"])(.+?)\3|\b(?:import|require)\s*\(\s*(['"])(.+?)\5/g;
 
-// A SELECT is matched in upper case only, to keep prose such as "select a row from the list" quiet.
+// Keywords match in upper case only, so prose such as "Delete from history" stays quiet.
 const SQL_TEXT =
-  /\bSELECT\s[^;]{1,200}?\sFROM\s+\w+|\b(?:insert\s+into|delete\s+from|create\s+table|alter\s+table|drop\s+table)\s+\w+|\bupdate\s+\w+\s+set\s+\w+/gi;
+  /\bSELECT\s[^;]{1,200}?\sFROM\s+\w+|\b(?:INSERT\s+INTO|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\s+\w+|\bUPDATE\s+\w+\s+SET\s+\w+/g;
 
 const isNodeModule = (specifier: string): boolean =>
   specifier.startsWith("node:") || builtinModules.includes(specifier.split("/")[0] ?? specifier);
