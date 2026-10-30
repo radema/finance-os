@@ -48,3 +48,8 @@ real/*.xls
 
 # Prototype screenshots: regenerable, too large to commit
 .scratch/gbi-v1/prototypes/*/screens/
+
+# Prototype build output and local data
+.scratch/gbi-v1/prototypes/*/node_modules/
+.scratch/gbi-v1/prototypes/*/dist/
+.scratch/gbi-v1/prototypes/*/.data/

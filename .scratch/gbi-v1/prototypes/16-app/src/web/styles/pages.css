@@ -1,0 +1,50 @@
+/* Page-local styles carried over from prototype 11 (transactions.html, start.html) plus small additions for the working app. */
+.tx .li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "what amt" "date fee"; }
+.tx .what { grid-area: what; } .tx .amt { grid-area: amt; text-align: right; }
+.tx .date { grid-area: date; font-size: var(--t-label); color: var(--muted); } .tx .fee { grid-area: fee; font-size: var(--t-label); color: var(--muted); text-align: right; }
+.tx .t, .tx .gl { display: none; } .tx .li small.m { display: block; }
+@media (min-width: 760px) {
+  .tx .li, .tx .head { grid-template-columns: 104px minmax(0, 2fr) 160px minmax(0, 1.2fr) 110px 96px 36px; grid-template-areas: "date what t gl amt fee x"; column-gap: 16px; align-items: center; }
+  .tx .t, .tx .gl { display: block; } .tx .li small.m { display: none; } .tx .date, .tx .fee { font-size: var(--t-sub); color: var(--ink2); }
+  .tx .head > span:nth-child(n+5) { text-align: right; }
+}
+.tx .x { grid-area: x; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; }
+.steps li { border-top: 2px solid var(--grid); padding-top: 8px; font-size: var(--t-label); line-height: var(--lh-label); color: var(--muted); }
+.steps li b { display: block; font-weight: 400; font-size: var(--t-axis); font-family: var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.steps li.done { border-top-color: var(--ink2); color: var(--ink2); }
+.steps li.cur { border-top-color: var(--ink); color: var(--ink); font-weight: 600; }
+.drop { border: 1px dashed var(--base); border-radius: 4px; padding: 20px; text-align: center; color: var(--ink2); margin-bottom: 16px; }
+.rowchk .li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.rowchk .li > .l1 { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
+.rowchk .skip { opacity: .72; }
+.rowchk .warn { font-size: var(--t-label); line-height: 18px; color: var(--ink2); display: flex; gap: 6px; align-items: flex-start; }
+.rowchk .warn svg { width: 14px; height: 14px; flex: none; margin-top: 2px; color: var(--muted); }
+.rowchk select { max-width: 320px; }
+.rowchk .need select { border-color: var(--hl); border-width: 2px; }
+.start { max-width: 760px; }
+.tasks { border-top: 1px solid var(--grid); }
+.task { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 0 12px; padding: 18px 0; border-bottom: 1px solid var(--grid); }
+.task .n { width: 28px; height: 28px; background: var(--tint-blue); border: 1px solid color-mix(in srgb, var(--blue) 40%, transparent); border-radius: 50%; display: grid; place-items: center; font-size: var(--t-label); color: var(--ink2); }
+.task.done .n { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.task.done .n svg { width: 16px; height: 16px; }
+.task h3 { font: 600 var(--t-body)/var(--lh-body) var(--font-text); margin: 0; }
+.task p { font-size: var(--t-sub); line-height: var(--lh-sub); color: var(--ink2); margin: 2px 0 10px; max-width: 42em; }
+.task .st { font-size: var(--t-label); color: var(--muted); margin-left: 8px; font-weight: 400; }
+.xbtn { background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: var(--t-label); text-decoration: underline; padding: 4px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.presets button { font: inherit; font-size: var(--t-label); border: 1px solid var(--base); background: transparent; color: var(--ink2); border-radius: 999px; padding: 7px 12px; cursor: pointer; min-height: 34px; }
+.presets button:hover { border-color: var(--ink2); }
+.backlink { display: inline-block; margin-bottom: 16px; font-size: var(--t-sub); }
+.toast { position: fixed; right: 16px; bottom: 16px; z-index: 80; background: var(--ink); color: var(--surface); padding: 10px 14px; border-radius: 6px; font-size: var(--t-label); max-width: 360px; }
+.toast.err { background: var(--hl); color: #fff; }
+.loading { padding: 48px 0; color: var(--muted); }
+.pgrid { width: 100%; border-collapse: collapse; font-size: var(--t-sub); }
+.pgrid th, .pgrid td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+.pgrid th:first-child, .pgrid td:first-child { text-align: left; white-space: normal; }
+.pgrid thead th { position: sticky; top: var(--topbar); background: var(--raised); color: var(--muted); font-weight: 400; font-size: var(--t-label); }
+.pgrid input { width: 104px; text-align: right; }
+.pgrid td.src { color: var(--muted); font-size: var(--t-label); }
+.sc { max-width: 100%; overflow-x: auto; }
+.tabs-flat { display: flex; gap: 16px; flex-wrap: wrap; }
+.mini { font-size: var(--t-label); color: var(--muted); }
