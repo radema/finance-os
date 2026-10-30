@@ -17,6 +17,7 @@ export type {
   TimeGrid,
 } from "./projection.ts";
 export { normaliseWeights, projectGoal, timeGrid } from "./projection.ts";
+export { goalSlot } from "./slots.ts";
 export type {
   Liquidation,
   LiquidationContext,

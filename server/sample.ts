@@ -15,7 +15,8 @@ import { HttpError } from "./router.ts";
 // Bundled into the server build: the installed app has no repo files at run time.
 const sample = sampleDataSchema.parse(sampleJson);
 
-async function isEmpty(db: Kysely<DB>): Promise<boolean> {
+/** True when the data folder has nothing the sample loader would collide with. */
+export async function isEmpty(db: Kysely<DB>): Promise<boolean> {
   for (const table of ["product", "goal", "transaction"] as const) {
     const row = await db
       .selectFrom(table)

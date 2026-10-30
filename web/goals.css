@@ -1,0 +1,130 @@
+/* Goals screens: the goal chip, KPI cards, the exhibit. Colours, type and spacing come from tokens.css.
+   A screen sets --slot (var(--slotN)) on its root; the chip sets it on itself with --tint. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s1) var(--s2);
+  border: 1px solid color-mix(in srgb, var(--slot) 42%, transparent);
+  border-radius: 999px;
+  background: var(--tint);
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  font-weight: 500;
+  text-decoration: none;
+}
+.chip:hover {
+  border-color: var(--slot);
+}
+.chip-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--slot);
+}
+
+.meter-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.meter {
+  display: inline-block;
+  width: 96px;
+  height: var(--s2);
+  border-radius: 4px;
+  background: var(--wash);
+  overflow: clip;
+}
+.meter-fill {
+  display: block;
+  height: 100%;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s3);
+  margin: var(--s4) 0;
+}
+.kpi {
+  padding: var(--s3);
+  border-top: 3px solid var(--slot);
+  border-radius: 8px;
+  background: var(--raised);
+}
+.kpi-label {
+  font: 500 var(--t-axis) / var(--lh-axis) var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink2);
+}
+.kpi-value {
+  margin: var(--s1) 0;
+  font: var(--w-display) var(--t-title) / var(--lh-title) var(--font-display);
+  letter-spacing: var(--ls-display);
+}
+.table tfoot th,
+.table tfoot td {
+  font-weight: 600;
+}
+.table tfoot th {
+  text-align: left;
+}
+
+.exhibit {
+  max-width: 960px;
+  margin: var(--s5) 0 0;
+}
+.exhibit-title {
+  margin: 0;
+  max-width: 34em;
+  font: var(--w-display) 20px / 28px var(--font-display);
+  letter-spacing: var(--ls-display);
+  text-wrap: balance;
+}
+.legend {
+  display: flex;
+  gap: var(--s3);
+  margin: var(--s3) 0 var(--s2);
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.swatch {
+  display: inline-block;
+  width: 16px;
+}
+.swatch-area {
+  height: 10px;
+  background: color-mix(in srgb, var(--slot) 40%, transparent);
+}
+.swatch-line {
+  height: 0;
+  border-top: 2px solid var(--ctx);
+}
+.chart {
+  width: 100%;
+  height: 320px;
+}
+.callout {
+  max-width: 46em;
+  margin-top: var(--s3);
+  padding-left: var(--s3);
+  border-left: 2px solid var(--hl);
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  color: var(--ink2);
+}
+.source {
+  margin-top: var(--s2);
+  font-size: var(--t-axis);
+  line-height: var(--lh-axis);
+  color: var(--muted);
+}

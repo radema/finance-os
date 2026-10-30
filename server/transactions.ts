@@ -35,6 +35,40 @@ const fromRow = (row: TransactionTable): Transaction => ({
   note: row.note,
 });
 
+/** A ledger row with the stored amount, which a coupon needs: its qty is 0. */
+export type LedgerEntry = LedgerRow & { amountCents: number };
+
+/** The whole ledger in date and entry order. The price is per unit: a BTP is quoted per 100. */
+export async function loadLedger(db: Kysely<DB>): Promise<LedgerEntry[]> {
+  const rows = await db
+    .selectFrom("transaction")
+    .innerJoin("product", "product.id", "transaction.productId")
+    .select([
+      "transaction.date",
+      "transaction.goalId",
+      "transaction.productId",
+      "transaction.type",
+      "transaction.qtyScaled",
+      "transaction.priceScaled",
+      "transaction.commissionCents",
+      "transaction.amountCents",
+      "product.regime",
+    ])
+    .orderBy("transaction.date")
+    .orderBy(sql`"transaction".rowid`)
+    .execute();
+  return rows.map((row) => ({
+    date: row.date,
+    goalId: row.goalId,
+    productId: row.productId,
+    type: row.type,
+    qty: fromScaled(row.qtyScaled),
+    price: unitPrice(row.regime, fromScaled(row.priceScaled)),
+    commission: row.commissionCents === null ? 0 : fromCents(row.commissionCents),
+    amountCents: row.amountCents,
+  }));
+}
+
 /** Transactions: list, create, edit, delete; holdings derived from them; the last price of a product. */
 export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void {
   const regimeOf = async (productId: string) => {
@@ -125,32 +159,7 @@ export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void 
 
   // Holdings are derived from the ledger on every call; nothing about them is stored.
   router.route("GET", "/api/holdings", z.object({}), async () => {
-    const rows = await db
-      .selectFrom("transaction")
-      .innerJoin("product", "product.id", "transaction.productId")
-      .select([
-        "transaction.date",
-        "transaction.goalId",
-        "transaction.productId",
-        "transaction.type",
-        "transaction.qtyScaled",
-        "transaction.priceScaled",
-        "transaction.commissionCents",
-        "product.regime",
-      ])
-      .orderBy("transaction.date")
-      .orderBy(sql`"transaction".rowid`)
-      .execute();
-    // The PMC is euros per unit, so the ledger carries the unit price (a BTP is quoted per 100).
-    const ledger: LedgerRow[] = rows.map((row) => ({
-      date: row.date,
-      goalId: row.goalId,
-      productId: row.productId,
-      type: row.type,
-      qty: fromScaled(row.qtyScaled),
-      price: unitPrice(row.regime, fromScaled(row.priceScaled)),
-      commission: row.commissionCents === null ? 0 : fromCents(row.commissionCents),
-    }));
+    const ledger = await loadLedger(db);
     const { units, accountUnits, pmc } = holdingsAt(ledger, "9999-12-31");
     return {
       buckets: [...units].flatMap(([goalId, products]) =>
