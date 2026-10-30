@@ -15,7 +15,8 @@ const vite = await createServer({
     host: "127.0.0.1",
     port: VITE_PORT,
     strictPort: true,
-    proxy: { "/api": api.url },
+    // "/api/", not "/api": a bare prefix would also send the web module /api.ts to the API.
+    proxy: { "/api/": api.url },
   },
 });
 await vite.listen();
