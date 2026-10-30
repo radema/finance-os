@@ -1,0 +1,124 @@
+/* Shell styles. Colours, type and spacing come only from tokens.css. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font: 400 var(--t-body) / var(--lh-body) var(--font-text);
+  font-variant-numeric: tabular-nums;
+}
+h1,
+p {
+  margin: 0;
+}
+a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+  text-decoration-color: var(--base);
+}
+a:hover {
+  text-decoration-color: var(--ink);
+}
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Sidebar left, content right. Desktop first: fluid from about 1024 to 1920 px. */
+.shell {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  min-height: 100vh;
+}
+@media (min-width: 1280px) {
+  .shell {
+    grid-template-columns: 248px minmax(0, 1fr);
+  }
+}
+.side {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid var(--grid);
+  padding: var(--s4) var(--s2) var(--s3);
+  scrollbar-width: thin;
+}
+.brand {
+  display: block;
+  padding: 0 var(--s2) var(--s3);
+  font: var(--w-display) 17px / 1.2 var(--font-display);
+  letter-spacing: var(--ls-display);
+  text-decoration: none;
+}
+.nav-section {
+  padding: var(--s2) 0;
+}
+.nav-head,
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+}
+.nav-head {
+  padding: var(--s2);
+  font-size: var(--t-sub);
+  font-weight: 600;
+  color: var(--ink);
+}
+.nav-item {
+  padding: var(--s1) var(--s2) var(--s1) var(--s4);
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  color: var(--ink2);
+}
+a.nav-head:hover,
+.nav-item:hover {
+  background: var(--wash);
+  color: var(--ink);
+}
+.nav [aria-current="page"] {
+  color: var(--ink);
+  font-weight: 600;
+  border-left-color: var(--ink);
+}
+.nav :focus-visible {
+  outline-offset: -2px;
+}
+.soon {
+  font: 500 10px / 12px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.main {
+  padding: var(--s5) clamp(24px, 3vw, 56px) var(--s6);
+}
+.tag {
+  margin-bottom: var(--s2);
+  font: 500 var(--t-axis) / var(--lh-axis) var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.title {
+  max-width: 34em;
+  font: var(--w-display) var(--t-title) / var(--lh-title) var(--font-display);
+  letter-spacing: var(--ls-display);
+  text-wrap: balance;
+}
+.unit {
+  max-width: 46em;
+  margin-top: var(--s2);
+  font: 300 var(--t-sub) / var(--lh-sub) var(--font-text);
+  color: var(--ink2);
+}
