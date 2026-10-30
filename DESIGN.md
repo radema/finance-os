@@ -79,7 +79,7 @@ The OE type scale, one step up:
 
 | Token | Size / line | Use |
 |---|---|---|
-| `--t-title` | 26 / 32 px | exhibit action title (page title 28 / 34) |
+| `--t-title` | 26 / 32 px | exhibit action title  |
 | `--t-body` | 16 / 24 px | body |
 | `--t-sub` | 15 / 22 px | tables, subtitle, unit line |
 | `--t-callout` | 14 / 20 px | callout, sidebar items |

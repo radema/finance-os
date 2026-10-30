@@ -57,7 +57,7 @@ a:hover {
   text-decoration: none;
 }
 .nav-section {
-  padding: 6px 0;
+  padding: var(--s2) 0;
 }
 .nav-head,
 .nav-item {
@@ -69,13 +69,13 @@ a:hover {
   border-left: 2px solid transparent;
 }
 .nav-head {
-  padding: 7px var(--s2);
+  padding: var(--s2);
   font-size: var(--t-sub);
   font-weight: 600;
   color: var(--ink);
 }
 .nav-item {
-  padding: 5px var(--s2) 5px var(--s4);
+  padding: var(--s1) var(--s2) var(--s1) var(--s4);
   font-size: var(--t-callout);
   line-height: var(--lh-callout);
   color: var(--ink2);
@@ -101,7 +101,7 @@ a.nav-head:hover,
 }
 
 .main {
-  padding: var(--s5) clamp(24px, 3vw, 56px) 64px;
+  padding: var(--s5) clamp(24px, 3vw, 56px) var(--s6);
 }
 .tag {
   margin-bottom: var(--s2);
@@ -112,7 +112,7 @@ a.nav-head:hover,
 }
 .title {
   max-width: 34em;
-  font: var(--w-display) 28px / 34px var(--font-display);
+  font: var(--w-display) var(--t-title) / var(--lh-title) var(--font-display);
   letter-spacing: var(--ls-display);
   text-wrap: balance;
 }
