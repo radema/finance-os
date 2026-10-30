@@ -210,7 +210,7 @@ minProb or the priority default.
 **Pension schedule (year t, t = 1 is Y0).** RAL(t) = RAL × (1 + g)^(t−1); TFR = RAL × 6.91%; worker
 and employer = RAL × %; voluntary = given, or max(0, cap + extra − worker − employer) (TFR outside the
 cap, t12 E6). Deductible = min(cap + extra, worker + employer + voluntary). Refund (cash inflow in
-t + 1) = min(voluntary, room) × marginalRate. For Y0 the voluntary amount is the actual voluntary
+t + 1) = min(voluntary, room) × marginalRate, where room = max(0, cap + extra − worker − employer). For Y0 the voluntary amount is the actual voluntary
 YTD (from transactions) plus the stub schedule; its refund is paid in Y0+1. Each year's TFR, worker, employer and voluntary flows are
 split separately by each product's % of that flow (t12 S5, no frozen year-1 weights). The engine
 values the whole pot net of exit tax; the Pension and Goal screens and the glossary state that usually
@@ -533,7 +533,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-54: MC accuracy. Check: fixture goal, 1,000 paths vs a 20,000-path reference. Expected: P(success) within ±2 pp.
 - AC-55: Stub shock scaling. Check: engine test, f = 2/12, many paths. Expected: the sample variance of stub log-returns is f·s² within sampling error.
 - AC-56: Cholesky fallback. Check: engine test with a non-positive-definite matrix. Expected: off-diagonals shrunk in 10% steps until it factorises; a flag is returned.
-- AC-57: Required contribution. Check: engine + property tests. Expected: the returned amount reaches the target (det.) or the required P (MC); `null` after 12 doublings; τ < 1 → 0 if met, else `null`.
+- AC-57: Required contribution. Check: engine + property tests. Expected: the returned amount reaches the target (det.) or the required P (MC); `null` after 12 doublings; no contribution step left (r = 0 and targetYear = Y0, or τ = 0) → 0 if met, else `null`; a goal due this year with r > 0 is solved normally.
 - AC-58: Status. Check: engine test. Expected: P ≥ required → On track; within 15 points → At risk; else Off track; minProb overrides the priority default.
 - AC-59: FI levels. Check: engine tests (t07). Expected: essential 1,000, optional 500, expenseGrowth = inflation → L2 = 300,000, L3 = 400,000 flat in all years; expenseGrowth 3% vs inflation 2% → L2(10) ≈ 331,000.
 - AC-60: FI wealth. Check: engine tests. Expected: net of liquidation tax today and projected; includePension defaults to true; Level 1 progress excludes the pension bucket; unticking a goal's countsTowardFI removes it.

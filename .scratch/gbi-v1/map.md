@@ -12,9 +12,9 @@ v1 = the whole source spec (6 milestones, 13 screens), built incrementally.
 Done when:
 
 - [ ] `.scratch/gbi-v1/spec.md` exists; every item under "Open questions" in `reference/source-spec.md` is answered in it or listed as out of scope; a `spec-reviewer` pass reports no blocking finding.
-- [ ] Every file in `.scratch/gbi-v1/issues/` has `Status: resolved` or is listed under Out of scope.
-- [ ] `gh issue list -R radema/finance-os --label gbi-v1` shows the parent issue(s) and sub-issues; a `spec-reviewer` `MODE: briefs` pass maps every `AC-` id of the spec to a sub-issue.
-- [ ] The spec names the keep/drop list for the current repo and the content of the new `CLAUDE.md`; the wipe itself is the first implementation sub-issue.
+- [x] Every file in `.scratch/gbi-v1/issues/` has `Status: resolved` or is listed under Out of scope.
+- [x] `gh issue list -R radema/finance-os --label gbi-v1` shows the parent issue(s) and sub-issues; a `spec-reviewer` `MODE: briefs` pass maps every `AC-` id of the spec to a sub-issue.
+- [x] The spec names the keep/drop list for the current repo and the content of the new `CLAUDE.md`; the wipe itself is the first implementation sub-issue.
 
 ## Notes
 
@@ -72,6 +72,7 @@ Folder: `.scratch/gbi-v1/` — research findings in `research/NN-<slug>.md`, pro
 - [13 — How v1 is cut into GitHub stories for ticket-loop](issues/13-delivery-slicing.md) — 7 parent issues S0–S6 cut vertically (wipe+scaffold first), labels `gbi-v1` + triage roles, `pnpm gate` per trail + CI workflow, tag gate in S0, one UI gate per story, Codex review on engine stories; Excel v2 importer and mobile layout move to v2; merge this branch to `main` before S0.
 - [16 — Working prototype](issues/16-working-prototype.md) — stack proven end to end (18 golden tests, analysis 230 ms); goal due 31 Dec, stub year proportional to time, per-kind price age, own XLSX reader; adds final story S7 UI/UX polish with an impeccable audit.
 - [14 — Write the v1 spec](issues/14-write-spec.md) — spec.md written and reviewed: AC-1…AC-93 under stories S0–S7, 31 December due date supersedes t12's golden 1,400 (now 2,600), v2 candidates and open-question table.
+- [15 — Publish implementation tickets on GitHub](issues/15-publish-tickets.md) — 8 parents #2–#9 (S0–S7) + 65 native sub-issues #10–#74 with briefs, deps and DAGs, label `gbi-v1`; GBI v2 backlog #75; AC-57 and refund room aligned in the spec.
 
 ## Not yet specified
 
