@@ -54,7 +54,7 @@ describe("loadSampleData", () => {
     expect(sell).toMatchObject({
       qtyScaled: -10_000_000,
       commissionCents: 295,
-      amountCents: -118_000,
+      amountCents: 118_000,
     });
     const bond = await db
       .selectFrom("transaction")

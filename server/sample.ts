@@ -98,7 +98,7 @@ export async function loadSampleData(db: Kysely<DB>): Promise<void> {
           qtyScaled: toScaled(qty),
           priceScaled: toScaled(price),
           commissionCents: commission === undefined ? null : toCents(commission),
-          amountCents: toCents(qty * unitPrice(regime, price)),
+          amountCents: toCents(Math.abs(qty) * unitPrice(regime, price)),
           note: "",
           importBatchId: null,
         })
