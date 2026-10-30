@@ -9,6 +9,7 @@ import { registerProductRoutes } from "./products.ts";
 import { createRouter } from "./router.ts";
 import { registerSampleRoutes } from "./sample.ts";
 import { serveStatic } from "./static.ts";
+import { registerTransactionRoutes } from "./transactions.ts";
 
 const HOST = "127.0.0.1";
 
@@ -46,6 +47,7 @@ export async function startServer({
   registerAllocationRoutes(router, db);
   registerAssumptionRoutes(router, db);
   registerSampleRoutes(router, db);
+  registerTransactionRoutes(router, db);
 
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];

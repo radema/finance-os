@@ -46,7 +46,8 @@ export function holdingsAt(ledger: readonly LedgerRow[], date: string): Holdings
     if (type === "coupon") continue;
 
     const held = accountUnits.get(productId) ?? 0;
-    if (type !== "sell" && qty > 0) {
+    // A buy that brings an oversold position back to exactly 0 units keeps the PMC as it was.
+    if (type !== "sell" && qty > 0 && held + qty !== 0) {
       const cost = (pmc.get(productId) ?? 0) * held + price * qty + commission;
       pmc.set(productId, cost / (held + qty));
     }

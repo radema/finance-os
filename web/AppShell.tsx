@@ -1,4 +1,5 @@
-import { DEFAULT_ROUTE, findPage, isBuilt, NAV } from "./nav.ts";
+import { DEFAULT_ROUTE, findPage, isBuilt, NAV, TRANSACTIONS_ROUTE } from "./nav.ts";
+import { TransactionsScreen } from "./operations/TransactionsScreen.tsx";
 import { SetupScreen } from "./setup/SetupScreen.tsx";
 
 function Sidebar({ route }: { route: string }) {
@@ -72,7 +73,13 @@ export function AppShell({ route }: { route: string }) {
     <div className="shell">
       <Sidebar route={route} />
       <main className="main">
-        {isBuilt(route) ? <SetupScreen route={route} /> : <SoonPage route={route} />}
+        {route === TRANSACTIONS_ROUTE ? (
+          <TransactionsScreen />
+        ) : isBuilt(route) ? (
+          <SetupScreen route={route} />
+        ) : (
+          <SoonPage route={route} />
+        )}
       </main>
     </div>
   );

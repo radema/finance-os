@@ -56,8 +56,12 @@ export const SETUP_TABS: readonly NavItem[] = [
   { key: "setup/assumptions", label: "Assumptions" },
 ];
 
+/** Built screens outside Setup. */
+export const TRANSACTIONS_ROUTE = "operations/transactions";
+
 /** Route keys that have a screen. The sidebar shows "soon" on the others. */
-export const isBuilt = (key: string): boolean => SETUP_TABS.some((tab) => tab.key === key);
+export const isBuilt = (key: string): boolean =>
+  key === TRANSACTIONS_ROUTE || SETUP_TABS.some((tab) => tab.key === key);
 
 /** The page behind a route key: an item, or a section that has no items. */
 export function findPage(key: string): NavItem | undefined {

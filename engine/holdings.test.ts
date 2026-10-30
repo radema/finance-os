@@ -97,6 +97,19 @@ describe("holdingsAt", () => {
   });
 });
 
+describe("oversold position", () => {
+  it("keeps the PMC finite when a buy brings the units back to exactly 0", () => {
+    const rows: LedgerRow[] = [
+      { date: "2026-01-01", goalId: "A", productId: "etf", type: "buy", qty: 10, price: 100 },
+      { date: "2026-02-01", goalId: "A", productId: "etf", type: "sell", qty: -15, price: 110 },
+      { date: "2026-03-01", goalId: "A", productId: "etf", type: "buy", qty: 5, price: 90 },
+    ];
+    const h = holdingsAt(rows, "2026-03-01");
+    expect(h.accountUnits.get("etf")).toBe(0);
+    expect(h.pmc.get("etf")).toBe(100);
+  });
+});
+
 describe("unitPrice", () => {
   it("divides the quoted price by 100 for govt", () => {
     expect(unitPrice("govt", 98.5)).toBe(0.985);
