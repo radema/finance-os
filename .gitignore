@@ -1,47 +1,58 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-.eggs/
-build/
+# Dependencies and install output
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output and tool caches
 dist/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+.cache/
+.swc/
+.eslintcache
 
-# uv / venv
-.venv/
-venv/
-uv.lock.bak
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 
-# Tooling caches
-.mypy_cache/
-.ruff_cache/
-.pytest_cache/
-.hypothesis/
-.coverage
-htmlcov/
+# Personal data - never committed. Only the repo-root fixtures/ folder may hold such files.
+# The app data lives in GBI_DATA_DIR, outside the repo; these rules guard against a stray copy.
+# The exceptions are written for files: a negation cannot re-include a file under an ignored folder.
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*-wal
+*-shm
+*.xlsx
+*.csv
+!/fixtures/**/*.sqlite
+!/fixtures/**/*.db
+!/fixtures/**/*.xlsx
+!/fixtures/**/*.csv
 
-# DuckDB / data
-*.duckdb
-*.duckdb.wal
-data/
-imports/
-export/
-exports/
-
-# Real personal financial data — never committed, even the empty template once filled in.
-# real/README.md stays tracked; every data file under real/ does not.
-real/*.csv
-real/*.yaml
-real/*.yml
-real/*.xlsx
-real/*.xls
-
-# Agent worktrees — transient checkouts, never part of the project.
-# `.claude/skills/` IS tracked; only the worktree churn is excluded.
+# Agent worktrees and local agent settings
 .claude/worktrees/
+.claude/settings.local.json
 
 # Editors / OS
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
 *:Zone.Identifier
