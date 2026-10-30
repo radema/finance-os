@@ -1,0 +1,78 @@
+import { DEFAULT_ROUTE, findPage, NAV } from "./nav.ts";
+
+function Sidebar({ route }: { route: string }) {
+  return (
+    <aside className="side">
+      <a className="brand" href={`#/${DEFAULT_ROUTE}`}>
+        GBI planner
+      </a>
+      <nav className="nav" aria-label="Main">
+        {NAV.map((section) => (
+          <div className="nav-section" key={section.key}>
+            {section.items.length === 0 ? (
+              <a
+                className="nav-head"
+                href={`#/${section.key}`}
+                aria-current={route === section.key ? "page" : undefined}
+              >
+                {section.label}
+                <span className="soon">soon</span>
+              </a>
+            ) : (
+              <>
+                <div className="nav-head">{section.label}</div>
+                {section.items.map((item) => (
+                  <a
+                    className="nav-item"
+                    key={item.key}
+                    href={`#/${item.key}`}
+                    aria-current={route === item.key ? "page" : undefined}
+                  >
+                    {item.label}
+                    <span className="soon">soon</span>
+                  </a>
+                ))}
+              </>
+            )}
+          </div>
+        ))}
+      </nav>
+    </aside>
+  );
+}
+
+function SoonPage({ route }: { route: string }) {
+  const page = findPage(route);
+  if (!page) {
+    return (
+      <>
+        <div className="tag">Not found</div>
+        <h1 className="title">Page not found</h1>
+        <p className="unit">
+          There is no page at this address. <a href={`#/${DEFAULT_ROUTE}`}>Back to the Overview</a>.
+        </p>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="tag">Soon</div>
+      <h1 className="title">{page.label}</h1>
+      <p className="unit">
+        This page is not built yet. It is in the sidebar to show where it will live.
+      </p>
+    </>
+  );
+}
+
+/** Sidebar plus content area. Every page shows the "soon" placeholder until it has a screen. */
+export function AppShell({ route }: { route: string }) {
+  return (
+    <div className="shell">
+      <Sidebar route={route} />
+      <main className="main">
+        <SoonPage route={route} />
+      </main>
+    </div>
+  );
+}

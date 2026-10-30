@@ -1,0 +1,98 @@
+/* Design tokens: palette D (reference/palette-substack-d.md), the OE Data Viz type scale one step up,
+   and the spacing scale. Light by default; dark follows prefers-color-scheme (manual toggle: #67).
+   Roles:
+   --hl                the one message (highlight). Marks only: bars, lines, dots, icons, rules. Never text or buttons.
+   --slot1..6          the six palette slots, one fixed colour per goal. Slot 1 = --hl, slot 2 = --hl2, slot 5 = --hl3.
+   --tint1..6          soft tints of the slots (light 12%, dark 18%) for chips, tags, card headers. Text on them stays --ink.
+   --blue and tints    general information (KPI accents, priority, headers). The highlight family means attention.
+   --ctx               context series grey.   --ink/--ink2/--muted  text greys.   --grid/--base  hairlines. */
+:root {
+  --surface: #f8fafb;
+  --raised: #ffffff;
+  --ink: #171b1f;
+  --ink2: #494e52;
+  --muted: #6a6f74;
+  --ctx: #a0a5ab;
+  --base: #bfc5ca;
+  --grid: #e0e5eb;
+  --wash: #eef1f4;
+  --hl: #b75a26;
+  --hl2: #f19d6b;
+  --hl3: #226061;
+  --slot1: #b75a26;
+  --slot2: #f19d6b;
+  --slot3: #4d734d;
+  --slot4: #c09036;
+  --slot5: #226061;
+  --slot6: #828231;
+  --tint1: #f0e7e1;
+  --tint2: #f7efea;
+  --tint3: #e3eae6;
+  --tint4: #f1ede3;
+  --tint5: #dee8e9;
+  --tint6: #eaece3;
+  --tint1-strong: #e8d4c8;
+  --blue: #116496;
+  --tint-blue-faint: #eaf1f5;
+  --tint-blue: #dce8ef;
+  --tint-blue-strong: #c1d6e3;
+  --tint-sand: #efe0d7;
+  --tint-pink: #fadedf;
+  --shadow: 0 6px 24px rgba(23, 27, 31, 0.14);
+  color-scheme: light;
+
+  --font-display: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-text: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --w-display: 500;
+  --ls-display: -0.02em;
+
+  --t-title: 26px;
+  --lh-title: 32px;
+  --t-body: 16px;
+  --lh-body: 24px;
+  --t-sub: 15px;
+  --lh-sub: 22px;
+  --t-callout: 14px;
+  --lh-callout: 20px;
+  --t-label: 13px;
+  --lh-label: 18px;
+  --t-axis: 12px;
+  --lh-axis: 16px;
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 16px;
+  --s4: 24px;
+  --s5: 32px;
+  --s6: 48px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #14181c;
+    --raised: #1a1f24;
+    --ink: #e6ecf2;
+    --ink2: #b3b8be;
+    --muted: #8e9398;
+    --ctx: #494e52;
+    --base: #393e42;
+    --grid: #23272b;
+    --wash: #1b2025;
+    --tint1: #31241e;
+    --tint2: #3c302a;
+    --tint3: #1e2825;
+    --tint4: #332e21;
+    --tint5: #172528;
+    --tint6: #282b20;
+    --tint1-strong: #4b2e1f;
+    --blue: #5496b7;
+    --tint-blue-faint: #1a252c;
+    --tint-blue: #202f38;
+    --tint-blue-strong: #28404e;
+    --tint-sand: #3d3836;
+    --tint-pink: #43373a;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
