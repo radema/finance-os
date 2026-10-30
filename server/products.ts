@@ -29,7 +29,7 @@ const fromRow = (row: ProductTable): Product => ({
 });
 
 // Broker units are entered on the Prices screen, so they are not part of a product edit.
-const toColumns = (input: ProductInput) => ({
+export const toColumns = (input: ProductInput) => ({
   ...input,
   zeroCommission: toFlag(input.zeroCommission),
 });
