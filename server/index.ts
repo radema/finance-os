@@ -17,6 +17,8 @@ export interface ServerOptions {
 }
 
 export interface RunningServer {
+  /** The address the listener is bound to. */
+  address: string;
   url: string;
   close(): Promise<void>;
 }
@@ -62,8 +64,10 @@ export async function startServer({
     throw error;
   }
 
+  const bound = server.address() as AddressInfo;
   return {
-    url: `http://${HOST}:${(server.address() as AddressInfo).port}`,
+    address: bound.address,
+    url: `http://${bound.address}:${bound.port}`,
     async close() {
       await new Promise<void>((resolve) => {
         server.close(() => resolve());

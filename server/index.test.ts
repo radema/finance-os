@@ -32,24 +32,33 @@ describe("startServer", () => {
     expect(await response.json()).toEqual({ status: "ok" });
   });
 
-  it("listens on 127.0.0.1 only", async () => {
-    const { url } = await start();
-    const { hostname, port } = new URL(url);
-    expect(hostname).toBe("127.0.0.1");
-
-    const reach = (host: string) =>
-      new Promise<boolean>((resolve) => {
-        const socket = connect({ host, port: Number(port) });
-        socket.on("connect", () => {
-          socket.destroy();
-          resolve(true);
-        });
-        socket.on("error", () => resolve(false));
-      });
-    expect(await reach("127.0.0.1")).toBe(true);
-    // Another loopback address: reachable only when the server is bound to every interface.
-    expect(await reach("127.0.0.2")).toBe(false);
+  it("listens on 127.0.0.1", async () => {
+    const { address, url } = await start();
+    expect(address).toBe("127.0.0.1");
+    expect(new URL(url).hostname).toBe("127.0.0.1");
   });
+
+  // On Linux all of 127.0.0.0/8 is loopback; elsewhere 127.0.0.2 is not configured by default.
+  it.skipIf(process.platform !== "linux")(
+    "does not listen on other loopback addresses",
+    async () => {
+      const { url } = await start();
+      const { port } = new URL(url);
+
+      const reach = (host: string) =>
+        new Promise<boolean>((resolve) => {
+          const socket = connect({ host, port: Number(port) });
+          socket.on("connect", () => {
+            socket.destroy();
+            resolve(true);
+          });
+          socket.on("error", () => resolve(false));
+        });
+      expect(await reach("127.0.0.1")).toBe(true);
+      // Reachable only when the server is bound to every interface.
+      expect(await reach("127.0.0.2")).toBe(false);
+    },
+  );
 
   it("creates the SQLite file in the data folder with the migration applied", async () => {
     await start();
