@@ -95,5 +95,6 @@ describe("SETUP_TABS", () => {
     ]);
     expect(isBuilt("setup/goals")).toBe(true);
     expect(isBuilt("setup/cash-flow")).toBe(false);
+    expect(isBuilt("operations/transactions")).toBe(true);
   });
 });

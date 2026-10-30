@@ -65,6 +65,42 @@ export const allocationWeightSchema = z.object({
 /** A weight and its share of the goal's total (the weights rescaled to 1). */
 export type AllocationRow = z.infer<typeof allocationWeightSchema> & { share: number };
 
+// --- Transaction -----------------------------------------------------------------------------
+
+export const TRANSACTION_TYPES = [
+  "opening",
+  "buy",
+  "sell",
+  "pensionContribution",
+  "coupon",
+] as const;
+
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "use YYYY-MM-DD")
+  .refine((value) => !Number.isNaN(Date.parse(value)), "not a real date");
+
+/**
+ * A transaction as the user enters it: an amount in cents (positive) and the quoted price. The
+ * server derives the signed quantity. A coupon has no price; its amount is the net cash received.
+ */
+export const transactionInputSchema = z.object({
+  date: isoDate,
+  goalId: z.string().min(1),
+  productId: z.string().min(1),
+  type: z.enum(TRANSACTION_TYPES),
+  amountCents: cents,
+  /** Above 0 for every type but a coupon; the server checks that. */
+  price: z.number().min(0).default(0),
+  /** The actual commission in cents. Null or absent means none is recorded. */
+  commissionCents: cents.nullable().default(null),
+  note: text.default(""),
+});
+export type TransactionInput = z.infer<typeof transactionInputSchema>;
+
+/** A transaction as the API returns it: `qty` is signed, `price` is the quoted price. */
+export type Transaction = TransactionInput & { id: string; qty: number };
+
 // --- Assumption documents --------------------------------------------------------------------
 
 export const settingsSchema = z.object({
