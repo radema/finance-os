@@ -210,4 +210,19 @@ describe("projectGoal", () => {
     expect(result.tax).toBeCloseTo(520, 9);
     expect(result.net).toBeCloseTo(9_480, 9);
   });
+
+  it("liquidates on 31 December for a December asOf, so a zainetto expiring before it gives no credit (AC-13)", () => {
+    const result = projectGoal(
+      input({
+        asOf: "2026-12-15",
+        goal: { id: "g", targetYear: 2026, target: 0, contributionGrowth: 0 },
+        monthly: 0,
+        positions: [{ productId: "p", value: 14_000, basis: 10_000 }],
+        products: new Map([["p", { regime: "govt", mu: 0, ter: 0 }]]),
+        settings: { ...settings, zainetto: { amount: 1_000, expiry: "2026-12-20", goalId: "g" } },
+      }),
+    );
+    expect(result.tau).toBe(0);
+    expect(result.tax).toBeCloseTo(500, 9);
+  });
 });
