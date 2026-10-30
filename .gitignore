@@ -1,43 +1,25 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-.eggs/
-build/
+# Node
+node_modules/
 dist/
+coverage/
+.vite/
+.swc/
+.cache/
+.eslintcache
+*.tsbuildinfo
 
-# uv / venv
-.venv/
-venv/
-uv.lock.bak
+# Personal data - never committed. Only the repo-root fixtures/ folder may hold such files.
+# The exceptions are written for files: a negation cannot re-include a file under an ignored folder.
+*.sqlite
+*.db
+*.xlsx
+*.csv
+!/fixtures/**/*.sqlite
+!/fixtures/**/*.db
+!/fixtures/**/*.xlsx
+!/fixtures/**/*.csv
 
-# Tooling caches
-.mypy_cache/
-.ruff_cache/
-.pytest_cache/
-.hypothesis/
-.coverage
-htmlcov/
-
-# DuckDB / data
-*.duckdb
-*.duckdb.wal
-data/
-imports/
-export/
-exports/
-
-# Real personal financial data — never committed, even the empty template once filled in.
-# real/README.md stays tracked; every data file under real/ does not.
-real/*.csv
-real/*.yaml
-real/*.yml
-real/*.xlsx
-real/*.xls
-
-# Agent worktrees — transient checkouts, never part of the project.
-# `.claude/skills/` IS tracked; only the worktree churn is excluded.
+# Agent worktrees - transient checkouts, never part of the project.
 .claude/worktrees/
 
 # Editors / OS
