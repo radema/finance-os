@@ -18,7 +18,7 @@ import { toFlag } from "./schema.ts";
 const idQuery = z.object({ id: z.string().min(1) });
 const versionKey = z.object({ goalId: z.string().min(1), fromMonth: monthSchema });
 
-const toColumns = (input: GoalInput) => ({
+export const toColumns = (input: GoalInput) => ({
   ...input,
   countsTowardFi: toFlag(input.countsTowardFi),
 });

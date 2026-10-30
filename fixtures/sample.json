@@ -1,0 +1,781 @@
+{
+  "asOf": "2026-10-31",
+  "settings": {
+    "trackingStart": "2026-01",
+    "zainetto": {
+      "amountCents": 40000,
+      "expiry": 2029,
+      "goalId": "g-car"
+    }
+  },
+  "products": [
+    {
+      "priceSource": "manual",
+      "id": "p-world-etf",
+      "name": "Sample World Equity ETF",
+      "isin": "ZZ0000000011",
+      "assetClass": "Equity",
+      "regime": "etf",
+      "whiteListShare": 0,
+      "expReturn": 0.06,
+      "volatility": 0.15,
+      "ter": 0.002
+    },
+    {
+      "priceSource": "manual",
+      "id": "p-mixed-etf",
+      "name": "Sample Mixed ETF",
+      "isin": "ZZ0000000029",
+      "assetClass": "Multi-asset",
+      "regime": "etf",
+      "whiteListShare": 0.5,
+      "expReturn": 0.045,
+      "volatility": 0.08,
+      "ter": 0.003
+    },
+    {
+      "priceSource": "manual",
+      "id": "p-direct",
+      "name": "Sample Direct Share",
+      "isin": "ZZ0000000037",
+      "assetClass": "Equity",
+      "regime": "direct",
+      "expReturn": 0.07,
+      "volatility": 0.25,
+      "ter": 0
+    },
+    {
+      "priceSource": "manual",
+      "id": "p-govt",
+      "name": "Sample Govt Bond 2029",
+      "isin": "ZZ0000000045",
+      "assetClass": "Govt bonds",
+      "regime": "govt",
+      "expReturn": 0.03,
+      "volatility": 0.05,
+      "ter": 0,
+      "maturity": "2029-06",
+      "couponRate": 0.025
+    },
+    {
+      "priceSource": "manual",
+      "id": "p-deposit",
+      "name": "Sample Deposit Account",
+      "isin": "",
+      "assetClass": "Cash",
+      "regime": "cash",
+      "expReturn": 0.025,
+      "volatility": 0,
+      "ter": 0,
+      "zeroCommission": true
+    },
+    {
+      "priceSource": "manual",
+      "id": "p-pension-balanced",
+      "name": "Sample Pension Fund Balanced",
+      "isin": "",
+      "assetClass": "Multi-asset",
+      "regime": "pension",
+      "expReturn": 0.04,
+      "volatility": 0.08,
+      "ter": 0.01,
+      "zeroCommission": true
+    },
+    {
+      "priceSource": "manual",
+      "id": "p-pension-equity",
+      "name": "Sample Pension Fund Equity",
+      "isin": "",
+      "assetClass": "Equity",
+      "regime": "pension",
+      "expReturn": 0.055,
+      "volatility": 0.14,
+      "ter": 0.012,
+      "zeroCommission": true
+    }
+  ],
+  "prices": [
+    {
+      "productId": "p-world-etf",
+      "month": "2025-12",
+      "price": 98.5,
+      "priceDate": "2025-12-31"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-01",
+      "price": 100,
+      "priceDate": "2026-01-30"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-02",
+      "price": 101.2,
+      "priceDate": "2026-02-27"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-03",
+      "price": 104.5,
+      "priceDate": "2026-03-31"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-04",
+      "price": 106.3,
+      "priceDate": "2026-04-30"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-05",
+      "price": 109,
+      "priceDate": "2026-05-29"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-06",
+      "price": 113.1,
+      "priceDate": "2026-06-30"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-07",
+      "price": 117.8,
+      "priceDate": "2026-07-31"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-08",
+      "price": 116.9,
+      "priceDate": "2026-08-31"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-09",
+      "price": 118.4,
+      "priceDate": "2026-09-30"
+    },
+    {
+      "productId": "p-world-etf",
+      "month": "2026-10",
+      "price": 120.5,
+      "priceDate": "2026-10-30"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2025-12",
+      "price": 101,
+      "priceDate": "2025-12-31"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-01",
+      "price": 100,
+      "priceDate": "2026-01-30"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-02",
+      "price": 97.5,
+      "priceDate": "2026-02-27"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-03",
+      "price": 93,
+      "priceDate": "2026-03-31"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-04",
+      "price": 92,
+      "priceDate": "2026-04-30"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-05",
+      "price": 88,
+      "priceDate": "2026-05-29"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-06",
+      "price": 85.5,
+      "priceDate": "2026-06-30"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-07",
+      "price": 82,
+      "priceDate": "2026-07-31"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-08",
+      "price": 79,
+      "priceDate": "2026-08-31"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-09",
+      "price": 74.5,
+      "priceDate": "2026-09-30"
+    },
+    {
+      "productId": "p-mixed-etf",
+      "month": "2026-10",
+      "price": 72,
+      "priceDate": "2026-10-30"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2025-12",
+      "price": 49,
+      "priceDate": "2025-12-31"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-01",
+      "price": 49.5,
+      "priceDate": "2026-01-30"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-02",
+      "price": 48,
+      "priceDate": "2026-02-27"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-03",
+      "price": 49,
+      "priceDate": "2026-03-31"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-04",
+      "price": 50.5,
+      "priceDate": "2026-04-30"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-05",
+      "price": 51.2,
+      "priceDate": "2026-05-29"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-06",
+      "price": 52,
+      "priceDate": "2026-06-30"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-07",
+      "price": 52.5,
+      "priceDate": "2026-07-31"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-08",
+      "price": 51,
+      "priceDate": "2026-08-31"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-09",
+      "price": 50,
+      "priceDate": "2026-09-30"
+    },
+    {
+      "productId": "p-direct",
+      "month": "2026-10",
+      "price": 53.5,
+      "priceDate": "2026-10-30"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2025-12",
+      "price": 98.2,
+      "priceDate": "2025-12-31"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-01",
+      "price": 98.1,
+      "priceDate": "2026-01-30"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-02",
+      "price": 98.3,
+      "priceDate": "2026-02-27"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-03",
+      "price": 98.4,
+      "priceDate": "2026-03-31"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-04",
+      "price": 98.45,
+      "priceDate": "2026-04-30"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-05",
+      "price": 98.5,
+      "priceDate": "2026-05-29"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-06",
+      "price": 98.7,
+      "priceDate": "2026-06-30"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-07",
+      "price": 98.9,
+      "priceDate": "2026-07-31"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-08",
+      "price": 99.1,
+      "priceDate": "2026-08-31"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-09",
+      "price": 99.3,
+      "priceDate": "2026-09-30"
+    },
+    {
+      "productId": "p-govt",
+      "month": "2026-10",
+      "price": 99.2,
+      "priceDate": "2026-10-30"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2025-12",
+      "price": 1,
+      "priceDate": "2025-12-31"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-01",
+      "price": 1,
+      "priceDate": "2026-01-30"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-02",
+      "price": 1,
+      "priceDate": "2026-02-27"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-03",
+      "price": 1,
+      "priceDate": "2026-03-31"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-04",
+      "price": 1,
+      "priceDate": "2026-04-30"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-05",
+      "price": 1,
+      "priceDate": "2026-05-29"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-06",
+      "price": 1,
+      "priceDate": "2026-06-30"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-07",
+      "price": 1,
+      "priceDate": "2026-07-31"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-08",
+      "price": 1,
+      "priceDate": "2026-08-31"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-09",
+      "price": 1,
+      "priceDate": "2026-09-30"
+    },
+    {
+      "productId": "p-deposit",
+      "month": "2026-10",
+      "price": 1,
+      "priceDate": "2026-10-30"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2025-12",
+      "price": 14.4,
+      "priceDate": "2025-12-31"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-01",
+      "price": 14.5,
+      "priceDate": "2026-01-30"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-02",
+      "price": 14.55,
+      "priceDate": "2026-02-27"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-03",
+      "price": 14.62,
+      "priceDate": "2026-03-31"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-04",
+      "price": 14.7,
+      "priceDate": "2026-04-30"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-05",
+      "price": 14.85,
+      "priceDate": "2026-05-29"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-06",
+      "price": 15.1,
+      "priceDate": "2026-06-30"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-07",
+      "price": 15.15,
+      "priceDate": "2026-07-31"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-08",
+      "price": 15.18,
+      "priceDate": "2026-08-31"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-09",
+      "price": 15.25,
+      "priceDate": "2026-09-30"
+    },
+    {
+      "productId": "p-pension-balanced",
+      "month": "2026-10",
+      "price": 15.3,
+      "priceDate": "2026-10-30"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2025-12",
+      "price": 11.9,
+      "priceDate": "2025-12-31"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-01",
+      "price": 12,
+      "priceDate": "2026-01-30"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-02",
+      "price": 12.2,
+      "priceDate": "2026-02-27"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-03",
+      "price": 12.35,
+      "priceDate": "2026-03-31"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-04",
+      "price": 12.6,
+      "priceDate": "2026-04-30"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-05",
+      "price": 12.8,
+      "priceDate": "2026-05-29"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-06",
+      "price": 12.9,
+      "priceDate": "2026-06-30"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-07",
+      "price": 13.1,
+      "priceDate": "2026-07-31"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-08",
+      "price": 12.95,
+      "priceDate": "2026-08-31"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-09",
+      "price": 12.9,
+      "priceDate": "2026-09-30"
+    },
+    {
+      "productId": "p-pension-equity",
+      "month": "2026-10",
+      "price": 13,
+      "priceDate": "2026-10-30"
+    }
+  ],
+  "goals": [
+    {
+      "id": "g-holiday",
+      "name": "Holiday",
+      "priority": "Want",
+      "targetCents": 300000,
+      "targetYear": 2026,
+      "contributionGrowth": 0,
+      "plan": [
+        {
+          "fromMonth": "2026-01",
+          "monthlyCents": 10000
+        }
+      ]
+    },
+    {
+      "id": "g-car",
+      "name": "New car",
+      "priority": "Want",
+      "targetCents": 2000000,
+      "targetYear": 2029,
+      "contributionGrowth": 0.02,
+      "plan": [
+        {
+          "fromMonth": "2026-01",
+          "monthlyCents": 40000
+        },
+        {
+          "fromMonth": "2026-07",
+          "monthlyCents": 45000
+        }
+      ]
+    },
+    {
+      "id": "g-home",
+      "name": "Home deposit",
+      "priority": "Need",
+      "targetCents": 4000000,
+      "targetYear": 2031,
+      "contributionGrowth": 0.02,
+      "plan": [
+        {
+          "fromMonth": "2026-01",
+          "monthlyCents": 60000
+        }
+      ]
+    },
+    {
+      "id": "g-retirement",
+      "name": "Retirement",
+      "priority": "Need",
+      "targetCents": 15000000,
+      "targetYear": 2046,
+      "contributionGrowth": 0.02,
+      "countsTowardFi": true,
+      "plan": [
+        {
+          "fromMonth": "2026-01",
+          "monthlyCents": 35000
+        }
+      ]
+    }
+  ],
+  "allocation": [
+    {
+      "goalId": "g-holiday",
+      "productId": "p-deposit",
+      "weight": 1
+    },
+    {
+      "goalId": "g-car",
+      "productId": "p-world-etf",
+      "weight": 60
+    },
+    {
+      "goalId": "g-car",
+      "productId": "p-direct",
+      "weight": 20
+    },
+    {
+      "goalId": "g-car",
+      "productId": "p-govt",
+      "weight": 20
+    },
+    {
+      "goalId": "g-home",
+      "productId": "p-direct",
+      "weight": 70
+    },
+    {
+      "goalId": "g-home",
+      "productId": "p-govt",
+      "weight": 30
+    },
+    {
+      "goalId": "g-retirement",
+      "productId": "p-pension-balanced",
+      "weight": 50
+    },
+    {
+      "goalId": "g-retirement",
+      "productId": "p-pension-equity",
+      "weight": 50
+    }
+  ],
+  "ledger": [
+    {
+      "date": "2026-01-02",
+      "goalId": "g-holiday",
+      "productId": "p-deposit",
+      "type": "opening",
+      "qty": 1500,
+      "price": 1
+    },
+    {
+      "date": "2026-01-02",
+      "goalId": "g-car",
+      "productId": "p-world-etf",
+      "type": "opening",
+      "qty": 40,
+      "price": 100
+    },
+    {
+      "date": "2026-01-02",
+      "goalId": "g-home",
+      "productId": "p-mixed-etf",
+      "type": "opening",
+      "qty": 200,
+      "price": 100
+    },
+    {
+      "date": "2026-01-02",
+      "goalId": "g-retirement",
+      "productId": "p-pension-balanced",
+      "type": "opening",
+      "qty": 800,
+      "price": 14.5
+    },
+    {
+      "date": "2026-01-02",
+      "goalId": "g-retirement",
+      "productId": "p-pension-equity",
+      "type": "opening",
+      "qty": 400,
+      "price": 12
+    },
+    {
+      "date": "2026-03-10",
+      "goalId": "g-car",
+      "productId": "p-world-etf",
+      "type": "buy",
+      "qty": 20,
+      "price": 104,
+      "commission": 3.95
+    },
+    {
+      "date": "2026-04-14",
+      "goalId": "g-home",
+      "productId": "p-mixed-etf",
+      "type": "buy",
+      "qty": 50,
+      "price": 92,
+      "commission": 8.74
+    },
+    {
+      "date": "2026-05-12",
+      "goalId": "g-car",
+      "productId": "p-govt",
+      "type": "buy",
+      "qty": 3000,
+      "price": 98.5,
+      "commission": 5.61
+    },
+    {
+      "date": "2026-06-01",
+      "goalId": "g-holiday",
+      "productId": "p-deposit",
+      "type": "buy",
+      "qty": 300,
+      "price": 1
+    },
+    {
+      "date": "2026-06-15",
+      "goalId": "g-retirement",
+      "productId": "p-pension-balanced",
+      "type": "pensionContribution",
+      "qty": 60,
+      "price": 15.1
+    },
+    {
+      "date": "2026-07-15",
+      "goalId": "g-car",
+      "productId": "p-world-etf",
+      "type": "sell",
+      "qty": -10,
+      "price": 118,
+      "commission": 2.95
+    },
+    {
+      "date": "2026-09-08",
+      "goalId": "g-car",
+      "productId": "p-direct",
+      "type": "buy",
+      "qty": 30,
+      "price": 50,
+      "commission": 2.95
+    },
+    {
+      "date": "2026-10-15",
+      "goalId": "g-retirement",
+      "productId": "p-pension-equity",
+      "type": "pensionContribution",
+      "qty": 50,
+      "price": 13
+    }
+  ],
+  "pensionPlan": {
+    "goalId": "g-retirement",
+    "firstYear": 2020
+  }
+}
