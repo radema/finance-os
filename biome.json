@@ -13,6 +13,7 @@
       "!coverage",
       "!.scratch",
       "!.claude",
+      "!tools/differential/mock-engine.js",
       "!pnpm-lock.yaml",
       "!**/*.md"
     ]
