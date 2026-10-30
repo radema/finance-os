@@ -1,0 +1,275 @@
+/* Setup screens: tabs, section cards, forms, tables. Colours, type and spacing come from tokens.css. */
+.tabs {
+  display: flex;
+  gap: var(--s3);
+  margin: var(--s4) 0 var(--s3);
+  border-bottom: 1px solid var(--grid);
+}
+.tab {
+  padding: var(--s2) var(--s1);
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: var(--t-sub);
+  line-height: var(--lh-sub);
+  color: var(--ink2);
+  text-decoration: none;
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tab[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--ink);
+}
+
+.card {
+  margin-bottom: var(--s4);
+  border-radius: 8px;
+  border-top: 3px solid var(--blue);
+  background: var(--raised);
+  overflow: clip;
+}
+.card-head {
+  padding: var(--s2) var(--s3);
+  background: var(--tint-blue-faint);
+  font: 500 var(--t-axis) / var(--lh-axis) var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink2);
+}
+.card-body {
+  padding: var(--s3);
+}
+.card-body > * + * {
+  margin-top: var(--s3);
+}
+.note,
+.sub,
+.field-hint {
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  color: var(--ink2);
+}
+.sub {
+  color: var(--muted);
+}
+.sub-line {
+  margin: 0;
+}
+.saved {
+  font-size: var(--t-callout);
+  color: var(--ink2);
+}
+.flag {
+  padding: var(--s2) var(--s3);
+  border-left: 2px solid var(--hl);
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+}
+.alert {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-left: 2px solid var(--hl);
+  background: var(--tint1);
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+}
+.alert p {
+  margin: 0 0 var(--s2);
+}
+
+/* Forms */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--s3);
+  align-items: start;
+}
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  align-items: end;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+.field-label {
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  font-weight: 500;
+  color: var(--ink2);
+}
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  min-width: 0;
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--base);
+  border-radius: 4px;
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-sub);
+  line-height: var(--lh-sub);
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-sub);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  grid-column: 1 / -1;
+}
+/* The save row of a form made of several cards. */
+form > .actions {
+  margin-bottom: var(--s4);
+}
+.card-body > .actions {
+  grid-column: auto;
+}
+
+/* Buttons: ink, never the highlight. */
+.btn {
+  padding: var(--s1) var(--s3);
+  border: 1px solid var(--base);
+  border-radius: 4px;
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  background: var(--wash);
+}
+.btn:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+.btn-primary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--ink2);
+}
+.btn-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink2);
+}
+.confirm {
+  display: inline-flex;
+  gap: var(--s1);
+}
+
+/* Tables: a sticky header on a raised surface, hairline rules. */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-sub);
+  line-height: var(--lh-sub);
+}
+.table th,
+.table td {
+  padding: var(--s2) var(--s2);
+  border-bottom: 1px solid var(--grid);
+  text-align: left;
+  vertical-align: middle;
+}
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--raised);
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  font-weight: 600;
+  color: var(--ink2);
+}
+.table .num {
+  text-align: right;
+}
+.row-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.matrix th[scope="row"] {
+  font-weight: 600;
+  color: var(--ink2);
+  white-space: nowrap;
+}
+.inline-input {
+  width: 6em;
+  text-align: right;
+}
+
+/* Need / Want / Wish: a marker plus a tint, so the shape carries the meaning too. */
+.prio,
+.ptag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 0 var(--s2);
+  border-radius: 4px;
+  font-size: var(--t-axis);
+  line-height: var(--lh-axis);
+  font-weight: 600;
+}
+.prio {
+  border: 1px solid color-mix(in srgb, var(--blue) 35%, transparent);
+}
+.prio::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1.5px solid var(--blue);
+}
+.prio-need {
+  background: var(--tint-blue-strong);
+}
+.prio-need::before {
+  background: var(--blue);
+}
+.prio-want {
+  background: var(--tint-blue);
+}
+.prio-want::before {
+  background: linear-gradient(90deg, var(--blue) 50%, transparent 50%);
+}
+.prio-wish {
+  background: var(--tint-blue-faint);
+}
+.ptag {
+  border: 1px solid var(--grid);
+  text-transform: uppercase;
+}
+.ptag-etf {
+  background: var(--tint-blue);
+}
+.ptag-govt {
+  background: var(--tint-sand);
+}
+.ptag-pension {
+  background: var(--tint-pink);
+}
+.ptag-other {
+  background: var(--wash);
+}
