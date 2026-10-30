@@ -1,4 +1,17 @@
-import { DEFAULT_ROUTE, findPage, NAV } from "./nav.ts";
+import { GoalDetailScreen } from "./goals/GoalDetailScreen.tsx";
+import { GoalsListScreen } from "./goals/GoalsListScreen.tsx";
+import {
+  DEFAULT_ROUTE,
+  findPage,
+  GOALS_DETAIL_ROUTE,
+  GOALS_LIST_ROUTE,
+  goalIdOf,
+  isBuilt,
+  NAV,
+  TRANSACTIONS_ROUTE,
+} from "./nav.ts";
+import { TransactionsScreen } from "./operations/TransactionsScreen.tsx";
+import { SetupScreen } from "./setup/SetupScreen.tsx";
 
 function Sidebar({ route }: { route: string }) {
   return (
@@ -26,10 +39,12 @@ function Sidebar({ route }: { route: string }) {
                     className="nav-item"
                     key={item.key}
                     href={`#/${item.key}`}
-                    aria-current={route === item.key ? "page" : undefined}
+                    aria-current={
+                      route === item.key || route.startsWith(`${item.key}/`) ? "page" : undefined
+                    }
                   >
                     {item.label}
-                    <span className="soon">soon</span>
+                    {isBuilt(item.key) ? null : <span className="soon">soon</span>}
                   </a>
                 ))}
               </>
@@ -71,7 +86,17 @@ export function AppShell({ route }: { route: string }) {
     <div className="shell">
       <Sidebar route={route} />
       <main className="main">
-        <SoonPage route={route} />
+        {route === TRANSACTIONS_ROUTE ? (
+          <TransactionsScreen />
+        ) : route === GOALS_LIST_ROUTE ? (
+          <GoalsListScreen />
+        ) : route === GOALS_DETAIL_ROUTE || goalIdOf(route) !== undefined ? (
+          <GoalDetailScreen goalId={goalIdOf(route)} />
+        ) : isBuilt(route) ? (
+          <SetupScreen route={route} />
+        ) : (
+          <SoonPage route={route} />
+        )}
       </main>
     </div>
   );

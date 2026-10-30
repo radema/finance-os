@@ -7,6 +7,16 @@ type Run = (request: Request) => Promise<Response>;
 // GET and DELETE carry their input in the query string, the other methods in a JSON body.
 const QUERY_METHODS: readonly string[] = ["GET", "DELETE"];
 
+/** Thrown by a handler to answer with a status other than 200, for example 404 or 409. */
+export class HttpError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
 const failure = (status: number, error: string, issues?: unknown): Response =>
   Response.json({ error, issues }, { status });
 
@@ -60,6 +70,7 @@ export function createRouter() {
     try {
       return await run(request);
     } catch (error) {
+      if (error instanceof HttpError) return failure(error.status, error.message);
       console.error(error);
       return failure(500, "internal error");
     }
@@ -67,3 +78,5 @@ export function createRouter() {
 
   return { route, handle };
 }
+
+export type Router = ReturnType<typeof createRouter>;

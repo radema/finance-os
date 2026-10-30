@@ -65,7 +65,7 @@ describe("startServer", () => {
     const db = new DatabaseSync(join(dataDir, "gbi.sqlite"));
     try {
       const migrations = db.prepare("SELECT name FROM kysely_migration ORDER BY name").all();
-      expect(migrations).toEqual([{ name: "001-baseline" }]);
+      expect(migrations).toEqual([{ name: "001-baseline" }, { name: "002-domain" }]);
       const tables = db.prepare("SELECT name FROM sqlite_schema WHERE name = 'meta'").all();
       expect(tables).toEqual([{ name: "meta" }]);
       expect(db.prepare("PRAGMA journal_mode").get()).toEqual({ journal_mode: "wal" });

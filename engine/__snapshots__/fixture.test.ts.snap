@@ -1,0 +1,117 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`synthetic fixture > matches the reviewed regression snapshot 1`] = `
+{
+  "goals": {
+    "g-car": {
+      "gross": 30785.15,
+      "net": 29952.69,
+      "perProduct": [
+        {
+          "basis": 15458.14,
+          "productId": "p-world-etf",
+          "value": 18261.49,
+        },
+        {
+          "basis": 6713.99,
+          "productId": "p-govt",
+          "value": 6797.01,
+        },
+        {
+          "basis": 4968.13,
+          "productId": "p-direct",
+          "value": 5726.65,
+        },
+      ],
+      "targetAtGoalDate": 21294.32,
+      "tau": 3.166667,
+      "tax": 832.46,
+    },
+    "g-holiday": {
+      "gross": 2004.89,
+      "net": 2004.89,
+      "perProduct": [
+        {
+          "basis": 2004.89,
+          "productId": "p-deposit",
+          "value": 2004.89,
+        },
+      ],
+      "targetAtGoalDate": 3009.92,
+      "tau": 0.166667,
+      "tax": 0,
+    },
+    "g-home": {
+      "gross": 65354.13,
+      "net": 64708.4,
+      "perProduct": [
+        {
+          "basis": 24398.31,
+          "productId": "p-mixed-etf",
+          "value": 22019.44,
+        },
+        {
+          "basis": 26940.39,
+          "productId": "p-direct",
+          "value": 31126.44,
+        },
+        {
+          "basis": 12085.88,
+          "productId": "p-govt",
+          "value": 12208.26,
+        },
+      ],
+      "targetAtGoalDate": 44309.23,
+      "tau": 5.166667,
+      "tax": 645.74,
+    },
+    "g-retirement": {
+      "gross": 166891.56,
+      "net": 152769.08,
+      "perProduct": [
+        {
+          "basis": 63880.48,
+          "productId": "p-pension-balanced",
+          "value": 84982.47,
+        },
+        {
+          "basis": 56824.48,
+          "productId": "p-pension-equity",
+          "value": 81909.08,
+        },
+      ],
+      "targetAtGoalDate": 223628.97,
+      "tau": 20.166667,
+      "tax": 14122.48,
+    },
+  },
+  "holdings": {
+    "pmc": {
+      "p-deposit": 1,
+      "p-direct": 50.098333,
+      "p-govt": 0.98687,
+      "p-mixed-etf": 98.43496,
+      "p-pension-balanced": 14.54186,
+      "p-pension-equity": 12.111111,
+      "p-world-etf": 101.399167,
+    },
+    "units": {
+      "g-car": {
+        "p-direct": 30,
+        "p-govt": 3000,
+        "p-world-etf": 50,
+      },
+      "g-holiday": {
+        "p-deposit": 1800,
+      },
+      "g-home": {
+        "p-mixed-etf": 250,
+      },
+      "g-retirement": {
+        "p-pension-balanced": 860,
+        "p-pension-equity": 450,
+      },
+    },
+  },
+}
+`;

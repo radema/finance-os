@@ -1,9 +1,17 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { z } from "zod";
+import { registerAllocationRoutes } from "./allocation.ts";
+import { registerAssumptionRoutes } from "./assumptions.ts";
+import { resolveToday } from "./config.ts";
 import { openDatabase } from "./db.ts";
+import { registerGoalRoutes } from "./goals.ts";
+import { registerGoalViewRoutes } from "./goalViews.ts";
+import { registerProductRoutes } from "./products.ts";
 import { createRouter } from "./router.ts";
+import { registerSampleRoutes } from "./sample.ts";
 import { serveStatic } from "./static.ts";
+import { registerTransactionRoutes } from "./transactions.ts";
 
 const HOST = "127.0.0.1";
 
@@ -14,6 +22,8 @@ export interface ServerOptions {
   port: number;
   /** Folder with the built web page, served outside `/api`. Omit to serve the API only. */
   webDir?: string;
+  /** The app clock, `YYYY-MM-DD`. Defaults to `GBI_AS_OF`, or today. */
+  today?: string;
 }
 
 export interface RunningServer {
@@ -32,10 +42,19 @@ export async function startServer({
   dataDir,
   port,
   webDir,
+  today,
 }: ServerOptions): Promise<RunningServer> {
   const db = await openDatabase(dataDir);
   const router = createRouter();
   router.route("GET", "/api/health", z.object({}), () => ({ status: "ok" }));
+  registerProductRoutes(router, db);
+  registerGoalRoutes(router, db);
+  registerAllocationRoutes(router, db);
+  registerAssumptionRoutes(router, db);
+  registerSampleRoutes(router, db);
+  registerTransactionRoutes(router, db);
+  // The clock is read on each request, so an app left open overnight still knows the date.
+  registerGoalViewRoutes(router, db, () => today ?? resolveToday(process.env));
 
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];
