@@ -1,17 +1,44 @@
-# Node
+# Dependencies and install output
 node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output and tool caches
 dist/
+build/
 coverage/
-.vite/
-.swc/
-.cache/
-.eslintcache
 *.tsbuildinfo
+.vite/
+.cache/
+.swc/
+.eslintcache
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 
 # Personal data - never committed. Only the repo-root fixtures/ folder may hold such files.
+# The app data lives in GBI_DATA_DIR, outside the repo; these rules guard against a stray copy.
 # The exceptions are written for files: a negation cannot re-include a file under an ignored folder.
 *.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
+*-wal
+*-shm
 *.xlsx
 *.csv
 !/fixtures/**/*.sqlite
@@ -19,11 +46,13 @@ coverage/
 !/fixtures/**/*.xlsx
 !/fixtures/**/*.csv
 
-# Agent worktrees - transient checkouts, never part of the project.
+# Agent worktrees and local agent settings
 .claude/worktrees/
+.claude/settings.local.json
 
 # Editors / OS
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
 *:Zone.Identifier
