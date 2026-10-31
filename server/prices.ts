@@ -3,11 +3,19 @@ import type { Kysely } from "kysely";
 import { z } from "zod";
 import { CsvError } from "../engine/csv.ts";
 import { addMonths, monthEnd, monthsEnding } from "../engine/months.ts";
+import { priceAge } from "../engine/priceAge.ts";
 import type { PriceCsvOptions, PriceRow } from "../engine/priceCsv.ts";
 import { latestPerMonth, parsePriceCsv } from "../engine/priceCsv.ts";
-import { canUseProvider, isoDate, monthSchema, PRICE_SOURCES } from "../engine/schemas.ts";
+import {
+  canUseProvider,
+  isoDate,
+  monthSchema,
+  PRICE_SOURCES,
+  settingsSchema,
+} from "../engine/schemas.ts";
 import { fromScaled, toScaled } from "../engine/units.ts";
 import type { DB } from "./db.ts";
+import { loadDocument } from "./documents.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 import { findOr404 } from "./rows.ts";
@@ -222,26 +230,23 @@ export function registerPriceRoutes(router: Router, db: Kysely<DB>, today: () =>
 
   router.route("GET", "/api/prices/overview", z.object({}), async () => {
     const products = await db.selectFrom("product").selectAll().orderBy("name").execute();
-    const rows = [];
-    for (const product of products) {
-      const last = await db
-        .selectFrom("pricePoint")
-        .select(["priceScaled", "priceDate"])
-        .where("productId", "=", product.id)
-        .orderBy("month", "desc")
-        .executeTakeFirst();
-      rows.push({
+    const points = await db.selectFrom("pricePoint").selectAll().orderBy("month", "desc").execute();
+    const { thresholds } = await loadDocument(db, "settings", settingsSchema);
+    return products.map((product) => {
+      const own = points.filter((p) => p.productId === product.id);
+      const last = own[0];
+      return {
         productId: product.id,
         name: product.name,
         regime: product.regime,
         priceSource: product.priceSource,
         lastPrice: last ? { price: fromScaled(last.priceScaled), priceDate: last.priceDate } : null,
+        age: priceAge(product, own, today(), thresholds.dailyPriceAgeDays),
         brokerUnits:
           product.brokerUnitsScaled === null ? null : fromScaled(product.brokerUnitsScaled),
         brokerUnitsDate: product.brokerUnitsDate,
-      });
-    }
-    return rows;
+      };
+    });
   });
 
   // The price date of a typed price is the clock date for the current month, else the month's last day.

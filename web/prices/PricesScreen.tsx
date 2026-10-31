@@ -6,6 +6,7 @@ import { Alert, Card, ProductTag, Resource } from "../setup/ui.tsx";
 import { CsvImport } from "./CsvImport.tsx";
 import { MonthGrid } from "./MonthGrid.tsx";
 import { Positions } from "./Positions.tsx";
+import { PriceFreshnessPill } from "./PriceFreshnessPill.tsx";
 import type { PriceOverviewRow, PriceSource } from "./types.ts";
 
 const SOURCE_LABEL: Record<PriceSource, string> = {
@@ -54,6 +55,7 @@ export function PricesScreen() {
                       <th>Source</th>
                       <th className="num">Last price</th>
                       <th>Price date</th>
+                      <th>Freshness</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -81,6 +83,9 @@ export function PricesScreen() {
                           {row.lastPrice ? formatUnitPrice(row.lastPrice.price) : "No price"}
                         </td>
                         <td>{row.lastPrice?.priceDate ?? "–"}</td>
+                        <td>
+                          <PriceFreshnessPill age={row.age} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
