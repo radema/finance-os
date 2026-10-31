@@ -2,6 +2,7 @@ import { DataFolderBanner } from "./DataFolderBanner.tsx";
 import { GoalDetailScreen } from "./goals/GoalDetailScreen.tsx";
 import { GoalsListScreen } from "./goals/GoalsListScreen.tsx";
 import { ImportScreen } from "./import/ImportScreen.tsx";
+import { IndependenceScreen } from "./independence/IndependenceScreen.tsx";
 import {
   CURRENT_PORTFOLIO_ROUTE,
   DEFAULT_ROUTE,
@@ -9,6 +10,7 @@ import {
   GOALS_DETAIL_ROUTE,
   GOALS_LIST_ROUTE,
   goalIdOf,
+  INDEPENDENCE_ROUTE,
   isBuilt,
   NAV,
   PENSION_ROUTE,
@@ -109,6 +111,8 @@ export function AppShell({ route }: { route: string }) {
           <GoalDetailScreen goalId={goalIdOf(route)} />
         ) : route === PENSION_ROUTE ? (
           <PensionScreen />
+        ) : route === INDEPENDENCE_ROUTE ? (
+          <IndependenceScreen />
         ) : isBuilt(route) ? (
           <SetupScreen route={route} />
         ) : (

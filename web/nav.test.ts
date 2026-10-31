@@ -96,6 +96,11 @@ describe("Goals screens", () => {
     expect(render("goals/list")).not.toContain("This page is not built yet");
   });
 
+  it("builds the Independence screen, and drops its soon tag", () => {
+    expect(isBuilt("independence")).toBe(true);
+    expect(render("independence")).not.toContain("This page is not built yet");
+  });
+
   it("reads the goal id of a detail route", () => {
     expect(goalIdOf("goals/detail/g-car")).toBe("g-car");
     expect(goalIdOf(goalDetailHref("a b").slice(1).replace(/^\//, ""))).toBe("a b");

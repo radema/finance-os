@@ -13,6 +13,7 @@ import { openDatabase } from "./db.ts";
 import { registerGoalRoutes } from "./goals.ts";
 import { registerGoalViewRoutes } from "./goalViews.ts";
 import { registerImportRoutes } from "./importRoutes.ts";
+import { registerIndependenceRoutes } from "./independence.ts";
 import { registerOpeningPositionRoutes } from "./openingPosition.ts";
 import { registerPensionRoutes } from "./pension.ts";
 import { registerPriceFetchRoutes } from "./priceFetch.ts";
@@ -87,6 +88,7 @@ export async function startServer({
   registerGoalViewRoutes(router, db, clock);
   registerCashFlowRoutes(router, db, clock);
   registerPensionRoutes(router, db, clock);
+  registerIndependenceRoutes(router, db, clock);
   registerSetupProgressRoutes(router, db);
 
   const server = createServer(async (req, res) => {
