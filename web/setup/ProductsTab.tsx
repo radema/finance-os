@@ -4,6 +4,7 @@ import type { Product, ProductInput } from "../../engine/schemas.ts";
 import { PRICE_SOURCES, REGIMES } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { fractionToPercent, percentToFraction } from "../forms.ts";
+import { hashParams } from "../hashQuery.ts";
 import { formatPercent } from "../money.ts";
 import {
   Alert,
@@ -95,7 +96,16 @@ const options = (values: readonly string[], labels: Record<string, string> = {})
 
 export function ProductsTab() {
   const products = useLoad<Product[]>("/api/products");
-  const [form, setForm] = useState<Form>(EMPTY);
+  // The Import screen links here with the name and identifier of a product it did not find.
+  const [form, setForm] = useState<Form>(() => {
+    const params = hashParams();
+    return {
+      ...EMPTY,
+      name: params.get("name") ?? "",
+      isin: params.get("isin") ?? "",
+      ticker: params.get("ticker") ?? "",
+    };
+  });
   const [editing, setEditing] = useState<string>();
   const [error, setError] = useState<string>();
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm({ ...form, [key]: value });

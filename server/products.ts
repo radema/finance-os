@@ -6,12 +6,11 @@ import { productInputSchema } from "../engine/schemas.ts";
 import type { DB } from "./db.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
+import { findOr404, idQuery } from "./rows.ts";
 import type { ProductTable } from "./schema.ts";
 import { toFlag } from "./schema.ts";
 
-const idQuery = z.object({ id: z.string().min(1) });
-
-const fromRow = (row: ProductTable): Product => ({
+export const fromRow = (row: ProductTable): Product => ({
   id: row.id,
   name: row.name,
   isin: row.isin,
@@ -36,9 +35,6 @@ export const toColumns = (input: ProductInput) => ({
 
 /** Products: list, create, edit, delete. A product that a transaction or a weight uses stays. */
 export function registerProductRoutes(router: Router, db: Kysely<DB>): void {
-  const find = (id: string) =>
-    db.selectFrom("product").selectAll().where("id", "=", id).executeTakeFirst();
-
   router.route("GET", "/api/products", z.object({}), async () => {
     const rows = await db.selectFrom("product").selectAll().orderBy("name").execute();
     return rows.map(fromRow);
@@ -58,14 +54,13 @@ export function registerProductRoutes(router: Router, db: Kysely<DB>): void {
     "/api/products",
     productInputSchema.extend({ id: z.string().min(1) }),
     async ({ id, ...input }) => {
-      if (!(await find(id))) throw new HttpError(404, "product not found");
+      await findOr404(db, "product", id, "product");
       await db.updateTable("product").set(toColumns(input)).where("id", "=", id).execute();
       return { id, ...input } satisfies Product;
     },
   );
 
   router.route("DELETE", "/api/products", idQuery, async ({ id }) => {
-    if (!(await find(id))) throw new HttpError(404, "product not found");
     const count = async (table: "transaction" | "allocationWeight") => {
       const row = await db
         .selectFrom(table)
@@ -81,7 +76,11 @@ export function registerProductRoutes(router: Router, db: Kysely<DB>): void {
         `This product is used by ${transactions} transaction(s) and ${weights} allocation weight(s). Remove them first.`,
       );
     }
-    await db.deleteFrom("product").where("id", "=", id).execute();
+    const { numDeletedRows } = await db
+      .deleteFrom("product")
+      .where("id", "=", id)
+      .executeTakeFirstOrThrow();
+    if (numDeletedRows === 0n) throw new HttpError(404, "product not found");
     return { id };
   });
 }

@@ -1,10 +1,12 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { planInForce } from "../engine/plan.ts";
 import type { AllocationRow, Goal, Product } from "../engine/schemas.ts";
 import { DEFAULT_CORRELATIONS } from "../engine/schemas.ts";
+import { DATABASE_FILE } from "./db.ts";
 import { startServer } from "./index.ts";
 
 const PRODUCT = {
@@ -380,6 +382,35 @@ describe("Setup API", () => {
         (await call<{ zainetto: { goalId: unknown } }>("GET", "/api/settings")).body.zainetto
           .goalId,
       ).toBeNull();
+    });
+
+    it("leaves the settings alone when the deleted goal is not the zainetto goal", async () => {
+      const linked = await createGoal();
+      const other = await createGoal({ name: "Car" });
+      const defaults = (await call<{ zainetto: object }>("GET", "/api/settings")).body;
+      await call("PUT", "/api/settings", {
+        ...defaults,
+        zainetto: { ...defaults.zainetto, goalId: linked.id },
+      });
+      const before = (await call("GET", "/api/settings")).body;
+      expect((await call("DELETE", `/api/goals?id=${other.id}`)).status).toBe(200);
+      expect((await call("GET", "/api/settings")).body).toEqual(before);
+    });
+
+    it("keeps the goal when the settings write fails during its delete", async () => {
+      const goal = await createGoal();
+      const defaults = (await call<{ zainetto: object }>("GET", "/api/settings")).body;
+      await call("PUT", "/api/settings", {
+        ...defaults,
+        zainetto: { ...defaults.zainetto, goalId: goal.id },
+      });
+      const database = new DatabaseSync(join(dataDir, DATABASE_FILE));
+      database.exec(
+        "CREATE TRIGGER fail_document_write BEFORE UPDATE ON document BEGIN SELECT RAISE(ABORT, 'write failed'); END",
+      );
+      database.close();
+      expect((await call("DELETE", `/api/goals?id=${goal.id}`)).status).toBe(500);
+      expect((await call<Goal[]>("GET", "/api/goals")).body.map((g) => g.id)).toEqual([goal.id]);
     });
 
     it("rejects an asymmetric correlation matrix and keeps the stored one symmetric", async () => {

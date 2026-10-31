@@ -30,11 +30,6 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
-const today = (): string => {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-};
 
 interface LastPrice {
   price: number;
@@ -42,11 +37,14 @@ interface LastPrice {
 }
 
 function AddForm({
+  today,
   goals,
   products,
   commission,
   onSaved,
 }: {
+  /** The server's app clock: the default date of a new transaction. */
+  today: string;
   goals: Goal[];
   products: Product[];
   commission: Commission;
@@ -183,6 +181,7 @@ export function TransactionsScreen() {
   const goals = useLoad<Goal[]>("/api/goals");
   const products = useLoad<Product[]>("/api/products");
   const commission = useLoad<Commission>("/api/commission");
+  const clock = useLoad<{ today: string }>("/api/today");
   const [goalFilter, setGoalFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [error, setError] = useState<string>();
@@ -221,12 +220,17 @@ export function TransactionsScreen() {
                       <p className="note">Add a product and a goal in Setup first.</p>
                     </Card>
                   ) : (
-                    <AddForm
-                      goals={goalList}
-                      products={productList}
-                      commission={plan}
-                      onSaved={list.reload}
-                    />
+                    <Resource loaded={clock}>
+                      {({ today }) => (
+                        <AddForm
+                          today={today}
+                          goals={goalList}
+                          products={productList}
+                          commission={plan}
+                          onSaved={list.reload}
+                        />
+                      )}
+                    </Resource>
                   )
                 }
               </Resource>

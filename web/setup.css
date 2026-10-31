@@ -106,7 +106,8 @@
 input[type="text"],
 input[type="number"],
 input[type="date"],
-select {
+select,
+textarea {
   width: 100%;
   min-width: 0;
   padding: var(--s1) var(--s2);
@@ -273,4 +274,45 @@ form > .actions {
 }
 .ptag-other {
   background: var(--wash);
+}
+
+/* Price freshness: a grey ring when current, a filled highlight dot when old. */
+.fresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 0 var(--s2);
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: var(--lh-axis);
+}
+.fresh::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border-radius: 50%;
+}
+.fresh-current {
+  background: var(--wash);
+}
+.fresh-current::before {
+  border: 1.5px solid var(--ctx);
+}
+.fresh-old {
+  background: var(--tint1);
+  border: 1px solid color-mix(in srgb, var(--hl) 35%, transparent);
+  font-weight: 600;
+}
+.fresh-old::before {
+  background: var(--hl);
+}
+
+.steps {
+  margin: 0;
+  padding-left: var(--s4);
+  font-size: var(--t-sub);
+}
+.steps li + li {
+  margin-top: var(--s2);
 }

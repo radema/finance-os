@@ -10,9 +10,9 @@ import { fromCents, fromScaled, toScaled } from "../engine/units.ts";
 import type { DB } from "./db.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
+import { findOr404, idQuery } from "./rows.ts";
 import type { TransactionTable } from "./schema.ts";
 
-const idQuery = z.object({ id: z.string().min(1) });
 const listQuery = z.object({
   goalId: z.string().min(1).optional(),
   year: z
@@ -22,7 +22,7 @@ const listQuery = z.object({
 });
 const lastPriceQuery = z.object({ productId: z.string().min(1) });
 
-const fromRow = (row: TransactionTable): Transaction => ({
+export const fromRow = (row: TransactionTable): Transaction => ({
   id: row.id,
   date: row.date,
   goalId: row.goalId,
@@ -69,29 +69,23 @@ export async function loadLedger(db: Kysely<DB>): Promise<LedgerEntry[]> {
   }));
 }
 
-/** Transactions: list, create, edit, delete; holdings derived from them; the last price of a product. */
-export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void {
-  const regimeOf = async (productId: string) => {
-    const product = await db
-      .selectFrom("product")
-      .select("regime")
-      .where("id", "=", productId)
-      .executeTakeFirst();
-    if (!product) throw new HttpError(404, "product not found");
-    return product.regime;
-  };
-
+/**
+ * Transactions: list, create, edit, delete; holdings derived from them; the last price of a
+ * product; the app clock, which the form uses as the default date.
+ *
+ * @param today The app clock, read on each request.
+ */
+export function registerTransactionRoutes(
+  router: Router,
+  db: Kysely<DB>,
+  today: () => string,
+): void {
   // The stored row. qty = amount / unit price, negative for a sell; a coupon has no quantity.
   const toColumns = async (input: TransactionInput) => {
     const { type, amountCents, price } = input;
     if (type !== "coupon" && price <= 0) throw new HttpError(400, "price: must be above 0");
-    const goal = await db
-      .selectFrom("goal")
-      .select("id")
-      .where("id", "=", input.goalId)
-      .executeTakeFirst();
-    if (!goal) throw new HttpError(404, "goal not found");
-    const regime = await regimeOf(input.productId);
+    await findOr404(db, "goal", input.goalId, "goal");
+    const { regime } = await findOr404(db, "product", input.productId, "product");
     const units = type === "coupon" ? 0 : fromCents(amountCents) / unitPrice(regime, price);
     return {
       date: input.date,
@@ -136,12 +130,7 @@ export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void 
     "/api/transactions",
     transactionInputSchema.extend({ id: z.string().min(1) }),
     async ({ id, ...input }) => {
-      const exists = await db
-        .selectFrom("transaction")
-        .select("id")
-        .where("id", "=", id)
-        .executeTakeFirst();
-      if (!exists) throw new HttpError(404, "transaction not found");
+      await findOr404(db, "transaction", id, "transaction");
       const columns = await toColumns(input);
       await db.updateTable("transaction").set(columns).where("id", "=", id).execute();
       return { id, ...input, ...stored(columns) } satisfies Transaction;
@@ -183,4 +172,6 @@ export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void 
       .executeTakeFirst();
     return row ? { price: fromScaled(row.priceScaled), priceDate: row.priceDate } : null;
   });
+
+  router.route("GET", "/api/today", z.object({}), () => ({ today: today() }));
 }
