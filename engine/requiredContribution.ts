@@ -5,7 +5,7 @@ import { timeGrid } from "./timeGrid.ts";
 
 /** Doublings of the upper bound before the goal is called not reachable. */
 const MAX_DOUBLINGS = 12;
-/** First upper bound of the monthly amount, in euros, when the goal has no monthly plan. */
+/** Smallest first upper bound of the monthly amount, in euros: a tiny plan still gets 12 doublings from here. */
 const DEFAULT_START = 100;
 /** The bisection stops when the bracket is one cent wide. */
 const AMOUNT_TOLERANCE = 0.01;
@@ -31,8 +31,8 @@ export type ProbabilityOptions = {
  *
  * The unknown is the monthly amount of a plain goal, in euros. For the pension goal it is the
  * multiplier of the contribution schedule (1 = the schedule as it is). The bracket starts at
- * [0, current monthly] (100 when it is 0; the multiplier starts at [0, 1]), doubles the upper bound
- * up to 12 times, then halves until it is one cent wide (1e-4 for the multiplier). The upper end is
+ * [0, max(current monthly, 100)] (the multiplier starts at [0, 1]), doubles the upper bound up to
+ * 12 times, then halves until it is one cent wide (1e-4 for the multiplier). The upper end is
  * returned, so the answer always reaches the target.
  *
  * @returns 0 when the goal is met with no contribution. `null` when it is not reachable after 12
@@ -50,16 +50,17 @@ export function requiredContribution(
   mode: "deterministic" | "probability",
   options?: ProbabilityOptions,
 ): number | null {
-  if (mode === "probability" && !options) throw new Error("Probability mode needs options");
+  const monteCarlo = mode === "probability" ? options : undefined;
+  if (mode === "probability" && !monteCarlo) throw new Error("Probability mode needs options");
 
   const meets = (input: ProjectionInput | MonteCarloGoal): boolean => {
-    if (mode === "deterministic" || !options) {
+    if (!monteCarlo) {
       const { net, targetAtGoalDate } = projectGoal(input);
       return net >= targetAtGoalDate;
     }
-    const { correlations, seed, paths, requiredP } = options;
+    const { correlations, seed, paths, requiredP } = monteCarlo;
     const result = runMonteCarlo({ goals: [input as MonteCarloGoal], correlations }, seed, paths);
-    return (result.goals[0]?.pSuccess as number) >= requiredP;
+    return (result.goals[0]?.pSuccess ?? 0) >= requiredP;
   };
 
   const grid = timeGrid(goal.asOf, goal.goal.targetYear);
@@ -68,7 +69,7 @@ export function requiredContribution(
   const { pension } = goal;
   const withAmount = (amount: number) =>
     pension ? { ...goal, pension: { ...pension, scale: amount } } : { ...goal, monthly: amount };
-  const start = pension ? MULTIPLIER_START : goal.monthly > 0 ? goal.monthly : DEFAULT_START;
+  const start = pension ? MULTIPLIER_START : Math.max(goal.monthly, DEFAULT_START);
   const tolerance = pension ? MULTIPLIER_TOLERANCE : AMOUNT_TOLERANCE;
 
   if (meets(withAmount(0))) return 0;

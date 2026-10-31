@@ -48,6 +48,13 @@ describe("requiredContribution, deterministic (AC-57)", () => {
     expect(requiredContribution(plain({}, 12 * 410_000), "deterministic")).toBeNull();
   });
 
+  it("starts from 100 when the current monthly is below it", () => {
+    // 1 EUR a month would reach only 4,096 in 12 doublings; 300,000 needs the start of 100.
+    const result = requiredContribution(plain({ monthly: 1 }, 12 * 300_000), "deterministic");
+    expect(result).toBeGreaterThanOrEqual(300_000);
+    expect(result).toBeLessThanOrEqual(300_000 + TOLERANCE);
+  });
+
   it("starts from 100 when the current monthly is 0", () => {
     expect(
       requiredContribution(plain({ monthly: 0 }, 12 * 400_000), "deterministic"),
