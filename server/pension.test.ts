@@ -140,6 +140,14 @@ describe("Pension plan and Pension view API", () => {
     const refused = await call<{ error: string }>("DELETE", `/api/products?id=${created.body.id}`);
     expect(refused.status).toBe(409);
     expect(refused.body.error).toContain("pension plan");
+    // The regime cannot leave `pension` while the flows name the product.
+    const asEtf = await call<{ error: string }>("PUT", "/api/products", {
+      ...fund,
+      id: created.body.id,
+      regime: "etf",
+    });
+    expect(asEtf.status).toBe(409);
+    expect(asEtf.body.error).toContain("pension plan");
     // Out of the flows, the same product can be deleted, and the view still loads.
     await call("PUT", "/api/pension-plan", { ...plan, flows: [] });
     expect((await call("DELETE", `/api/products?id=${created.body.id}`)).status).toBe(200);
