@@ -214,14 +214,14 @@ export function TransactionsScreen() {
           <Resource loaded={products}>
             {(productList) => (
               <Resource loaded={commission}>
-                {(plan) => (
-                  <Resource loaded={clock}>
-                    {({ today }) =>
-                      goalList.length === 0 || productList.length === 0 ? (
-                        <Card title="Add transaction">
-                          <p className="note">Add a product and a goal in Setup first.</p>
-                        </Card>
-                      ) : (
+                {(plan) =>
+                  goalList.length === 0 || productList.length === 0 ? (
+                    <Card title="Add transaction">
+                      <p className="note">Add a product and a goal in Setup first.</p>
+                    </Card>
+                  ) : (
+                    <Resource loaded={clock}>
+                      {({ today }) => (
                         <AddForm
                           today={today}
                           goals={goalList}
@@ -229,10 +229,10 @@ export function TransactionsScreen() {
                           commission={plan}
                           onSaved={list.reload}
                         />
-                      )
-                    }
-                  </Resource>
-                )}
+                      )}
+                    </Resource>
+                  )
+                }
               </Resource>
             )}
           </Resource>
