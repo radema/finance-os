@@ -18,7 +18,7 @@ export type {
   ProjectionInput,
   ProjectionSettings,
 } from "./projection.ts";
-export { normaliseWeights, projectGoal } from "./projection.ts";
+export { normaliseWeights, projectGoal, targetAtGoalDate } from "./projection.ts";
 export type { CashFlow, CashFlowEvent, PensionFlow, PensionPlan } from "./schemas.ts";
 export { cashFlowSchema, pensionPlanSchema } from "./schemas.ts";
 export { goalSlot } from "./slots.ts";
