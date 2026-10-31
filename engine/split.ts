@@ -14,6 +14,9 @@ export type SplitPlan = {
   units: readonly UnitPart[];
 };
 
+/** A part of a coupon: the bucket and its share of the net cash, in integer cents. */
+export type CouponPart = { goalId: string; amountCents: number };
+
 declare const confirmedBrand: unique symbol;
 
 /** A split the user confirmed. Only `confirmSplit` makes one. */
@@ -118,6 +121,30 @@ export function splitCommission(commissionCents: number, parts: readonly UnitPar
     parts.map((part) => ({ goalId: part.goalId, weight: part.units })),
   );
   return parts.map((part, index) => ({ ...part, commissionCents: cents[index] ?? 0 }));
+}
+
+/**
+ * Splits a coupon's net cash over the buckets in proportion to the units they hold, in integer
+ * cents by largest remainder. The parts sum exactly to `amountCents`. Buckets with no units and
+ * parts of 0 cents are dropped.
+ *
+ * @throws RangeError when the amount is not a whole number of cents above 0, or no bucket holds units.
+ */
+export function splitCoupon(amountCents: number, unitsByBucket: readonly UnitPart[]): CouponPart[] {
+  if (!Number.isInteger(amountCents) || amountCents <= 0) {
+    throw new RangeError(
+      `The coupon must be a whole number of cents above 0, and it is ${amountCents}.`,
+    );
+  }
+  const holding = unitsByBucket.filter((bucket) => bucket.units > 0);
+  if (holding.length === 0) throw new RangeError("A coupon split needs a bucket with units held.");
+  const cents = apportion(
+    amountCents,
+    holding.map((bucket) => ({ goalId: bucket.goalId, weight: bucket.units })),
+  );
+  return holding
+    .map((bucket, index) => ({ goalId: bucket.goalId, amountCents: cents[index] ?? 0 }))
+    .filter((part) => part.amountCents > 0);
 }
 
 /**

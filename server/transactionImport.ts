@@ -22,24 +22,31 @@ export type ImportSource = { sourceName: string; fileName: string };
 
 /** Reads the data the preview checks rows against. */
 export async function loadImportState(db: Kysely<DB>): Promise<ImportState> {
-  const [products, goals, weights, ledger, storedTrades, openingAsOf] = await Promise.all([
-    db.selectFrom("product").select(["id", "isin", "ticker", "name", "regime"]).execute(),
-    db.selectFrom("goal").select("id").execute(),
-    db.selectFrom("allocationWeight").selectAll().execute(),
-    loadLedger(db),
-    db
-      .selectFrom("transaction")
-      .select(["date", "productId", "priceScaled", "qtyScaled"])
-      .where("type", "in", ["buy", "sell"])
-      .execute(),
-    loadOpeningAsOf(db),
-  ]);
+  const [products, goals, weights, ledger, storedTrades, storedCoupons, openingAsOf] =
+    await Promise.all([
+      db.selectFrom("product").select(["id", "isin", "ticker", "name", "regime"]).execute(),
+      db.selectFrom("goal").select("id").execute(),
+      db.selectFrom("allocationWeight").selectAll().execute(),
+      loadLedger(db),
+      db
+        .selectFrom("transaction")
+        .select(["date", "productId", "priceScaled", "qtyScaled"])
+        .where("type", "in", ["buy", "sell"])
+        .execute(),
+      db
+        .selectFrom("transaction")
+        .select(["date", "productId", "amountCents"])
+        .where("type", "=", "coupon")
+        .execute(),
+      loadOpeningAsOf(db),
+    ]);
   return {
     products,
     goalIds: goals.map((goal) => goal.id),
     weights,
     ledger,
     storedTrades,
+    storedCoupons,
     openingAsOf,
   };
 }
@@ -55,8 +62,8 @@ export async function previewImport(
 
 /**
  * Commits the ready rows of a file as one batch, in one database transaction. The statuses are
- * computed again here; nothing the client holds is trusted. Each part of a confirmed split is its
- * own transaction. A row counts once in the batch, whatever its number of parts.
+ * computed again here; nothing the client holds is trusted. Each part of a confirmed split, and
+ * each part of a coupon, is its own transaction. A row counts once in the batch, whatever its number of parts.
  *
  * @returns The batch, or `null` when no row is ready: then nothing is written, not even a batch.
  */
@@ -71,9 +78,7 @@ export function commitTransactionImport(
     const previews = previewTransactionImport(rows, state, decisions);
     const ready = previews.flatMap((preview, index) => {
       const row = rows[index];
-      return preview.status === "ready" && preview.split && row
-        ? [{ row, preview, split: preview.split }]
-        : [];
+      return preview.status === "ready" && row ? [{ row, preview }] : [];
     });
     if (ready.length === 0) return null;
 
@@ -91,11 +96,30 @@ export function commitTransactionImport(
     await trx.insertInto("importBatch").values(batch).execute();
 
     const regimes = new Map(state.products.map((product) => [product.id, product.regime]));
-    for (const { row, preview, split } of ready) {
+    for (const { row, preview } of ready) {
       const productId = preview.productId as string;
+      // A coupon: qty 0, price 0 (it never enters the PMC), the net cash as the amount.
+      for (const part of preview.couponParts) {
+        await trx
+          .insertInto("transaction")
+          .values({
+            id: randomUUID(),
+            date: row.date as string,
+            goalId: part.goalId,
+            productId,
+            type: "coupon",
+            qtyScaled: 0,
+            priceScaled: 0,
+            commissionCents: null,
+            amountCents: part.amountCents,
+            note: "",
+            importBatchId: batch.id,
+          })
+          .execute();
+      }
       const regime = regimes.get(productId) as Regime;
       const price = parseDecimal(row.price) as number;
-      for (const part of split.parts) {
+      for (const part of preview.split?.parts ?? []) {
         await trx
           .insertInto("transaction")
           .values({

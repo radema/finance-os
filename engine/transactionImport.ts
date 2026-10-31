@@ -2,9 +2,9 @@ import type { BucketWeight } from "./bucket.ts";
 import { assignBucket } from "./bucket.ts";
 import type { LedgerRow, Regime } from "./holdings.ts";
 import { holdingsAt, unitPrice } from "./holdings.ts";
-import type { ConfirmedSplit, UnitPart } from "./split.ts";
-import { confirmSplit } from "./split.ts";
-import { toCents, toScaled } from "./units.ts";
+import type { ConfirmedSplit, CouponPart, UnitPart } from "./split.ts";
+import { confirmSplit, splitCoupon } from "./split.ts";
+import { fromScaled, toCents, toScaled } from "./units.ts";
 
 /** One normalised row of a broker file. Numbers are exact decimal text, `null` when empty. */
 export type ImportRow = {
@@ -51,6 +51,13 @@ export type StoredTrade = {
   qtyScaled: number;
 };
 
+/** A stored coupon, reduced to what the "already in your records" check compares. */
+export type StoredCoupon = {
+  date: string;
+  productId: string;
+  amountCents: number;
+};
+
 /** The current data the preview reads. Plain values: the preview does no I/O. */
 export type ImportState = {
   products: readonly ImportProduct[];
@@ -58,6 +65,7 @@ export type ImportState = {
   weights: readonly BucketWeight[];
   ledger: readonly LedgerRow[];
   storedTrades: readonly StoredTrade[];
+  storedCoupons: readonly StoredCoupon[];
   /** The opening position's asOf date; `null` when none is saved. */
   openingAsOf: string | null;
 };
@@ -90,6 +98,8 @@ export type PreviewRow = {
   productId: string | null;
   /** The confirmed split to write. Non-null only when the status is `ready`. */
   split: ConfirmedSplit | null;
+  /** The coupon parts to write. Non-empty only when the status is `ready` and the row is a coupon. */
+  couponParts: CouponPart[];
   /** The buckets the user can pick from, when the status is `needs a goal`. */
   candidates: string[];
 };
@@ -114,6 +124,7 @@ const result = (
   warnings: [],
   productId: null,
   split: null,
+  couponParts: [],
   candidates: [],
   ...extra,
 });
@@ -129,7 +140,10 @@ function fieldProblems(row: ImportRow): string[] {
   if (row.type === "unknown") {
     problems.push(`type not recognised: check Descrizione "${row.description}" and Segno (A or V)`);
   }
-  if (row.type !== "coupon") {
+  if (row.type === "coupon") {
+    const value = parseDecimal(row.controvalore);
+    if (value === null || value <= 0) problems.push("Controvalore is missing or not above 0");
+  } else {
     const qty = parseDecimal(row.qty);
     if (qty === null || qty === 0) problems.push("qty is missing or 0");
     const price = parseDecimal(row.price);
@@ -215,6 +229,107 @@ function resolveSplit(
   }
 }
 
+/** The ledger rows a ready trade adds, so a coupon of the same file counts its units. */
+function ledgerRows(p: Parsed, split: ConfirmedSplit): LedgerRow[] {
+  const price = unitPrice(p.product.regime, fromScaled(p.priceScaled));
+  return split.parts.map((part) => ({
+    date: p.date,
+    goalId: part.goalId,
+    productId: p.productId,
+    type: p.row.type === "sell" ? "sell" : "buy",
+    qty: p.row.type === "sell" ? -part.units : part.units,
+    price,
+  }));
+}
+
+/** A coupon row that read fine. */
+type ParsedCoupon = {
+  row: ImportRow;
+  date: string;
+  productId: string;
+  /** The net cash received, in cents. */
+  amountCents: number;
+};
+
+/**
+ * The parts of one coupon: split by the units each bucket holds on the coupon date, with no user
+ * choice. When no bucket holds the bond, the user picks one bucket.
+ */
+function resolveCoupon(
+  coupon: ParsedCoupon,
+  decision: RowDecision | undefined,
+  state: ImportState,
+  ledger: readonly LedgerRow[],
+): { parts: CouponPart[] } | { reason: string; candidates: string[] } {
+  const { units } = holdingsAt(ledger, coupon.date);
+  const held: UnitPart[] = [];
+  for (const [goalId, products] of units) {
+    const count = products.get(coupon.productId) ?? 0;
+    if (toScaled(count) > 0) held.push({ goalId, units: count });
+  }
+  if (held.length > 0) return { parts: splitCoupon(coupon.amountCents, held) };
+
+  const candidates = [
+    ...new Set(
+      state.weights
+        .filter((w) => w.productId === coupon.productId && w.weight > 0)
+        .map((w) => w.goalId),
+    ),
+  ].sort();
+  const goalId = decision?.goalId;
+  if (goalId === undefined) {
+    return { reason: "no bucket holds the bond on this date: pick a bucket", candidates };
+  }
+  if (!state.goalIds.includes(goalId)) {
+    return { reason: `bucket "${goalId}" is not a goal`, candidates };
+  }
+  return { parts: [{ goalId, amountCents: coupon.amountCents }] };
+}
+
+/** The preview of each coupon row: already stored, ready with its parts, or needs a goal. */
+function couponStatuses(
+  coupons: readonly ParsedCoupon[],
+  state: ImportState,
+  decisions: Readonly<Record<number, RowDecision>>,
+  ledger: readonly LedgerRow[],
+): Map<ImportRow, PreviewRow> {
+  const keyOf = (c: { date: string; productId: string }) => `${c.date}|${c.productId}`;
+  const sumBy = (items: readonly { date: string; productId: string; amountCents: number }[]) => {
+    const totals = new Map<string, number>();
+    for (const item of items)
+      totals.set(keyOf(item), (totals.get(keyOf(item)) ?? 0) + item.amountCents);
+    return totals;
+  };
+  const stored = sumBy(state.storedCoupons);
+  const inFile = sumBy(coupons);
+
+  const results = new Map<ImportRow, PreviewRow>();
+  for (const coupon of coupons) {
+    const { row, productId } = coupon;
+    const found = stored.get(keyOf(coupon));
+    if (found !== undefined && found === inFile.get(keyOf(coupon))) {
+      results.set(
+        row,
+        result(row, "already in your records", ["the stored coupons already cover it"], {
+          productId,
+        }),
+      );
+      continue;
+    }
+    const resolved = resolveCoupon(coupon, decisions[row.rowNumber], state, ledger);
+    results.set(
+      row,
+      "parts" in resolved
+        ? result(row, "ready", [], { productId, couponParts: resolved.parts })
+        : result(row, "needs a goal", [resolved.reason], {
+            productId,
+            candidates: resolved.candidates,
+          }),
+    );
+  }
+  return results;
+}
+
 /**
  * Checks every row against the current data and the user's decisions. Pure: no I/O. The commit
  * calls it again and ignores any status the client holds.
@@ -222,14 +337,17 @@ function resolveSplit(
  * A row can match several statuses; the first of these applies:
  * 1. `needs fix` for a field problem (date, currency, Cambio, type, qty, price, commission);
  * 2. `already in the opening position` (date <= the opening asOf, when there is one);
- * 3. `needs fix` for a coupon row (coupon handling comes in #30);
- * 4. `product not found`;
- * 5. `already in your records`: per key (date, product, price), the file's total signed qty equals
+ * 3. `product not found`;
+ * 4. `already in your records`: per key (date, product, price), the file's total signed qty equals
  *    the stored total, and something is stored. When the stored total is not zero and differs,
- *    the rows stay in the normal flow;
- * 6. `needs fix` for a row identical to another one of the file (date, product, qty, price) unless
+ *    the rows stay in the normal flow. A coupon uses the key (date, product) and compares the net
+ *    amount in cents;
+ * 5. `needs fix` for a row identical to another one of the file (date, product, qty, price) unless
  *    the user confirmed it as a real order;
- * 7. `needs a goal`, then `ready`.
+ * 6. `needs a goal`, then `ready`.
+ *
+ * A coupon row is split by the units held on its date: the stored ledger plus the ready trade rows
+ * of the file. `needs a goal` for a coupon means no bucket holds the bond.
  *
  * @param rows Normalised rows of one file, in file order.
  * @param state The current data.
@@ -243,6 +361,7 @@ export function previewTransactionImport(
 ): PreviewRow[] {
   const results = new Map<ImportRow, PreviewRow>();
   const live: Parsed[] = [];
+  const coupons: ParsedCoupon[] = [];
 
   for (const row of rows) {
     const problems = fieldProblems(row);
@@ -260,15 +379,6 @@ export function previewTransactionImport(
       );
       continue;
     }
-    if (row.type === "coupon") {
-      results.set(
-        row,
-        result(row, "needs fix", [
-          "coupon rows cannot be imported yet: coupon handling comes in #30",
-        ]),
-      );
-      continue;
-    }
     const product = findProduct(row, state.products);
     if (product === null) {
       const hint = row.title === "" ? "" : ` (${row.title})`;
@@ -276,6 +386,11 @@ export function previewTransactionImport(
         row,
         result(row, "product not found", [`no product with ISIN ${row.isin}${hint}`]),
       );
+      continue;
+    }
+    if (row.type === "coupon") {
+      const amountCents = toCents(parseDecimal(row.controvalore) as number);
+      coupons.push({ row, date, productId: product.id, amountCents });
       continue;
     }
     const units = Math.abs(parseDecimal(row.qty) as number);
@@ -325,6 +440,7 @@ export function previewTransactionImport(
   }
 
   const holdings = holdingsAt(state.ledger, END_OF_TIME);
+  const readyTrades: LedgerRow[] = [];
   for (const p of open) {
     const { row } = p;
     const base = { productId: p.product.id, warnings: controvaloreWarning(p) };
@@ -343,6 +459,7 @@ export function previewTransactionImport(
       continue;
     }
     const resolved = resolveSplit(p, decisions[row.rowNumber], state, holdings);
+    if ("split" in resolved) readyTrades.push(...ledgerRows(p, resolved.split));
     results.set(
       row,
       "split" in resolved
@@ -354,5 +471,9 @@ export function previewTransactionImport(
     );
   }
 
-  return rows.map((row) => results.get(row) as PreviewRow);
+  const couponResults = couponStatuses(coupons, state, decisions, [
+    ...state.ledger,
+    ...readyTrades,
+  ]);
+  return rows.map((row) => (results.get(row) ?? couponResults.get(row)) as PreviewRow);
 }
