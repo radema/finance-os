@@ -58,6 +58,7 @@ export const SETUP_TABS: readonly NavItem[] = [
 
 /** Built screens outside Setup. The detail route takes a goal id: `goals/detail/<id>`. */
 export const TRANSACTIONS_ROUTE = "operations/transactions";
+export const PRICES_ROUTE = "operations/prices";
 export const GOALS_LIST_ROUTE = "goals/list";
 export const GOALS_DETAIL_ROUTE = "goals/detail";
 
@@ -76,6 +77,7 @@ export const goalDetailHref = (goalId: string): string =>
 /** Route keys that have a screen. The sidebar shows "soon" on the others. */
 export const isBuilt = (key: string): boolean =>
   key === TRANSACTIONS_ROUTE ||
+  key === PRICES_ROUTE ||
   key === GOALS_LIST_ROUTE ||
   key === GOALS_DETAIL_ROUTE ||
   SETUP_TABS.some((tab) => tab.key === key);

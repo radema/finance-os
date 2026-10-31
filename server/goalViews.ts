@@ -10,6 +10,7 @@ import type {
   SeriesPoint,
 } from "../engine/goalViews.ts";
 import { holdingsAt, unitPrice } from "../engine/holdings.ts";
+import { monthEnd } from "../engine/months.ts";
 import { planInForce } from "../engine/plan.ts";
 import type { ProductParams } from "../engine/projection.ts";
 import { projectGoal, timeGrid } from "../engine/projection.ts";
@@ -29,11 +30,6 @@ import { loadLedger } from "./transactions.ts";
 const NO_PRICE_NOTE = "A held product has no price, so the projection is not shown.";
 const NO_FIRST_YEAR_NOTE =
   "The pension plan has no first year of membership, so the exit tax and the net are not shown.";
-
-const monthEnd = (month: string): string => {
-  const lastDay = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0));
-  return `${month}-${String(lastDay.getUTCDate()).padStart(2, "0")}`;
-};
 
 function monthsBetween(first: string, last: string): string[] {
   const months: string[] = [];
