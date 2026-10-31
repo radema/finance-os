@@ -1,29 +1,23 @@
-import { z } from "zod";
+import YahooFinance from "yahoo-finance2";
 import type { FetchedPrice, PriceProvider } from "../engine/priceFetch.ts";
 
-const CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/";
 const DAY_SECONDS = 86_400;
 
-// The endpoint's answer, reduced to what is read. Unadjusted `close` only, never `adjclose`.
-const chartSchema = z.object({
-  chart: z.object({
-    result: z
-      .array(
-        z.object({
-          meta: z.object({ currency: z.string().optional(), gmtoffset: z.number().default(0) }),
-          timestamp: z.array(z.number()).default([]),
-          indicators: z.object({
-            quote: z.array(z.object({ close: z.array(z.number().nullable()) })),
-          }),
-        }),
-      )
-      .nullable(),
-    error: z.object({ description: z.string().optional() }).nullable().optional(),
-  }),
-});
+/** The part of a `chart` answer that is read: daily quotes and the currency, in array form. */
+export interface YahooChart {
+  meta: { currency: string; gmtoffset: number };
+  quotes: { date: Date; close: number | null }[];
+}
+
+/** Asks for the daily history of one symbol. `signal` aborts a request that hangs. */
+export type ChartCall = (
+  symbol: string,
+  query: { period1: Date; period2: Date; interval: "1d" },
+  signal: AbortSignal,
+) => Promise<YahooChart>;
 
 export interface YahooOptions {
-  fetchImpl?: typeof fetch;
+  chart?: ChartCall;
   /** Waits between retries. */
   sleep?: (ms: number) => Promise<void>;
   /** Clock in ms, for the cache. */
@@ -34,21 +28,39 @@ export interface YahooOptions {
   timeoutMs?: number;
 }
 
-const unix = (date: string): number => Date.parse(`${date}T00:00:00Z`) / 1000;
+// The library client is made on the first fetch, so starting the app costs nothing.
+function libraryChart(): ChartCall {
+  let client: InstanceType<typeof YahooFinance> | undefined;
+  return (symbol, query, signal) => {
+    // The library has no `repair`-style rescaling in `chart`; none is requested here.
+    client ??= new YahooFinance({ suppressNotices: ["yahooSurvey"], versionCheck: false });
+    return client.chart(symbol, { ...query, return: "array" }, { fetchOptions: { signal } });
+  };
+}
 
-/** Thrown for an answer that a retry cannot improve. */
+/** An answer that a retry cannot improve. */
 class Permanent extends Error {}
 
+/** A client error other than "too many requests" says the request is wrong; a retry repeats it. */
+const isPermanent = (error: unknown): boolean => {
+  if (error instanceof Permanent) return true;
+  const { name, code } = error as { name?: string; code?: unknown };
+  if (name === "BadRequestError" || name === "InvalidOptionsError") return true;
+  return (
+    name === "HTTPError" && typeof code === "number" && code >= 400 && code < 500 && code !== 429
+  );
+};
+
 /**
- * The v1 price provider: Yahoo's chart endpoint, for `.MI` tickers only, over plain `fetch`. It
- * asks for daily closes and returns them as Yahoo states them: no currency conversion, no
- * `repair`-style rescaling. Answers are cached for a few minutes; a failed request is retried with
- * a growing delay; every request has a time limit. Only the ticker and the dates leave the machine.
+ * The v1 price provider: Yahoo through `yahoo-finance2`, for `.MI` tickers only. It asks for daily
+ * closes and returns the raw `close` with Yahoo's currency code: no conversion, no adjusted close,
+ * no rescaling. Answers are cached for a few minutes; a failed request is retried with a growing
+ * delay; every request has a time limit. Only the ticker and the dates leave the machine.
  *
- * @param options Test hooks and limits; the defaults are for the real endpoint.
+ * @param options Test hooks and limits; the defaults are for the real library.
  */
 export function createYahooProvider({
-  fetchImpl = fetch,
+  chart = libraryChart(),
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   now = Date.now,
   attempts = 3,
@@ -59,31 +71,18 @@ export function createYahooProvider({
   const cache = new Map<string, { at: number; rows: FetchedPrice[] }>();
 
   async function request(ticker: string, from: string, to: string): Promise<FetchedPrice[]> {
-    const url = `${CHART_URL}${encodeURIComponent(ticker)}?period1=${unix(from)}&period2=${unix(to) + DAY_SECONDS}&interval=1d`;
-    const response = await fetchImpl(url, {
-      headers: { "User-Agent": "Mozilla/5.0 gbi" },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      const detail = chartSchema.safeParse(body).data?.chart.error?.description;
-      const message = `Yahoo answered ${response.status}${detail ? `: ${detail}` : ""}.`;
-      // A client error other than "too many requests" says the request is wrong; a retry repeats it.
-      throw response.status >= 400 && response.status < 500 && response.status !== 429
-        ? new Permanent(message)
-        : new Error(message);
-    }
-    const [result] = chartSchema.parse(await response.json()).chart.result ?? [];
-    if (!result) throw new Permanent(`Yahoo returned no data for ${ticker}.`);
-    const { currency, gmtoffset } = result.meta;
-    if (!currency) throw new Permanent(`Yahoo gave no currency for ${ticker}.`);
-    const closes = result.indicators.quote[0]?.close ?? [];
-    return result.timestamp.flatMap((time, i) => {
-      const close = closes[i];
-      if (close === null || close === undefined) return [];
-      // The exchange's calendar day: Milan closes at 17:30 local, far from midnight UTC.
-      const date = new Date((time + gmtoffset) * 1000).toISOString().slice(0, 10);
-      return [{ ticker, date, close, currency }];
+    const period2 = new Date(Date.parse(`${to}T00:00:00Z`) + DAY_SECONDS * 1000);
+    const { meta, quotes } = await chart(
+      ticker,
+      { period1: new Date(`${from}T00:00:00Z`), period2, interval: "1d" },
+      AbortSignal.timeout(timeoutMs),
+    );
+    if (!meta.currency) throw new Permanent(`Yahoo gave no currency for ${ticker}.`);
+    return quotes.flatMap(({ date, close }) => {
+      if (close === null) return [];
+      // The exchange's calendar day: a Milan close is far from midnight UTC, but be exact.
+      const day = new Date(date.getTime() + meta.gmtoffset * 1000).toISOString().slice(0, 10);
+      return [{ ticker, date: day, close, currency: meta.currency }];
     });
   }
 
@@ -94,7 +93,7 @@ export function createYahooProvider({
       try {
         return await request(ticker, from, to);
       } catch (error) {
-        if (error instanceof Permanent) throw error;
+        if (isPermanent(error)) throw error;
         lastError = error;
       }
     }
