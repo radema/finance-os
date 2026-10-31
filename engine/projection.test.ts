@@ -5,6 +5,7 @@ import {
   type ProductParams,
   type ProjectionInput,
   projectGoal,
+  targetAtGoalDate,
 } from "./projection.ts";
 import { type PensionFlow, pensionPlanSchema } from "./schemas.ts";
 import { timeGrid } from "./timeGrid.ts";
@@ -54,6 +55,16 @@ describe("normaliseWeights", () => {
 
   it("gives shares of 0 when all weights are 0", () => {
     expect(normaliseWeights(new Map([["a", 0]])).get("a")).toBe(0);
+  });
+});
+
+describe("targetAtGoalDate", () => {
+  it("grows today's target by inflation over tau (10 000 x 1.02^2 = 10 404)", () => {
+    expect(targetAtGoalDate(10_000, 0.02, 2)).toBeCloseTo(10_404, 8);
+  });
+
+  it("returns today's target when the goal is already due (tau 0)", () => {
+    expect(targetAtGoalDate(10_000, 0.02, timeGrid("2026-10-31", 2025).tau)).toBe(10_000);
   });
 });
 

@@ -14,6 +14,11 @@ export function stepContribution(step: Step, y0: number, monthly: number, growth
   return step.months * yearly;
 }
 
+/** Today's `target` grown by `inflation` over `tau` real years; `tau` is 0 for a goal already due. */
+export function targetAtGoalDate(target: number, inflation: number, tau: number): number {
+  return target * (1 + inflation) ** tau;
+}
+
 /** Rescale non-negative weights to shares that sum to 1. All weights 0 gives all shares 0. */
 export function normaliseWeights(weights: ReadonlyMap<string, number>): Map<string, number> {
   let sum = 0;
@@ -280,7 +285,7 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
   const { gross, tax, net } = liquidateGoal(input, perProduct);
   return {
     tau: plan.grid.tau,
-    targetAtGoalDate: input.goal.target * (1 + input.settings.inflation) ** plan.grid.tau,
+    targetAtGoalDate: targetAtGoalDate(input.goal.target, input.settings.inflation, plan.grid.tau),
     perProduct,
     gross,
     tax,
