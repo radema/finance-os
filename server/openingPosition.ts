@@ -56,6 +56,7 @@ export function registerOpeningPositionRoutes(router: Router, db: Kysely<DB>): v
             amountCents: toCents(units * unitPrice(regime, pmc)),
             note: "",
             importBatchId: null,
+            flow: null,
           };
           await trx.insertInto("transaction").values(row).execute();
           saved.push(fromRow(row));

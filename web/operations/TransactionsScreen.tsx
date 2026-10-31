@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { estimateCommission, isCostly, minEfficientTicket } from "../../engine/commission.ts";
 import type { TransactionType } from "../../engine/holdings.ts";
-import type { Commission, Goal, Product, Transaction } from "../../engine/schemas.ts";
+import type {
+  Commission,
+  Goal,
+  PensionFlow,
+  PensionPlan,
+  Product,
+  Transaction,
+} from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { eurosToCents, num } from "../forms.ts";
 import { formatEuro, formatPercent } from "../money.ts";
@@ -41,6 +48,7 @@ function AddForm({
   goals,
   products,
   commission,
+  pensionPlan,
   onSaved,
 }: {
   /** The server's app clock: the default date of a new transaction. */
@@ -48,6 +56,8 @@ function AddForm({
   goals: Goal[];
   products: Product[];
   commission: Commission;
+  /** The saved plan: it says which flows a pension fund takes. */
+  pensionPlan: PensionPlan | null | undefined;
   onSaved: () => void;
 }) {
   const [date, setDate] = useState(today);
@@ -57,6 +67,7 @@ function AddForm({
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
   const [fee, setFee] = useState("");
+  const [flow, setFlow] = useState("");
   const [priceNote, setPriceNote] = useState<string>();
   const [error, setError] = useState<string>();
 
@@ -81,6 +92,12 @@ function AddForm({
   const hasAmount = Number.isFinite(amountCents) && amountCents > 0;
   const estimate =
     product && hasAmount ? estimateCommission(commission, product, type, amountCents) : 0;
+  // A fund that takes both flows needs the user's choice; with one flow the server picks it.
+  const takesBothFlows =
+    type === "pensionContribution" &&
+    (["Work", "Voluntary"] as const).every((kind) =>
+      pensionPlan?.flows.some((f) => f.productId === productId && f.flow === kind && f.pct > 0),
+    );
   const costly = product && hasAmount && isCostly(commission, product, type, amountCents);
 
   const save = async () => {
@@ -94,6 +111,7 @@ function AddForm({
           amountCents,
           price: type === "coupon" ? 0 : num(price),
           commissionCents: fee.trim() === "" ? null : eurosToCents(fee),
+          flow: takesBothFlows && flow !== "" ? flow : undefined,
         },
       });
       setError(undefined);
@@ -135,6 +153,20 @@ function AddForm({
           onChange={(v) => setType(v as TransactionType)}
           options={FORM_TYPES}
         />
+        {takesBothFlows ? (
+          <SelectField
+            label="Flow"
+            value={flow}
+            onChange={setFlow}
+            options={[
+              { value: "", label: "Choose…" },
+              ...(["Work", "Voluntary"] satisfies PensionFlow["flow"][]).map((kind) => ({
+                value: kind,
+                label: kind,
+              })),
+            ]}
+          />
+        ) : null}
         <NumberField
           label={type === "coupon" ? "Net cash received (€)" : "Amount (€)"}
           value={amount}
@@ -182,6 +214,7 @@ export function TransactionsScreen() {
   const products = useLoad<Product[]>("/api/products");
   const commission = useLoad<Commission>("/api/commission");
   const clock = useLoad<{ today: string }>("/api/today");
+  const pensionPlan = useLoad<PensionPlan | null>("/api/pension-plan");
   const [goalFilter, setGoalFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [error, setError] = useState<string>();
@@ -227,6 +260,7 @@ export function TransactionsScreen() {
                           goals={goalList}
                           products={productList}
                           commission={plan}
+                          pensionPlan={pensionPlan.data}
                           onSaved={list.reload}
                         />
                       )}
@@ -287,7 +321,10 @@ export function TransactionsScreen() {
                         <td>
                           {p?.name ?? "?"} {p ? <ProductTag regime={p.regime} /> : null}
                         </td>
-                        <td>{TYPE_LABEL[t.type] ?? t.type}</td>
+                        <td>
+                          {TYPE_LABEL[t.type] ?? t.type}
+                          {t.flow ? ` (${t.flow})` : ""}
+                        </td>
                         <td className="num">
                           {t.type === "coupon" ? "–" : quantity.format(t.qty)}
                         </td>

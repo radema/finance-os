@@ -39,17 +39,14 @@ function latestPrice(data: SampleData, productId: string): number {
 
 const round = (value: number, places = 2) => Number(value.toFixed(places));
 
-/** This year's pension contributions on products with a Voluntary flow, in cents. */
+/** This year's pension contributions with flow Voluntary, in cents. */
 function voluntaryYtdCents(data: SampleData): number {
-  const voluntary = new Set(
-    data.pensionPlan.flows.filter((flow) => flow.flow === "Voluntary").map((f) => f.productId),
-  );
   return data.ledger
     .filter(
       (row) =>
         row.type === "pensionContribution" &&
-        row.date.slice(0, 4) === data.asOf.slice(0, 4) &&
-        voluntary.has(row.productId),
+        row.flow === "Voluntary" &&
+        row.date.slice(0, 4) === data.asOf.slice(0, 4),
     )
     .reduce((sum, row) => sum + Math.round(row.qty * row.price * 100), 0);
 }

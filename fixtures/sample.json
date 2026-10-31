@@ -744,6 +744,7 @@
       "goalId": "g-retirement",
       "productId": "p-pension-balanced",
       "type": "pensionContribution",
+      "flow": "Work",
       "qty": 60,
       "price": 15.1
     },
@@ -770,6 +771,7 @@
       "goalId": "g-retirement",
       "productId": "p-pension-equity",
       "type": "pensionContribution",
+      "flow": "Voluntary",
       "qty": 50,
       "price": 13
     }

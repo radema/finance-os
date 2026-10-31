@@ -69,6 +69,7 @@ describe("startServer", () => {
         { name: "001-baseline" },
         { name: "002-domain" },
         { name: "003-batch-created-ids" },
+        { name: "004-transaction-flow" },
       ]);
       const tables = db.prepare("SELECT name FROM sqlite_schema WHERE name = 'meta'").all();
       expect(tables).toEqual([{ name: "meta" }]);

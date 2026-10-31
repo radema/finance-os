@@ -8,6 +8,7 @@ import { planInForce } from "../engine/plan.ts";
 import { cashFlowSchema, pensionPlanSchema, settingsSchema } from "../engine/schemas.ts";
 import type { DB } from "./db.ts";
 import { loadDocument, saveDocument } from "./documents.ts";
+import { voluntaryYtdCents } from "./pensionPlan.ts";
 import type { Router } from "./router.ts";
 import { loadLedger } from "./transactions.ts";
 
@@ -54,22 +55,7 @@ export function registerCashFlowRoutes(router: Router, db: Kysely<DB>, today: ()
     const plan = await loadPensionPlan(db);
     let pension: Parameters<typeof projectCashFlow>[0]["pension"];
     if (plan) {
-      // Voluntary YTD: this year's pension contributions on the products with a Voluntary flow.
-      const voluntary = new Set(
-        plan.flows
-          .filter((flow) => flow.flow === "Voluntary" && flow.pct > 0)
-          .map((flow) => flow.productId),
-      );
-      const year = asOf.slice(0, 4);
-      const voluntaryYtd = (await loadLedger(db))
-        .filter(
-          (entry) =>
-            entry.type === "pensionContribution" &&
-            voluntary.has(entry.productId) &&
-            entry.date.startsWith(year) &&
-            entry.date <= asOf,
-        )
-        .reduce((sum, entry) => sum + entry.amountCents, 0);
+      const voluntaryYtd = voluntaryYtdCents(await loadLedger(db), asOf);
       pension = {
         goalId: plan.goalId,
         schedule: pensionSchedule(plan, settings, asOf, voluntaryYtd),

@@ -80,6 +80,8 @@ export const TRANSACTION_TYPES = [
   "coupon",
 ] as const;
 
+export const PENSION_FLOWS = ["Work", "Voluntary"] as const;
+
 export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "use YYYY-MM-DD")
@@ -99,6 +101,8 @@ export const transactionInputSchema = z.object({
   price: z.number().min(0).default(0),
   /** The actual commission in cents. Null or absent means none is recorded. */
   commissionCents: cents.nullable().default(null),
+  /** `pensionContribution` only. The server defaults it from the pension plan and refuses it on other types. */
+  flow: z.enum(PENSION_FLOWS).optional(),
   note: text.default(""),
 });
 export type TransactionInput = z.infer<typeof transactionInputSchema>;
@@ -186,8 +190,6 @@ export type Settings = z.infer<typeof settingsSchema>;
 
 const TFR_PCT = 0.0691;
 const EXTRA_DEDUCTION_CENTS = 265_000;
-
-export const PENSION_FLOWS = ["Work", "Voluntary"] as const;
 
 /** One product's share of a pension flow: `Work` is TFR + worker + employer, `Voluntary` is the rest. */
 export const pensionFlowSchema = z.object({

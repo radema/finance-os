@@ -78,7 +78,7 @@ export function registerPensionRoutes(router: Router, db: Kysely<DB>, today: () 
     };
     if (!plan || plan.ral === undefined) return { ...base, thisYear: null, schedule: [] };
 
-    const voluntaryYtd = voluntaryYtdCents(world.ledger, plan, asOf);
+    const voluntaryYtd = voluntaryYtdCents(world.ledger, asOf);
     const schedule = pensionSchedule(plan, settings, asOf, voluntaryYtd, SCHEDULE_YEARS);
     const [first] = schedule;
     if (!first) return { ...base, thisYear: null, schedule: [] };

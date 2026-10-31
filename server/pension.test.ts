@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { GoalDetail } from "../engine/goalViews.ts";
 import type { PensionView } from "../engine/pensionView.ts";
-import type { PensionPlan } from "../engine/schemas.ts";
+import type { PensionPlan, Transaction } from "../engine/schemas.ts";
 import sampleJson from "../fixtures/sample.json" with { type: "json" };
 import { startServer } from "./index.ts";
 
@@ -81,6 +81,91 @@ describe("Pension plan and Pension view API", () => {
     await contribute("2025-12-31", "p-pension-equity", 20_000);
     await contribute("2026-04-01", "p-pension-balanced", 30_000);
     expect((await view()).thisYear?.voluntaryYtd).toBeCloseTo(750, 6);
+  });
+
+  // AC-94: the equity fund takes both flows (Work 40% of the Work flow, all of Voluntary).
+  describe("contribution flow (AC-94)", () => {
+    const bothFlows = (plan: PensionPlan): PensionPlan => ({
+      ...plan,
+      flows: [
+        { productId: "p-pension-balanced", flow: "Work", pct: 0.6 },
+        { productId: "p-pension-equity", flow: "Work", pct: 0.4 },
+        { productId: "p-pension-equity", flow: "Voluntary", pct: 1 },
+      ],
+    });
+    const contribute = (date: string, productId: string, amountCents: number, flow?: string) =>
+      call<Transaction & { error?: string }>("POST", "/api/transactions", {
+        date,
+        goalId: "g-retirement",
+        productId,
+        type: "pensionContribution",
+        amountCents,
+        price: 13,
+        flow,
+      });
+    const savePlan = async (change: (plan: PensionPlan) => PensionPlan) => {
+      const plan = (await call<PensionPlan>("GET", "/api/pension-plan")).body;
+      expect((await call("PUT", "/api/pension-plan", change(plan))).status).toBe(200);
+    };
+
+    it("counts only the Voluntary contribution of a fund that takes both flows", async () => {
+      await call("POST", "/api/sample-data");
+      await savePlan(bothFlows);
+      expect((await contribute("2026-03-01", "p-pension-equity", 10_000, "Work")).status).toBe(200);
+      expect((await contribute("2026-04-01", "p-pension-equity", 20_000, "Voluntary")).status).toBe(
+        200,
+      );
+      // 650 from the sample's Voluntary row + 200; the 100 of Work is not voluntary.
+      expect((await view()).thisYear?.voluntaryYtd).toBeCloseTo(850, 6);
+    });
+
+    it("gives a contribution the flow of a product that takes one flow", async () => {
+      await call("POST", "/api/sample-data");
+      const equity = await contribute("2026-03-01", "p-pension-equity", 10_000);
+      expect(equity.body.flow).toBe("Voluntary");
+      const balanced = await contribute("2026-03-02", "p-pension-balanced", 10_000);
+      expect(balanced.body.flow).toBe("Work");
+      const list = (await call<Transaction[]>("GET", "/api/transactions?year=2026")).body;
+      expect(list.filter((row) => row.date === "2026-03-01").map((row) => row.flow)).toEqual([
+        "Voluntary",
+      ]);
+    });
+
+    it("refuses a contribution without a flow on a fund that takes both", async () => {
+      await call("POST", "/api/sample-data");
+      await savePlan(bothFlows);
+      const refused = await contribute("2026-03-01", "p-pension-equity", 10_000);
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toContain("flow");
+      // The same rule holds on an edit.
+      const ok = await contribute("2026-03-01", "p-pension-equity", 10_000, "Work");
+      const { id, flow: _flow, ...rest } = ok.body;
+      expect((await call("PUT", "/api/transactions", { id, ...rest })).status).toBe(400);
+    });
+
+    it("refuses a flow on a row that is not a pension contribution", async () => {
+      await call("POST", "/api/sample-data");
+      const refused = await call<{ error: string }>("POST", "/api/transactions", {
+        date: "2026-03-01",
+        goalId: "g-car",
+        productId: "p-world-etf",
+        type: "buy",
+        amountCents: 10_000,
+        price: 100,
+        flow: "Work",
+      });
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toContain("flow");
+    });
+
+    it("keeps no flow for a product that the plan does not name, which counts as Work", async () => {
+      await call("POST", "/api/sample-data");
+      await savePlan((plan) => ({ ...plan, flows: [] }));
+      const row = await contribute("2026-03-01", "p-pension-equity", 10_000);
+      expect(row.status).toBe(200);
+      expect(row.body.flow).toBeUndefined();
+      expect((await view()).thisYear?.voluntaryYtd).toBeCloseTo(650, 6);
+    });
   });
 
   it("saves the plan, validated, and reads it back", async () => {

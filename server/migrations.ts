@@ -130,6 +130,26 @@ const migrations: Record<string, Migration> = {
         CHECK (created_ids IS NULL OR json_valid(created_ids))`.execute(db);
     },
   },
+  "004-transaction-flow": {
+    async up(db) {
+      await sql`ALTER TABLE "transaction" ADD COLUMN flow TEXT
+        CHECK (flow IS NULL OR flow IN ('Work', 'Voluntary'))`.execute(db);
+      // Backfill (AC-94): a pension contribution on a product that takes exactly one flow in the
+      // saved plan gets that flow. Other rows stay empty, and an empty flow counts as Work.
+      await sql`UPDATE "transaction" SET flow = (
+          SELECT MIN(json_extract(item.value, '$.flow'))
+          FROM document, json_each(document.value, '$.flows') AS item
+          WHERE document.kind = 'pensionPlan'
+            AND json_extract(item.value, '$.productId') = "transaction".product_id
+            AND json_extract(item.value, '$.pct') > 0)
+        WHERE type = 'pensionContribution' AND (
+          SELECT COUNT(DISTINCT json_extract(item.value, '$.flow'))
+          FROM document, json_each(document.value, '$.flows') AS item
+          WHERE document.kind = 'pensionPlan'
+            AND json_extract(item.value, '$.productId') = "transaction".product_id
+            AND json_extract(item.value, '$.pct') > 0) = 1`.execute(db);
+    },
+  },
 };
 
 export const migrationProvider: MigrationProvider = {

@@ -15,23 +15,16 @@ export async function loadPensionPlan(db: Kysely<DB>): Promise<PensionPlan | und
 }
 
 /**
- * Voluntary contributions made in the year of `asOf`, in cents: the `pensionContribution`
- * transactions on products that have a Voluntary flow, dated up to `asOf`.
+ * Voluntary contributions made in the year of `asOf`, in cents: this year's `pensionContribution`
+ * transactions with flow `Voluntary`, dated up to `asOf`. A row with no flow counts as Work.
  */
-export function voluntaryYtdCents(
-  ledger: readonly LedgerEntry[],
-  plan: PensionPlan,
-  asOf: string,
-): number {
-  const voluntary = new Set(
-    plan.flows.filter((flow) => flow.flow === "Voluntary").map((flow) => flow.productId),
-  );
+export function voluntaryYtdCents(ledger: readonly LedgerEntry[], asOf: string): number {
   const year = asOf.slice(0, 4);
   return ledger
     .filter(
       (entry) =>
         entry.type === "pensionContribution" &&
-        voluntary.has(entry.productId) &&
+        entry.flow === "Voluntary" &&
         entry.date.slice(0, 4) === year &&
         entry.date <= asOf,
     )

@@ -157,7 +157,7 @@ describe("export and import", () => {
   it("carries the migration version and no timestamp", async () => {
     const document = await exportAll(db);
     expect(Object.keys(document)).toEqual(["schemaVersion", "tables"]);
-    expect(document.schemaVersion).toBe("003-batch-created-ids");
+    expect(document.schemaVersion).toBe("004-transaction-flow");
   });
 
   it("covers every table in the database, a new one included (AC-40)", async () => {
@@ -194,10 +194,10 @@ describe("export and import", () => {
   it("refuses a file from another migration version and changes nothing", async () => {
     await seed(db);
     const before = JSON.stringify(await exportAll(db));
-    const document = { ...(await exportAll(db)), schemaVersion: "004-future" };
+    const document = { ...(await exportAll(db)), schemaVersion: "005-future" };
 
     await expect(importAll(db, dataDir, "2026-05-01", document)).rejects.toThrow(
-      /migration version 004-future.*003-batch-created-ids/,
+      /migration version 005-future.*004-transaction-flow/,
     );
     expect(JSON.stringify(await exportAll(db))).toBe(before);
   });
