@@ -17,13 +17,9 @@ export const splitDecision = (split: ConfirmedSplit): RowDecision => ({
   },
 });
 
-/**
- * True for a `needs fix` row that repeats another row of the file, the one case the user can
- * confirm as a real order. It reads the preview's reason, so a test runs the real preview on it.
- */
+/** True for a trade or a coupon that repeats another row of the file: the user can confirm it. */
 export const isDuplicateFix = (preview: PreviewRow | undefined): boolean =>
-  preview?.status === "needs fix" &&
-  preview.reasons.some((reason) => reason.startsWith("same date"));
+  preview?.duplicateInFile === true;
 
 const ISIN = /^[A-Z]{2}[A-Z0-9]{9}\d$/;
 

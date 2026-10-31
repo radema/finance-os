@@ -124,7 +124,10 @@ export function registerImportRoutes(router: Router, db: Kysely<DB>): void {
     const read = readImportFile(file, asked);
     const { headers } = read.table;
     const guess = guessMapping(headers, "transactions");
-    const saved = await loadSaved(db, "transactions");
+    // `/preview` parses with the mapping's delimiter, so only a mapping that fits this file's is offered.
+    const saved = (await loadSaved(db, "transactions")).filter(
+      (m) => read.kind === "xlsx" || m.delimiter === "auto" || m.delimiter === read.delimiter,
+    );
     const suggestions = suggestMappings(
       headers,
       read.fineco ? [FINECO_PRESET, ...saved] : saved,

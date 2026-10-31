@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ImportMapping, ImportTable } from "./importMapping.ts";
 import { FINECO_PRESET, guessMapping, mapRows, suggestMappings } from "./importMapping.ts";
+import { parseDecimal } from "./transactionImport.ts";
 
 const GOALS = [
   { id: "g1", name: "House" },
@@ -102,6 +103,17 @@ describe("mapRows", () => {
       GOALS,
     );
     expect(rows.map((r) => r.date)).toEqual(["2024-01-15", "2024-01-15", "2024-01-31"]);
+  });
+
+  it("writes fractions as plain decimal text with no trailing dot", () => {
+    const [row] = mapRows(
+      table(["d", "p", "q", "pr"], ["2024-01-15", "X", "0,9999999", "0,0000001"]),
+      { columnMap: map, ...settings },
+      GOALS,
+    );
+    expect(row).toMatchObject({ qty: "1", price: "0" });
+    expect(parseDecimal(row?.qty ?? null)).toBe(1);
+    expect(parseDecimal(row?.price ?? null)).toBe(0);
   });
 
   it("keeps an unreadable date as null with its text", () => {

@@ -134,7 +134,7 @@ export function RowCheck({
                           onDecide(row.rowNumber, { ...decision, confirmDuplicate: true })
                         }
                       >
-                        Confirm as real order
+                        {row.type === "coupon" ? "Confirm as real coupon" : "Confirm as real order"}
                       </button>
                     ) : null}
                     {row.type === "coupon" &&

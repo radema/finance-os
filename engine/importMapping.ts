@@ -149,7 +149,7 @@ const BUY_WORDS = new Set(["buy", "a", "acquisto"]);
 const SELL_WORDS = new Set(["sell", "v", "vendita"]);
 
 const decimalText = (value: number): string =>
-  Number.isInteger(value) ? String(value) : value.toFixed(6).replace(/0+$/, "");
+  Number.isInteger(value) ? String(value) : value.toFixed(6).replace(/\.?0+$/, "");
 
 /** A number cell as exact decimal text; the raw text when it is not a number; null when empty. */
 function numberText(cell: string, decimal: DecimalFormat): string | null {

@@ -32,15 +32,21 @@ const STATE: ImportState = {
 };
 
 describe("isDuplicateFix", () => {
-  it("is true for a row the preview flags as a repeat of another row of the file", () => {
-    const [first, second] = previewTransactionImport(
-      [row({ rowNumber: 2 }), row({ rowNumber: 3 })],
-      STATE,
-      {},
-    );
-    expect(first?.status).toBe("needs fix");
-    expect(isDuplicateFix(first)).toBe(true);
-    expect(isDuplicateFix(second)).toBe(true);
+  const [first, second] = previewTransactionImport(
+    [row({ rowNumber: 2 }), row({ rowNumber: 3 })],
+    STATE,
+    {},
+  );
+  const coupons = previewTransactionImport(
+    [2, 3].map((n) =>
+      row({ rowNumber: n, type: "coupon", qty: null, price: null, controvalore: "40.5" }),
+    ),
+    STATE,
+    {},
+  );
+
+  it("is true for a trade or a coupon that repeats another row of the file", () => {
+    expect([first, second, ...coupons].map(isDuplicateFix)).toEqual([true, true, true, true]);
   });
 
   it("is false for another needs-fix row and for a ready row", () => {

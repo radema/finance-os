@@ -104,6 +104,8 @@ export type PreviewRow = {
   couponParts: CouponPart[];
   /** The buckets the user can pick from, when the status is `needs a goal`. */
   candidates: string[];
+  /** True when the row repeats another row of the file and waits for `confirmDuplicate`. */
+  duplicateInFile: boolean;
 };
 
 const DECIMAL = /^-?\d+(\.\d+)?$/;
@@ -128,6 +130,7 @@ const result = (
   split: null,
   couponParts: [],
   candidates: [],
+  duplicateInFile: false,
   ...extra,
 });
 
@@ -330,7 +333,7 @@ function couponStatuses(
           row,
           "needs fix",
           [`same date and product as the coupon of row ${others}: confirm it as a real coupon`],
-          { productId },
+          { productId, duplicateInFile: true },
         ),
       );
       continue;
@@ -472,7 +475,7 @@ export function previewTransactionImport(
           row,
           "needs fix",
           [`same date, product, qty and price as row ${others}: confirm it as a real order`],
-          base,
+          { ...base, duplicateInFile: true },
         ),
       );
       continue;

@@ -200,6 +200,41 @@ describe("import API", () => {
     expect(other.body.suggestions).toEqual([]);
   });
 
+  it("does not offer a mapping saved for another delimiter", async () => {
+    const columnMap = { date: "Giorno", product: "Codice", qty: "Pezzi", price: "Prezzo" };
+    await call("PUT", "/api/import/mappings", {
+      name: "semicolon broker",
+      kind: "transactions",
+      columnMap,
+      delimiter: ";",
+      decimal: "comma",
+      dateFormat: "dmy",
+    });
+    await call("PUT", "/api/import/mappings", {
+      name: "any broker",
+      kind: "transactions",
+      columnMap,
+      delimiter: "auto",
+      decimal: "comma",
+      dateFormat: "dmy",
+    });
+    const semicolons = await call<ReadResult>(
+      "POST",
+      "/api/import/read",
+      csv("Giorno;Codice;Pezzi;Prezzo\n1;2;3;4\n"),
+    );
+    expect(semicolons.body.suggestions.map((m) => m.name)).toEqual([
+      "any broker",
+      "semicolon broker",
+    ]);
+    const commas = await call<ReadResult>(
+      "POST",
+      "/api/import/read",
+      csv("Giorno,Codice,Pezzi,Prezzo\n1,2,3,4\n"),
+    );
+    expect(commas.body.suggestions.map((m) => m.name)).toEqual(["any broker"]);
+  });
+
   it("refuses to save a mapping under the preset name and deletes a saved one", async () => {
     const body = {
       name: FINECO_PRESET.name,
