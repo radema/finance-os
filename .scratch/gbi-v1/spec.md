@@ -408,7 +408,7 @@ today's euros, time-weighted and money-weighted return, drawdown, average cost (
 carry-forward (zainetto), FIRE and Barista FIRE, opening position, Need/Want/Wish, ISIN, coupon, old
 price, minimum efficient ticket, stamp duty (bollo), exit tax, white-list share. Method notes cover:
 time grid and 31 December due date, taxes by regime, Monte Carlo, required contribution, FI levels,
-performance formulas, optimizer rules, the kept simplifications (S3, S6, S7, cash stamp duty) and the
+performance formulas, optimizer rules, the kept simplifications (S6, S7, cash stamp duty) and the
 pension capital/annuity note.
 
 ### Delivery (t13, t16)
@@ -603,7 +603,7 @@ Published by ticket 15 as one issue "GBI v2 backlog".
 - Goal month: a due date other than 31 December (t12, t16).
 - Per-year pension deduction cap (t12).
 - BTP maturity before the goal year: model and flag it (t12).
-- Exact exit-tax base and 365-day membership years (t12 S3).
+- 365-day membership years (t12 S3). The exit-tax base already leaves out the non-deducted part (AC-95).
 - Extra-deduction window and regional/municipal surcharges in the refund (t12 S6).
 - 12.5% on the govt-bond share of pension funds (t12 S7).
 - Flat €34.20 stamp duty for current accounts (t12).
