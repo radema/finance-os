@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import sampleJson from "../fixtures/sample.json" with { type: "json" };
 import { pensionFlowsByProduct, pensionSchedule } from "./pension.ts";
 import { pensionPlanSchema } from "./schemas.ts";
 
@@ -22,9 +23,9 @@ const plan = pensionPlanSchema.parse({
 
 describe("pensionPlanSchema", () => {
   it("accepts the partial document of the #23 fixture", () => {
-    const parsed = pensionPlanSchema.parse({ goalId: "g-retirement", firstYear: 2020 });
-    expect(parsed.goalId).toBe("g-retirement");
-    expect(parsed.firstYear).toBe(2020);
+    const parsed = pensionPlanSchema.parse(sampleJson.pensionPlan);
+    expect(parsed.goalId).toBe(sampleJson.pensionPlan.goalId);
+    expect(parsed.firstYear).toBe(sampleJson.pensionPlan.firstYear);
     expect(parsed.ral).toBeUndefined();
     expect(parsed.voluntary).toBeNull();
     expect(parsed.tfrPct).toBe(0.0691);
@@ -64,7 +65,7 @@ describe("pensionPlanSchema", () => {
 
 describe("pensionSchedule (AC-45)", () => {
   // asOf 2026-06-30: Y0 = 2026, f = 6/12. Voluntary YTD 3,375 = the Y0 stub of 6,750 x 1/2, so
-  // the Y0 voluntary is 6,750 and the Y0 row matches the plain formula.
+  // the Y0 tax-year voluntary is 6,750 too and every row follows the plain formula.
   const rows = pensionSchedule(plan, settings, "2026-06-30", eur(3_375), 3);
 
   it("gives one row per year from Y0, with the refund dated t + 1", () => {
@@ -105,21 +106,26 @@ describe("pensionSchedule (AC-45)", () => {
     ]);
   });
 
-  it("uses the actual voluntary YTD plus the stub schedule in Y0", () => {
-    // Stub = 6,750 x 6/12 = 3,375. YTD 2,000 gives 5,375; refund 5,375 x 35% in 2027.
+  it("keeps the Y0 contribution fields full-year and puts YTD plus stub in the tax year", () => {
+    // Stub = 6,750 x 6/12 = 3,375. YTD 2,000 gives a tax-year voluntary of 5,375; refund
+    // 5,375 x 35% in 2027. The row itself stays full-year, so "row x f" is the stub.
     const [y0, y1] = pensionSchedule(plan, settings, "2026-06-30", eur(2_000), 2);
-    expect(y0?.voluntary).toBeCloseTo(eur(5_375), 6);
+    expect(y0?.voluntary).toBeCloseTo(eur(6_750), 6);
+    expect(y0?.tfr).toBeCloseTo(eur(2_764), 6);
+    expect(y0?.voluntaryTaxYear).toBeCloseTo(eur(5_375), 6);
     expect(y0?.deductible).toBeCloseTo(eur(1_200 + 5_375), 6);
     expect(y0?.refund).toBeCloseTo(eur(5_375 * 0.35), 6);
     expect(y0?.refundYear).toBe(2027);
     // The next year does not use the YTD.
     expect(y1?.voluntary).toBeCloseTo(eur(6_630), 6);
+    expect(y1?.voluntaryTaxYear).toBeCloseTo(eur(6_630), 6);
   });
 
   it("caps the Y0 refund and deduction when YTD plus the stub passes the room", () => {
     // 5,000 + 3,375 = 8,375 > room 6,750: refund on 6,750, deduction 7,950.
     const [y0] = pensionSchedule(plan, settings, "2026-06-30", eur(5_000), 1);
-    expect(y0?.voluntary).toBeCloseTo(eur(8_375), 6);
+    expect(y0?.voluntary).toBeCloseTo(eur(6_750), 6);
+    expect(y0?.voluntaryTaxYear).toBeCloseTo(eur(8_375), 6);
     expect(y0?.deductible).toBeCloseTo(eur(7_950), 6);
     expect(y0?.refund).toBeCloseTo(eur(6_750 * 0.35), 6);
   });
@@ -127,8 +133,9 @@ describe("pensionSchedule (AC-45)", () => {
   it("uses a given voluntary amount, and refunds only up to the room", () => {
     const given = pensionPlanSchema.parse({ ...plan, voluntary: eur(1_000) });
     const rowsGiven = pensionSchedule(given, settings, "2026-12-31", 0, 2);
-    // asOf in December: f = 0, so Y0 holds only the YTD (0). Year 2: voluntary 1,000.
-    expect(rowsGiven[0]?.voluntary).toBe(0);
+    // asOf in December: f = 0, so the Y0 tax year holds only the YTD (0). Year 2: voluntary 1,000.
+    expect(rowsGiven[0]?.voluntary).toBe(eur(1_000));
+    expect(rowsGiven[0]?.voluntaryTaxYear).toBe(0);
     expect(rowsGiven[1]?.voluntary).toBe(eur(1_000));
     expect(rowsGiven[1]?.deductible).toBeCloseTo(eur(1_320 + 1_000), 6);
     expect(rowsGiven[1]?.refund).toBeCloseTo(eur(1_000 * 0.35), 6);
@@ -170,7 +177,8 @@ describe("pensionFlowsByProduct (AC-46)", () => {
       { productId: "b", flow: "Voluntary", pct: 0.8 },
     ],
   });
-  const schedule = pensionSchedule(flowPlan, settings, "2026-06-30", eur(3_375), 3);
+  // The YTD (1,000) does not touch the split: Y0 splits the full-year amounts.
+  const schedule = pensionSchedule(flowPlan, settings, "2026-06-30", eur(1_000), 3);
   const byYear = pensionFlowsByProduct(schedule, flowPlan.flows);
 
   const amount = (year: number, productId: string) =>

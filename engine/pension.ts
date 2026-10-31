@@ -13,8 +13,10 @@ export type PensionYear = {
   tfr: number;
   worker: number;
   employer: number;
-  /** In Y0: the actual voluntary year-to-date plus the stub schedule. */
+  /** The full-year scheduled voluntary amount, in Y0 too: "row x f" gives the stub. */
   voluntary: number;
+  /** The voluntary amount of the tax year. In Y0: the actual YTD plus `voluntary` x f. Feeds only `deductible` and `refund`. */
+  voluntaryTaxYear: number;
   deductible: number;
   refund: number;
   refundYear: number;
@@ -23,9 +25,10 @@ export type PensionYear = {
 /**
  * The pension schedule, one row per year from Y0 = year(asOf). A plan without `ral` has no rows.
  *
- * Y0 holds the full-year RAL, TFR, worker and employer; the caller scales them by the stub
- * fraction where it needs the rest of the year. Y0 voluntary = `voluntaryYtd` + the Y0 voluntary
- * of the schedule (given, or to cap) x f. The refund and the deduction are capped by the room.
+ * Every contribution field of the Y0 row is the full-year schedule; the caller scales the row by
+ * the stub fraction f where it needs the rest of the year. The tax year of Y0 is different:
+ * `voluntaryTaxYear` = `voluntaryYtd` + `voluntary` x f. It feeds the deduction and the refund,
+ * which the room caps.
  *
  * @param plan The pension plan document.
  * @param settings Settings; only the deduction cap is read.
@@ -40,27 +43,29 @@ export function pensionSchedule(
   voluntaryYtd: number,
   years: number = DEFAULT_YEARS,
 ): PensionYear[] {
-  if (plan.ral === undefined) return [];
+  const ral0 = plan.ral;
+  if (ral0 === undefined) return [];
   const { y0, f } = timeGrid(asOf, Number(asOf.slice(0, 4)));
   const deductionLimit = settings.pensionDeductionCapCents + plan.extra;
 
   return Array.from({ length: years }, (_, index) => {
     const year = y0 + index;
-    const ral = (plan.ral ?? 0) * (1 + plan.ralGrowth) ** index;
+    const ral = ral0 * (1 + plan.ralGrowth) ** index;
     const worker = ral * plan.workerPct;
     const employer = ral * plan.employerPct;
     const room = Math.max(0, deductionLimit - worker - employer);
     const scheduled = plan.voluntary ?? room;
-    const voluntary = index === 0 ? voluntaryYtd + scheduled * f : scheduled;
+    const voluntaryTaxYear = index === 0 ? voluntaryYtd + scheduled * f : scheduled;
     return {
       year,
       ral,
       tfr: ral * plan.tfrPct,
       worker,
       employer,
-      voluntary,
-      deductible: Math.min(deductionLimit, worker + employer + voluntary),
-      refund: Math.min(voluntary, room) * plan.marginalRate,
+      voluntary: scheduled,
+      voluntaryTaxYear,
+      deductible: Math.min(deductionLimit, worker + employer + voluntaryTaxYear),
+      refund: Math.min(voluntaryTaxYear, room) * plan.marginalRate,
       refundYear: year + 1,
     };
   });

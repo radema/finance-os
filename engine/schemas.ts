@@ -184,6 +184,9 @@ export const settingsSchema = z.object({
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
+const TFR_PCT = 0.0691;
+const EXTRA_DEDUCTION_CENTS = 265_000;
+
 export const PENSION_FLOWS = ["Work", "Voluntary"] as const;
 
 /** One product's share of a pension flow: `Work` is TFR + worker + employer, `Voluntary` is the rest. */
@@ -204,13 +207,13 @@ export const pensionPlanSchema = z.object({
   firstYear: z.number().int().min(1950).max(2200),
   ral: cents.optional(),
   ralGrowth: z.number().gt(-1).max(1).default(0),
-  tfrPct: fraction.default(0.0691),
+  tfrPct: fraction.default(TFR_PCT),
   workerPct: fraction.default(0),
   employerPct: fraction.default(0),
   voluntary: cents.nullable().default(null),
   marginalRate: fraction.default(0),
   /** The extra deduction on top of the cap, every year. */
-  extra: cents.default(265_000),
+  extra: cents.default(EXTRA_DEDUCTION_CENTS),
   flows: z.array(pensionFlowSchema).default([]),
 });
 export type PensionPlan = z.infer<typeof pensionPlanSchema>;
