@@ -436,6 +436,49 @@ describe("pension goal (AC-47)", () => {
     expect(basisOf(workOnly, "q")).toBeCloseTo(7_950, 6);
   });
 
+  it("takes the non-deducted part of worker + employer above the limit off the Work fund (AC-97)", () => {
+    // RAL 100,000, worker 3%, employer 6%: 9,000 against the limit 7,950. Voluntary YTD 7,000, so the
+    // non-deducted part is 9,000 + 7,000 - 7,950 = 8,050: 7,000 voluntary (off q) and 1,050 from
+    // work (off p). p takes Work, q takes Voluntary; opening p 5,000, q 7,000.
+    const result = projectGoal(
+      input({
+        asOf: "2026-10-31",
+        goal: { id: "g", targetYear: 2026, target: 0, contributionGrowth: 0 },
+        products: new Map([
+          ["p", { regime: "pension", mu: 0, ter: 0 }],
+          ["q", { regime: "pension", mu: 0, ter: 0 }],
+        ]),
+        positions: [
+          { productId: "p", value: 5_000, basis: 5_000 },
+          { productId: "q", value: 7_000, basis: 7_000 },
+        ],
+        firstYear: 2020,
+        pension: {
+          plan: pensionPlanSchema.parse({
+            goalId: "g",
+            firstYear: 2020,
+            ral: 10_000_000,
+            tfrPct: 0.0691,
+            workerPct: 0.03,
+            employerPct: 0.06,
+            voluntary: null,
+            flows: [
+              { productId: "p", flow: "Work", pct: 1 },
+              { productId: "q", flow: "Voluntary", pct: 1 },
+            ],
+          }),
+          deductionCapCents: 530_000,
+          voluntaryYtd: 700_000,
+        },
+      }),
+    );
+    const basisOf = (id: string) => result.perProduct.find((p) => p.productId === id)?.basis;
+    // Work added (6,910 + 9,000) x 2/12 = 2,651.67; stub 0 (room 0).
+    expect(basisOf("p")).toBeCloseTo(5_000 + 15_910 / 6 - 1_050, 6);
+    // q: 7,000 - 7,000.
+    expect(basisOf("q")).toBeCloseTo(0, 6);
+  });
+
   it("splits each year's Work and Voluntary flows by product", () => {
     const result = pensionGoal(2027, "2026-12-31", [
       { productId: "p", flow: "Work", pct: 0.75 },

@@ -110,7 +110,7 @@ export type ProductFlow = {
   work: number;
   voluntary: number;
   total: number;
-  /** This product's share of the year's non-deducted part, by its pct of the Voluntary flow (the Work flow when the plan has none). */
+  /** This product's share of the year's non-deducted part: the voluntary part by Voluntary pct, the rest by Work pct. */
   nonDeducted: number;
 };
 
@@ -119,8 +119,9 @@ export type PensionYearFlows = { year: number; products: ProductFlow[] };
 /**
  * Split each year's flows by product. The Work flow (TFR + worker + employer) and the Voluntary
  * flow (`voluntaryAhead`) are split separately by each product's pct of that flow, using that
- * year's amounts. The year's non-deducted part is voluntary money, so it follows the products' pct of the
- * Voluntary flow, or of the Work flow when the plan has no Voluntary flow.
+ * year's amounts. The year's non-deducted part is voluntary money first: up to the tax-year voluntary
+ * it follows the products' pct of the Voluntary flow, and what is left (worker + employer above the
+ * limit) follows the Work flow. A flow the plan does not have hands its part to the other flow.
  */
 export function pensionFlowsByProduct(
   schedule: readonly PensionYear[],
@@ -138,16 +139,23 @@ export function pensionFlowsByProduct(
       const voluntary = row.voluntaryAhead * pct(productId, "Voluntary");
       return { productId, work, voluntary, total: work + voluntary };
     });
-    const sharesOf = (kind: PensionFlow["flow"]) =>
-      productIds.map((productId) => pct(productId, kind));
-    const voluntaryShares = sharesOf("Voluntary");
-    const shares = voluntaryShares.some((share) => share > 0) ? voluntaryShares : sharesOf("Work");
-    const sharesTotal = shares.reduce((sum, share) => sum + share, 0);
+    const shares = (kind: PensionFlow["flow"]) => productIds.map((id) => pct(id, kind));
+    const voluntaryShares = shares("Voluntary");
+    const workShares = shares("Work");
+    const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+    const hasVoluntary = sum(voluntaryShares) > 0;
+    const hasWork = sum(workShares) > 0;
+    const voluntaryPart = Math.min(row.nonDeducted, row.voluntaryTaxYear);
+    const workPart = row.nonDeducted - voluntaryPart;
+    const spread = (amount: number, flowShares: number[], index: number) =>
+      sum(flowShares) > 0 ? (amount * (flowShares[index] ?? 0)) / sum(flowShares) : 0;
     return {
       year: row.year,
       products: amounts.map((product, index) => ({
         ...product,
-        nonDeducted: sharesTotal > 0 ? (row.nonDeducted * (shares[index] ?? 0)) / sharesTotal : 0,
+        nonDeducted:
+          spread(voluntaryPart, hasVoluntary ? voluntaryShares : workShares, index) +
+          spread(workPart, hasWork ? workShares : voluntaryShares, index),
       })),
     };
   });
