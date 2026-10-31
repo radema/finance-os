@@ -1,4 +1,5 @@
 import type { Regime } from "../../engine/holdings.ts";
+import type { PriceAge } from "../../engine/priceAge.ts";
 import type { PRICE_SOURCES } from "../../engine/schemas.ts";
 
 export type PriceSource = (typeof PRICE_SOURCES)[number];
@@ -29,6 +30,7 @@ export interface PriceOverviewRow {
   regime: Regime;
   priceSource: PriceSource;
   lastPrice: { price: number; priceDate: string } | null;
+  age: PriceAge;
   brokerUnits: number | null;
   brokerUnitsDate: string | null;
 }

@@ -414,4 +414,69 @@ describe("Prices API", () => {
     const half = await call("PUT", "/api/prices/broker-units", { productId, units: 3, date: null });
     expect(half.status).toBe(400);
   });
+
+  describe("price age", () => {
+    interface AgeRow {
+      productId: string;
+      age: { old: boolean; reason: string };
+      lastPrice: { price: number } | null;
+    }
+    const ages = async () =>
+      Object.fromEntries(
+        (await call<AgeRow[]>("GET", "/api/prices/overview")).body.map((row) => [
+          row.productId,
+          row,
+        ]),
+      );
+    const csv = (product: string, date: string) =>
+      call("POST", "/api/prices/import", { text: `date;product;price\n${date};${product};100\n` });
+
+    it("flags a provider close 8 days before the clock, not one 7 days before", async () => {
+      const productId = await addProduct();
+      await call("PUT", "/api/prices/source", { productId, priceSource: "provider" });
+      await csv("VWCE", "2026-03-08");
+      expect((await ages())[productId]?.age.old).toBe(false);
+      await csv("VWCE", "2026-03-07");
+      expect((await ages())[productId]?.age.old).toBe(true);
+    });
+
+    it("takes the 7 days from the settings threshold", async () => {
+      const productId = await addProduct();
+      await call("PUT", "/api/prices/source", { productId, priceSource: "provider" });
+      await csv("VWCE", "2026-03-08");
+      const settings = (await call<{ thresholds: object }>("GET", "/api/settings")).body;
+      await call("PUT", "/api/settings", {
+        ...settings,
+        thresholds: { ...settings.thresholds, dailyPriceAgeDays: 3 },
+      });
+      expect((await ages())[productId]?.age.old).toBe(true);
+    });
+
+    it("flags a manual or csv product only when the previous month-end price is missing", async () => {
+      const manual = await addProduct({ name: "Manual", isin: "", ticker: "" });
+      const fromCsv = await addProduct({ name: "FromCsv", isin: "", ticker: "" });
+      await call("PUT", "/api/prices/source", { productId: fromCsv, priceSource: "csv" });
+      await call("PUT", "/api/prices", { productId: manual, month: "2026-03", price: 100 });
+      await csv("FromCsv", "2026-03-01");
+      expect([(await ages())[manual]?.age.old, (await ages())[fromCsv]?.age.old]).toEqual([
+        true,
+        true,
+      ]);
+      await csv("Manual", "2026-02-01");
+      await csv("FromCsv", "2026-02-01");
+      expect([(await ages())[manual]?.age.old, (await ages())[fromCsv]?.age.old]).toEqual([
+        false,
+        false,
+      ]);
+    });
+
+    it("flags a product with no price, and keeps the price of an old product", async () => {
+      const empty = await addProduct({ name: "Empty", isin: "", ticker: "" });
+      const stale = await addProduct({ name: "Stale", isin: "", ticker: "" });
+      await csv("Stale", "2026-01-31");
+      const rows = await ages();
+      expect(rows[empty]).toMatchObject({ age: { old: true }, lastPrice: null });
+      expect(rows[stale]).toMatchObject({ age: { old: true }, lastPrice: { price: 100 } });
+    });
+  });
 });
