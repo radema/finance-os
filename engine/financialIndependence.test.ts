@@ -92,7 +92,7 @@ describe("fiLevels", () => {
 describe("projectFinancialIndependence targets", () => {
   it("keeps L2 = 300,000 and L3 = 400,000 flat in every year when expenseGrowth = inflation (AC-59)", () => {
     const { points } = projectFinancialIndependence(input(), 1, 10);
-    expect(points).toHaveLength(41);
+    expect(points).toHaveLength(42);
     for (const point of points) {
       expect(point.targets[1]).toBeCloseTo(300_000, 6);
       expect(point.targets[2]).toBeCloseTo(400_000, 6);
@@ -118,7 +118,8 @@ describe("projectFinancialIndependence targets", () => {
     expect(points[1]?.year).toBe(2026);
     expect(points[2]?.t).toBeCloseTo(2 / 12 + 1, 12);
     expect(points[2]?.year).toBe(2027);
-    expect(points[40]?.year).toBe(2065);
+    expect(points[41]?.year).toBe(2066);
+    expect(points[41]?.t).toBeCloseTo(2 / 12 + 40, 12);
   });
 });
 
@@ -155,10 +156,14 @@ describe("projectFinancialIndependence wealth", () => {
       ],
     });
     const { points } = projectFinancialIndependence(flat, 1, 5);
-    expect(points[1]?.total.deterministic).toBeCloseTo(10_000, 8); // end of 2026: f = 0, no stub
+    // f = 0: the end of 2026 repeats today (same t, year and wealth); the grid index stays the same for every asOf.
+    expect(points[1]).toMatchObject({ t: 0, year: 2026 });
+    expect(points[1]?.total.deterministic).toBe(points[0]?.total.deterministic);
+    expect(points[1]?.total.deterministic).toBeCloseTo(10_000, 8);
     expect(points[2]?.total.deterministic).toBeCloseTo(11_200 / 1.02, 8); // end of 2027
     expect(points[10]?.total.deterministic).toBeCloseTo(11_200 / 1.02 ** 9, 8);
-    expect(points[40]?.total.deterministic).toBeCloseTo(11_200 / 1.02 ** 39, 8);
+    expect(points[41]?.t).toBe(40);
+    expect(points[41]?.total.deterministic).toBeCloseTo(11_200 / 1.02 ** 40, 8);
   });
 
   it("removes a goal whose countsTowardFi is off (AC-60)", () => {
@@ -320,7 +325,7 @@ describe("projectFinancialIndependence Monte Carlo", () => {
         expect(p).toBeLessThanOrEqual(1);
       }
     }
-    expect(points[40]?.total.p90).toBeGreaterThan(points[40]?.total.p10 as number);
+    expect(points[41]?.total.p90).toBeGreaterThan(points[41]?.total.p10 as number);
   });
 
   it("reads the same shocks as runMonteCarlo: at the goal date the median is the goal's own", () => {

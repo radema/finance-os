@@ -1,5 +1,6 @@
 // Financial independence: the three levels, the wealth that counts toward them, and its projection
 // over 40 years. Pure; amounts are today's euros as floats and are never rounded here.
+import { ASSET_CLASSES } from "./assetClasses.ts";
 import {
   correlationFactor,
   drawShocks,
@@ -20,9 +21,11 @@ import { pathRandom } from "./random.ts";
 import type { FireSettings } from "./schemas.ts";
 import { timeGrid } from "./timeGrid.ts";
 
-/** The projection has one point for today and one for the end of each of the next 39 grid years. */
-const POINTS = 41;
-const CLASS_COUNT = 6;
+/** Years after Y0 the projection runs: its last point is 31 December of Y0 + 40, t = 40 + f. */
+const FI_YEARS = 40;
+/** Today, the end of the stub (Y0), then the end of each of the next 40 years. */
+const POINTS = FI_YEARS + 2;
+const CLASS_COUNT = ASSET_CLASSES.length;
 /** Index of Level 1 in the level arrays. */
 const SAFETY = 0;
 const P10 = 0.1;
@@ -74,7 +77,7 @@ export type FiResult = {
   /** Level targets today. */
   levels: number[];
   wealthToday: { total: number; nonPension: number; pension: number };
-  /** Point 0 is today; point k ≥ 1 is 31 December of year Y0 + k − 1. */
+  /** Point 0 is today; point k ≥ 1 is 31 December of year Y0 + k − 1. With f = 0 points 0 and 1 are both t = 0. */
   points: FiPoint[];
   /** First year the median and the deterministic line reach each level; null when never. */
   reached: { median: number | null; deterministic: number | null }[];
@@ -159,7 +162,7 @@ export function projectFinancialIndependence(
   const { factor, shrunk } = correlationFactor(input.correlations);
   const levels = fiLevels(input);
   const y0 = Number(input.asOf.slice(0, 4));
-  const grid = timeGrid(input.asOf, y0 + POINTS - 2);
+  const grid = timeGrid(input.asOf, y0 + FI_YEARS);
   const years = [y0, ...grid.steps.map((step) => step.year)];
   const times = [0];
   for (const step of grid.steps) times.push((times.at(-1) as number) + step.fraction);

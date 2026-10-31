@@ -60,7 +60,7 @@ export function lognormalParams(mu: number, sigma: number): { m: number; s: numb
 }
 
 /** A goal resolved for simulation. */
-export type Prepared = {
+type Prepared = {
   input: MonteCarloGoal;
   plan: PathPlan;
   /** Per product: lognormal parameters and the index of its class. */
