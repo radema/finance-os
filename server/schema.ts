@@ -1,6 +1,8 @@
 // Typed Kysely schema. Property names are camelCase; the CamelCasePlugin maps them to the
 // snake_case columns of the migrations. `*Cents` columns are integer cents, `*Scaled` columns are
 // integers scaled by 10^6 (see engine/units.ts). Booleans are 0 | 1.
+import type { Regime, TransactionType } from "../engine/holdings.ts";
+
 type Flag = 0 | 1;
 
 export const toFlag = (value: boolean): Flag => (value ? 1 : 0);
@@ -12,7 +14,7 @@ export interface ProductTable {
   name: string;
   isin: string;
   assetClass: "Equity" | "Govt bonds" | "Corp bonds" | "Multi-asset" | "Cash" | "Gold/Commodities";
-  regime: "etf" | "direct" | "govt" | "cash" | "pension";
+  regime: Regime;
   whiteListShare: number;
   expReturn: number;
   volatility: number;
@@ -70,7 +72,7 @@ export interface TransactionTable {
   date: string;
   goalId: string;
   productId: string;
-  type: "opening" | "buy" | "sell" | "pensionContribution" | "coupon";
+  type: TransactionType;
   /** Signed: a sell is negative; 0 for a coupon. */
   qtyScaled: number;
   priceScaled: number;

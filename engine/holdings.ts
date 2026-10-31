@@ -1,6 +1,8 @@
-export type Regime = "etf" | "direct" | "govt" | "cash" | "pension";
+import type { REGIMES, TRANSACTION_TYPES } from "./schemas.ts";
 
-export type TransactionType = "opening" | "buy" | "sell" | "pensionContribution" | "coupon";
+export type Regime = (typeof REGIMES)[number];
+
+export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
 /** One ledger row. Money is in euros as floats; the server converts stored cents before the call. */
 export type LedgerRow = {
