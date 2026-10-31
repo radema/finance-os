@@ -151,12 +151,12 @@ describe("previewProductImport", () => {
     expect(result.every((r) => r.input === null)).toBe(true);
   });
 
-  it("refuses the provider for a BTP or a pension fund", () => {
+  it("accepts the provider for a BTP, as the Setup screen does", () => {
     const rows = productRows(
       [...PRODUCT_HEADERS, "Price source"],
       ["BTP", "", "Govt bonds", "govt", "3", "5", "0", "provider"],
     );
-    expect(previewProductImport(rows, [])[0]).toMatchObject({ status: "needs fix" });
+    expect(previewProductImport(rows, [])[0]).toMatchObject({ status: "new" });
   });
 
   it("reads maturity from a full date and flags a repeat of an earlier row", () => {

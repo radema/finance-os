@@ -149,7 +149,8 @@ async function isUsed(
  *
  * @param trx The caller's transaction.
  * @param batch The batch to undo.
- * @returns The ids deleted and the ids kept because they are in use.
+ * @returns The ids deleted and the ids kept because they are in use. An id that no longer
+ * exists is in neither list.
  */
 export async function undoCreatedRows(
   trx: Kysely<DB>,
@@ -170,11 +171,11 @@ export async function undoCreatedRows(
       result.kept.push(id);
       continue;
     }
-    await trx
+    const { numDeletedRows } = await trx
       .deleteFrom(batch.kind === "products" ? "product" : "goal")
       .where("id", "=", id)
-      .execute();
-    result.deleted.push(id);
+      .executeTakeFirstOrThrow();
+    if (numDeletedRows > 0n) result.deleted.push(id);
   }
   return result;
 }

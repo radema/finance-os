@@ -7,7 +7,6 @@ import type { ImportTable } from "./importMapping.ts";
 import { normaliseHeader } from "./importMapping.ts";
 import type { Goal, GoalInput, Product, ProductInput } from "./schemas.ts";
 import {
-  canUseProvider,
   goalInputSchema,
   PRICE_SOURCES,
   PRIORITIES,
@@ -315,7 +314,6 @@ function previewRecords<T extends object>(
   existing: readonly (T & { id: string })[],
   schema: Schema<T>,
   keysOf: (record: Partial<T>) => string[],
-  refuse: (input: T) => string | undefined,
 ): RecordPreview<T>[] {
   const working: Working<T>[] = existing.map((record) => ({
     id: record.id,
@@ -355,8 +353,6 @@ function previewRecords<T extends object>(
       );
     }
     const input = parsed.data;
-    const refused = refuse(input);
-    if (refused) return fix(refused, String((input as Record<string, unknown>).name ?? ""));
     const changed = match
       ? Object.keys(input).filter(
           (key) =>
@@ -397,19 +393,10 @@ export function previewProductImport(
   rows: readonly RecordRow[],
   existing: readonly Product[],
 ): RecordPreview<ProductInput>[] {
-  return previewRecords<ProductInput>(
-    rows,
-    existing,
-    productInputSchema,
-    (record) => {
-      const isin = record.isin?.trim().toUpperCase() ?? "";
-      return [...(isin === "" ? [] : [`isin:${isin}`]), ...nameKey(record)];
-    },
-    (input) =>
-      input.priceSource === "provider" && !canUseProvider(input.regime)
-        ? "priceSource: a BTP or a pension fund has no provider: use manual or csv"
-        : undefined,
-  );
+  return previewRecords<ProductInput>(rows, existing, productInputSchema, (record) => {
+    const isin = record.isin?.trim().toUpperCase() ?? "";
+    return [...(isin === "" ? [] : [`isin:${isin}`]), ...nameKey(record)];
+  });
 }
 
 /**
@@ -423,5 +410,5 @@ export function previewGoalImport(
   rows: readonly RecordRow[],
   existing: readonly Goal[],
 ): RecordPreview<GoalInput>[] {
-  return previewRecords<GoalInput>(rows, existing, goalInputSchema, nameKey, () => undefined);
+  return previewRecords<GoalInput>(rows, existing, goalInputSchema, nameKey);
 }

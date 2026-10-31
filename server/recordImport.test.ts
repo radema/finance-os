@@ -229,6 +229,16 @@ describe("products and goals import API", () => {
       expect((await products())[0]).toMatchObject({ expReturn: 0.06 });
     });
 
+    it("does not count a created row that was already deleted", async () => {
+      const batch = await commit("goals", GOALS);
+      const car = (await goals()).find((g) => g.name === "Car") as Goal;
+      await call("DELETE", `/api/goals?id=${car.id}`);
+      const result = await run(batch.batchId);
+      expect(result.kept).toEqual([]);
+      expect(result.deleted).toHaveLength(1);
+      expect(result.deleted).not.toContain(car.id);
+    });
+
     it("keeps a created goal that has a transaction, a plan version or the zainetto link", async () => {
       const batch = await commit(
         "goals",
