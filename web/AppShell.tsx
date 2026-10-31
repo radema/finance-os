@@ -1,6 +1,7 @@
 import { DataFolderBanner } from "./DataFolderBanner.tsx";
 import { GoalDetailScreen } from "./goals/GoalDetailScreen.tsx";
 import { GoalsListScreen } from "./goals/GoalsListScreen.tsx";
+import { ImportScreen } from "./import/ImportScreen.tsx";
 import {
   CURRENT_PORTFOLIO_ROUTE,
   DEFAULT_ROUTE,
@@ -13,7 +14,6 @@ import {
   PRICES_ROUTE,
   TRANSACTIONS_ROUTE,
 } from "./nav.ts";
-import { CurrentPortfolioScreen } from "./operations/CurrentPortfolioScreen.tsx";
 import { TransactionsScreen } from "./operations/TransactionsScreen.tsx";
 import { FirstRunChecklist } from "./overview/FirstRunChecklist.tsx";
 import { PricesScreen } from "./prices/PricesScreen.tsx";
@@ -98,7 +98,7 @@ export function AppShell({ route }: { route: string }) {
         ) : route === TRANSACTIONS_ROUTE ? (
           <TransactionsScreen />
         ) : route === CURRENT_PORTFOLIO_ROUTE ? (
-          <CurrentPortfolioScreen />
+          <ImportScreen />
         ) : route === PRICES_ROUTE ? (
           <PricesScreen />
         ) : route === GOALS_LIST_ROUTE ? (

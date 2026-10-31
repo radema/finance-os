@@ -205,8 +205,7 @@ export function CurrentPortfolioScreen() {
 
   return (
     <>
-      <div className="tag">Operations · Import</div>
-      <h1 className="title">Current portfolio</h1>
+      <h2 className="import-section-title">Current portfolio</h2>
       <p className="note">
         Enter what you hold today: units and PMC per product, then split the units over the buckets.
         Each part is saved as an opening transaction, not a contribution.

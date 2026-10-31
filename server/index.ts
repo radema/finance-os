@@ -10,6 +10,7 @@ import { isCloudSyncedPath } from "./dataFolder.ts";
 import { openDatabase } from "./db.ts";
 import { registerGoalRoutes } from "./goals.ts";
 import { registerGoalViewRoutes } from "./goalViews.ts";
+import { registerImportRoutes } from "./importRoutes.ts";
 import { registerOpeningPositionRoutes } from "./openingPosition.ts";
 import { registerPriceRoutes } from "./prices.ts";
 import { registerProductRoutes } from "./products.ts";
@@ -71,6 +72,7 @@ export async function startServer({
   registerSampleRoutes(router, db);
   registerTransactionRoutes(router, db);
   registerOpeningPositionRoutes(router, db);
+  registerImportRoutes(router, db);
   registerPriceRoutes(router, db, clock);
   registerDataRoutes(router, db, dataDir, clock);
   registerGoalViewRoutes(router, db, clock);

@@ -29,6 +29,9 @@ export type ParsedRow = {
   description: string;
 };
 
+/** The sheet of the Fineco export that holds the movements. */
+export const FINECO_SHEET = "Movimenti Dossier Titoli";
+
 const COLUMNS = {
   date: "Operazione",
   description: "Descrizione",
@@ -75,7 +78,9 @@ function movementType(description: string, side: string): MovementType {
 }
 
 /** Finds the header by its column names, wherever it sits, and maps each name to a column. */
-function findHeader(rows: Cell[][]): { rowIndex: number; columns: Map<string, number> } {
+function findHeader(
+  rows: Cell[][],
+): { rowIndex: number; columns: Map<string, number> } | undefined {
   for (const [rowIndex, row] of rows.entries()) {
     const names = row.map(normalise);
     const columns = new Map<string, number>();
@@ -85,8 +90,11 @@ function findHeader(rows: Cell[][]): { rowIndex: number; columns: Map<string, nu
     }
     if (columns.size === HEADER_NAMES.length) return { rowIndex, columns };
   }
-  throw new Error(`Fineco header row not found: expected the columns ${HEADER_NAMES.join(", ")}`);
+  return undefined;
 }
+
+/** The index of the Fineco header row in a sheet, or undefined when the sheet is not a Fineco one. */
+export const finecoHeaderIndex = (rows: Cell[][]): number | undefined => findHeader(rows)?.rowIndex;
 
 /**
  * Parses the rows of the Fineco "Movimenti Dossier Titoli" sheet. The header is found by its
@@ -98,7 +106,11 @@ function findHeader(rows: Cell[][]): { rowIndex: number; columns: Map<string, nu
  * @throws When no row holds all the Fineco column names.
  */
 export function parseFinecoMovimenti(rows: Cell[][]): ParsedRow[] {
-  const { rowIndex: headerIndex, columns } = findHeader(rows);
+  const header = findHeader(rows);
+  if (header === undefined) {
+    throw new Error(`Fineco header row not found: expected the columns ${HEADER_NAMES.join(", ")}`);
+  }
+  const { rowIndex: headerIndex, columns } = header;
   const parsed: ParsedRow[] = [];
 
   for (const [rowIndex, row] of rows.entries()) {

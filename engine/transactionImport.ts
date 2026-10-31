@@ -32,6 +32,8 @@ export type ImportRow = {
   description: string;
   /** The goal id the bucket column resolved to: `undefined` when absent, `null` when unknown. */
   bucket?: string | null;
+  /** The user's note, written on each transaction of the row. */
+  note?: string;
 };
 
 export type ImportProduct = {

@@ -26,7 +26,7 @@ const stepsOf = ({ products, goals, openingPosition }: SetupProgress): Step[] =>
   { label: "Add your goals", href: "#/setup/goals", done: goals },
   {
     label: "Enter your current portfolio",
-    href: `#/${CURRENT_PORTFOLIO_ROUTE}`,
+    href: `#/${CURRENT_PORTFOLIO_ROUTE}?tab=portfolio`,
     done: openingPosition,
     locked: products && goals ? undefined : "Add at least one product and one goal first.",
   },

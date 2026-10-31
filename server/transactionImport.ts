@@ -132,7 +132,7 @@ export function commitTransactionImport(
             priceScaled: toScaled(price),
             commissionCents: row.commission === null ? null : part.commissionCents,
             amountCents: toCents(part.units * unitPrice(regime, price)),
-            note: "",
+            note: row.note ?? "",
             importBatchId: batch.id,
           })
           .execute();
