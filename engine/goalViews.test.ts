@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { GoalWorld, GoalWorldProduct } from "./goalViews.ts";
 import { detailOf, seriesOf, summaryOf } from "./goalViews.ts";
 import { settingsSchema } from "./schemas.ts";
-import { timeGrid } from "./timeGrid.ts";
 
 const etf: GoalWorldProduct = {
   id: "etf",
@@ -131,8 +130,8 @@ describe("detailOf", () => {
 
   it("grows the target by inflation to the goal date", () => {
     const w = world();
-    const { tau } = timeGrid("2026-03-31", 2035);
-    expect(detailOf(w, goalOf(w)).targetAtGoalDate).toBeCloseTo(10_000 * 1.02 ** tau, 6);
+    // tau = 9/12 left in 2026 + 9 full years = 9.75, so 10,000 x 1.02^9.75 = 12,129.7451.
+    expect(detailOf(w, goalOf(w)).targetAtGoalDate).toBeCloseTo(12_129.7451, 3);
   });
 
   it("projects a gross, a tax and a net at the goal date", () => {
