@@ -8,6 +8,14 @@ export type {
   TransactionType,
 } from "./holdings.ts";
 export { holdingsAt, unitPrice } from "./holdings.ts";
+export type {
+  GoalDistribution,
+  MonteCarloGoal,
+  MonteCarloInput,
+  MonteCarloProduct,
+  MonteCarloResult,
+} from "./monteCarlo.ts";
+export { lognormalParams, runMonteCarlo, simulatePaths } from "./monteCarlo.ts";
 export type { PensionYear, PensionYearFlows, ProductFlow } from "./pension.ts";
 export { pensionFlowsByProduct, pensionSchedule } from "./pension.ts";
 export type {

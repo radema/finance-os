@@ -1,8 +1,8 @@
 import type { Regime } from "./holdings.ts";
-import { pensionFlowsByProduct, pensionSchedule } from "./pension.ts";
+import { type PensionYearFlows, pensionFlowsByProduct, pensionSchedule } from "./pension.ts";
 import type { PensionPlan } from "./schemas.ts";
-import { liquidate, type Zainetto } from "./tax.ts";
-import { type Step, timeGrid } from "./timeGrid.ts";
+import { type Liquidation, liquidate, type Zainetto } from "./tax.ts";
+import { type Step, type TimeGrid, timeGrid } from "./timeGrid.ts";
 import { fromCents } from "./units.ts";
 
 /**
@@ -99,13 +99,42 @@ export type GoalProjection = {
 };
 
 /**
- * Project one goal to its due date along the deterministic path.
+ * The growth factor of one product in one step, before the cash and pension yield tax and the
+ * stamp duty. The deterministic rule and the Monte Carlo rule differ only here.
  *
- * Liquidation taxes come from `liquidate`. Inside a step the net coupon is added after the growth and before the stamp duty, so the
- * stamp duty is taken on the value that includes the coupon.
+ * @param productId The product.
+ * @param params Its parameters.
+ * @param stepIndex 0-based index of the step in the time grid.
+ * @param phi The step's fraction: f for the stub, else 1.
  */
-export function projectGoal(input: ProjectionInput): GoalProjection {
-  const { goal, monthly, products, settings } = input;
+export type GrowthRule = (
+  productId: string,
+  params: ProductParams,
+  stepIndex: number,
+  phi: number,
+) => number;
+
+/** The net coupon rate and growth of the deterministic path: ((1 + mu - c)(1 - TER))^phi. */
+export const deterministicGrowth: GrowthRule = (_productId, params, _stepIndex, phi) => {
+  const coupon = params.regime === "govt" ? (params.couponRate ?? 0) : 0;
+  return ((1 + params.mu - coupon) * (1 - params.ter)) ** phi;
+};
+
+type OpeningPosition = { productId: string; params: ProductParams } & Position;
+
+/** What a path needs that does not change between paths: the grid, the flows and the opening state. */
+export type PathPlan = {
+  grid: TimeGrid;
+  /** Plain-goal contribution of each step. */
+  contributions: readonly number[];
+  pensionFlows: readonly PensionYearFlows[];
+  shares: ReadonlyMap<string, number>;
+  opening: readonly OpeningPosition[];
+};
+
+/** Resolve everything about a goal's projection that the paths share. */
+export function preparePath(input: ProjectionInput): PathPlan {
+  const { goal, monthly, products } = input;
   const grid = timeGrid(input.asOf, goal.targetYear);
   const { pension } = input;
   const shares = normaliseWeights(pension ? new Map() : input.weights);
@@ -122,25 +151,54 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
       )
     : [];
 
-  const state = new Map<string, { value: number; basis: number }>();
-  for (const { productId, value, basis } of input.positions) state.set(productId, { value, basis });
+  const state = new Map<string, Position>();
+  for (const position of input.positions) state.set(position.productId, { ...position });
   const weighted = pension ? pension.plan.flows.map((flow) => flow.productId) : shares.keys();
   for (const productId of weighted) {
-    if (!state.has(productId)) state.set(productId, { value: 0, basis: 0 });
+    if (!state.has(productId)) state.set(productId, { productId, value: 0, basis: 0 });
   }
+  const opening = [...state.values()].map((position) => {
+    const params = products.get(position.productId);
+    if (!params) throw new Error(`No parameters for product ${position.productId}`);
+    return { ...position, params };
+  });
 
-  for (const step of grid.steps) {
+  return {
+    grid,
+    contributions: grid.steps.map((step) =>
+      stepContribution(step, grid.y0, monthly, goal.contributionGrowth),
+    ),
+    pensionFlows,
+    shares,
+    opening,
+  };
+}
+
+/**
+ * Run one path of a prepared goal. `growth` supplies each product's growth factor; everything
+ * else in the step is the deterministic rule. After every step `afterStep` sees the positions.
+ *
+ * @returns The positions at the goal date.
+ */
+export function runPath(
+  plan: PathPlan,
+  settings: ProjectionSettings,
+  growth: GrowthRule,
+  afterStep?: (stepIndex: number, positions: readonly ProductProjection[]) => void,
+): ProductProjection[] {
+  const state = plan.opening.map((position) => ({ ...position }));
+
+  for (const [stepIndex, step] of plan.grid.steps.entries()) {
     const phi = step.fraction;
-    const contribution = stepContribution(step, grid.y0, monthly, goal.contributionGrowth);
-    const yearFlows = pensionFlows.find((row) => row.year === step.year)?.products;
+    const contribution = plan.contributions[stepIndex] ?? 0;
+    const yearFlows = plan.pensionFlows.find((row) => row.year === step.year)?.products;
 
-    for (const [productId, position] of state) {
-      const params = products.get(productId);
-      if (!params) throw new Error(`No parameters for product ${productId}`);
-      const { regime, mu, ter } = params;
+    for (const position of state) {
+      const { productId, params } = position;
+      const { regime } = params;
       const coupon = regime === "govt" ? (params.couponRate ?? 0) : 0;
 
-      let g = ((1 + mu - coupon) * (1 - ter)) ** phi;
+      let g = growth(productId, params, stepIndex, phi);
       if (regime === "cash" && g > 1) g = 1 + (g - 1) * (1 - settings.taxStd);
       if (regime === "pension") g = 1 + (g - 1) * (1 - settings.pensionTax);
 
@@ -158,22 +216,27 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
       const flow = yearFlows?.find((candidate) => candidate.productId === productId);
       const added = yearFlows
         ? fromCents((flow?.work ?? 0) * phi + (flow?.voluntary ?? 0))
-        : contribution * (shares.get(productId) ?? 0);
+        : contribution * (plan.shares.get(productId) ?? 0);
       position.value += added;
       // The non-deducted part of the year, Y0 too, is left out of the exit-tax basis in full. It is
       // voluntary money; in Y0 it can be money already in the opening basis, so the basis floors at 0.
       position.basis = Math.max(0, position.basis + added - fromCents(flow?.nonDeducted ?? 0));
       if (regime === "cash") position.basis = position.value;
     }
+    afterStep?.(stepIndex, state);
   }
 
-  const perProduct = [...state].map(([productId, { value, basis }]) => ({
-    productId,
-    value,
-    basis,
-  }));
-  const { gross, tax, net } = liquidate(
-    perProduct.map(({ productId, value, basis }) => {
+  return state.map(({ productId, value, basis }) => ({ productId, value, basis }));
+}
+
+/** Liquidate positions at the goal date with the goal's tax context. */
+export function liquidateGoal(
+  input: ProjectionInput,
+  positions: readonly ProductProjection[],
+): Liquidation {
+  const { goal, products, settings } = input;
+  return liquidate(
+    positions.map(({ productId, value, basis }) => {
       const params = products.get(productId);
       return {
         regime: params?.regime ?? "etf",
@@ -191,9 +254,21 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
       firstYear: input.firstYear,
     },
   );
+}
+
+/**
+ * Project one goal to its due date along the deterministic path.
+ *
+ * Liquidation taxes come from `liquidate`. Inside a step the net coupon is added after the growth and before the stamp duty, so the
+ * stamp duty is taken on the value that includes the coupon.
+ */
+export function projectGoal(input: ProjectionInput): GoalProjection {
+  const plan = preparePath(input);
+  const perProduct = runPath(plan, input.settings, deterministicGrowth);
+  const { gross, tax, net } = liquidateGoal(input, perProduct);
   return {
-    tau: grid.tau,
-    targetAtGoalDate: goal.target * (1 + settings.inflation) ** grid.tau,
+    tau: plan.grid.tau,
+    targetAtGoalDate: input.goal.target * (1 + input.settings.inflation) ** plan.grid.tau,
     perProduct,
     gross,
     tax,
