@@ -1,0 +1,17 @@
+/* Pension screen. Colours, type and spacing come from tokens.css; the screen sets --slot to the
+   pension goal's colour (slot 1). */
+.swatch-work,
+.swatch-voluntary {
+  height: 10px;
+  background: var(--slot);
+}
+.swatch-voluntary {
+  opacity: 0.45;
+}
+.flow-input {
+  max-width: 7em;
+  text-align: right;
+}
+.capital-note {
+  max-width: 46em;
+}

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import sampleJson from "../fixtures/sample.json" with { type: "json" };
 import { pensionFlowsByProduct, pensionSchedule } from "./pension.ts";
 import { pensionPlanSchema } from "./schemas.ts";
 
@@ -23,9 +22,9 @@ const plan = pensionPlanSchema.parse({
 
 describe("pensionPlanSchema", () => {
   it("accepts the partial document of the #23 fixture", () => {
-    const parsed = pensionPlanSchema.parse(sampleJson.pensionPlan);
-    expect(parsed.goalId).toBe(sampleJson.pensionPlan.goalId);
-    expect(parsed.firstYear).toBe(sampleJson.pensionPlan.firstYear);
+    const parsed = pensionPlanSchema.parse({ goalId: "g-retirement", firstYear: 2020 });
+    expect(parsed.goalId).toBe("g-retirement");
+    expect(parsed.firstYear).toBe(2020);
     expect(parsed.ral).toBeUndefined();
     expect(parsed.voluntary).toBeNull();
     expect(parsed.tfrPct).toBe(0.0691);

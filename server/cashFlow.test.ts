@@ -18,8 +18,10 @@ const document = {
   events: [{ year: 2027, label: "boiler", amount: -60_000 }],
 };
 
-// The sample pension plan names the goal and the first year only. This one has a schedule, and
-// flows that make p-pension-equity the voluntary product.
+// A plan with the goal and the first year only: no RAL, so no schedule.
+const partialPlan = { goalId: "g-retirement", firstYear: 2020 };
+
+// This one has a schedule, and flows that make p-pension-equity the voluntary product.
 const fullPlan = {
   goalId: "g-retirement",
   firstYear: 2020,
@@ -76,14 +78,15 @@ describe("Cash flow API (AC-50)", () => {
 
   it("saves the document and returns it with the engine's rows", async () => {
     await call("POST", "/api/sample-data");
+    sql(`UPDATE document SET value = '${JSON.stringify(partialPlan)}' WHERE kind = 'pensionPlan'`);
     const saved = await call<CashFlowView>("PUT", "/api/cash-flow", document);
     expect(saved.status).toBe(200);
     expect(saved.body.cashFlow).toEqual(document);
     expect((await read()).cashFlow).toEqual(document);
 
     // Oracle: the engine on the fixture's goals at asOf 2026-10-31. Plans in force in October:
-    // holiday 100, car 450, home 600, retirement 350 (a pension goal: schedule only, and the
-    // fixture's plan has no RAL, so no schedule).
+    // holiday 100, car 450, home 600, retirement 350 (a pension goal: schedule only, and this
+    // plan has no RAL, so no schedule).
     const expected = projectCashFlow({
       asOf: "2026-10-31",
       cashFlow: document,

@@ -75,6 +75,15 @@ function engineNet(goalId: string) {
       },
     },
     firstYear: sample.pensionPlan.goalId === goalId ? sample.pensionPlan.firstYear : undefined,
+    // The Equity fund is the only one with a Voluntary flow: 50 units x 13 euros this year.
+    pension:
+      sample.pensionPlan.goalId === goalId
+        ? {
+            plan: sample.pensionPlan,
+            deductionCapCents: sample.settings.pensionDeductionCapCents,
+            voluntaryYtd: 65_000,
+          }
+        : undefined,
   });
 }
 

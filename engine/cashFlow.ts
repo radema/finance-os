@@ -1,8 +1,9 @@
 // The 10-year household cash flow: capacity against what the goals take from savings. Pure; money
 // is in cents and is never rounded here.
 import type { PensionYear } from "./pension.ts";
-import { stepContribution, timeGrid } from "./projection.ts";
+import { stepContribution } from "./projection.ts";
 import type { CashFlow } from "./schemas.ts";
+import { timeGrid } from "./timeGrid.ts";
 
 const DEFAULT_YEARS = 10;
 const MONTHS_PER_YEAR = 12;

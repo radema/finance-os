@@ -66,23 +66,23 @@ exports[`synthetic fixture > matches the reviewed regression snapshot 1`] = `
       "tax": 645.74,
     },
     "g-retirement": {
-      "gross": 166891.56,
-      "net": 152769.08,
+      "gross": 340566.5,
+      "net": 311639.09,
       "perProduct": [
         {
-          "basis": 63880.48,
+          "basis": 101427.74,
           "productId": "p-pension-balanced",
-          "value": 84982.47,
+          "value": 131671.26,
         },
         {
-          "basis": 56824.48,
+          "basis": 145815.01,
           "productId": "p-pension-equity",
-          "value": 81909.08,
+          "value": 208895.23,
         },
       ],
       "targetAtGoalDate": 223628.97,
       "tau": 20.166667,
-      "tax": 14122.48,
+      "tax": 28927.4,
     },
   },
   "holdings": {
