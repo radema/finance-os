@@ -6,7 +6,7 @@ import { holdingsAt } from "./holdings.ts";
 import { monthEnd } from "./months.ts";
 import { planInForce } from "./plan.ts";
 import type { ProductParams } from "./projection.ts";
-import { projectGoal } from "./projection.ts";
+import { projectGoal, targetAtGoalDate } from "./projection.ts";
 import type { Goal, PensionPlan, Product, Settings } from "./schemas.ts";
 import { goalSlot } from "./slots.ts";
 import type { LiquidationPosition } from "./tax.ts";
@@ -237,8 +237,11 @@ export function detailOf(world: GoalWorld, goal: GoalWorldGoal): GoalDetail {
         ).tax
       : null;
 
-  const inflation = settings.inflation;
-  const targetAtGoalDate = summary.target * (1 + inflation) ** timeGrid(asOf, goal.targetYear).tau;
+  const inflatedTarget = targetAtGoalDate(
+    summary.target,
+    settings.inflation,
+    timeGrid(asOf, goal.targetYear).tau,
+  );
 
   const weightedRegimes = goalWeights.map(
     (weight) => products.get(weight.productId)?.regime ?? "etf",
@@ -309,7 +312,7 @@ export function detailOf(world: GoalWorld, goal: GoalWorldGoal): GoalDetail {
   return {
     ...summary,
     targetYear: goal.targetYear,
-    targetAtGoalDate,
+    targetAtGoalDate: inflatedTarget,
     asOf,
     projection,
     projectionNote,
