@@ -3,6 +3,7 @@ import { ASSET_CLASSES } from "../../engine/assetClasses.ts";
 import type { Commission, CorrelationsView, Goal, Settings } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, num, percentToFraction } from "../forms.ts";
+import { DataCard } from "./DataCard.tsx";
 import {
   Alert,
   Card,
@@ -394,6 +395,10 @@ export function AssumptionsTab() {
     }
   };
 
+  const reloadAll = () => {
+    for (const resource of [settings, commission, correlations, goals]) resource.reload();
+  };
+
   return (
     <Resource loaded={settings}>
       {(s) => (
@@ -418,6 +423,7 @@ export function AssumptionsTab() {
                         />
                         <Alert message={error} />
                       </Card>
+                      <DataCard onImported={reloadAll} />
                     </>
                   )}
                 </Resource>
