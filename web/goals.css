@@ -128,3 +128,91 @@
   line-height: var(--lh-axis);
   color: var(--muted);
 }
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--grid);
+  border-radius: 999px;
+  background: var(--wash);
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  white-space: nowrap;
+}
+.status svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--muted);
+}
+.status-at_risk,
+.status-off_track {
+  border-color: color-mix(in srgb, var(--hl) 35%, transparent);
+  background: var(--tint1);
+  font-weight: 600;
+}
+.status-off_track {
+  border-color: var(--hl);
+  background: var(--tint1-strong);
+}
+.status-at_risk svg,
+.status-off_track svg {
+  color: var(--hl);
+}
+
+.title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+}
+.swatch-band {
+  height: 10px;
+  background: color-mix(in srgb, var(--slot) 30%, transparent);
+}
+.swatch-median {
+  height: 0;
+  border-top: 2px solid var(--line, var(--slot));
+}
+.swatch-target {
+  height: 0;
+  border-top: 2px dashed var(--ink2);
+}
+.take-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.take-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s1) var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--grid);
+  font-size: var(--t-sub);
+  line-height: var(--lh-sub);
+}
+.take-list li:last-child {
+  border-bottom: 0;
+}
+.exhibit + .card {
+  margin-top: var(--s5);
+}
+.take-value {
+  font-weight: 600;
+  text-align: right;
+}
+.take-value small,
+.take-hint {
+  display: block;
+  font-weight: 400;
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  color: var(--muted);
+}
+.chart-range {
+  height: 180px;
+}

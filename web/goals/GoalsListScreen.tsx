@@ -4,8 +4,10 @@ import { formatAmount, formatPercent } from "../money.ts";
 import { SampleCard } from "../setup/SampleCard.tsx";
 import { Card, PriorityTag, Resource } from "../setup/ui.tsx";
 import { GoalChip } from "./GoalChip.tsx";
+import { pVsRequired } from "./outlook.ts";
+import { StatusChip } from "./StatusChip.tsx";
 
-/** Goals > List: one row per goal with its priority and its value against its target. */
+/** Goals > List: one row per goal with its priority, status, P against the required probability, and value against target. */
 export function GoalsListScreen() {
   const list = useLoad<GoalListView>("/api/goal-list");
 
@@ -45,6 +47,8 @@ export function GoalsListScreen() {
                         <tr>
                           <th>Goal</th>
                           <th>Priority</th>
+                          <th>Status</th>
+                          <th>P vs required</th>
                           <th className="num">Value</th>
                           <th className="num">Target</th>
                           <th>Value vs target</th>
@@ -60,6 +64,14 @@ export function GoalsListScreen() {
                               </td>
                               <td>
                                 <PriorityTag priority={goal.priority} />
+                              </td>
+                              <td>
+                                {goal.outlook ? <StatusChip status={goal.outlook.status} /> : "–"}
+                              </td>
+                              <td>
+                                {goal.outlook
+                                  ? pVsRequired(goal.outlook.pSuccess, goal.outlook.requiredP)
+                                  : "–"}
                               </td>
                               <td className="num">
                                 {formatAmount(goal.value)}
