@@ -85,6 +85,20 @@ describe("backups", () => {
     for (const name of others) expect(backupFiles()).toContain(name);
   });
 
+  it("keeps the backup it just wrote when the app clock is behind the newest backups", async () => {
+    mkdirSync(backupsDir());
+    for (let i = 1; i <= 30; i++) {
+      writeFileSync(join(backupsDir(), `gbi-2026-06-${String(i).padStart(2, "0")}.sqlite`), "x");
+    }
+
+    const result = await runDailyBackup(db, dataDir, "2026-05-01");
+
+    expect(result.created).toBe("gbi-2026-05-01.sqlite");
+    expect(backupFiles()).toContain("gbi-2026-05-01.sqlite");
+    expect(backupFiles()).toHaveLength(30);
+    expect(result.pruned).toEqual(["gbi-2026-06-01.sqlite"]);
+  });
+
   it("makes a pre-import backup under its own name, outside the once-a-day rule", async () => {
     const before = await backupBeforeImport(db, dataDir, "2026-05-01");
     const daily = await runDailyBackup(db, dataDir, "2026-05-01");

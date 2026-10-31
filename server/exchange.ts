@@ -48,14 +48,19 @@ async function orderColumns(db: Kysely<DB>, table: string): Promise<string[]> {
  * volatile is added, so equal data gives equal output.
  */
 export async function exportAll(db: Kysely<DB>): Promise<ExportDocument> {
-  const tables: ExportDocument["tables"] = {};
-  for (const table of await listTables(db)) {
-    const order = (await orderColumns(db, table)).map((column) => sql.id(column));
-    const { rows } = await sql<ExportDocument["tables"][string][number]>`
-      SELECT * FROM ${sql.id(table)} ORDER BY ${sql.join(order)}`.execute(rawSql(db));
-    tables[table] = rows;
-  }
-  return { schemaVersion: await schemaVersion(db), tables };
+  // One transaction, so every table is read from the same snapshot.
+  return rawSql(db)
+    .transaction()
+    .execute(async (trx) => {
+      const tables: ExportDocument["tables"] = {};
+      for (const table of await listTables(trx)) {
+        const order = (await orderColumns(trx, table)).map((column) => sql.id(column));
+        const { rows } = await sql<ExportDocument["tables"][string][number]>`
+          SELECT * FROM ${sql.id(table)} ORDER BY ${sql.join(order)}`.execute(trx);
+        tables[table] = rows;
+      }
+      return { schemaVersion: await schemaVersion(trx), tables };
+    });
 }
 
 async function checkCompatible(db: Kysely<DB>, document: ExportDocument): Promise<string[]> {

@@ -29,9 +29,13 @@ async function writeBackup(
   const dir = join(dataDir, BACKUPS_FOLDER);
   mkdirSync(dir, { recursive: true });
   await sql`VACUUM INTO ${join(dir, name)}`.execute(db);
-  // The names sort by day, then daily before import, so the newest come last.
-  const newestFirst = backupNames(dir).sort().reverse();
-  const pruned = newestFirst.slice(BACKUPS_KEPT);
+  // Names sort by day; on one day the `-import-` names come before the daily name. The file just
+  // written stays, even when the app clock is behind the others, and the 29 newest others stay too.
+  const others = backupNames(dir)
+    .filter((existing) => existing !== name)
+    .sort()
+    .reverse();
+  const pruned = others.slice(BACKUPS_KEPT - 1);
   for (const old of pruned) rmSync(join(dir, old));
   return { created: name, pruned };
 }
