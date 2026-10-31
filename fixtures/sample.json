@@ -2,6 +2,8 @@
   "asOf": "2026-10-31",
   "settings": {
     "trackingStart": "2026-01",
+    "seed": 42,
+    "mcPaths": 1000,
     "zainetto": {
       "amountCents": 40000,
       "expiry": 2029,

@@ -1,0 +1,94 @@
+/* Independence screen: the ladder, the counts list and the chart legend samples. Tokens only. */
+.ladder {
+  display: grid;
+  gap: var(--s3);
+  max-width: 960px;
+}
+.ladder-row {
+  display: grid;
+  grid-template-columns: 120px minmax(160px, 1fr) minmax(200px, 280px);
+  align-items: center;
+  gap: var(--s3);
+}
+.ladder-name {
+  font-size: var(--t-sub);
+  line-height: var(--lh-sub);
+  font-weight: 600;
+}
+.ladder-bar {
+  display: flex;
+  height: var(--s4);
+  border-radius: 4px;
+  background: var(--wash);
+  overflow: clip;
+}
+.ladder-seg {
+  display: block;
+  height: 100%;
+  background: var(--slot);
+  /* a surface-coloured edge between segments */
+  border-right: 2px solid var(--surface);
+}
+.ladder-figures {
+  font-size: var(--t-sub);
+  line-height: var(--lh-sub);
+}
+.ladder-figures .sub-line {
+  display: block;
+  color: var(--muted);
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+}
+
+.swatch-box {
+  width: 10px;
+  height: 10px;
+  background: var(--slot);
+}
+.swatch-band {
+  height: 10px;
+  background: color-mix(in srgb, var(--slot5) 30%, transparent);
+}
+.swatch-solid {
+  height: 0;
+  border-top: 2px solid var(--slot5);
+}
+.swatch-dash {
+  height: 0;
+  border-top: 2px dashed var(--slot5);
+}
+.swatch-level {
+  height: 0;
+  border-top: 2px solid var(--ctx);
+}
+
+.independence-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--s3);
+  align-items: start;
+  margin-top: var(--s4);
+}
+.counts {
+  display: grid;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.counts li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding-left: var(--s2);
+  border-left: 3px solid var(--slot);
+}
+.counts-value {
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  color: var(--ink2);
+}
+.chart-tall {
+  height: 400px;
+}

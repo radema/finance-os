@@ -113,5 +113,35 @@ exports[`synthetic fixture > matches the reviewed regression snapshot 1`] = `
       },
     },
   },
+  "monteCarlo": {
+    "g-car": {
+      "avgShortfall": 0.72,
+      "p10": 25543.92,
+      "p50": 29484.61,
+      "p90": 34020.09,
+      "pSuccess": 0.998,
+    },
+    "g-holiday": {
+      "avgShortfall": 1005.03,
+      "p10": 2004.89,
+      "p50": 2004.89,
+      "p90": 2004.89,
+      "pSuccess": 0,
+    },
+    "g-home": {
+      "avgShortfall": 14.14,
+      "p10": 51441.72,
+      "p50": 63460.16,
+      "p90": 76215.35,
+      "pSuccess": 0.99,
+    },
+    "g-retirement": {
+      "avgShortfall": 2799.63,
+      "p10": 217614.96,
+      "p50": 309045.98,
+      "p90": 444439.17,
+      "pSuccess": 0.878,
+    },
+  },
 }
 `;

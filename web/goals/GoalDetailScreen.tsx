@@ -1,9 +1,13 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { GoalDetail } from "../../engine/goalViews.ts";
+import type { GoalAnalysis, GoalDetailView } from "../../engine/goalViews.ts";
 import { useLoad } from "../api.ts";
-import { formatAmount, formatUnitPrice } from "../money.ts";
+import { formatAmount, formatPercent, formatUnitPrice } from "../money.ts";
 import { GOALS_LIST_ROUTE } from "../nav.ts";
 import { Card, PriorityTag, ProductTag, Resource } from "../setup/ui.tsx";
+import { FanChart } from "./FanChart.tsx";
+import { horizonText, requiredText, usesSlotLine } from "./outlook.ts";
+import { RangeChart } from "./RangeChart.tsx";
+import { StatusChip } from "./StatusChip.tsx";
 import { ValueChart } from "./ValueChart.tsx";
 
 const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
@@ -22,7 +26,7 @@ function Kpi({ label, value, note }: { label: string; value: string; note?: Reac
   );
 }
 
-function Exhibit({ goal }: { goal: GoalDetail }) {
+function Exhibit({ goal }: { goal: GoalDetailView }) {
   const last = goal.series.at(-1);
   if (!last) {
     return (
@@ -70,7 +74,169 @@ function Exhibit({ goal }: { goal: GoalDetail }) {
   );
 }
 
-function Detail({ goal }: { goal: GoalDetail }) {
+const slotStyle = (slot: number) =>
+  ({
+    "--slot": `var(--slot${slot})`,
+    "--line": usesSlotLine(slot) ? `var(--slot${slot})` : "var(--ink2)",
+  }) as CSSProperties;
+const bandLegend = (
+  <>
+    <li>
+      <span className="swatch swatch-band" />
+      Bad to good case
+    </li>
+    <li>
+      <span className="swatch swatch-median" />
+      Typical case
+    </li>
+    <li>
+      <span className="swatch swatch-target" />
+      Target
+    </li>
+  </>
+);
+
+function FanExhibit({ goal, analysis }: { goal: GoalDetailView; analysis: GoalAnalysis }) {
+  const { pSuccess, requiredP, fan, targetAtGoalDate } = analysis;
+  const reached = pSuccess >= requiredP;
+  const title = `${goal.name} reaches its target in ${formatPercent(pSuccess)} of simulated markets${
+    reached
+      ? `; ${formatPercent(requiredP)} is required`
+      : `, below the ${formatPercent(requiredP)} required`
+  }`;
+  const last = fan.at(-1);
+  return (
+    <figure className="exhibit" style={slotStyle(goal.slot)}>
+      <div className="tag">Fan of outcomes</div>
+      <h2 className="exhibit-title">{title}</h2>
+      <p className="unit">
+        Net value if sold at the end of that year, in euros of that year. The band runs from the bad
+        case to the good case.
+      </p>
+      {fan.length > 1 ? (
+        <>
+          <ul className="legend">{bandLegend}</ul>
+          <FanChart
+            fan={fan}
+            target={targetAtGoalDate}
+            slot={goal.slot}
+            label={`Fan of outcomes for ${goal.name}: bad, typical and good case by year, against the target`}
+          />
+        </>
+      ) : (
+        <p className="note">
+          This goal is due this year, so there is no path to draw. The range below shows the
+          outcome.
+        </p>
+      )}
+      <p className="callout">
+        The target is {formatAmount(goal.target)} in today's euros, {formatAmount(targetAtGoalDate)}{" "}
+        at the goal date.
+        {last ? ` The typical case ends at ${formatAmount(last.typical)}.` : null}
+      </p>
+      <figcaption className="source">
+        Source: your holdings and prices to {goal.asOf.slice(0, 7)}; {analysis.paths} simulated
+        markets, seed {analysis.seed}; after tax and fund costs.
+      </figcaption>
+    </figure>
+  );
+}
+
+function RangeExhibit({ goal, analysis }: { goal: GoalDetailView; analysis: GoalAnalysis }) {
+  const { range } = analysis;
+  const gap = range.typical - range.target;
+  const title = `In the typical case ${goal.name} ends ${formatAmount(Math.abs(gap))} ${gap >= 0 ? "above" : "below"} its target`;
+  return (
+    <figure className="exhibit" style={slotStyle(goal.slot)}>
+      <div className="tag">Range of outcomes</div>
+      <h2 className="exhibit-title">{title}</h2>
+      <p className="unit">Net value at the goal date, 31 December {goal.targetYear}, in euros.</p>
+      <ul className="legend">{bandLegend}</ul>
+      <RangeChart
+        range={range}
+        slot={goal.slot}
+        label={`Range of outcomes for ${goal.name} at the goal date: bad ${formatAmount(range.bad)}, typical ${formatAmount(range.typical)}, good ${formatAmount(range.good)}, target ${formatAmount(range.target)}`}
+      />
+      <p className="callout">
+        The bad case is {formatAmount(range.bad)} and the good case is {formatAmount(range.good)}.
+        The target at the goal date is {formatAmount(range.target)}.
+      </p>
+      <figcaption className="source">
+        Source: {analysis.paths} simulated markets, seed {analysis.seed}; after tax and fund costs.
+      </figcaption>
+    </figure>
+  );
+}
+
+function WhatItWouldTake({ analysis }: { analysis: GoalAnalysis }) {
+  const { required, requiredP, horizonYears } = analysis;
+  const { deterministic, probability, currentMonthly, unit } = required;
+  const against = (amount: number | null) => {
+    if (amount === null || amount === 0 || currentMonthly === null) return null;
+    const gap = amount - currentMonthly;
+    if (Math.abs(gap) < 0.005) return "The same as now";
+    return `${formatAmount(Math.abs(gap))} ${gap > 0 ? "more" : "less"} than now`;
+  };
+  const rows: { label: string; hint: string; amount: number | null }[] = [
+    {
+      label: "To reach the target",
+      hint: "The lowest amount that reaches the target on the typical growth of each product",
+      amount: deterministic,
+    },
+    {
+      label: `For a ${formatPercent(requiredP)} chance`,
+      hint: "The lowest amount that meets the required probability",
+      amount: probability,
+    },
+  ];
+  return (
+    <Card title="What it would take">
+      <ul className="take-list">
+        {rows.map((row) => (
+          <li key={row.label}>
+            <span>
+              {row.label}
+              <small className="take-hint">{row.hint}.</small>
+            </span>
+            <span className="take-value">
+              {requiredText(row.amount, unit)}
+              <small>{against(row.amount)}</small>
+            </span>
+          </li>
+        ))}
+        <li>
+          <span>Time to the goal date</span>
+          <span className="take-value">{horizonText(horizonYears)}</span>
+        </li>
+      </ul>
+      <p className="sub">
+        {currentMonthly === null
+          ? "For the pension goal the answer is a multiple of its contribution schedule: 1 is the schedule as it is."
+          : `You put in ${formatAmount(currentMonthly)} a month now.`}
+      </p>
+    </Card>
+  );
+}
+
+function Analysis({ goal }: { goal: GoalDetailView }) {
+  const { analysis } = goal;
+  if (!analysis) {
+    return (
+      <Card title="Monte Carlo">
+        <p className="note">{goal.projectionNote ?? "The simulation cannot run for this goal."}</p>
+      </Card>
+    );
+  }
+  return (
+    <>
+      <FanExhibit goal={goal} analysis={analysis} />
+      <RangeExhibit goal={goal} analysis={analysis} />
+      <WhatItWouldTake analysis={analysis} />
+    </>
+  );
+}
+
+function Detail({ goal }: { goal: GoalDetailView }) {
   const net = goal.projection?.net ?? null;
   const goalDate = `31 December ${goal.targetYear}`;
   return (
@@ -78,11 +244,21 @@ function Detail({ goal }: { goal: GoalDetail }) {
       <div className="tag">Goal</div>
       <h1 className="title">{goal.name}</h1>
       <p className="unit">
-        <PriorityTag priority={goal.priority} /> Goal date {goalDate}. Values at the end of{" "}
-        {goal.asOf.slice(0, 7)}.
+        <PriorityTag priority={goal.priority} />{" "}
+        {goal.analysis ? <StatusChip status={goal.analysis.status} /> : null} Goal date {goalDate}.
+        Values at the end of {goal.asOf.slice(0, 7)}.
       </p>
 
       <div className="kpis">
+        <Kpi
+          label="Chance of success"
+          value={goal.analysis ? formatPercent(goal.analysis.pSuccess) : MISSING}
+          note={
+            goal.analysis
+              ? `${formatPercent(goal.analysis.requiredP)} required.`
+              : "The simulation cannot run for this goal."
+          }
+        />
         <Kpi
           label="Value"
           value={formatAmount(goal.value)}
@@ -105,6 +281,8 @@ function Detail({ goal }: { goal: GoalDetail }) {
           note={`${formatAmount(goal.target)} in today's euros, grown by inflation.`}
         />
       </div>
+
+      <Analysis goal={goal} />
 
       <Card title="Holdings">
         {goal.holdings.length === 0 ? (
@@ -163,7 +341,7 @@ function Detail({ goal }: { goal: GoalDetail }) {
 }
 
 function Loader({ goalId }: { goalId: string }) {
-  const loaded = useLoad<GoalDetail>(`/api/goal-detail?id=${encodeURIComponent(goalId)}`);
+  const loaded = useLoad<GoalDetailView>(`/api/goal-detail?id=${encodeURIComponent(goalId)}`);
   if (loaded.error === NOT_FOUND) {
     return (
       <>
@@ -179,7 +357,7 @@ function Loader({ goalId }: { goalId: string }) {
   return <Resource loaded={loaded}>{(goal) => <Detail goal={goal} />}</Resource>;
 }
 
-/** Goals > Detail: value, deterministic net, target at the goal date, holdings, value vs money put in. */
+/** Goals > Detail: value, P vs required, fan, range, what it would take, holdings, value vs money put in. */
 export function GoalDetailScreen({ goalId }: { goalId: string | undefined }) {
   if (goalId === undefined) {
     return (

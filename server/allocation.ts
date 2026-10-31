@@ -1,8 +1,8 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import { normaliseWeights } from "../engine/projection.ts";
 import type { AllocationRow } from "../engine/schemas.ts";
 import { allocationWeightSchema } from "../engine/schemas.ts";
-import { normaliseWeights } from "../engine/weights.ts";
 import type { DB } from "./db.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
@@ -17,8 +17,8 @@ function withShares(
   const result: AllocationRow[] = [];
   for (const goalId of new Set(rows.map((row) => row.goalId))) {
     const goalRows = rows.filter((row) => row.goalId === goalId);
-    const shares = normaliseWeights(goalRows.map((row) => row.weight));
-    for (const [i, row] of goalRows.entries()) result.push({ ...row, share: shares[i] as number });
+    const shares = normaliseWeights(new Map(goalRows.map((row) => [row.productId, row.weight])));
+    for (const row of goalRows) result.push({ ...row, share: shares.get(row.productId) as number });
   }
   return result;
 }
