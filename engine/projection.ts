@@ -114,8 +114,8 @@ export type GrowthRule = (
   phi: number,
 ) => number;
 
-/** The net coupon rate and growth of the deterministic path: ((1 + mu - c)(1 - TER))^phi. */
-export const deterministicGrowth: GrowthRule = (_productId, params, _stepIndex, phi) => {
+/** The growth factor of the deterministic path: ((1 + mu - c)(1 - TER))^phi. */
+const deterministicGrowth: GrowthRule = (_productId, params, _stepIndex, phi) => {
   const coupon = params.regime === "govt" ? (params.couponRate ?? 0) : 0;
   return ((1 + params.mu - coupon) * (1 - params.ter)) ** phi;
 };
