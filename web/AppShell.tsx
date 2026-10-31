@@ -9,10 +9,12 @@ import {
   goalIdOf,
   isBuilt,
   NAV,
+  PRICES_ROUTE,
   TRANSACTIONS_ROUTE,
 } from "./nav.ts";
 import { CurrentPortfolioScreen } from "./operations/CurrentPortfolioScreen.tsx";
 import { TransactionsScreen } from "./operations/TransactionsScreen.tsx";
+import { PricesScreen } from "./prices/PricesScreen.tsx";
 import { SetupScreen } from "./setup/SetupScreen.tsx";
 
 function Sidebar({ route }: { route: string }) {
@@ -92,6 +94,8 @@ export function AppShell({ route }: { route: string }) {
           <TransactionsScreen />
         ) : route === CURRENT_PORTFOLIO_ROUTE ? (
           <CurrentPortfolioScreen />
+        ) : route === PRICES_ROUTE ? (
+          <PricesScreen />
         ) : route === GOALS_LIST_ROUTE ? (
           <GoalsListScreen />
         ) : route === GOALS_DETAIL_ROUTE || goalIdOf(route) !== undefined ? (

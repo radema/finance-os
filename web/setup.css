@@ -106,7 +106,8 @@
 input[type="text"],
 input[type="number"],
 input[type="date"],
-select {
+select,
+textarea {
   width: 100%;
   min-width: 0;
   padding: var(--s1) var(--s2);

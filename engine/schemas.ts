@@ -12,6 +12,10 @@ export const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "use YYYY
 
 export const REGIMES = ["etf", "direct", "govt", "cash", "pension"] as const;
 export const PRICE_SOURCES = ["provider", "csv", "manual"] as const;
+/** BTP and pension funds have no price provider: their price is manual or CSV. */
+export const canUseProvider = (regime: (typeof REGIMES)[number]): boolean =>
+  regime !== "govt" && regime !== "pension";
+
 export const PRIORITIES = ["Need", "Want", "Wish"] as const;
 
 // --- Product ---------------------------------------------------------------------------------
@@ -76,7 +80,7 @@ export const TRANSACTION_TYPES = [
   "coupon",
 ] as const;
 
-const isoDate = z
+export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "use YYYY-MM-DD")
   .refine((value) => !Number.isNaN(Date.parse(value)), "not a real date");
