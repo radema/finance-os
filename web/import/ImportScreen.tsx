@@ -3,8 +3,8 @@ import { useLoad } from "../api.ts";
 import { hashParams } from "../hashQuery.ts";
 import { CurrentPortfolioScreen } from "../operations/CurrentPortfolioScreen.tsx";
 import { CsvImport } from "../prices/CsvImport.tsx";
-import { Card } from "../setup/ui.tsx";
 import { PastImports } from "./PastImports.tsx";
+import { RecordImport } from "./RecordImport.tsx";
 import { TransactionsImport } from "./TransactionsImport.tsx";
 import type { BatchRow } from "./types.ts";
 
@@ -55,9 +55,7 @@ export function ImportScreen() {
       {tab === "transactions" ? <TransactionsImport onImported={batches.reload} /> : null}
       {tab === "prices" ? <CsvImport onImported={batches.reload} /> : null}
       {tab === "products" || tab === "goals" ? (
-        <Card title={tab === "products" ? "Import products" : "Import goals"}>
-          <p className="note">This import is not built yet.</p>
-        </Card>
+        <RecordImport key={tab} kind={tab} onImported={batches.reload} />
       ) : null}
       {tab === "portfolio" ? <CurrentPortfolioScreen /> : null}
 

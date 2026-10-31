@@ -92,6 +92,7 @@ export function commitTransactionImport(
       rowsSkipped: rows.length - ready.length,
       undoneAt: null,
       priorPrices: null,
+      createdIds: null,
     };
     await trx.insertInto("importBatch").values(batch).execute();
 

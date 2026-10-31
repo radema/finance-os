@@ -94,6 +94,8 @@ export interface ImportBatchTable {
   undoneAt: string | null;
   /** JSON: the prior state of the prices this batch overwrote. */
   priorPrices: string | null;
+  /** JSON: the ids of the products or goals this batch created, for undo. */
+  createdIds: string | null;
 }
 
 export interface ImportMappingTable {

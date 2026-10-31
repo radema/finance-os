@@ -10,7 +10,7 @@ import { findOr404, idQuery } from "./rows.ts";
 import type { ProductTable } from "./schema.ts";
 import { toFlag } from "./schema.ts";
 
-const fromRow = (row: ProductTable): Product => ({
+export const fromRow = (row: ProductTable): Product => ({
   id: row.id,
   name: row.name,
   isin: row.isin,

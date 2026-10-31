@@ -21,18 +21,18 @@ const FIELD_LABEL: Record<TransactionField, string> = {
   commission: "Commission (optional)",
   note: "Note (optional)",
 };
-const DELIMITERS = [
+export const DELIMITERS = [
   { value: "auto", label: "Detect" },
   { value: ";", label: "Semicolon ;" },
   { value: ",", label: "Comma ," },
   { value: "\t", label: "Tab" },
 ];
-const DECIMALS = [
+export const DECIMALS = [
   { value: "auto", label: "Detect" },
   { value: "comma", label: "Comma 1,5" },
   { value: "point", label: "Point 1.5" },
 ];
-const DATES = [
+export const DATES = [
   { value: "auto", label: "Detect" },
   { value: "iso", label: "YYYY-MM-DD" },
   { value: "dmy", label: "DD/MM/YYYY" },
@@ -46,7 +46,7 @@ interface Weight {
   weight: number;
 }
 
-function toBase64(bytes: ArrayBuffer): string {
+export function toBase64(bytes: ArrayBuffer): string {
   let binary = "";
   const view = new Uint8Array(bytes);
   for (let i = 0; i < view.length; i += 0x8000) {

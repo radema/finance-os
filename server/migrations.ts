@@ -124,6 +124,12 @@ const migrations: Record<string, Migration> = {
       for (const statement of DOMAIN_TABLES) await statement.execute(db);
     },
   },
+  "003-batch-created-ids": {
+    async up(db) {
+      await sql`ALTER TABLE import_batch ADD COLUMN created_ids TEXT
+        CHECK (created_ids IS NULL OR json_valid(created_ids))`.execute(db);
+    },
+  },
 };
 
 export const migrationProvider: MigrationProvider = {
