@@ -39,8 +39,47 @@ export type MockState = {
 
 export type MockAnalysis = { results: { id: string; detNet: number }[] };
 
+/** The part of a mock state that the copied `cashflow` reads. Money is in euros. */
+export type MockCashFlowState = {
+  asOf: string;
+  cashflow: {
+    income: number;
+    incomeGrowth: number;
+    essential: number;
+    optional: number;
+    expenseGrowth: number;
+    events: { year: number; label: string; amount: number }[];
+  };
+  pension: {
+    goalId: string;
+    ral: number;
+    ralGrowth: number;
+    tfrPct: number;
+    workerPct: number;
+    employerPct: number;
+    cap: number;
+    extra: number;
+    /** An empty string means "to cap". */
+    voluntary: number | "";
+    marginal: number;
+  };
+  goals: { id: string; year: number; contrib: number; cgrowth: number }[];
+};
+
+export type MockCashFlowRow = {
+  year: number;
+  income: number;
+  expenses: number;
+  events: number;
+  refund: number;
+  capacity: number;
+  planned: number;
+  free: number;
+};
+
 type MockEngine = {
   analyse(state: MockState, date: string, options: { paths: number }): MockAnalysis;
+  cashflow(state: MockCashFlowState, years: number): MockCashFlowRow[];
 };
 
 // The copy is browser code. Its globals live here, not in the copy.
@@ -50,5 +89,5 @@ const mkey = (d: string): string => d.slice(0, 7);
 /** The mock engine, evaluated once in its own context. */
 export function loadMockEngine(): MockEngine {
   const source = readFileSync(join(import.meta.dirname, "mock-engine.js"), "utf8");
-  return runInNewContext(`${source}\n({ analyse });`, { CLASSES, mkey }) as MockEngine;
+  return runInNewContext(`${source}\n({ analyse, cashflow });`, { CLASSES, mkey }) as MockEngine;
 }

@@ -156,3 +156,58 @@ export const scenarioArb: fc.Arbitrary<Scenario> = fc
       ledger,
     };
   });
+
+/** One random cash flow and pension plan, in euros, to run next to a `Scenario`. */
+export type CashFlowScenario = {
+  cashFlow: {
+    income: number;
+    incomeGrowth: number;
+    essential: number;
+    optional: number;
+    expenseGrowth: number;
+    events: { yearOffset: number; amount: number }[];
+  };
+  pension: {
+    /** Index into the scenario's goals. */
+    goal: number;
+    ral: number;
+    workerPct: number;
+    employerPct: number;
+    /** Null means "to cap". */
+    voluntary: number | null;
+    marginalRate: number;
+    extra: number;
+    capCents: number;
+  };
+};
+
+/**
+ * Random cash flows for the differential test: whole euros, ralGrowth 0 and a pension goal with
+ * one flow. The pension is described here; the harness builds both engines' inputs from it.
+ */
+export const cashFlowScenarioArb: fc.Arbitrary<CashFlowScenario> = fc.record({
+  cashFlow: fc.record({
+    income: fc.integer({ min: 10_000, max: 100_000 }),
+    incomeGrowth: rate(-0.02, 0.05),
+    essential: fc.integer({ min: 0, max: 3_000 }),
+    optional: fc.integer({ min: 0, max: 2_000 }),
+    expenseGrowth: rate(0, 0.05),
+    events: fc.array(
+      fc.record({
+        yearOffset: fc.integer({ min: 0, max: 9 }),
+        amount: fc.integer({ min: -5_000, max: 5_000 }),
+      }),
+      { maxLength: 6 },
+    ),
+  }),
+  pension: fc.record({
+    goal: fc.nat(),
+    ral: fc.integer({ min: 10_000, max: 80_000 }),
+    workerPct: rate(0, 0.03),
+    employerPct: rate(0, 0.03),
+    voluntary: fc.option(fc.integer({ min: 0, max: 6_000 }), { nil: null }),
+    marginalRate: rate(0.23, 0.43),
+    extra: fc.constantFrom(0, 2_650),
+    capCents: fc.integer({ min: 300_000, max: 600_000 }),
+  }),
+});

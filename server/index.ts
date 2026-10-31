@@ -5,6 +5,7 @@ import type { PriceProvider } from "../engine/priceFetch.ts";
 import { registerAllocationRoutes } from "./allocation.ts";
 import { registerAssumptionRoutes } from "./assumptions.ts";
 import { runDailyBackup } from "./backup.ts";
+import { registerCashFlowRoutes } from "./cashFlow.ts";
 import { resolveToday } from "./config.ts";
 import { registerDataRoutes } from "./data.ts";
 import { isCloudSyncedPath } from "./dataFolder.ts";
@@ -83,6 +84,7 @@ export async function startServer({
   registerPriceFetchRoutes(router, db, clock, priceProvider);
   registerDataRoutes(router, db, dataDir, clock);
   registerGoalViewRoutes(router, db, clock);
+  registerCashFlowRoutes(router, db, clock);
   registerSetupProgressRoutes(router, db);
 
   const server = createServer(async (req, res) => {
