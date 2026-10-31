@@ -11,14 +11,14 @@ import { loadDocument, saveDocument } from "./documents.ts";
 import type { Router } from "./router.ts";
 import { loadLedger } from "./transactions.ts";
 
-/** The pension plan document, or undefined when none is saved or it is not valid yet. */
+/** The pension plan document, or undefined when none is saved. A saved document that is not valid throws. */
 async function loadPensionPlan(db: Kysely<DB>) {
   const row = await db
     .selectFrom("document")
     .select("value")
     .where("kind", "=", "pensionPlan")
     .executeTakeFirst();
-  return row ? pensionPlanSchema.safeParse(JSON.parse(row.value)).data : undefined;
+  return row ? pensionPlanSchema.parse(JSON.parse(row.value)) : undefined;
 }
 
 /**

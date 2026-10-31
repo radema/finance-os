@@ -24,8 +24,6 @@ export type CashFlowInput = {
   goals: readonly CashFlowGoal[];
   /** The pension goal counts only its voluntary part, from the schedule. */
   pension?: { goalId: string; schedule: readonly PensionYear[] };
-  /** Rows to produce, Y0 first. */
-  years?: number;
 };
 
 export type CashFlowYear = {
@@ -54,7 +52,7 @@ export type CashFlowView = {
 };
 
 /**
- * The cash flow for `years` years from Y0 = year(asOf).
+ * The cash flow for 10 years from Y0 = year(asOf).
  *
  * Income and expenses grow by (1 + g)^(year - Y0), as the mock does. Goal contributions follow
  * `projectGoal`: the stub is r x monthly, full year k grows by (1 + contributionGrowth)^(k - 1),
@@ -62,7 +60,7 @@ export type CashFlowView = {
  * f = r / 12; events and the refund are whole.
  */
 export function projectCashFlow(input: CashFlowInput): CashFlowYear[] {
-  const { asOf, cashFlow, goals, pension, years = DEFAULT_YEARS } = input;
+  const { asOf, cashFlow, goals, pension } = input;
   const { y0, f } = timeGrid(asOf, Number(asOf.slice(0, 4)));
 
   const planned = new Map<number, number>();
@@ -79,7 +77,7 @@ export function projectCashFlow(input: CashFlowInput): CashFlowYear[] {
     }
   }
 
-  return Array.from({ length: years }, (_, index) => {
+  return Array.from({ length: DEFAULT_YEARS }, (_, index) => {
     const year = y0 + index;
     const share = index === 0 ? f : 1;
     const income = cashFlow.income * (1 + cashFlow.incomeGrowth) ** index * share;
