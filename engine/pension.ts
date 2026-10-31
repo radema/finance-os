@@ -1,7 +1,8 @@
 // The pension schedule and the split of its yearly flows by product. Pure; money is in cents and
 // is never rounded here.
-import { timeGrid } from "./projection.ts";
+
 import type { PensionFlow, PensionPlan, Settings } from "./schemas.ts";
+import { timeGrid } from "./timeGrid.ts";
 
 /** The projection runs 40 years (t = 0 ... 40 in the spec). */
 const DEFAULT_YEARS = 40;

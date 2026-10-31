@@ -15,10 +15,8 @@ export type {
   ProductProjection,
   ProjectionInput,
   ProjectionSettings,
-  Step,
-  TimeGrid,
 } from "./projection.ts";
-export { normaliseWeights, projectGoal, timeGrid } from "./projection.ts";
+export { normaliseWeights, projectGoal } from "./projection.ts";
 export type { PensionFlow, PensionPlan } from "./schemas.ts";
 export { pensionPlanSchema } from "./schemas.ts";
 export { goalSlot } from "./slots.ts";
@@ -29,3 +27,5 @@ export type {
   Zainetto,
 } from "./tax.ts";
 export { liquidate, pensionExitRate } from "./tax.ts";
+export type { Step, TimeGrid } from "./timeGrid.ts";
+export { timeGrid } from "./timeGrid.ts";

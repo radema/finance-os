@@ -5,9 +5,9 @@ import {
   type ProductParams,
   type ProjectionInput,
   projectGoal,
-  timeGrid,
 } from "./projection.ts";
 import { type PensionFlow, pensionPlanSchema } from "./schemas.ts";
+import { timeGrid } from "./timeGrid.ts";
 
 const settings = { inflation: 0.02, bollo: 0, taxStd: 0.26, taxGovt: 0.125, pensionTax: 0.2 };
 const etf: ProductParams = { regime: "etf", mu: 0, ter: 0 };
