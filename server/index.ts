@@ -69,7 +69,7 @@ export async function startServer({
   registerAllocationRoutes(router, db);
   registerAssumptionRoutes(router, db);
   registerSampleRoutes(router, db);
-  registerTransactionRoutes(router, db);
+  registerTransactionRoutes(router, db, clock);
   registerOpeningPositionRoutes(router, db);
   registerPriceRoutes(router, db, clock);
   registerDataRoutes(router, db, dataDir, clock);

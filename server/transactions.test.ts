@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Goal, Product, Transaction } from "../engine/schemas.ts";
 import { DATABASE_FILE } from "./db.ts";
 import { startServer } from "./index.ts";
@@ -199,5 +199,36 @@ describe("Transactions API", () => {
       price: 123.45,
       priceDate: "2026-10-15",
     });
+  });
+});
+
+describe("App clock API", () => {
+  let dataDir: string;
+  let stop: (() => Promise<void>) | undefined;
+
+  beforeEach(() => {
+    dataDir = mkdtempSync(join(tmpdir(), "gbi-clock-"));
+  });
+  afterEach(async () => {
+    await stop?.();
+    stop = undefined;
+    vi.unstubAllEnvs();
+    rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  const today = async (): Promise<unknown> => {
+    const server = await startServer({ dataDir, port: 0 });
+    stop = server.close;
+    return (await (await fetch(`${server.url}/api/today`)).json()) as unknown;
+  };
+
+  it("sends GBI_AS_OF as the date", async () => {
+    vi.stubEnv("GBI_AS_OF", "2026-03-15");
+    expect(await today()).toEqual({ today: "2026-03-15" });
+  });
+
+  it("sends today's date when GBI_AS_OF is not set", async () => {
+    vi.stubEnv("GBI_AS_OF", "");
+    expect(await today()).toEqual({ today: new Date().toLocaleDateString("sv") });
   });
 });
