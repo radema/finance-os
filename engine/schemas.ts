@@ -184,6 +184,37 @@ export const settingsSchema = z.object({
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
+export const PENSION_FLOWS = ["Work", "Voluntary"] as const;
+
+/** One product's share of a pension flow: `Work` is TFR + worker + employer, `Voluntary` is the rest. */
+export const pensionFlowSchema = z.object({
+  productId: z.string().min(1),
+  flow: z.enum(PENSION_FLOWS),
+  pct: fraction,
+});
+export type PensionFlow = z.infer<typeof pensionFlowSchema>;
+
+/**
+ * The stored PensionPlan document. Only `goalId` and `firstYear` are required, so the S1 fixture's
+ * partial document is valid. Without `ral` there is no schedule. A blank `voluntary` means "to cap".
+ * Money is in cents.
+ */
+export const pensionPlanSchema = z.object({
+  goalId: z.string().min(1),
+  firstYear: z.number().int().min(1950).max(2200),
+  ral: cents.optional(),
+  ralGrowth: z.number().gt(-1).max(1).default(0),
+  tfrPct: fraction.default(0.0691),
+  workerPct: fraction.default(0),
+  employerPct: fraction.default(0),
+  voluntary: cents.nullable().default(null),
+  marginalRate: fraction.default(0),
+  /** The extra deduction on top of the cap, every year. */
+  extra: cents.default(265_000),
+  flows: z.array(pensionFlowSchema).default([]),
+});
+export type PensionPlan = z.infer<typeof pensionPlanSchema>;
+
 export const commissionSchema = z
   .object({
     plan: name.default("Fineco Trading"),
