@@ -120,11 +120,17 @@ const CENTS = 100;
 const pensionGoalId = (scenario: Scenario, cf: CashFlowScenario): string =>
   scenario.goals[cf.pension.goal % scenario.goals.length]?.id ?? "";
 
-/** The copied mock's 10-year cash flow, in euros. */
+/**
+ * The copied mock's 10-year cash flow, in euros. The mock keeps paying the pension refund after the
+ * pension goal ends; v1 stops with the last one in targetYear + 1 (AC-96). That listed difference is
+ * applied here, so the rows still compare line by line.
+ */
 export function mockCashFlow(scenario: Scenario, cf: CashFlowScenario): MockCashFlowRow[] {
   const { pension } = cf;
   const y0 = Number(scenario.asOf.slice(0, 4));
-  return mock.cashflow(
+  const goalId = pensionGoalId(scenario, cf);
+  const lastRefundYear = (scenario.goals.find((g) => g.id === goalId)?.targetYear ?? 0) + 1;
+  const rows = mock.cashflow(
     {
       asOf: scenario.asOf,
       cashflow: {
@@ -155,6 +161,11 @@ export function mockCashFlow(scenario: Scenario, cf: CashFlowScenario): MockCash
       })),
     },
     10,
+  );
+  return rows.map((row) =>
+    row.year > lastRefundYear
+      ? { ...row, refund: 0, capacity: row.capacity - row.refund, free: row.free - row.refund }
+      : row,
   );
 }
 

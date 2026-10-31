@@ -153,6 +153,16 @@ describe("Cash flow API (AC-50)", () => {
     expect((await read()).rows[1]?.refund).toBeCloseTo(33_250, 6);
   });
 
+  it("pays no refund after the pension goal's last one, in targetYear + 1 (AC-96)", async () => {
+    await call("POST", "/api/sample-data");
+    sql(`UPDATE document SET value = '${JSON.stringify(fullPlan)}' WHERE kind = 'pensionPlan'`);
+    sql("UPDATE goal SET target_year = 2028 WHERE id = 'g-retirement'");
+    await call("PUT", "/api/cash-flow", document);
+    // Schedule rows 2026 to 2028 are refunded in 2027 to 2029; 2030 on shows 0.
+    const refunds = (await read()).rows.map((row) => row.refund > 0);
+    expect(refunds.slice(0, 6)).toEqual([false, true, true, true, false, false]);
+  });
+
   it("refuses a bad document", async () => {
     expect((await call("PUT", "/api/cash-flow", { ...document, essential: -1 })).status).toBe(400);
     expect((await call("PUT", "/api/cash-flow", { ...document, incomeGrowth: -1 })).status).toBe(

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { GoalDetail } from "../engine/goalViews.ts";
 import type { PensionView } from "../engine/pensionView.ts";
-import type { PensionPlan, Transaction } from "../engine/schemas.ts";
+import type { Goal, PensionPlan, Transaction } from "../engine/schemas.ts";
 import sampleJson from "../fixtures/sample.json" with { type: "json" };
 import { startServer } from "./index.ts";
 
@@ -166,6 +166,36 @@ describe("Pension plan and Pension view API", () => {
       expect(row.body.flow).toBeUndefined();
       expect((await view()).thisYear?.voluntaryYtd).toBeCloseTo(650, 6);
     });
+  });
+
+  // AC-95. Sample: worker + employer 800, cap 5,300 + extra 2,650 = 7,950, Voluntary YTD 650.
+  it("shows still available 0 and the non-deducted part when this year's payments pass the limit", async () => {
+    await call("POST", "/api/sample-data");
+    const plan = (await call<PensionPlan>("GET", "/api/pension-plan")).body;
+    // No scheduled voluntary for the rest of the year, so the tax year is the YTD alone.
+    await call("PUT", "/api/pension-plan", { ...plan, voluntary: 0 });
+    await call("POST", "/api/transactions", {
+      date: "2026-10-20",
+      goalId: "g-retirement",
+      productId: "p-pension-equity",
+      type: "pensionContribution",
+      amountCents: 700_000,
+      price: 13,
+    });
+    // Used = 800 + 650 + 7,000 = 7,950 + 500.
+    const { thisYear } = await view();
+    expect(thisYear?.used).toBeCloseTo(8_450, 6);
+    expect(thisYear?.available).toBe(0);
+    expect(thisYear?.nonDeducted).toBeCloseTo(500, 6);
+  });
+
+  it("ends the schedule at the pension goal's target year (AC-96)", async () => {
+    await call("POST", "/api/sample-data");
+    const goal = (await call<Goal[]>("GET", "/api/goals")).body.find(
+      (g) => g.id === "g-retirement",
+    );
+    await call("PUT", "/api/goals", { ...goal, targetYear: 2028 });
+    expect((await view()).schedule.map((row) => row.year)).toEqual([2026, 2027, 2028]);
   });
 
   it("saves the plan, validated, and reads it back", async () => {

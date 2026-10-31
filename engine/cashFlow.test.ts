@@ -26,6 +26,7 @@ const cashFlow = cashFlowSchema.parse({
 // RAL 30,000 flat, worker 1%, employer 1%, voluntary 1,200, marginal 35%, cap 5,300 + extra 2,650.
 // Voluntary YTD 300, so the tax year of Y0 holds 300 + 1,200 x 2/12 = 500, all inside the room
 // (7,950 - 300 - 300). Refund of 2026 = 500 x 35% = 175; of every later year 1,200 x 35% = 420.
+// The goal is due 2027 (AC-96): the schedule's rows after 2027 pay no refund, so 2028 is the last.
 const plan = pensionPlanSchema.parse({
   goalId: "g-pension",
   firstYear: 2020,
@@ -84,6 +85,11 @@ describe("projectCashFlow (AC-48), asOf 2026-10-31", () => {
   it("pays the 2026 refund whole in 2027: it is not scaled by f", () => {
     expect(rows[1]?.refund).toBe(eur(175));
     expect(rows[2]?.refund).toBe(eur(420));
+  });
+
+  it("pays the last refund in targetYear + 1 and none after the pension goal (AC-96)", () => {
+    // The goal is due 2027: its last schedule row is 2027, refunded in 2028. Rows from 2029 show 0.
+    expect(rows.slice(3).map((row) => row.refund)).toEqual(new Array(7).fill(0));
   });
 
   it("grows income and expenses by (1 + g)^(year - Y0), as the mock does", () => {

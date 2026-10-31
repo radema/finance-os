@@ -1,6 +1,6 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
-import { type PensionYear, pensionSchedule } from "../engine/pension.ts";
+import { type PensionYear, pensionSchedule, scheduleYears } from "../engine/pension.ts";
 import type { PensionThisYear, PensionView, PensionYearView } from "../engine/pensionView.ts";
 import { PENSION_FLOWS, pensionPlanSchema } from "../engine/schemas.ts";
 import { pensionExitRate } from "../engine/tax.ts";
@@ -79,18 +79,23 @@ export function registerPensionRoutes(router: Router, db: Kysely<DB>, today: () 
     if (!plan || plan.ral === undefined) return { ...base, thisYear: null, schedule: [] };
 
     const voluntaryYtd = voluntaryYtdCents(world.ledger, asOf);
-    const schedule = pensionSchedule(plan, settings, asOf, voluntaryYtd, SCHEDULE_YEARS);
+    // The schedule ends at the pension goal's target year (AC-96).
+    const goal = world.goals.find((candidate) => candidate.id === plan.goalId);
+    const years = goal
+      ? Math.min(SCHEDULE_YEARS, scheduleYears(asOf, goal.targetYear))
+      : SCHEDULE_YEARS;
+    const schedule = pensionSchedule(plan, settings, asOf, voluntaryYtd, years);
     const [first] = schedule;
     if (!first) return { ...base, thisYear: null, schedule: [] };
 
-    const goal = world.goals.find((candidate) => candidate.id === plan.goalId);
     const used = first.worker + first.employer + voluntaryYtd;
     const thisYear: PensionThisYear = {
       year: first.year,
       cap: fromCents(settings.pensionDeductionCapCents),
       extra: fromCents(plan.extra),
       used: fromCents(used),
-      available: fromCents(settings.pensionDeductionCapCents + plan.extra - used),
+      available: fromCents(Math.max(0, settings.pensionDeductionCapCents + plan.extra - used)),
+      nonDeducted: fromCents(first.nonDeducted),
       voluntaryYtd: fromCents(voluntaryYtd),
       refund: fromCents(first.refund),
       refundYear: first.refundYear,

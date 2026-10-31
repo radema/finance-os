@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pensionFlowsByProduct, pensionSchedule } from "./pension.ts";
+import { pensionFlowsByProduct, pensionSchedule, scheduleYears } from "./pension.ts";
 import { pensionPlanSchema } from "./schemas.ts";
 
 // Money is in cents: a hand value in euros is written as `eur * 100`.
@@ -127,6 +127,49 @@ describe("pensionSchedule (AC-45)", () => {
     expect(y0?.voluntaryTaxYear).toBeCloseTo(eur(8_375), 6);
     expect(y0?.deductible).toBeCloseTo(eur(7_950), 6);
     expect(y0?.refund).toBeCloseTo(eur(6_750 * 0.35), 6);
+  });
+
+  it("takes the non-deducted part where worker + employer + voluntary pass cap + extra (AC-95)", () => {
+    // RAL 30,000 flat: worker 300 + employer 300; voluntary 7,850 = room 7,350 + 500.
+    // Total 8,450 against the limit 7,950: 500 is not deductible. TFR is outside the cap.
+    const over = pensionPlanSchema.parse({
+      goalId: "g",
+      firstYear: 2020,
+      ral: eur(30_000),
+      workerPct: 0.01,
+      employerPct: 0.01,
+      voluntary: eur(7_850),
+      marginalRate: 0.35,
+    });
+    const [y0, y1] = pensionSchedule(over, settings, "2026-12-31", 0, 2);
+    expect(y1?.nonDeducted).toBeCloseTo(eur(500), 6);
+    expect(y1?.deductible).toBeCloseTo(eur(7_950), 6);
+    // Y0 (asOf in December: f = 0) uses the tax-year voluntary, here the YTD of 0.
+    expect(y0?.nonDeducted).toBe(0);
+  });
+
+  it("uses the tax-year voluntary of Y0 for its non-deducted part, and 0 when voluntary is to cap", () => {
+    // Worker + employer 600; voluntary 0 scheduled; YTD 7,700: 600 + 7,700 - 7,950 = 350.
+    const none = pensionPlanSchema.parse({
+      goalId: "g",
+      firstYear: 2020,
+      ral: eur(30_000),
+      workerPct: 0.01,
+      employerPct: 0.01,
+      voluntary: 0,
+    });
+    const [y0, y1] = pensionSchedule(none, settings, "2026-10-31", eur(7_700), 2);
+    expect(y0?.nonDeducted).toBeCloseTo(eur(350), 6);
+    expect(y1?.nonDeducted).toBe(0);
+    // To cap: the scheduled voluntary fills the room, so nothing is left over in later years.
+    const toCap = pensionSchedule(plan, settings, "2026-06-30", eur(3_375), 3);
+    expect(toCap.map((row) => row.nonDeducted)).toEqual([0, 0, 0]);
+  });
+
+  it("counts the schedule years through the goal's target year, Y0 first (AC-96)", () => {
+    expect(scheduleYears("2026-10-31", 2028)).toBe(3);
+    expect(scheduleYears("2026-10-31", 2026)).toBe(1);
+    expect(scheduleYears("2026-10-31", 2025)).toBe(0);
   });
 
   it("uses a given voluntary amount, and refunds only up to the room", () => {

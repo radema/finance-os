@@ -155,11 +155,13 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
       }
 
       // Pension: that year's flows, the stub being the Y0 row x f. The schedule is in cents.
+      const flow = yearFlows?.find((candidate) => candidate.productId === productId);
       const added = yearFlows
-        ? fromCents(yearFlows.find((flow) => flow.productId === productId)?.total ?? 0) * phi
+        ? fromCents(flow?.total ?? 0) * phi
         : contribution * (shares.get(productId) ?? 0);
       position.value += added;
-      position.basis += added;
+      // The non-deducted part of the year (the stub: x f) is left out of the exit-tax basis.
+      position.basis += added - fromCents(flow?.nonDeducted ?? 0) * phi;
       if (regime === "cash") position.basis = position.value;
     }
   }

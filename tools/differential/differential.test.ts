@@ -12,7 +12,8 @@ const TOLERANCE_EUR = 0.01;
  * contributionGrowth 0, the plain monthly contribution. The cash flow adds ralGrowth 0 and a pension
  * goal with one flow, and compares the rows from year Y0 + 2: the refund of Y0 depends on the
  * voluntary YTD, which only v1 reads. The listed differences M2, E9, S1, S2, S5, the growth exponent
- * of the first full year and plan versions lie outside it. Plan vs actual (#54) adds a `describe`
+ * of the first full year and plan versions lie outside it. The pension refund after the pension goal
+ * ends (AC-96) is a listed difference: the mock rows are adjusted in the harness. Plan vs actual (#54) adds a `describe`
  * here with its own comparison on the same scenarios.
  */
 describe("mock differential (AC-18)", () => {

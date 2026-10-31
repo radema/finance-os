@@ -23,38 +23,47 @@ function Kpi({ label, value, note }: { label: string; value: string; note?: stri
 }
 
 function ThisYear({ year }: { year: PensionThisYear }) {
+  // `used` counts the voluntary so far; the non-deducted part is the schedule's figure for the year.
+  const overLimit = year.used > year.cap + year.extra;
   return (
-    <div className="kpis">
-      <Kpi
-        label={`Cap ${year.year}`}
-        value={formatAmount(year.cap)}
-        note={`Plus ${formatAmount(year.extra)} of extra deduction.`}
-      />
-      <Kpi
-        label="Used"
-        value={formatAmount(year.used)}
-        note={`Worker and employer for the year, plus ${formatAmount(year.voluntaryYtd)} of voluntary so far.`}
-      />
-      <Kpi
-        label="Still available"
-        value={formatAmount(year.available)}
-        note="Cap plus extra, minus used."
-      />
-      <Kpi
-        label="Refund"
-        value={formatAmount(year.refund)}
-        note={`Paid in ${year.refundYear}, at your marginal rate.`}
-      />
-      <Kpi
-        label="Exit tax"
-        value={year.exitTax === null ? MISSING : formatAmount(year.exitTax)}
-        note={
-          year.exitRate === null || year.exitTaxYear === null
-            ? "Not available: the pension goal or a price is missing."
-            : `At 31 December ${year.exitTaxYear}: ${formatPercent(year.exitRate)} of all contributions.`
-        }
-      />
-    </div>
+    <>
+      <div className="kpis">
+        <Kpi
+          label={`Cap ${year.year}`}
+          value={formatAmount(year.cap)}
+          note={`Plus ${formatAmount(year.extra)} of extra deduction.`}
+        />
+        <Kpi
+          label="Used"
+          value={formatAmount(year.used)}
+          note={`Worker and employer for the year, plus ${formatAmount(year.voluntaryYtd)} of voluntary so far.`}
+        />
+        <Kpi
+          label="Still available"
+          value={formatAmount(year.available)}
+          note="Cap plus extra, minus used."
+        />
+        <Kpi
+          label="Refund"
+          value={formatAmount(year.refund)}
+          note={`Paid in ${year.refundYear}, at your marginal rate.`}
+        />
+        <Kpi
+          label="Exit tax"
+          value={year.exitTax === null ? MISSING : formatAmount(year.exitTax)}
+          note={
+            year.exitRate === null || year.exitTaxYear === null
+              ? "Not available: the pension goal or a price is missing."
+              : `At 31 December ${year.exitTaxYear}: ${formatPercent(year.exitRate)} of your deducted contributions.`
+          }
+        />
+      </div>
+      {overLimit ? (
+        <p className="note" data-testid="non-deducted">
+          {formatAmount(year.nonDeducted)} of this year's payments are not tax-deductible.
+        </p>
+      ) : null}
+    </>
   );
 }
 
