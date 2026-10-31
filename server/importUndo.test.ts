@@ -179,6 +179,52 @@ describe("undoBatch", () => {
     ]);
   });
 
+  it("undoes overlapping price batches last in first out", async () => {
+    const first = await importPriceBatch();
+    const second = (
+      await importPrices(db, [{ product: "p-world", date: "2024-01-31", price: 130 }], {
+        fileName: "q.csv",
+        sourceName: "CSV",
+        fetchedAt: "2024-03-02T10:00:00Z",
+      })
+    ).batch;
+    const prices = () =>
+      db.selectFrom("pricePoint").select(["month", "priceScaled", "source"]).execute();
+
+    await expect(undoBatch(db, first.id)).rejects.toMatchObject({ status: 409 });
+    expect(
+      (await db.selectFrom("importBatch").select("undoneAt").execute()).map((b) => b.undoneAt),
+    ).toEqual([null, null]);
+
+    await undoBatch(db, second.id);
+    await undoBatch(db, first.id);
+    expect(await prices()).toEqual([
+      { month: "2024-01", priceScaled: 100_000_000, source: "manual" },
+    ]);
+    const batches = await db.selectFrom("importBatch").select("undoneAt").execute();
+    expect(batches.every((batch) => batch.undoneAt !== null)).toBe(true);
+  });
+
+  it("keeps a manual price entered after a price batch", async () => {
+    const batch = await importPriceBatch();
+    await storePrice(
+      db,
+      {
+        productId: "p-world",
+        month: "2024-01",
+        priceScaled: 777_000_000,
+        priceDate: "2024-01-31",
+        source: "manual",
+        fetchedAt: "2024-03-05T10:00:00Z",
+        importBatchId: null,
+      },
+      { explicitRefetch: false },
+    );
+    await undoBatch(db, batch.id);
+    const prices = await db.selectFrom("pricePoint").select(["month", "priceScaled"]).execute();
+    expect(prices).toEqual([{ month: "2024-01", priceScaled: 777_000_000 }]);
+  });
+
   it("refuses a batch that is already undone and changes nothing", async () => {
     const batch = await importTransactions();
     await undoBatch(db, batch.id);
