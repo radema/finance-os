@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { Loaded } from "../api.ts";
+import { api, messageOf } from "../api.ts";
 import { Card, Resource } from "../setup/ui.tsx";
 import type { BatchRow } from "./types.ts";
 
@@ -11,8 +13,29 @@ const KIND_LABEL: Record<BatchRow["kind"], string> = {
 
 /** Every import batch of any kind, newest first. */
 export function PastImports({ batches }: { batches: Loaded<BatchRow[]> }) {
+  const [error, setError] = useState<string>();
+  const [undoing, setUndoing] = useState<string>();
+
+  const undo = async (id: string) => {
+    setUndoing(id);
+    setError(undefined);
+    try {
+      await api("POST", "/api/import/batches/undo", { body: { id } });
+    } catch (failure) {
+      setError(messageOf(failure));
+    } finally {
+      setUndoing(undefined);
+      batches.reload();
+    }
+  };
+
   return (
     <Card title="Past imports">
+      {error ? (
+        <p className="note" role="alert">
+          {error}
+        </p>
+      ) : null}
       <Resource loaded={batches}>
         {(list) =>
           list.length === 0 ? (
@@ -30,6 +53,7 @@ export function PastImports({ batches }: { batches: Loaded<BatchRow[]> }) {
                     <th className="num">Imported</th>
                     <th className="num">Skipped</th>
                     <th>State</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -43,6 +67,18 @@ export function PastImports({ batches }: { batches: Loaded<BatchRow[]> }) {
                       <td className="num">{batch.rowsImported}</td>
                       <td className="num">{batch.rowsSkipped}</td>
                       <td>{batch.undoneAt ? `Undone ${batch.undoneAt.slice(0, 10)}` : "Active"}</td>
+                      <td>
+                        {batch.undoneAt ? null : (
+                          <button
+                            className="btn"
+                            type="button"
+                            disabled={undoing !== undefined}
+                            onClick={() => undo(batch.id)}
+                          >
+                            Undo
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

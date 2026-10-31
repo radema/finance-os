@@ -316,6 +316,24 @@ describe("import API", () => {
     expect(list[0]).toHaveProperty("undoneAt", null);
   });
 
+  it("undoes a batch over the API, and refuses the second undo", async () => {
+    const prices = await call<{ batch?: { id: string } }>("POST", "/api/prices/import", {
+      text: `date,product,price\n2024-01-31,${BOND},51\n`,
+      fileName: "p.csv",
+    });
+    const [batch] = (await call<{ id: string }[]>("GET", "/api/import/batches")).body;
+    expect(prices.status).toBe(200);
+    const undone = await call<{ undoneAt: string }>("POST", "/api/import/batches/undo", {
+      id: batch?.id,
+    });
+    expect(undone.status).toBe(200);
+    expect(undone.body.undoneAt).toBeTruthy();
+    const listed = (await call<{ undoneAt: string | null }[]>("GET", "/api/import/batches")).body;
+    expect(listed[0]?.undoneAt).toBe(undone.body.undoneAt);
+    const again = await call("POST", "/api/import/batches/undo", { id: batch?.id });
+    expect(again.status).toBe(409);
+  });
+
   it("answers 400 with a readable message for a file it cannot read", async () => {
     const bad = await call<{ error: string }>("POST", "/api/import/read", csv('a;b\n"x;2'));
     expect(bad.status).toBe(400);
