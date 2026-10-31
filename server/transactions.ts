@@ -69,8 +69,17 @@ export async function loadLedger(db: Kysely<DB>): Promise<LedgerEntry[]> {
   }));
 }
 
-/** Transactions: list, create, edit, delete; holdings derived from them; the last price of a product. */
-export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void {
+/**
+ * Transactions: list, create, edit, delete; holdings derived from them; the last price of a
+ * product; the app clock, which the form uses as the default date.
+ *
+ * @param today The app clock, read on each request.
+ */
+export function registerTransactionRoutes(
+  router: Router,
+  db: Kysely<DB>,
+  today: () => string,
+): void {
   // The stored row. qty = amount / unit price, negative for a sell; a coupon has no quantity.
   const toColumns = async (input: TransactionInput) => {
     const { type, amountCents, price } = input;
@@ -163,4 +172,6 @@ export function registerTransactionRoutes(router: Router, db: Kysely<DB>): void 
       .executeTakeFirst();
     return row ? { price: fromScaled(row.priceScaled), priceDate: row.priceDate } : null;
   });
+
+  router.route("GET", "/api/today", z.object({}), () => ({ today: today() }));
 }
