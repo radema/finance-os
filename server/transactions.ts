@@ -4,10 +4,12 @@ import { sql } from "kysely";
 import { z } from "zod";
 import type { LedgerRow } from "../engine/holdings.ts";
 import { holdingsAt, unitPrice } from "../engine/holdings.ts";
-import type { Transaction, TransactionInput } from "../engine/schemas.ts";
+import { flowsTaken } from "../engine/pension.ts";
+import type { PensionFlow, Transaction, TransactionInput } from "../engine/schemas.ts";
 import { transactionInputSchema } from "../engine/schemas.ts";
 import { fromCents, fromScaled, toScaled } from "../engine/units.ts";
 import type { DB } from "./db.ts";
+import { loadPensionPlan } from "./pensionPlan.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 import { findOr404, idQuery } from "./rows.ts";
@@ -32,11 +34,16 @@ export const fromRow = (row: TransactionTable): Transaction => ({
   qty: fromScaled(row.qtyScaled),
   price: fromScaled(row.priceScaled),
   commissionCents: row.commissionCents,
+  flow: row.flow ?? undefined,
   note: row.note,
 });
 
 /** A ledger row with the stored amount, which a coupon needs: its qty is 0. */
-export type LedgerEntry = LedgerRow & { amountCents: number };
+export type LedgerEntry = LedgerRow & {
+  amountCents: number;
+  /** A `pensionContribution`'s flow. Null counts as Work. */
+  flow: PensionFlow["flow"] | null;
+};
 
 /** The whole ledger in date and entry order. The price is per unit: a BTP is quoted per 100. */
 export async function loadLedger(db: Kysely<DB>): Promise<LedgerEntry[]> {
@@ -52,6 +59,7 @@ export async function loadLedger(db: Kysely<DB>): Promise<LedgerEntry[]> {
       "transaction.priceScaled",
       "transaction.commissionCents",
       "transaction.amountCents",
+      "transaction.flow",
       "product.regime",
     ])
     .orderBy("transaction.date")
@@ -66,6 +74,7 @@ export async function loadLedger(db: Kysely<DB>): Promise<LedgerEntry[]> {
     price: unitPrice(row.regime, fromScaled(row.priceScaled)),
     commission: row.commissionCents === null ? 0 : fromCents(row.commissionCents),
     amountCents: row.amountCents,
+    flow: row.flow,
   }));
 }
 
@@ -80,6 +89,22 @@ export function registerTransactionRoutes(
   db: Kysely<DB>,
   today: () => string,
 ): void {
+  // The flow of a pension contribution: the one given, else the flow its product takes in the
+  // saved plan. A product with both flows needs the user's choice. No plan flow leaves it empty,
+  // which counts as Work.
+  const flowOf = async (input: TransactionInput): Promise<PensionFlow["flow"] | null> => {
+    if (input.type !== "pensionContribution") {
+      if (input.flow) throw new HttpError(400, "flow: only a pension contribution has a flow");
+      return null;
+    }
+    if (input.flow) return input.flow;
+    const plan = await loadPensionPlan(db);
+    const taken = flowsTaken(plan, input.productId);
+    if (taken.length > 1)
+      throw new HttpError(400, "flow: choose Work or Voluntary, this fund takes both flows");
+    return taken[0] ?? null;
+  };
+
   // The stored row. qty = amount / unit price, negative for a sell; a coupon has no quantity.
   const toColumns = async (input: TransactionInput) => {
     const { type, amountCents, price } = input;
@@ -96,6 +121,7 @@ export function registerTransactionRoutes(
       priceScaled: toScaled(type === "coupon" ? 0 : price),
       commissionCents: input.commissionCents,
       amountCents,
+      flow: await flowOf(input),
       note: input.note,
     };
   };
@@ -104,6 +130,7 @@ export function registerTransactionRoutes(
   const stored = (columns: Awaited<ReturnType<typeof toColumns>>) => ({
     qty: fromScaled(columns.qtyScaled),
     price: fromScaled(columns.priceScaled),
+    flow: columns.flow ?? undefined,
   });
 
   router.route("GET", "/api/transactions", listQuery, async ({ goalId, year }) => {

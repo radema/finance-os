@@ -114,6 +114,7 @@ export function commitTransactionImport(
             commissionCents: null,
             amountCents: part.amountCents,
             note: "",
+            flow: null,
             importBatchId: batch.id,
           })
           .execute();
@@ -134,6 +135,7 @@ export function commitTransactionImport(
             commissionCents: row.commission === null ? null : part.commissionCents,
             amountCents: toCents(part.units * unitPrice(regime, price)),
             note: row.note ?? "",
+            flow: null,
             importBatchId: batch.id,
           })
           .execute();

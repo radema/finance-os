@@ -1,7 +1,6 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { z } from "zod";
-import { pensionPlanPartialSchema } from "../engine/fixture.ts";
 import type {
   GoalDetail,
   GoalListView,
@@ -13,14 +12,16 @@ import { holdingsAt, unitPrice } from "../engine/holdings.ts";
 import { monthEnd } from "../engine/months.ts";
 import { planInForce } from "../engine/plan.ts";
 import type { ProductParams } from "../engine/projection.ts";
-import { projectGoal, timeGrid } from "../engine/projection.ts";
+import { projectGoal } from "../engine/projection.ts";
 import { settingsSchema } from "../engine/schemas.ts";
 import { goalSlot } from "../engine/slots.ts";
 import type { LiquidationPosition } from "../engine/tax.ts";
 import { liquidate } from "../engine/tax.ts";
+import { timeGrid } from "../engine/timeGrid.ts";
 import { fromCents, fromScaled } from "../engine/units.ts";
 import type { DB } from "./db.ts";
 import { loadDocument } from "./documents.ts";
+import { loadPensionPlan, voluntaryYtdCents } from "./pensionPlan.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 import { idQuery } from "./rows.ts";
@@ -51,7 +52,7 @@ function monthsBetween(first: string, last: string): string[] {
 }
 
 /** Everything the Goals screens read, loaded once per request. */
-async function loadWorld(db: Kysely<DB>, today: string) {
+export async function loadWorld(db: Kysely<DB>, today: string) {
   const products = await db.selectFrom("product").selectAll().execute();
   const priceRows = await db
     .selectFrom("pricePoint")
@@ -63,14 +64,7 @@ async function loadWorld(db: Kysely<DB>, today: string) {
   const weights = await db.selectFrom("allocationWeight").selectAll().execute();
   const ledger = await loadLedger(db);
   const settings = await loadDocument(db, "settings", settingsSchema);
-  const pensionRow = await db
-    .selectFrom("document")
-    .select("value")
-    .where("kind", "=", "pensionPlan")
-    .executeTakeFirst();
-  const pension = pensionRow
-    ? pensionPlanPartialSchema.safeParse(JSON.parse(pensionRow.value)).data
-    : undefined;
+  const pension = await loadPensionPlan(db);
 
   const regimeOf = new Map(products.map((product) => [product.id, product.regime]));
   const pricesOf = new Map<string, { month: string; price: number }[]>();
@@ -105,7 +99,7 @@ async function loadWorld(db: Kysely<DB>, today: string) {
     held: holdingsAt(ledger, asOf),
   };
 }
-type World = Awaited<ReturnType<typeof loadWorld>>;
+export type World = Awaited<ReturnType<typeof loadWorld>>;
 
 const summaryOf = (world: World, goal: World["goals"][number]): GoalSummary => {
   const positions = world.held.units.get(goal.id) ?? new Map<string, number>();
@@ -128,7 +122,7 @@ const summaryOf = (world: World, goal: World["goals"][number]): GoalSummary => {
   };
 };
 
-function detailOf(world: World, goal: World["goals"][number]): GoalDetail {
+export function detailOf(world: World, goal: World["goals"][number]): GoalDetail {
   const { products, settings, pension, asOf, month } = world;
   const summary = summaryOf(world, goal);
   const goalWeights = world.weights.filter((weight) => weight.goalId === goal.id);
@@ -261,6 +255,14 @@ function detailOf(world: World, goal: World["goals"][number]): GoalDetail {
               },
       },
       firstYear: pension?.firstYear,
+      pension:
+        pension?.goalId === goal.id && pension.ral !== undefined
+          ? {
+              plan: pension,
+              deductionCapCents: settings.pensionDeductionCapCents,
+              voluntaryYtd: voluntaryYtdCents(world.ledger, asOf),
+            }
+          : undefined,
     });
     projection = { gross, tax, net };
   }

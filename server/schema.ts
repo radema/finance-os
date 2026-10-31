@@ -2,6 +2,7 @@
 // snake_case columns of the migrations. `*Cents` columns are integer cents, `*Scaled` columns are
 // integers scaled by 10^6 (see engine/units.ts). Booleans are 0 | 1.
 import type { Regime, TransactionType } from "../engine/holdings.ts";
+import type { PensionFlow } from "../engine/schemas.ts";
 
 type Flag = 0 | 1;
 
@@ -80,6 +81,8 @@ export interface TransactionTable {
   amountCents: number;
   note: string;
   importBatchId: string | null;
+  /** `pensionContribution` only. */
+  flow: PensionFlow["flow"] | null;
 }
 
 export interface ImportBatchTable {

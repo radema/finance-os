@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { mockNet, v1Net } from "./harness.ts";
-import { type Scenario, scenarioArb } from "./scenario.ts";
+import { mockCashFlow, mockNet, v1CashFlow, v1Net } from "./harness.ts";
+import { cashFlowScenarioArb, type Scenario, scenarioArb } from "./scenario.ts";
 
 const TOLERANCE_EUR = 0.01;
 
@@ -9,10 +9,12 @@ const TOLERANCE_EUR = 0.01;
  * Differential test of v1 against the copied mock engine (AC-18).
  *
  * The domain is where the two must agree: asOf in December (r = 0), commissions 0, couponRate 0,
- * contributionGrowth 0, the plain monthly contribution (the pension schedule is S3). The listed
- * differences M2, E9, S1, S2, S5, the growth exponent of the first full year and plan versions lie
- * outside it. Cash flow (#42) and plan vs actual (#54) add a `describe` here with their own
- * comparison on the same scenarios.
+ * contributionGrowth 0, the plain monthly contribution. The cash flow adds ralGrowth 0 and a pension
+ * goal with one flow, and compares the rows from year Y0 + 2: the refund of Y0 depends on the
+ * voluntary YTD, which only v1 reads. The listed differences M2, E9, S1, S2, S5, the growth exponent
+ * of the first full year and plan versions lie outside it. The pension refund after the pension goal
+ * ends (AC-96) is a listed difference: the mock rows are adjusted in the harness. Plan vs actual (#54) adds a `describe`
+ * here with its own comparison on the same scenarios.
  */
 describe("mock differential (AC-18)", () => {
   describe("goal projection: deterministic net per goal", () => {
@@ -24,6 +26,39 @@ describe("mock differential (AC-18)", () => {
           expect([...v1.keys()]).toEqual([...mock.keys()]);
           for (const [goalId, net] of v1) {
             expect(Math.abs(net - (mock.get(goalId) ?? Number.NaN))).toBeLessThanOrEqual(
+              TOLERANCE_EUR,
+            );
+          }
+        }),
+        { numRuns: 1_000 },
+      );
+    });
+  });
+
+  describe("cash flow: rows from year Y0 + 2", () => {
+    it("agrees within 0.01 euro on the agreed domain", () => {
+      fc.assert(
+        fc.property(scenarioArb, cashFlowScenarioArb, (scenario, cf) => {
+          const mock = mockCashFlow(scenario, cf);
+          const v1 = v1CashFlow(scenario, cf);
+          expect(v1).toHaveLength(mock.length);
+          for (const [index, row] of v1.entries()) {
+            if (index < 2) continue;
+            const expected = mock[index];
+            expect(row.year).toBe(expected?.year);
+            for (const key of [
+              "income",
+              "expenses",
+              "events",
+              "refund",
+              "capacity",
+              "planned",
+            ] as const) {
+              expect(
+                Math.abs(row[key] / 100 - (expected?.[key] ?? Number.NaN)),
+              ).toBeLessThanOrEqual(TOLERANCE_EUR);
+            }
+            expect(Math.abs(row.gap / 100 - (expected?.free ?? Number.NaN))).toBeLessThanOrEqual(
               TOLERANCE_EUR,
             );
           }

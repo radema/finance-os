@@ -80,6 +80,8 @@ export const TRANSACTION_TYPES = [
   "coupon",
 ] as const;
 
+export const PENSION_FLOWS = ["Work", "Voluntary"] as const;
+
 export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "use YYYY-MM-DD")
@@ -99,6 +101,8 @@ export const transactionInputSchema = z.object({
   price: z.number().min(0).default(0),
   /** The actual commission in cents. Null or absent means none is recorded. */
   commissionCents: cents.nullable().default(null),
+  /** `pensionContribution` only. The server defaults it from the pension plan and refuses it on other types. */
+  flow: z.enum(PENSION_FLOWS).optional(),
   note: text.default(""),
 });
 export type TransactionInput = z.infer<typeof transactionInputSchema>;
@@ -183,6 +187,60 @@ export const settingsSchema = z.object({
     .prefault({}),
 });
 export type Settings = z.infer<typeof settingsSchema>;
+
+const TFR_PCT = 0.0691;
+const EXTRA_DEDUCTION_CENTS = 265_000;
+
+/** One product's share of a pension flow: `Work` is TFR + worker + employer, `Voluntary` is the rest. */
+export const pensionFlowSchema = z.object({
+  productId: z.string().min(1),
+  flow: z.enum(PENSION_FLOWS),
+  pct: fraction,
+});
+export type PensionFlow = z.infer<typeof pensionFlowSchema>;
+
+/**
+ * The stored PensionPlan document. Only `goalId` and `firstYear` are required, so the S1 fixture's
+ * partial document is valid. Without `ral` there is no schedule. A blank `voluntary` means "to cap".
+ * Money is in cents.
+ */
+export const pensionPlanSchema = z.object({
+  goalId: z.string().min(1),
+  firstYear: z.number().int().min(1950).max(2200),
+  ral: cents.optional(),
+  ralGrowth: z.number().gt(-1).max(1).default(0),
+  tfrPct: fraction.default(TFR_PCT),
+  workerPct: fraction.default(0),
+  employerPct: fraction.default(0),
+  voluntary: cents.nullable().default(null),
+  marginalRate: fraction.default(0),
+  /** The extra deduction on top of the cap, every year. */
+  extra: cents.default(EXTRA_DEDUCTION_CENTS),
+  flows: z.array(pensionFlowSchema).default([]),
+});
+export type PensionPlan = z.infer<typeof pensionPlanSchema>;
+
+/** One one-off event of the cash flow: a signed amount (a cost is negative) in a calendar year. */
+export const cashFlowEventSchema = z.object({
+  year: z.number().int().min(2000).max(2200),
+  label: text,
+  amount: z.number().int(),
+});
+export type CashFlowEvent = z.infer<typeof cashFlowEventSchema>;
+
+/**
+ * The stored CashFlow document. Money is in cents: `income` is a year, `essential` and `optional`
+ * are a month. It also feeds the financial-independence levels (essential, optional, expenseGrowth).
+ */
+export const cashFlowSchema = z.object({
+  income: cents.default(0),
+  incomeGrowth: z.number().gt(-1).max(1).default(0),
+  essential: cents.default(0),
+  optional: cents.default(0),
+  expenseGrowth: z.number().gt(-1).max(1).default(0),
+  events: z.array(cashFlowEventSchema).default([]),
+});
+export type CashFlow = z.infer<typeof cashFlowSchema>;
 
 export const commissionSchema = z
   .object({

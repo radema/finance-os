@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { pensionPlanPartialSchema } from "../engine/fixture.ts";
+import { pensionPlanSchema } from "../engine/schemas.ts";
 import { type DB, openDatabase } from "./db.ts";
 import { loadDocument, saveDocument } from "./documents.ts";
 import { HttpError } from "./router.ts";
@@ -77,8 +77,9 @@ describe("loadSampleData", () => {
       expiry: 2029,
       goalId: "g-car",
     });
-    const plan = await loadDocument(db, "pensionPlan", pensionPlanPartialSchema);
-    expect(plan).toEqual({ goalId: "g-retirement", firstYear: 2020 });
+    const plan = await loadDocument(db, "pensionPlan", pensionPlanSchema);
+    expect(plan).toMatchObject({ goalId: "g-retirement", firstYear: 2020, ral: 4_000_000 });
+    expect(plan.flows).toHaveLength(2);
   });
 
   it("refuses a second load and changes nothing", async () => {

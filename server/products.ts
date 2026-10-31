@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Product, ProductInput } from "../engine/schemas.ts";
 import { productInputSchema } from "../engine/schemas.ts";
 import type { DB } from "./db.ts";
+import { loadPensionPlan } from "./pensionPlan.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 import { findOr404, idQuery } from "./rows.ts";
@@ -49,12 +50,21 @@ export function registerProductRoutes(router: Router, db: Kysely<DB>): void {
     return { id, ...input } satisfies Product;
   });
 
+  const inPensionFlows = async (productId: string) =>
+    (await loadPensionPlan(db))?.flows.some((flow) => flow.productId === productId) ?? false;
+
   router.route(
     "PUT",
     "/api/products",
     productInputSchema.extend({ id: z.string().min(1) }),
     async ({ id, ...input }) => {
       await findOr404(db, "product", id, "product");
+      if (input.regime !== "pension" && (await inPensionFlows(id))) {
+        throw new HttpError(
+          409,
+          "This product is named in the pension plan flows, so it must stay a pension fund. Remove it from the flows first.",
+        );
+      }
       await db.updateTable("product").set(toColumns(input)).where("id", "=", id).execute();
       return { id, ...input } satisfies Product;
     },
@@ -74,6 +84,12 @@ export function registerProductRoutes(router: Router, db: Kysely<DB>): void {
       throw new HttpError(
         409,
         `This product is used by ${transactions} transaction(s) and ${weights} allocation weight(s). Remove them first.`,
+      );
+    }
+    if (await inPensionFlows(id)) {
+      throw new HttpError(
+        409,
+        "This product is named in the pension plan flows. Remove it from the flows first.",
       );
     }
     const { numDeletedRows } = await db
