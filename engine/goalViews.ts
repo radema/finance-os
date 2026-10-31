@@ -6,7 +6,7 @@ import type { GoalStatus } from "./goalStatus.ts";
 import { goalStatus, requiredProbability } from "./goalStatus.ts";
 import type { LedgerRow, Regime } from "./holdings.ts";
 import { holdingsAt } from "./holdings.ts";
-import type { MonteCarloGoal, MonteCarloProduct } from "./monteCarlo.ts";
+import type { GoalDistribution, MonteCarloGoal, MonteCarloProduct } from "./monteCarlo.ts";
 import { runMonteCarlo } from "./monteCarlo.ts";
 import { monthEnd } from "./months.ts";
 import { planInForce } from "./plan.ts";
@@ -503,8 +503,9 @@ export function analysisOf(world: GoalWorld, goal: GoalWorldGoal): GoalAnalysis 
   if (input === null) return null;
   const { seed, mcPaths: paths, inflation } = world.settings;
   const { correlations } = world;
-  const distribution = runMonteCarlo({ goals: [input], correlations }, seed, paths).goals[0];
-  if (!distribution) return null;
+  // One input gives one distribution.
+  const distribution = runMonteCarlo({ goals: [input], correlations }, seed, paths)
+    .goals[0] as GoalDistribution;
 
   const outlook = outlookOf(world, goal, distribution.pSuccess);
   const grid = timeGrid(input.asOf, goal.targetYear);
