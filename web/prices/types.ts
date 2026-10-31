@@ -41,3 +41,30 @@ export interface ImportResult {
   rowsSkipped: number;
   unknownProducts: string[];
 }
+
+export type FetchProblemReason = "provider-error" | "non-eur" | "move-above-25";
+
+/** A fetched price held back for the user's decision, as `GET /api/prices/review` returns it. */
+export interface ReviewItem {
+  id: string;
+  productId: string;
+  productName: string;
+  ticker: string;
+  date: string;
+  /** In `currency`, as the provider gave it. */
+  price: number;
+  currency: string;
+  reason: Exclude<FetchProblemReason, "provider-error">;
+}
+
+export interface ReviewState {
+  items: ReviewItem[];
+  problems: { productId: string; reason: FetchProblemReason }[];
+  errors: { productId: string; productName: string; message: string }[];
+}
+
+export interface FetchResult {
+  stored: unknown[];
+  reviewed: unknown[];
+  problems: unknown[];
+}
