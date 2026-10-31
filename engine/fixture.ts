@@ -53,6 +53,6 @@ export const sampleDataSchema = z.object({
   goals: z.array(goalInputSchema.extend({ id, plan: z.array(planVersionSchema) })),
   allocation: z.array(allocationWeightSchema),
   ledger: z.array(sampleTransactionSchema),
-  pensionPlan: pensionPlanPartialSchema,
+  pensionPlan: pensionPlanSchema,
 });
 export type SampleData = z.infer<typeof sampleDataSchema>;

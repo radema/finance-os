@@ -776,6 +776,18 @@
   ],
   "pensionPlan": {
     "goalId": "g-retirement",
-    "firstYear": 2020
+    "firstYear": 2020,
+    "ral": 4000000,
+    "ralGrowth": 0.02,
+    "tfrPct": 0.0691,
+    "workerPct": 0.01,
+    "employerPct": 0.01,
+    "voluntary": null,
+    "marginalRate": 0.35,
+    "extra": 265000,
+    "flows": [
+      { "productId": "p-pension-balanced", "flow": "Work", "pct": 1 },
+      { "productId": "p-pension-equity", "flow": "Voluntary", "pct": 1 }
+    ]
   }
 }

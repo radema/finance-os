@@ -39,6 +39,21 @@ function latestPrice(data: SampleData, productId: string): number {
 
 const round = (value: number, places = 2) => Number(value.toFixed(places));
 
+/** This year's pension contributions on products with a Voluntary flow, in cents. */
+function voluntaryYtdCents(data: SampleData): number {
+  const voluntary = new Set(
+    data.pensionPlan.flows.filter((flow) => flow.flow === "Voluntary").map((f) => f.productId),
+  );
+  return data.ledger
+    .filter(
+      (row) =>
+        row.type === "pensionContribution" &&
+        row.date.slice(0, 4) === data.asOf.slice(0, 4) &&
+        voluntary.has(row.productId),
+    )
+    .reduce((sum, row) => sum + Math.round(row.qty * row.price * 100), 0);
+}
+
 function project(data: SampleData, goalId: string, overrides: { zainettoExpiry?: number } = {}) {
   const goal = data.goals.find((candidate) => candidate.id === goalId);
   if (!goal) throw new Error(`no goal ${goalId}`);
@@ -80,6 +95,14 @@ function project(data: SampleData, goalId: string, overrides: { zainettoExpiry?:
             },
     },
     firstYear: data.pensionPlan.goalId === goalId ? data.pensionPlan.firstYear : undefined,
+    pension:
+      data.pensionPlan.goalId === goalId
+        ? {
+            plan: data.pensionPlan,
+            deductionCapCents: data.settings.pensionDeductionCapCents,
+            voluntaryYtd: voluntaryYtdCents(data),
+          }
+        : undefined,
   });
 }
 
@@ -106,8 +129,18 @@ describe("synthetic fixture", () => {
     );
   });
 
-  it("holds a partial pension plan with goalId and firstYear", () => {
-    expect(sample.pensionPlan).toEqual({ goalId: "g-retirement", firstYear: 2020 });
+  it("holds a full pension plan with round inputs and one flow per fund", () => {
+    expect(sample.pensionPlan).toMatchObject({
+      goalId: "g-retirement",
+      firstYear: 2020,
+      ral: 4_000_000,
+      voluntary: null,
+    });
+    expect(sample.pensionPlan.flows).toEqual([
+      { productId: "p-pension-balanced", flow: "Work", pct: 1 },
+      { productId: "p-pension-equity", flow: "Voluntary", pct: 1 },
+    ]);
+    expect(voluntaryYtdCents(sample)).toBe(65_000);
   });
 
   it("matches the reviewed regression snapshot", () => {
@@ -157,5 +190,20 @@ describe("synthetic fixture", () => {
       (p) => p.productId === "p-mixed-etf",
     );
     expect(position?.value).toBeLessThan(position?.basis ?? 0);
+  });
+
+  // Hand check of the Retirement goal basis. Y0 row: RAL 40,000, TFR 2,764 + worker 400 + employer
+  // 400 = 3,564 Work; voluntary to cap = 5,300 + 2,650 - 800 = 7,150. Stub x 2/12; Work grows 2% a
+  // year through 2046 (sum 3,564 x 1.02 x (1.02^20 - 1)/0.02 = 88,327.6); the voluntary room is
+  // 7,950 - 800 x 1.02^k (sum 159,000 - 19,826.7 = 139,173.3). Work goes to the Balanced fund,
+  // Voluntary to the Equity fund. Opening + bought units: Balanced 12,506, Equity 5,450.
+  // Exit rate: 2046 - 2020 - 15 = 11 extra years, 15% - 3.3% = 11.7%.
+  it("hand check: the Retirement goal contributes by the pension flows (AC-47)", () => {
+    const result = project(sample, "g-retirement");
+    const basisOf = (id: string) => result.perProduct.find((p) => p.productId === id)?.basis ?? 0;
+    expect(basisOf("p-pension-balanced")).toBeCloseTo(12_506 + 3_564 / 6 + 88_327.6, 0);
+    expect(basisOf("p-pension-equity")).toBeCloseTo(5_450 + 7_150 / 6 + 139_173.3, 0);
+    const basis = basisOf("p-pension-balanced") + basisOf("p-pension-equity");
+    expect(result.tax).toBeCloseTo(0.117 * basis, 6);
   });
 });

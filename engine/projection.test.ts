@@ -7,6 +7,7 @@ import {
   projectGoal,
   timeGrid,
 } from "./projection.ts";
+import { type PensionFlow, pensionPlanSchema } from "./schemas.ts";
 
 const settings = { inflation: 0.02, bollo: 0, taxStd: 0.26, taxGovt: 0.125, pensionTax: 0.2 };
 const etf: ProductParams = { regime: "etf", mu: 0, ter: 0 };
@@ -254,5 +255,69 @@ describe("projectGoal", () => {
     );
     // gain 2,000 x 26% = 520 tax, less the 260 credit
     expect(result.tax).toBeCloseTo(260, 9);
+  });
+});
+
+describe("pension goal (AC-47)", () => {
+  // RAL 40,000 flat, TFR 6.91%, worker 1%, employer 2%, voluntary 1,000: TFR 2,764 + worker 400 +
+  // employer 800 + voluntary 1,000 = 4,964 a year. Money in the plan is in cents.
+  const plan = (flows: PensionFlow[]) =>
+    pensionPlanSchema.parse({
+      goalId: "g",
+      firstYear: 2020,
+      ral: 4_000_000,
+      tfrPct: 0.0691,
+      workerPct: 0.01,
+      employerPct: 0.02,
+      voluntary: 100_000,
+      flows,
+    });
+  const oneFund: PensionFlow[] = [
+    { productId: "p", flow: "Work", pct: 1 },
+    { productId: "p", flow: "Voluntary", pct: 1 },
+  ];
+  const pensionGoal = (targetYear: number, asOf: string, flows = oneFund) =>
+    projectGoal(
+      input({
+        asOf,
+        goal: { id: "g", targetYear, target: 0, contributionGrowth: 0.5 },
+        monthly: 999,
+        weights: new Map([["other", 1]]),
+        products: new Map([
+          ["p", { regime: "pension", mu: 0, ter: 0 }],
+          ["q", { regime: "pension", mu: 0, ter: 0 }],
+        ]),
+        firstYear: 2020,
+        pension: { plan: plan(flows), deductionCapCents: 530_000, voluntaryYtd: 0 },
+      }),
+    );
+
+  // asOf 31 December: f = 0, so the stub adds nothing and the goal years 2027 ... targetYear add 4,964 each.
+  it("gives each goal its own exit rate: 13.5% in 2040, 9% in 2055", () => {
+    const early = pensionGoal(2040, "2026-12-31");
+    // 14 years x 4,964 = 69,496 of basis; 2040 - 2020 - 15 = 5 extra years: 15% - 1.5% = 13.5%.
+    expect(early.gross).toBeCloseTo(69_496, 6);
+    expect(early.tax).toBeCloseTo(9_381.96, 6);
+    expect(early.net).toBeCloseTo(60_114.04, 6);
+    const late = pensionGoal(2055, "2026-12-31");
+    // 29 years x 4,964 = 143,956; 20 extra years: 15% - 6% = 9%.
+    expect(late.gross).toBeCloseTo(143_956, 6);
+    expect(late.tax).toBeCloseTo(12_956.04, 6);
+  });
+
+  it("adds the Y0 schedule x f in the stub and ignores the monthly plan and the weights", () => {
+    // asOf 31 October: f = 2/12; the 2026 goal year has only the stub.
+    expect(pensionGoal(2026, "2026-10-31").gross).toBeCloseTo(4_964 / 6, 6);
+  });
+
+  it("splits each year's Work and Voluntary flows by product", () => {
+    const result = pensionGoal(2027, "2026-12-31", [
+      { productId: "p", flow: "Work", pct: 0.75 },
+      { productId: "q", flow: "Work", pct: 0.25 },
+      { productId: "q", flow: "Voluntary", pct: 1 },
+    ]);
+    const value = (id: string) => result.perProduct.find((p) => p.productId === id)?.value;
+    expect(value("p")).toBeCloseTo(3_964 * 0.75, 6);
+    expect(value("q")).toBeCloseTo(3_964 * 0.25 + 1_000, 6);
   });
 });
