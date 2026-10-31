@@ -8,6 +8,7 @@ export function readTokens(slot: number) {
   return {
     slot: token(`--slot${slot}`),
     ctx: token("--ctx"),
+    surface: token("--surface"),
     grid: token("--grid"),
     muted: token("--muted"),
     ink2: token("--ink2"),

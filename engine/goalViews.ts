@@ -1,12 +1,18 @@
 // What the Goals list and the Goal detail screens read from the API. These are computed read models:
 // amounts are euros as floats, and rounding happens only in the view. A value that cannot be
 // computed (a missing price, a missing pension first year) is `null`, never a guess.
+
+import type { GoalStatus } from "./goalStatus.ts";
+import { goalStatus, requiredProbability } from "./goalStatus.ts";
 import type { LedgerRow, Regime } from "./holdings.ts";
 import { holdingsAt } from "./holdings.ts";
+import type { GoalDistribution, MonteCarloGoal, MonteCarloProduct } from "./monteCarlo.ts";
+import { runMonteCarlo } from "./monteCarlo.ts";
 import { monthEnd } from "./months.ts";
 import { planInForce } from "./plan.ts";
-import type { ProductParams } from "./projection.ts";
+import type { Position } from "./projection.ts";
 import { projectGoal, targetAtGoalDate } from "./projection.ts";
+import { requiredContribution } from "./requiredContribution.ts";
 import type { Goal, PensionPlan, Product, Settings } from "./schemas.ts";
 import { goalSlot } from "./slots.ts";
 import type { LiquidationPosition } from "./tax.ts";
@@ -28,12 +34,69 @@ export interface GoalSummary {
   missingPrices: boolean;
 }
 
+/** The Monte Carlo verdict on a goal: P(success) against the probability it must reach. */
+export interface Outlook {
+  status: GoalStatus;
+  /** Share of simulated paths that reach the target, as a fraction. */
+  pSuccess: number;
+  /** The required probability, as a fraction. */
+  requiredP: number;
+}
+
+export interface GoalListRow extends GoalSummary {
+  /** Null when the Monte Carlo cannot run: a held product has no price, or no pension first year. */
+  outlook: Outlook | null;
+}
+
 export interface GoalListView {
   /** The valuation date: the month-end of the last month that has prices. */
   asOf: string;
   /** True on an empty data folder, where the sample data can be loaded. */
   sampleAvailable: boolean;
-  goals: GoalSummary[];
+  goals: GoalListRow[];
+}
+
+/** Net value at the end of one year of the goal, over the simulated paths. */
+export interface FanPoint {
+  year: number;
+  /** The bad case (10% of paths end below it). */
+  bad: number;
+  /** The typical case (the median). */
+  typical: number;
+  /** The good case (10% of paths end above it). */
+  good: number;
+}
+
+/** What it would take to reach the target. `null` means not reachable. */
+export interface RequiredContributions {
+  /** The pension goal's unknown is a multiplier of its schedule (1 = as it is), not euros. */
+  unit: "monthly" | "schedule";
+  /** Smallest amount with the deterministic net at the target. */
+  deterministic: number | null;
+  /** Smallest amount with P(success) at the required probability. */
+  probability: number | null;
+  /** The monthly amount in force, euros. Null for the pension goal. */
+  currentMonthly: number | null;
+}
+
+/** The Monte Carlo analysis of one goal. */
+export interface GoalAnalysis extends Outlook {
+  /** Settings: simulated paths and seed. */
+  paths: number;
+  seed: number;
+  /** Real years from the valuation date to the goal date. */
+  horizonYears: number;
+  targetAtGoalDate: number;
+  /** One point per year to the goal year. A goal due now has one point. */
+  fan: FanPoint[];
+  /** Net value at the goal date. */
+  range: { bad: number; typical: number; good: number; target: number };
+  required: RequiredContributions;
+}
+
+export interface GoalDetailView extends GoalDetail {
+  /** Null when the Monte Carlo cannot run. */
+  analysis: GoalAnalysis | null;
 }
 
 export interface HoldingRow {
@@ -78,7 +141,15 @@ export interface GoalDetail extends GoalSummary {
 /** What the builders read of a product. */
 export type GoalWorldProduct = Pick<
   Product,
-  "id" | "name" | "regime" | "whiteListShare" | "expReturn" | "ter" | "couponRate"
+  | "id"
+  | "name"
+  | "regime"
+  | "whiteListShare"
+  | "expReturn"
+  | "volatility"
+  | "assetClass"
+  | "ter"
+  | "couponRate"
 >;
 
 /** What the builders read of a goal. `target` is in today's euros. */
@@ -89,6 +160,8 @@ export interface GoalWorldGoal {
   target: number;
   targetYear: number;
   contributionGrowth: number;
+  /** The goal's own required probability, as a fraction. Null: the default of its priority. */
+  minProb: number | null;
 }
 
 /** A ledger row with the cash of a coupon, which has no quantity. */
@@ -106,6 +179,8 @@ export interface GoalWorld {
   weights: readonly { goalId: string; productId: string; weight: number }[];
   ledger: readonly GoalWorldLedgerRow[];
   settings: Settings;
+  /** The stored 6×6 correlation matrix, in the order of ASSET_CLASSES. The simulation shrinks it if needed. */
+  correlations: readonly (readonly number[])[];
   pension?: PensionPlan;
   /** Voluntary pension contributions of the valuation year, in cents. */
   voluntaryYtdCents: number;
@@ -142,6 +217,100 @@ function monthsBetween(first: string, last: string): string[] {
 const priceAt = (world: GoalWorld, productId: string, at: string): number | undefined =>
   world.prices.get(productId)?.findLast((point) => point.month <= at)?.price;
 
+const hasNoFirstYear = (world: GoalWorld, regimes: Iterable<string>) =>
+  world.pension?.firstYear === undefined && [...regimes].includes("pension");
+
+/** The goal's opening positions at the valuation month, and why the projection cannot run (if so). */
+function openingOf(
+  world: GoalWorld,
+  goal: GoalWorldGoal,
+): { positions: Position[]; priced: boolean; note: string | null } {
+  const held = holdingsAt(world.ledger, monthEnd(world.month));
+  const positions: Position[] = [];
+  const regimes: string[] = [];
+  let priced = true;
+  for (const [productId, units] of held.units.get(goal.id) ?? []) {
+    const product = world.products.get(productId);
+    if (units === 0 || !product) continue;
+    regimes.push(product.regime);
+    const price = priceAt(world, productId, world.month);
+    if (price === undefined) priced = false;
+    else
+      positions.push({
+        productId,
+        value: units * price,
+        basis: units * (held.pmc.get(productId) ?? 0),
+      });
+  }
+  const weighted = world.weights
+    .filter((weight) => weight.goalId === goal.id)
+    .map((weight) => world.products.get(weight.productId)?.regime ?? "etf");
+  let note: string | null = null;
+  if (!priced) note = NO_PRICE_NOTE;
+  else if (hasNoFirstYear(world, [...regimes, ...weighted])) note = NO_FIRST_YEAR_NOTE;
+  return { positions, priced, note };
+}
+
+/** The projection input of a goal over its opening positions: the one the deterministic and Monte Carlo runs share. */
+function inputOf(world: GoalWorld, goal: GoalWorldGoal, positions: Position[]): MonteCarloGoal {
+  const { products, settings, pension, month } = world;
+  const { zainetto } = settings;
+  const params = new Map<string, MonteCarloProduct>(
+    [...products.values()].map((product) => [
+      product.id,
+      {
+        regime: product.regime,
+        mu: product.expReturn,
+        ter: product.ter,
+        couponRate: product.couponRate,
+        whiteListShare: product.whiteListShare,
+        sigma: product.volatility,
+        assetClass: product.assetClass,
+      },
+    ]),
+  );
+  return {
+    asOf: monthEnd(month),
+    goal: {
+      id: goal.id,
+      targetYear: goal.targetYear,
+      target: goal.target,
+      contributionGrowth: goal.contributionGrowth,
+    },
+    monthly: planInForce(
+      world.plans.filter((version) => version.goalId === goal.id),
+      month,
+    ),
+    positions,
+    products: params,
+    weights: new Map(
+      world.weights
+        .filter((weight) => weight.goalId === goal.id)
+        .map((weight) => [weight.productId, weight.weight]),
+    ),
+    settings: {
+      ...settings,
+      zainetto:
+        zainetto.goalId === null
+          ? undefined
+          : {
+              amount: fromCents(zainetto.amountCents),
+              expiry: String(zainetto.expiry),
+              goalId: zainetto.goalId,
+            },
+    },
+    firstYear: pension?.firstYear,
+    pension:
+      pension?.goalId === goal.id && pension.ral !== undefined
+        ? {
+            plan: pension,
+            deductionCapCents: settings.pensionDeductionCapCents,
+            voluntaryYtd: world.voluntaryYtdCents,
+          }
+        : undefined,
+  };
+}
+
 export function summaryOf(world: GoalWorld, goal: GoalWorldGoal): GoalSummary {
   const positions =
     holdingsAt(world.ledger, monthEnd(world.month)).units.get(goal.id) ?? new Map<string, number>();
@@ -169,7 +338,6 @@ export function detailOf(world: GoalWorld, goal: GoalWorldGoal): GoalDetail {
   const asOf = monthEnd(month);
   const held = holdingsAt(world.ledger, asOf);
   const summary = summaryOf(world, goal);
-  const goalWeights = world.weights.filter((weight) => weight.goalId === goal.id);
 
   const liquidation = (positions: LiquidationPosition[], withZainetto: boolean) => {
     const { zainetto } = settings;
@@ -189,9 +357,6 @@ export function detailOf(world: GoalWorld, goal: GoalWorldGoal): GoalDetail {
           : undefined,
     });
   };
-  const hasNoFirstYear = (regimes: Iterable<string>) =>
-    pension?.firstYear === undefined && [...regimes].includes("pension");
-
   const holdings: HoldingRow[] = [];
   for (const [productId, units] of held.units.get(goal.id) ?? []) {
     const product = products.get(productId);
@@ -207,7 +372,7 @@ export function detailOf(world: GoalWorld, goal: GoalWorldGoal): GoalDetail {
     };
     // A holding's own tax: the zainetto credit is shared by the bucket, so it shows only in the total.
     const taxIfSold =
-      value === null || hasNoFirstYear([product.regime])
+      value === null || hasNoFirstYear(world, [product.regime])
         ? null
         : liquidation([position], false).tax;
     holdings.push({
@@ -222,10 +387,10 @@ export function detailOf(world: GoalWorld, goal: GoalWorldGoal): GoalDetail {
       taxIfSold,
     });
   }
-  const priced = holdings.every((row) => row.value !== null);
+  const opening = openingOf(world, goal);
   const heldRegimes = holdings.map((row) => row.regime);
   const taxIfSoldTotal =
-    priced && !hasNoFirstYear(heldRegimes)
+    opening.priced && !hasNoFirstYear(world, heldRegimes)
       ? liquidation(
           holdings.map((row) => ({
             regime: row.regime,
@@ -243,69 +408,10 @@ export function detailOf(world: GoalWorld, goal: GoalWorldGoal): GoalDetail {
     timeGrid(asOf, goal.targetYear).tau,
   );
 
-  const weightedRegimes = goalWeights.map(
-    (weight) => products.get(weight.productId)?.regime ?? "etf",
-  );
-  let projectionNote: string | null = null;
-  if (!priced) projectionNote = NO_PRICE_NOTE;
-  else if (hasNoFirstYear([...heldRegimes, ...weightedRegimes]))
-    projectionNote = NO_FIRST_YEAR_NOTE;
-
+  const projectionNote = opening.note;
   let projection: GoalDetail["projection"] = null;
   if (projectionNote === null) {
-    const params = new Map<string, ProductParams>(
-      [...products.values()].map((product) => [
-        product.id,
-        {
-          regime: product.regime,
-          mu: product.expReturn,
-          ter: product.ter,
-          couponRate: product.couponRate,
-          whiteListShare: product.whiteListShare,
-        },
-      ]),
-    );
-    const { zainetto } = settings;
-    const { gross, tax, net } = projectGoal({
-      asOf,
-      goal: {
-        id: goal.id,
-        targetYear: goal.targetYear,
-        target: summary.target,
-        contributionGrowth: goal.contributionGrowth,
-      },
-      monthly: planInForce(
-        world.plans.filter((version) => version.goalId === goal.id),
-        month,
-      ),
-      positions: holdings.map((row) => ({
-        productId: row.productId,
-        value: row.value ?? 0,
-        basis: row.units * row.pmc,
-      })),
-      products: params,
-      weights: new Map(goalWeights.map((weight) => [weight.productId, weight.weight])),
-      settings: {
-        ...settings,
-        zainetto:
-          zainetto.goalId === null
-            ? undefined
-            : {
-                amount: fromCents(zainetto.amountCents),
-                expiry: String(zainetto.expiry),
-                goalId: zainetto.goalId,
-              },
-      },
-      firstYear: pension?.firstYear,
-      pension:
-        pension?.goalId === goal.id && pension.ral !== undefined
-          ? {
-              plan: pension,
-              deductionCapCents: settings.pensionDeductionCapCents,
-              voluntaryYtd: world.voluntaryYtdCents,
-            }
-          : undefined,
-    });
+    const { gross, tax, net } = projectGoal(inputOf(world, goal, opening.positions));
     projection = { gross, tax, net };
   }
 
@@ -346,4 +452,90 @@ export function seriesOf(world: GoalWorld, goalId: string): SeriesPoint[] {
     }
     return { month, value, moneyIn };
   });
+}
+
+/** The goal's Monte Carlo input, or null when it cannot run (a missing price or pension first year). */
+function monteCarloInputOf(world: GoalWorld, goal: GoalWorldGoal): MonteCarloGoal | null {
+  const opening = openingOf(world, goal);
+  return opening.note === null ? inputOf(world, goal, opening.positions) : null;
+}
+
+const outlookOf = (world: GoalWorld, goal: GoalWorldGoal, pSuccess: number): Outlook => {
+  const requiredP = requiredProbability(goal, world.settings.requiredProb);
+  return {
+    status: goalStatus(pSuccess, requiredP, world.settings.thresholds.statusBandPoints),
+    pSuccess,
+    requiredP,
+  };
+};
+
+/**
+ * The goals of the list with their status and P(success) against the required probability. One
+ * simulation runs every goal on the shared shocks, with the seed and the paths of the Settings.
+ */
+export function listRowsOf(world: GoalWorld): GoalListRow[] {
+  const inputs = world.goals.map((goal) => monteCarloInputOf(world, goal));
+  const runnable = inputs.filter((input) => input !== null);
+  const { goals: distributions } = runnable.length
+    ? runMonteCarlo(
+        { goals: runnable, correlations: world.correlations },
+        world.settings.seed,
+        world.settings.mcPaths,
+      )
+    : { goals: [] };
+  let next = 0;
+  return world.goals.map((goal, index) => {
+    const distribution = inputs[index] ? distributions[next++] : undefined;
+    return {
+      ...summaryOf(world, goal),
+      outlook: distribution ? outlookOf(world, goal, distribution.pSuccess) : null,
+    };
+  });
+}
+
+/**
+ * The Monte Carlo analysis of one goal: status, fan, range at the goal date, and what it would take.
+ * Null when the simulation cannot run. The required amounts take one bisection each, so this is
+ * for the detail only. The goal runs alone, and its paths are the same as in the list.
+ */
+export function analysisOf(world: GoalWorld, goal: GoalWorldGoal): GoalAnalysis | null {
+  const input = monteCarloInputOf(world, goal);
+  if (input === null) return null;
+  const { seed, mcPaths: paths, inflation } = world.settings;
+  const { correlations } = world;
+  // One input gives one distribution.
+  const distribution = runMonteCarlo({ goals: [input], correlations }, seed, paths)
+    .goals[0] as GoalDistribution;
+
+  const outlook = outlookOf(world, goal, distribution.pSuccess);
+  const grid = timeGrid(input.asOf, goal.targetYear);
+  const years = grid.steps.length > 0 ? grid.steps.map((step) => step.year) : [grid.y0];
+  const fan = years.map((year, index) => ({
+    year,
+    bad: distribution.p10[index] as number,
+    typical: distribution.p50[index] as number,
+    good: distribution.p90[index] as number,
+  }));
+  const target = targetAtGoalDate(goal.target, inflation, grid.tau);
+  const last = fan.at(-1) as FanPoint;
+  return {
+    ...outlook,
+    paths,
+    seed,
+    horizonYears: grid.tau,
+    targetAtGoalDate: target,
+    fan,
+    range: { bad: last.bad, typical: last.typical, good: last.good, target },
+    required: {
+      unit: input.pension ? "schedule" : "monthly",
+      deterministic: requiredContribution(input, "deterministic"),
+      probability: requiredContribution(input, "probability", {
+        requiredP: outlook.requiredP,
+        correlations,
+        seed,
+        paths,
+      }),
+      currentMonthly: input.pension ? null : input.monthly,
+    },
+  };
 }
