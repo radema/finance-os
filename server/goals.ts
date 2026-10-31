@@ -12,10 +12,10 @@ import type { DB } from "./db.ts";
 import { loadDocument, saveDocument } from "./documents.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
+import { findOr404, idQuery } from "./rows.ts";
 import type { GoalTable } from "./schema.ts";
 import { toFlag } from "./schema.ts";
 
-const idQuery = z.object({ id: z.string().min(1) });
 const versionKey = z.object({ goalId: z.string().min(1), fromMonth: monthSchema });
 
 export const toColumns = (input: GoalInput) => ({
@@ -37,8 +37,6 @@ const toGoal = (row: GoalTable, plan: Goal["plan"]): Goal => ({
 
 /** Goals with their plan history: list, create, edit, delete, and plan versions. */
 export function registerGoalRoutes(router: Router, db: Kysely<DB>): void {
-  const find = (id: string) =>
-    db.selectFrom("goal").selectAll().where("id", "=", id).executeTakeFirst();
   const planOf = (goalId: string) =>
     db
       .selectFrom("contributionPlan")
@@ -78,14 +76,13 @@ export function registerGoalRoutes(router: Router, db: Kysely<DB>): void {
     "/api/goals",
     goalInputSchema.extend({ id: z.string().min(1) }),
     async ({ id, ...input }) => {
-      if (!(await find(id))) throw new HttpError(404, "goal not found");
+      await findOr404(db, "goal", id, "goal");
       await db.updateTable("goal").set(toColumns(input)).where("id", "=", id).execute();
       return { id, ...input, plan: await planOf(id) } satisfies Goal;
     },
   );
 
   router.route("DELETE", "/api/goals", idQuery, async ({ id }) => {
-    if (!(await find(id))) throw new HttpError(404, "goal not found");
     const { n } = await db
       .selectFrom("transaction")
       .select((eb) => eb.fn.countAll<number>().as("n"))
@@ -95,7 +92,11 @@ export function registerGoalRoutes(router: Router, db: Kysely<DB>): void {
       throw new HttpError(409, `This goal has ${n} transaction(s). Delete or move them first.`);
     }
     // The goal's weights and plan versions go with it (ON DELETE CASCADE).
-    await db.deleteFrom("goal").where("id", "=", id).execute();
+    const { numDeletedRows } = await db
+      .deleteFrom("goal")
+      .where("id", "=", id)
+      .executeTakeFirstOrThrow();
+    if (numDeletedRows === 0n) throw new HttpError(404, "goal not found");
     const settings = await loadDocument(db, "settings", settingsSchema);
     if (settings.zainetto.goalId === id) {
       await saveDocument(db, "settings", {
@@ -112,7 +113,7 @@ export function registerGoalRoutes(router: Router, db: Kysely<DB>): void {
     "/api/goal-plan",
     planVersionSchema.extend({ goalId: z.string().min(1) }),
     async ({ goalId, fromMonth, monthlyCents }) => {
-      if (!(await find(goalId))) throw new HttpError(404, "goal not found");
+      await findOr404(db, "goal", goalId, "goal");
       await db
         .insertInto("contributionPlan")
         .values({ goalId, fromMonth, monthlyCents })
