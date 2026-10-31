@@ -356,4 +356,21 @@ describe("coupon rows (AC-33)", () => {
     const elsewhere = [{ date: "2024-07-02", productId: BTP, amountCents: 4050 }];
     expect(only([coupon()], couponState({ storedCoupons: elsewhere })).status).toBe("ready");
   });
+
+  it("two coupon rows of one date and product need fix until each is confirmed as real", () => {
+    const rows = [coupon({ rowNumber: 20 }), coupon({ rowNumber: 21 })];
+    const unconfirmed = preview(rows, couponState());
+    expect(unconfirmed.map((r) => r.status)).toEqual(["needs fix", "needs fix"]);
+    expect(unconfirmed[0]?.reasons.join(" ")).toContain("row 21");
+    const confirmed = preview(rows, couponState(), {
+      20: { confirmDuplicate: true },
+      21: { confirmDuplicate: true },
+    });
+    expect(confirmed.map((r) => r.status)).toEqual(["ready", "ready"]);
+  });
+
+  it("coupons of different dates or products in one file are not repeats", () => {
+    const rows = [coupon({ rowNumber: 20 }), coupon({ rowNumber: 21, date: "2024-07-02" })];
+    expect(preview(rows, couponState()).map((r) => r.status)).toEqual(["ready", "ready"]);
+  });
 });

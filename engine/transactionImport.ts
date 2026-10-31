@@ -316,6 +316,23 @@ function couponStatuses(
       );
       continue;
     }
+    const same = coupons.filter((other) => keyOf(other) === keyOf(coupon));
+    if (same.length > 1 && decisions[row.rowNumber]?.confirmDuplicate !== true) {
+      const others = same
+        .filter((other) => other.row !== row)
+        .map((other) => other.row.rowNumber)
+        .join(", ");
+      results.set(
+        row,
+        result(
+          row,
+          "needs fix",
+          [`same date and product as the coupon of row ${others}: confirm it as a real coupon`],
+          { productId },
+        ),
+      );
+      continue;
+    }
     const resolved = resolveCoupon(coupon, decisions[row.rowNumber], state, ledger);
     results.set(
       row,
@@ -342,8 +359,8 @@ function couponStatuses(
  *    the stored total, and something is stored. When the stored total is not zero and differs,
  *    the rows stay in the normal flow. A coupon uses the key (date, product) and compares the net
  *    amount in cents;
- * 5. `needs fix` for a row identical to another one of the file (date, product, qty, price) unless
- *    the user confirmed it as a real order;
+ * 5. `needs fix` for a row identical to another one of the file (date, product, qty, price; for a
+ *    coupon, date and product) unless the user confirmed it as a real order;
  * 6. `needs a goal`, then `ready`.
  *
  * A coupon row is split by the units held on its date: the stored ledger plus the ready trade rows

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { GoalDetail } from "../engine/goalViews.ts";
 import { holdingsAt } from "../engine/holdings.ts";
 import type { ImportRow, RowDecision } from "../engine/transactionImport.ts";
 import type { DB } from "./db.ts";
@@ -10,6 +11,8 @@ import { openDatabase } from "./db.ts";
 import { saveDocument } from "./documents.ts";
 import { buildFinecoXlsx, buildLargeFinecoXlsx, SYNTHETIC_ISIN } from "./finecoFixture.ts";
 import { parseFinecoMovimenti } from "./finecoMovimenti.ts";
+import { registerGoalViewRoutes } from "./goalViews.ts";
+import { createRouter } from "./router.ts";
 import { commitTransactionImport, previewImport } from "./transactionImport.ts";
 import { loadLedger } from "./transactions.ts";
 import { readXlsx } from "./xlsx.ts";
@@ -284,6 +287,25 @@ describe("transaction import", () => {
       expect(after.units).toEqual(before.units);
       expect(after.pmc).toEqual(before.pmc);
       expect(await db.selectFrom("transaction").select("id").execute()).toHaveLength(4);
+    });
+
+    it("does not raise a goal's money put in (not a contribution)", async () => {
+      await buyBtp("g1", 1800);
+      await buyBtp("g2", 1200);
+      const router = createRouter();
+      registerGoalViewRoutes(router, db, () => "2024-12-31");
+      const moneyIn = async (goalId: string) => {
+        const response = await router.handle(
+          new Request(`http://gbi.test/api/goal-detail?id=${goalId}`),
+        );
+        const detail = (await response.json()) as GoalDetail;
+        return detail.series.at(-1)?.moneyIn ?? Number.NaN;
+      };
+      const before = [await moneyIn("g1"), await moneyIn("g2")];
+      expect(before[0]).toBeGreaterThan(0);
+      await commitTransactionImport(db, couponOnly(), {}, SOURCE);
+      expect(await moneyIn("g1")).toBeLessThanOrEqual(before[0] ?? Number.NaN);
+      expect(await moneyIn("g2")).toBeLessThanOrEqual(before[1] ?? Number.NaN);
     });
 
     it("needs a goal when no bucket holds the bond, then writes one coupon for the picked bucket", async () => {
