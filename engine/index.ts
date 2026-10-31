@@ -6,6 +6,8 @@ export type {
   TransactionType,
 } from "./holdings.ts";
 export { holdingsAt, unitPrice } from "./holdings.ts";
+export type { PensionYear, PensionYearFlows, ProductFlow } from "./pension.ts";
+export { pensionFlowsByProduct, pensionSchedule } from "./pension.ts";
 export type {
   GoalProjection,
   Position,
@@ -17,6 +19,8 @@ export type {
   TimeGrid,
 } from "./projection.ts";
 export { normaliseWeights, projectGoal, timeGrid } from "./projection.ts";
+export type { PensionFlow, PensionPlan } from "./schemas.ts";
+export { pensionPlanSchema } from "./schemas.ts";
 export { goalSlot } from "./slots.ts";
 export type {
   Liquidation,

@@ -7,6 +7,7 @@ import {
   allocationWeightSchema,
   goalInputSchema,
   monthSchema,
+  pensionPlanSchema,
   planVersionSchema,
   productInputSchema,
   settingsSchema,
@@ -40,11 +41,7 @@ export const sampleTransactionSchema = z.object({
  * The part of the pension plan that S1 needs: the goal and the year the membership started.
  * S3's full pension-plan schema must accept this document and extend it.
  */
-export const pensionPlanPartialSchema = z.object({
-  goalId: id,
-  /** The exit tax needs it. */
-  firstYear: z.number().int().min(1950).max(2200),
-});
+export const pensionPlanPartialSchema = pensionPlanSchema.pick({ goalId: true, firstYear: true });
 export type PensionPlanPartial = z.infer<typeof pensionPlanPartialSchema>;
 
 export const sampleDataSchema = z.object({
