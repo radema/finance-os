@@ -7,6 +7,7 @@ import {
   allocationWeightSchema,
   goalInputSchema,
   monthSchema,
+  PENSION_FLOWS,
   pensionPlanSchema,
   planVersionSchema,
   productInputSchema,
@@ -31,6 +32,8 @@ export const sampleTransactionSchema = z.object({
   goalId: id,
   productId: id,
   type: z.enum(["opening", "buy", "sell", "pensionContribution"]),
+  /** `pensionContribution` only. */
+  flow: z.enum(PENSION_FLOWS).optional(),
   /** Signed: a sell is negative. */
   qty: z.number(),
   price: z.number().positive(),

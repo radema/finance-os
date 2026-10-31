@@ -260,7 +260,7 @@ export function detailOf(world: World, goal: World["goals"][number]): GoalDetail
           ? {
               plan: pension,
               deductionCapCents: settings.pensionDeductionCapCents,
-              voluntaryYtd: voluntaryYtdCents(world.ledger, pension, asOf),
+              voluntaryYtd: voluntaryYtdCents(world.ledger, asOf),
             }
           : undefined,
     });

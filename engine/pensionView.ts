@@ -23,8 +23,10 @@ export interface PensionThisYear {
   extra: number;
   /** Worker + employer of the year plus the voluntary YTD. */
   used: number;
-  /** Cap + extra - used. */
+  /** Cap + extra - used, never below 0. */
   available: number;
+  /** This year's non-deducted part (AC-95). The screen shows it when `used` is above cap + extra. */
+  nonDeducted: number;
   /** Voluntary contributions already made this year: the year's `pensionContribution` transactions on Voluntary products. */
   voluntaryYtd: number;
   refund: number;

@@ -58,7 +58,8 @@ export type CashFlowView = {
  * Income and expenses grow by (1 + g)^(year - Y0), as the mock does. Goal contributions follow
  * `projectGoal`: the stub is r x monthly, full year k grows by (1 + contributionGrowth)^(k - 1),
  * and a goal stops after its target year. In Y0 income, expenses and contributions are scaled by
- * f = r / 12; events and the refund are whole.
+ * f = r / 12; events and the refund are whole. The pension refund ends with the pension goal: the last
+ * one is paid in its target year + 1.
  */
 export function projectCashFlow(input: CashFlowInput): CashFlowYear[] {
   const { asOf, cashFlow, goals, pension } = input;
@@ -78,6 +79,14 @@ export function projectCashFlow(input: CashFlowInput): CashFlowYear[] {
     }
   }
 
+  // The schedule ends with the pension goal: its last row is the target year, refunded the year after.
+  const pensionEnd = goals.find((goal) => goal.id === pension?.goalId)?.targetYear;
+  const pensionRefund = new Map(
+    (pension?.schedule ?? [])
+      .filter((row) => pensionEnd === undefined || row.year <= pensionEnd)
+      .map((row) => [row.refundYear, row.refund]),
+  );
+
   return Array.from({ length: DEFAULT_YEARS }, (_, index) => {
     const year = y0 + index;
     const share = index === 0 ? f : 1;
@@ -90,7 +99,7 @@ export function projectCashFlow(input: CashFlowInput): CashFlowYear[] {
     const events = cashFlow.events
       .filter((event) => event.year === year)
       .reduce((sum, event) => sum + event.amount, 0);
-    const refund = pension?.schedule.find((row) => row.refundYear === year)?.refund ?? 0;
+    const refund = pensionRefund.get(year) ?? 0;
     const capacity = income - expenses + events + refund;
     const planOfYear = planned.get(year) ?? 0;
     return {

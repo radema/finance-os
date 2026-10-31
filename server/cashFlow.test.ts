@@ -124,6 +124,45 @@ describe("Cash flow API (AC-50)", () => {
     expect(rows[0]?.planned).toBeGreaterThan(0);
   });
 
+  it("counts only the Voluntary contribution of a fund with both flows in the refund (AC-94)", async () => {
+    await call("POST", "/api/sample-data");
+    const bothFlows = {
+      ...fullPlan,
+      flows: [
+        { productId: "p-pension-balanced", flow: "Work", pct: 0.6 },
+        { productId: "p-pension-equity", flow: "Work", pct: 0.4 },
+        { productId: "p-pension-equity", flow: "Voluntary", pct: 1 },
+      ],
+    };
+    sql(`UPDATE document SET value = '${JSON.stringify(bothFlows)}' WHERE kind = 'pensionPlan'`);
+    await call("PUT", "/api/cash-flow", document);
+    const contribute = (date: string, amountCents: number, flow: string) =>
+      call("POST", "/api/transactions", {
+        date,
+        goalId: "g-retirement",
+        productId: "p-pension-equity",
+        type: "pensionContribution",
+        amountCents,
+        price: 13,
+        flow,
+      });
+    // Sample: 650 Voluntary on the equity fund. Add 200 Work (not counted) and 100 Voluntary.
+    await contribute("2026-03-01", 20_000, "Work");
+    await contribute("2026-04-01", 10_000, "Voluntary");
+    // Tax year of 2026: 650 + 100 + 1,200 x 2/12 = 950; refund 950 x 35% = 332.50.
+    expect((await read()).rows[1]?.refund).toBeCloseTo(33_250, 6);
+  });
+
+  it("pays no refund after the pension goal's last one, in targetYear + 1 (AC-96)", async () => {
+    await call("POST", "/api/sample-data");
+    sql(`UPDATE document SET value = '${JSON.stringify(fullPlan)}' WHERE kind = 'pensionPlan'`);
+    sql("UPDATE goal SET target_year = 2028 WHERE id = 'g-retirement'");
+    await call("PUT", "/api/cash-flow", document);
+    // Schedule rows 2026 to 2028 are refunded in 2027 to 2029; 2030 on shows 0.
+    const refunds = (await read()).rows.map((row) => row.refund > 0);
+    expect(refunds.slice(0, 6)).toEqual([false, true, true, true, false, false]);
+  });
+
   it("refuses a bad document", async () => {
     expect((await call("PUT", "/api/cash-flow", { ...document, essential: -1 })).status).toBe(400);
     expect((await call("PUT", "/api/cash-flow", { ...document, incomeGrowth: -1 })).status).toBe(

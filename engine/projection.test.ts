@@ -310,6 +310,55 @@ describe("pension goal (AC-47)", () => {
     expect(pensionGoal(2026, "2026-10-31").gross).toBeCloseTo(4_964 / 6, 6);
   });
 
+  // AC-95. RAL 30,000 flat, TFR 6.91%, worker 1%, employer 1%, voluntary 7,850 = room 7,350 + 500.
+  // Per year: TFR 2,073 + worker 300 + employer 300 + voluntary 7,850 = 10,523; the 500 over the
+  // limit 7,950 is not deductible.
+  const overLimit = (voluntary: number, targetYear: number, asOf: string, voluntaryYtd = 0) =>
+    projectGoal(
+      input({
+        asOf,
+        goal: { id: "g", targetYear, target: 0, contributionGrowth: 0 },
+        products: new Map([["p", { regime: "pension", mu: 0, ter: 0 }]]),
+        firstYear: 2020,
+        pension: {
+          plan: pensionPlanSchema.parse({
+            goalId: "g",
+            firstYear: 2020,
+            ral: 3_000_000,
+            tfrPct: 0.0691,
+            workerPct: 0.01,
+            employerPct: 0.01,
+            voluntary,
+            flows: oneFund,
+          }),
+          deductionCapCents: 530_000,
+          voluntaryYtd,
+        },
+      }),
+    );
+
+  it("leaves the non-deducted part out of the exit-tax basis (AC-95)", () => {
+    // asOf 31 December, due 2027: one full year. Value 10,523; basis 10,523 - 500 = 10,023;
+    // rate 15% (2027 - 2020 - 15 < 0): tax 1,503.45.
+    const over = overLimit(785_000, 2027, "2026-12-31");
+    expect(over.gross).toBeCloseTo(10_523, 6);
+    expect(over.perProduct[0]?.basis).toBeCloseTo(10_023, 6);
+    expect(over.tax).toBeCloseTo(1_503.45, 6);
+    // At the room (voluntary 7,350) nothing is left over: value and basis are both 10,023.
+    const atRoom = overLimit(735_000, 2027, "2026-12-31");
+    expect(atRoom.gross).toBeCloseTo(10_023, 6);
+    expect(atRoom.perProduct[0]?.basis).toBeCloseTo(10_023, 6);
+  });
+
+  it("takes the Y0 non-deducted part x f out of the stub's basis", () => {
+    // asOf 31 October (f = 2/12), due 2026, voluntary 0, YTD 7,700: Y0 non-deducted
+    // 600 + 7,700 - 7,950 = 350. Stub contribution (2,073 + 600) x 2/12 = 445.50;
+    // basis 445.50 - 350 x 2/12 = 387.1666...
+    const stub = overLimit(0, 2026, "2026-10-31", 770_000);
+    expect(stub.gross).toBeCloseTo(445.5, 6);
+    expect(stub.perProduct[0]?.basis).toBeCloseTo(445.5 - 350 / 6, 6);
+  });
+
   it("splits each year's Work and Voluntary flows by product", () => {
     const result = pensionGoal(2027, "2026-12-31", [
       { productId: "p", flow: "Work", pct: 0.75 },
