@@ -14,6 +14,11 @@ export function stepContribution(step: Step, y0: number, monthly: number, growth
   return step.months * yearly;
 }
 
+/** Today's `target` grown by `inflation` over `tau` real years; `tau` is 0 for a goal already due. */
+export function targetAtGoalDate(target: number, inflation: number, tau: number): number {
+  return target * (1 + inflation) ** tau;
+}
+
 /** Rescale non-negative weights to shares that sum to 1. All weights 0 gives all shares 0. */
 export function normaliseWeights(weights: ReadonlyMap<string, number>): Map<string, number> {
   let sum = 0;
@@ -79,6 +84,8 @@ export type ProjectionInput = {
     deductionCapCents: number;
     /** Voluntary contributions already made this year, in cents. */
     voluntaryYtd: number;
+    /** Multiplier of every contribution of the schedule, default 1. The required contribution solves for it. */
+    scale?: number;
   };
 };
 
@@ -138,6 +145,7 @@ export function preparePath(input: ProjectionInput): PathPlan {
   const grid = timeGrid(input.asOf, goal.targetYear);
   const { pension } = input;
   const shares = normaliseWeights(pension ? new Map() : input.weights);
+  const scale = pension?.scale ?? 1;
   const pensionFlows = pension
     ? pensionFlowsByProduct(
         pensionSchedule(
@@ -148,7 +156,16 @@ export function preparePath(input: ProjectionInput): PathPlan {
           grid.steps.length,
         ),
         pension.plan.flows,
-      )
+      ).map((row) => ({
+        year: row.year,
+        products: row.products.map((flow) => ({
+          ...flow,
+          work: flow.work * scale,
+          voluntary: flow.voluntary * scale,
+          total: flow.total * scale,
+          nonDeducted: flow.nonDeducted * scale,
+        })),
+      }))
     : [];
 
   const state = new Map<string, Position>();
@@ -274,7 +291,7 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
   const { gross, tax, net } = liquidateGoal(input, perProduct);
   return {
     tau: plan.grid.tau,
-    targetAtGoalDate: input.goal.target * (1 + input.settings.inflation) ** plan.grid.tau,
+    targetAtGoalDate: targetAtGoalDate(input.goal.target, input.settings.inflation, plan.grid.tau),
     perProduct,
     gross,
     tax,

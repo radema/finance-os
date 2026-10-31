@@ -16,6 +16,7 @@ import {
   type PathPlan,
   type ProductProjection,
   runPath,
+  targetAtGoalDate,
 } from "./projection.ts";
 import { pathRandom } from "./random.ts";
 import type { FireSettings } from "./schemas.ts";
@@ -166,7 +167,7 @@ export function projectFinancialIndependence(
   const years = [y0, ...grid.steps.map((step) => step.year)];
   const times = [0];
   for (const step of grid.steps) times.push((times.at(-1) as number) + step.fraction);
-  const deflators = times.map((t) => (1 + input.inflation) ** t);
+  const deflators = times.map((t) => targetAtGoalDate(1, input.inflation, t));
 
   const shocks = new Float64Array(grid.steps.length * CLASS_COUNT);
   const buckets = input.goals

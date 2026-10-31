@@ -9,6 +9,8 @@ export type {
   FiResult,
 } from "./financialIndependence.ts";
 export { fiLevels, projectFinancialIndependence } from "./financialIndependence.ts";
+export type { GoalStatus } from "./goalStatus.ts";
+export { goalStatus, requiredProbability } from "./goalStatus.ts";
 export type {
   Holdings,
   LedgerRow,
@@ -34,7 +36,9 @@ export type {
   ProjectionInput,
   ProjectionSettings,
 } from "./projection.ts";
-export { normaliseWeights, projectGoal } from "./projection.ts";
+export { normaliseWeights, projectGoal, targetAtGoalDate } from "./projection.ts";
+export type { ProbabilityOptions } from "./requiredContribution.ts";
+export { requiredContribution } from "./requiredContribution.ts";
 export type {
   CashFlow,
   CashFlowEvent,
