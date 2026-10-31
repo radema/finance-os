@@ -1,5 +1,7 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import { detailOf } from "../engine/goalViews.ts";
+import { monthEnd } from "../engine/months.ts";
 import { type PensionYear, pensionSchedule, scheduleYears } from "../engine/pension.ts";
 import type { PensionThisYear, PensionView, PensionYearView } from "../engine/pensionView.ts";
 import { PENSION_FLOWS, pensionPlanSchema } from "../engine/schemas.ts";
@@ -7,8 +9,8 @@ import { pensionExitRate } from "../engine/tax.ts";
 import { fromCents } from "../engine/units.ts";
 import type { DB } from "./db.ts";
 import { saveDocument } from "./documents.ts";
-import { detailOf, loadWorld } from "./goalViews.ts";
-import { loadPensionPlan, voluntaryYtdCents } from "./pensionPlan.ts";
+import { loadWorld } from "./goalViews.ts";
+import { loadPensionPlan } from "./pensionPlan.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 
@@ -67,7 +69,8 @@ export function registerPensionRoutes(router: Router, db: Kysely<DB>, today: () 
 
   router.route("GET", "/api/pension-view", z.object({}), async (): Promise<PensionView> => {
     const world = await loadWorld(db, today());
-    const { pension: plan, settings, asOf } = world;
+    const { pension: plan, settings } = world;
+    const asOf = monthEnd(world.month);
     const base = {
       asOf,
       plan: plan ?? null,
@@ -78,7 +81,7 @@ export function registerPensionRoutes(router: Router, db: Kysely<DB>, today: () 
     };
     if (!plan || plan.ral === undefined) return { ...base, thisYear: null, schedule: [] };
 
-    const voluntaryYtd = voluntaryYtdCents(world.ledger, asOf);
+    const voluntaryYtd = world.voluntaryYtdCents;
     // The schedule ends at the pension goal's target year (AC-96).
     const goal = world.goals.find((candidate) => candidate.id === plan.goalId);
     const years = goal
