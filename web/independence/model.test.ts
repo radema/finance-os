@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FiPoint, FiResult } from "../../engine/financialIndependence.ts";
 import type { IndependenceView } from "../../engine/independenceView.ts";
-import { ladderRows, parseDraft, reachedWithin } from "./model.ts";
+import { changedSettings, ladderRows, parseDraft, reachedWithin } from "./model.ts";
 
 const band = { p10: 0, p50: 0, p90: 0, deterministic: 0 };
 const point = (year: number, t: number, pReached: number[]): FiPoint => ({
@@ -127,5 +127,18 @@ describe("parseDraft", () => {
     expect(parseDraft({ ...draft, l2Mult: "" })).toBeNull();
     expect(parseDraft({ ...draft, efMonths: "-1" })).toBeNull();
     expect(parseDraft({ ...draft, essential: "abc" })).toBeNull();
+  });
+});
+
+describe("changedSettings", () => {
+  const parsed = { l2Mult: 250, l3Mult: 200, efMonths: 12, essentialCents: 0, optionalCents: 0 };
+  const fire = view.fire;
+
+  it("holds only the multipliers that changed, never efFromGoal or includePension", () => {
+    expect(changedSettings(parsed, fire)).toEqual({ l2Mult: 250 });
+  });
+
+  it("is null when nothing changed", () => {
+    expect(changedSettings({ ...parsed, l2Mult: 300 }, fire)).toBeNull();
   });
 });

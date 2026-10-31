@@ -230,6 +230,37 @@ describe("Independence API (AC-62)", () => {
     expect(body.note).toMatch(/first year/);
   });
 
+  it("projects a ticked non-pension goal that is weighted to a pension product (no 500)", async () => {
+    await loadSample();
+    sql(
+      "INSERT INTO allocation_weight (goal_id, product_id, weight) VALUES ('g-home', 'p-pension-equity', 1)",
+    );
+    await call("PUT", "/api/independence/counts", { id: "g-home", countsTowardFi: true });
+    const { status, body } = await call("GET", "/api/independence");
+    expect(status).toBe(200);
+    expect(body.result?.points).toHaveLength(42);
+    // The goal's net today is still the 18,000 of its holdings: the pension weight holds no value.
+    expect(body.goals.find((goal) => goal.id === "g-home")?.today).toBeCloseTo(18_000, 6);
+  });
+
+  it("does not reset the stored settings when the PUT body is partial", async () => {
+    await loadSample();
+    const stored = {
+      efFromGoal: "g-home",
+      efMonths: 6,
+      l2Mult: 250,
+      l3Mult: 100,
+      includePension: false,
+    };
+    await call("PUT", "/api/independence/settings", stored);
+    const partial = await call("PUT", "/api/independence/settings", { l2Mult: 200 });
+    expect(partial.status).toBe(200);
+    expect(partial.body.fire).toEqual({ ...stored, l2Mult: 200 });
+    expect((await read()).fire).toEqual({ ...stored, l2Mult: 200 });
+    const empty = await call("PUT", "/api/independence/settings", {});
+    expect(empty.body.fire).toEqual({ ...stored, l2Mult: 200 });
+  });
+
   it("is the same on two reads: the seed and the path count come from Settings", async () => {
     await loadSample();
     await call("PUT", "/api/independence/expenses", EXPENSES);

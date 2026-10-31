@@ -454,10 +454,23 @@ export function seriesOf(world: GoalWorld, goalId: string): SeriesPoint[] {
   });
 }
 
+/**
+ * The goal's projection input over its holdings at the valuation month. A held product with no price
+ * is left out, so it counts as 0; `note` says why the projection cannot run (a missing price or pension
+ * first year), and `priced` is false when a price is missing.
+ */
+export function monteCarloGoalOf(
+  world: GoalWorld,
+  goal: GoalWorldGoal,
+): { input: MonteCarloGoal; priced: boolean; note: string | null } {
+  const { positions, priced, note } = openingOf(world, goal);
+  return { input: inputOf(world, goal, positions), priced, note };
+}
+
 /** The goal's Monte Carlo input, or null when it cannot run (a missing price or pension first year). */
 function monteCarloInputOf(world: GoalWorld, goal: GoalWorldGoal): MonteCarloGoal | null {
-  const opening = openingOf(world, goal);
-  return opening.note === null ? inputOf(world, goal, opening.positions) : null;
+  const { input, note } = monteCarloGoalOf(world, goal);
+  return note === null ? input : null;
 }
 
 const outlookOf = (world: GoalWorld, goal: GoalWorldGoal, pSuccess: number): Outlook => {

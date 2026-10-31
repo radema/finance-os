@@ -6,6 +6,7 @@ import { formatAmount, formatPercent } from "../money.ts";
 import { Alert, Card, CheckField, Field, NumberField, Resource } from "../setup/ui.tsx";
 import { FanChart, ProgressChart } from "./FiCharts.tsx";
 import {
+  changedSettings,
   type Draft,
   type LadderRow,
   LEVEL_NAMES,
@@ -214,6 +215,8 @@ function Settings({
   const [error, setError] = useState<string>();
   // A response that arrives after a newer request is dropped.
   const sequence = useRef(0);
+  const latest = useRef(view);
+  latest.current = view;
 
   const send = async (path: string, body: unknown) => {
     const mine = ++sequence.current;
@@ -233,32 +236,11 @@ function Settings({
   useEffect(() => {
     const parsed = parseDraft(draft);
     if (!parsed) return;
-    const { fire, expenses } = view;
     const timer = setTimeout(async () => {
-      let next = view;
-      if (
-        parsed.l2Mult !== fire.l2Mult ||
-        parsed.l3Mult !== fire.l3Mult ||
-        parsed.efMonths !== fire.efMonths
-      ) {
-        const mine = ++sequence.current;
-        try {
-          next = await api<IndependenceView>("PUT", "/api/independence/settings", {
-            body: {
-              ...fire,
-              l2Mult: parsed.l2Mult,
-              l3Mult: parsed.l3Mult,
-              efMonths: parsed.efMonths,
-            },
-          });
-          if (mine !== sequence.current) return;
-          onView(next);
-          setError(undefined);
-        } catch (failure) {
-          if (mine === sequence.current) setError(messageOf(failure));
-          return;
-        }
-      }
+      // The stored values at the time of the save, not at the render that changed the draft.
+      const { fire, expenses } = latest.current;
+      const changes = changedSettings(parsed, fire);
+      if (changes) await send("/api/independence/settings", changes);
       if (
         parsed.essentialCents !== expenses.essentialCents ||
         parsed.optionalCents !== expenses.optionalCents
@@ -304,7 +286,6 @@ function Settings({
             value={fire.efFromGoal ?? MONTHS}
             onChange={(event) =>
               void send("/api/independence/settings", {
-                ...fire,
                 efFromGoal: event.target.value === MONTHS ? null : event.target.value,
               })
             }
@@ -327,9 +308,7 @@ function Settings({
       <CheckField
         label="Include the pension in the wealth"
         checked={fire.includePension}
-        onChange={(includePension) =>
-          void send("/api/independence/settings", { ...fire, includePension })
-        }
+        onChange={(includePension) => void send("/api/independence/settings", { includePension })}
       />
       <p className="sub">
         Expense growth is {fractionToPercent(view.expenses.expenseGrowth)}% a year. Change it on the

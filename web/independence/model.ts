@@ -1,4 +1,5 @@
 import type { IndependenceView } from "../../engine/independenceView.ts";
+import type { FireSettings } from "../../engine/schemas.ts";
 import { eurosToCents, num } from "../forms.ts";
 
 /** "P(reached in 20 y)" reads the point at 31 December of Y0 + this many years. */
@@ -98,4 +99,19 @@ export function parseDraft(draft: Draft): ParsedDraft | null {
     essentialCents: eurosToCents(draft.essential),
     optionalCents: eurosToCents(draft.optional),
   };
+}
+
+/**
+ * The numeric FI settings that differ from the stored ones, or null. The save sends only these, so it
+ * cannot write back an `efFromGoal` or `includePension` that the user changed meanwhile.
+ */
+export function changedSettings(
+  parsed: ParsedDraft,
+  fire: FireSettings,
+): Partial<Pick<FireSettings, "l2Mult" | "l3Mult" | "efMonths">> | null {
+  const changes: Partial<Pick<FireSettings, "l2Mult" | "l3Mult" | "efMonths">> = {};
+  for (const key of ["l2Mult", "l3Mult", "efMonths"] as const) {
+    if (parsed[key] !== fire[key]) changes[key] = parsed[key];
+  }
+  return Object.keys(changes).length === 0 ? null : changes;
 }
