@@ -307,3 +307,12 @@ form > .actions {
 .fresh-old::before {
   background: var(--hl);
 }
+
+.steps {
+  margin: 0;
+  padding-left: var(--s4);
+  font-size: var(--t-sub);
+}
+.steps li + li {
+  margin-top: var(--s2);
+}
