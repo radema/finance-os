@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { z } from "zod";
+import type { PriceProvider } from "../engine/priceFetch.ts";
 import { registerAllocationRoutes } from "./allocation.ts";
 import { registerAssumptionRoutes } from "./assumptions.ts";
 import { runDailyBackup } from "./backup.ts";
@@ -11,6 +12,7 @@ import { openDatabase } from "./db.ts";
 import { registerGoalRoutes } from "./goals.ts";
 import { registerGoalViewRoutes } from "./goalViews.ts";
 import { registerOpeningPositionRoutes } from "./openingPosition.ts";
+import { registerPriceFetchRoutes } from "./priceFetch.ts";
 import { registerPriceRoutes } from "./prices.ts";
 import { registerProductRoutes } from "./products.ts";
 import { createRouter } from "./router.ts";
@@ -18,6 +20,7 @@ import { registerSampleRoutes } from "./sample.ts";
 import { registerSetupProgressRoutes } from "./setupProgress.ts";
 import { serveStatic } from "./static.ts";
 import { registerTransactionRoutes } from "./transactions.ts";
+import { createYahooProvider } from "./yahooProvider.ts";
 
 const HOST = "127.0.0.1";
 
@@ -30,6 +33,8 @@ export interface ServerOptions {
   webDir?: string;
   /** The app clock, `YYYY-MM-DD`. Defaults to `GBI_AS_OF`, or today. */
   today?: string;
+  /** Where fetched prices come from. Defaults to Yahoo; tests pass a stub. */
+  priceProvider?: PriceProvider;
 }
 
 export interface RunningServer {
@@ -49,6 +54,7 @@ export async function startServer({
   port,
   webDir,
   today,
+  priceProvider = createYahooProvider(),
 }: ServerOptions): Promise<RunningServer> {
   const db = await openDatabase(dataDir);
   // The clock is read on each use, so an app left open overnight still knows the date.
@@ -72,6 +78,7 @@ export async function startServer({
   registerTransactionRoutes(router, db, clock);
   registerOpeningPositionRoutes(router, db);
   registerPriceRoutes(router, db, clock);
+  registerPriceFetchRoutes(router, db, clock, priceProvider);
   registerDataRoutes(router, db, dataDir, clock);
   registerGoalViewRoutes(router, db, clock);
   registerSetupProgressRoutes(router, db);
