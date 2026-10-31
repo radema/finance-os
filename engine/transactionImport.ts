@@ -131,13 +131,14 @@ function fieldProblems(row: ImportRow): string[] {
   }
   if (row.type !== "coupon") {
     const qty = parseDecimal(row.qty);
-    if (qty === null || qty <= 0) problems.push("qty is missing or not above 0");
+    if (qty === null || qty === 0) problems.push("qty is missing or 0");
     const price = parseDecimal(row.price);
     if (price === null || price <= 0) problems.push("price is missing or not above 0");
   }
   if (row.commission !== null) {
     const commission = parseDecimal(row.commission);
-    if (commission === null || commission < 0) problems.push("commission is not a number");
+    if (commission === null) problems.push("commission is not a number");
+    else if (commission < 0) problems.push("commission is negative");
   }
   return problems;
 }
@@ -293,10 +294,9 @@ export function previewTransactionImport(
   // Already in your records: totals per key (date, product, price).
   const keyOf = (p: { date: string; productId: string; priceScaled: number }) =>
     `${p.date}|${p.productId}|${p.priceScaled}`;
-  const stored = new Map<string, { count: number; total: number }>();
+  const stored = new Map<string, number>();
   for (const trade of state.storedTrades) {
-    const entry = stored.get(keyOf(trade)) ?? { count: 0, total: 0 };
-    stored.set(keyOf(trade), { count: entry.count + 1, total: entry.total + trade.qtyScaled });
+    stored.set(keyOf(trade), (stored.get(keyOf(trade)) ?? 0) + trade.qtyScaled);
   }
   const fileTotals = new Map<string, number>();
   for (const p of live) {
@@ -307,7 +307,7 @@ export function previewTransactionImport(
   for (const p of live) {
     const key = keyOf(p);
     const found = stored.get(key);
-    if (found && found.total === fileTotals.get(key)) {
+    if (found !== undefined && found === fileTotals.get(key)) {
       results.set(
         p.row,
         result(p.row, "already in your records", ["the stored transactions already cover it"], {

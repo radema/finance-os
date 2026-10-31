@@ -124,6 +124,21 @@ describe("needs fix (AC-29)", () => {
     expect(result.reasons.length).toBeGreaterThan(0);
   });
 
+  it("a negative commission needs fix with its own message", () => {
+    const result = only([row({ commission: "-2.95" })]);
+    expect(result.status).toBe("needs fix");
+    expect(result.reasons).toEqual(["commission is negative"]);
+    expect(only([row({ commission: "abc" })]).reasons).toEqual(["commission is not a number"]);
+  });
+
+  it("a sell with a negative qty is ready: the sign comes from the type", () => {
+    const negative = only([row({ type: "sell", qty: "-8" })]);
+    const positive = only([row({ type: "sell", qty: "8" })]);
+    expect(negative.status).toBe("ready");
+    expect(negative.split).toEqual(positive.split);
+    expect(only([row({ qty: "0" })]).status).toBe("needs fix");
+  });
+
   it("a coupon row needs fix, with a plain reason that #30 handles coupons", () => {
     const result = only([row({ type: "coupon", price: null, commission: null })]);
     expect(result.status).toBe("needs fix");

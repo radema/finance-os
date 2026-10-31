@@ -152,6 +152,15 @@ describe("transaction import", () => {
     expect(sell?.amountCents).toBe(72_080);
   });
 
+  it("stores a sell with a negative file qty as a negative-qty sell, like a positive one", async () => {
+    const [first] = finecoRows(buildFinecoXlsx());
+    if (!first) throw new Error("no row");
+    const sell = { ...first, type: "sell" as const, qty: "-8", bucket: "g1" };
+    await commitTransactionImport(db, [sell], {}, SOURCE);
+    const [stored] = await db.selectFrom("transaction").selectAll().execute();
+    expect([stored?.type, stored?.qtyScaled]).toEqual(["sell", -8_000_000]);
+  });
+
   it("commits no split the user did not confirm (AC-31)", async () => {
     const rows = finecoRows(buildFinecoXlsx());
     const unconfirmed: Record<number, RowDecision> = {
