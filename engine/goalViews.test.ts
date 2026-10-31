@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GoalWorld, GoalWorldProduct } from "./goalViews.ts";
-import { detailOf, seriesOf, summaryOf } from "./goalViews.ts";
-import { settingsSchema } from "./schemas.ts";
+import { analysisOf, detailOf, listRowsOf, seriesOf, summaryOf } from "./goalViews.ts";
+import { DEFAULT_CORRELATIONS, settingsSchema } from "./schemas.ts";
 
 const etf: GoalWorldProduct = {
   id: "etf",
@@ -9,6 +9,8 @@ const etf: GoalWorldProduct = {
   regime: "etf",
   whiteListShare: 0,
   expReturn: 0.05,
+  volatility: 0.15,
+  assetClass: "Equity",
   ter: 0.002,
   couponRate: 0,
 };
@@ -29,6 +31,7 @@ const world = (overrides: Partial<GoalWorld> = {}): GoalWorld => ({
       target: 10_000,
       targetYear: 2035,
       contributionGrowth: 0,
+      minProb: null,
     },
   ],
   plans: [],
@@ -39,6 +42,7 @@ const world = (overrides: Partial<GoalWorld> = {}): GoalWorld => ({
     { ...buy("2026-03-05", "etf", 0, 0), type: "coupon", amount: 3 },
   ],
   settings: settingsSchema.parse({}),
+  correlations: DEFAULT_CORRELATIONS,
   pension: undefined,
   voluntaryYtdCents: 0,
   month: "2026-03",
@@ -171,5 +175,125 @@ describe("detailOf", () => {
       taxIfSoldTotal: null,
     });
     expect(detailOf(w, goalOf(w)).holdings[0]?.taxIfSold).toBeNull();
+  });
+});
+
+// The same world with no volatility: every path is the deterministic one, so P is 0 or 1.
+const calm = (
+  overrides: Partial<GoalWorld> = {},
+  target = 10_000,
+  minProb: number | null = null,
+) => {
+  const [goal] = world().goals;
+  if (!goal) throw new Error("no goal");
+  return world({
+    products: new Map([[etf.id, { ...etf, volatility: 0 }]]),
+    goals: [{ ...goal, target, minProb }],
+    ...overrides,
+  });
+};
+
+const analysis = (w: GoalWorld) => {
+  const result = analysisOf(w, goalOf(w));
+  if (!result) throw new Error("no analysis");
+  return result;
+};
+
+describe("analysisOf", () => {
+  it("has the median equal to the deterministic net when volatility is 0 (AC-53)", () => {
+    const w = calm();
+    const net = detailOf(w, goalOf(w)).projection?.net ?? Number.NaN;
+    const { range, fan } = analysis(w);
+    expect(range.typical).toBeCloseTo(net, 6);
+    expect(range.bad).toBeCloseTo(net, 6);
+    expect(range.good).toBeCloseTo(net, 6);
+    expect(fan.at(-1)?.typical).toBeCloseTo(net, 6);
+  });
+
+  it("gives one fan point per year from the valuation year to the goal year", () => {
+    const { fan } = analysis(world());
+    expect(fan.map((point) => point.year)).toEqual([
+      2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035,
+    ]);
+    for (const point of fan) {
+      expect(point.bad).toBeLessThanOrEqual(point.typical);
+      expect(point.typical).toBeLessThanOrEqual(point.good);
+    }
+  });
+
+  it("is on track when P reaches the required probability, off track far below it (AC-58)", () => {
+    // The net is a few hundred euros. A target of 100 is met on every path, 10,000 on none.
+    expect(analysis(calm({}, 100))).toMatchObject({
+      pSuccess: 1,
+      requiredP: 0.9,
+      status: "on_track",
+    });
+    expect(analysis(calm())).toMatchObject({ pSuccess: 0, requiredP: 0.9, status: "off_track" });
+  });
+
+  it("lets the goal's minProb override the priority default, and is at risk within 15 points (AC-58)", () => {
+    expect(analysis(calm({}, 10_000, 0.1))).toMatchObject({
+      pSuccess: 0,
+      requiredP: 0.1,
+      status: "at_risk",
+    });
+  });
+
+  it("finds the monthly amount that reaches the target, and not one cent less (AC-57)", () => {
+    const w = calm();
+    const { required } = analysis(w);
+    expect(required.unit).toBe("monthly");
+    const amount = required.deterministic ?? Number.NaN;
+    const netWith = (monthly: number) => {
+      const planned = calm({ plans: [{ goalId: "g1", fromMonth: "2026-01", monthly }] });
+      const projection = detailOf(planned, goalOf(planned));
+      return projection.projection?.net ?? Number.NaN;
+    };
+    const target = detailOf(w, goalOf(w)).targetAtGoalDate;
+    expect(netWith(amount)).toBeGreaterThanOrEqual(target);
+    expect(netWith(amount - 0.02)).toBeLessThan(target);
+    // With no volatility the required probability is met exactly when the target is met.
+    expect(required.probability).toBeCloseTo(amount, 2);
+  });
+
+  it("gives null when the target cannot be reached, for both amounts (AC-57)", () => {
+    const { required } = analysis(calm({}, 1e15));
+    expect(required).toMatchObject({ deterministic: null, probability: null });
+  });
+
+  it("gives 0 when the goal is met with no contribution", () => {
+    expect(analysis(calm({}, 100)).required).toMatchObject({ deterministic: 0, probability: 0 });
+  });
+
+  it("gives the horizon in years and the monthly plan in force", () => {
+    const w = calm({ plans: [{ goalId: "g1", fromMonth: "2026-01", monthly: 150 }] });
+    const result = analysis(w);
+    // 9 months left in 2026 plus 9 full years.
+    expect(result.horizonYears).toBeCloseTo(9.75, 10);
+    expect(result.required.currentMonthly).toBe(150);
+  });
+
+  it("is the same for the list and the detail: one seed, shared shocks", () => {
+    const w = world();
+    expect(listRowsOf(w)[0]?.outlook?.pSuccess).toBe(analysis(w).pSuccess);
+  });
+
+  it("is null when a held product has no price (list and detail)", () => {
+    const w = world({
+      products: new Map([
+        [etf.id, etf],
+        [fund.id, fund],
+      ]),
+      ledger: [...world().ledger, buy("2026-02-20", "fund", 2, 50)],
+    });
+    expect(analysisOf(w, goalOf(w))).toBeNull();
+    expect(listRowsOf(w)[0]?.outlook).toBeNull();
+  });
+
+  it("uses the seed of the settings: the same seed gives the same P, another seed may not", () => {
+    const seeded = (seed: number) =>
+      analysis(world({ settings: settingsSchema.parse({ seed }) })).range;
+    expect(seeded(7)).toEqual(seeded(7));
+    expect(seeded(7)).not.toEqual(seeded(8));
   });
 });

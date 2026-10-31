@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { sampleDataSchema } from "../engine/fixture.ts";
-import type { GoalDetail, GoalListView } from "../engine/goalViews.ts";
+import type { GoalDetailView, GoalListView } from "../engine/goalViews.ts";
 import { holdingsAt, unitPrice } from "../engine/holdings.ts";
 import { planInForce } from "../engine/plan.ts";
 import type { ProductParams } from "../engine/projection.ts";
@@ -16,7 +16,7 @@ import { startServer } from "./index.ts";
 const sample = sampleDataSchema.parse(sampleJson);
 
 /** The engine run on the fixture, built here without the server: the oracle for the detail. */
-function engineNet(goalId: string) {
+function engineNet(goalId: string, monthlyOverride?: number) {
   const regimeOf = new Map(sample.products.map((product) => [product.id, product.regime]));
   const holdings = holdingsAt(
     sample.ledger.map((row) => ({
@@ -36,10 +36,15 @@ function engineNet(goalId: string) {
       target: goal.targetCents / 100,
       contributionGrowth: goal.contributionGrowth,
     },
-    monthly: planInForce(
-      goal.plan.map(({ fromMonth, monthlyCents }) => ({ fromMonth, monthly: monthlyCents / 100 })),
-      sample.asOf.slice(0, 7),
-    ),
+    monthly:
+      monthlyOverride ??
+      planInForce(
+        goal.plan.map(({ fromMonth, monthlyCents }) => ({
+          fromMonth,
+          monthly: monthlyCents / 100,
+        })),
+        sample.asOf.slice(0, 7),
+      ),
     positions: [...(holdings.units.get(goalId) ?? [])].map(([productId, units]) => {
       const last = sample.prices
         .filter((price) => price.productId === productId)
@@ -110,7 +115,7 @@ describe("Goals list and Goal detail API", () => {
   };
   const list = async () => (await call<GoalListView>("GET", "/api/goal-list")).body;
   const detail = async (id: string) =>
-    (await call<GoalDetail>("GET", `/api/goal-detail?id=${id}`)).body;
+    (await call<GoalDetailView>("GET", `/api/goal-detail?id=${id}`)).body;
   const loadSample = () => call("POST", "/api/sample-data");
   const sql = (statement: string) => {
     const database = new DatabaseSync(join(dataDir, DATABASE_FILE));
@@ -135,7 +140,7 @@ describe("Goals list and Goal detail API", () => {
     expect(home).toMatchObject({ priority: "Need", target: 40_000, missingPrices: false });
     expect(home?.value).toBeCloseTo(18_000, 6);
     expect(Object.keys(home ?? {}).sort()).toEqual(
-      ["id", "missingPrices", "name", "priority", "slot", "target", "value"].sort(),
+      ["id", "missingPrices", "name", "outlook", "priority", "slot", "target", "value"].sort(),
     );
   });
 
@@ -218,5 +223,99 @@ describe("Goals list and Goal detail API", () => {
 
   it("answers 404 for an unknown goal", async () => {
     expect((await call("GET", "/api/goal-detail?id=nope")).status).toBe(404);
+  });
+
+  describe("Monte Carlo analysis", () => {
+    // The spec's required probabilities: Need 90%, Want 75%, Wish 50%. Status band: 15 points (AC-58).
+    const requiredByGoal = { "g-holiday": 0.75, "g-car": 0.75, "g-home": 0.9, "g-retirement": 0.9 };
+    const statusOf = (p: number, required: number) => {
+      if (p >= required) return "on_track";
+      return required - p <= 0.15 + 1e-9 ? "at_risk" : "off_track";
+    };
+
+    it("shows status and P against the required probability for each goal of the list", async () => {
+      await loadSample();
+      const { goals } = await list();
+      expect(goals).toHaveLength(4);
+      for (const goal of goals) {
+        const outlook = goal.outlook;
+        expect(outlook).not.toBeNull();
+        expect(outlook?.requiredP).toBe(requiredByGoal[goal.id as keyof typeof requiredByGoal]);
+        expect(outlook?.pSuccess).toBeGreaterThanOrEqual(0);
+        expect(outlook?.pSuccess).toBeLessThanOrEqual(1);
+        expect(outlook?.status).toBe(statusOf(outlook?.pSuccess ?? 0, outlook?.requiredP ?? 0));
+      }
+    });
+
+    it("has the same P in the list and in the detail, and the same twice (seeded)", async () => {
+      await loadSample();
+      const { goals } = await list();
+      for (const goal of goals) {
+        const analysis = (await detail(goal.id)).analysis;
+        expect(analysis?.pSuccess).toBe(goal.outlook?.pSuccess);
+      }
+      expect(await list()).toEqual(await list());
+    });
+
+    it("gives the fan, the range and the horizon in the detail", async () => {
+      await loadSample();
+      const car = (await detail("g-car")).analysis;
+      // Valuation 2026-10-31 (2 months left in 2026), goal date 31 December 2029: 2/12 + 3 years.
+      expect(car?.horizonYears).toBeCloseTo(2 / 12 + 3, 10);
+      expect(car?.fan.map((point) => point.year)).toEqual([2026, 2027, 2028, 2029]);
+      expect(car?.paths).toBe(1000);
+      expect(car?.seed).toBe(42);
+      // 20,000 today's euros grown by 2% for 3 and 2/12 years.
+      expect(car?.targetAtGoalDate).toBeCloseTo(20_000 * 1.02 ** (38 / 12), 6);
+      expect(car?.range.target).toBe(car?.targetAtGoalDate);
+      expect(car?.range.bad).toBeLessThanOrEqual(car?.range.typical ?? 0);
+      expect(car?.range.typical).toBeLessThanOrEqual(car?.range.good ?? 0);
+      expect(car?.range).toMatchObject({
+        bad: car?.fan.at(-1)?.bad,
+        typical: car?.fan.at(-1)?.typical,
+        good: car?.fan.at(-1)?.good,
+      });
+    });
+
+    it("gives a goal due this year a single point", async () => {
+      await loadSample();
+      const holiday = (await detail("g-holiday")).analysis;
+      expect(holiday?.fan.map((point) => point.year)).toEqual([2026]);
+    });
+
+    it("finds the monthly amount that reaches the target, and not one cent less (AC-57)", async () => {
+      await loadSample();
+      const car = (await detail("g-car")).analysis;
+      expect(car?.required.unit).toBe("monthly");
+      expect(car?.required.currentMonthly).toBe(450);
+      const amount = car?.required.deterministic ?? Number.NaN;
+      const target = engineNet("g-car").targetAtGoalDate;
+      expect(engineNet("g-car", amount).net).toBeGreaterThanOrEqual(target);
+      expect(engineNet("g-car", amount - 0.02).net).toBeLessThan(target);
+      // 75% sits above the median, so the probability amount is not below the deterministic one.
+      expect(car?.required.probability ?? Number.NaN).toBeGreaterThanOrEqual(amount);
+    });
+
+    it("gives the pension goal's required contribution as a multiplier of its schedule", async () => {
+      await loadSample();
+      const retirement = (await detail("g-retirement")).analysis;
+      expect(retirement?.required.unit).toBe("schedule");
+      expect(retirement?.required.currentMonthly).toBeNull();
+    });
+
+    it("gives null for a target that cannot be reached", async () => {
+      await loadSample();
+      sql("UPDATE goal SET target_cents = 100000000000000 WHERE id = 'g-car'");
+      const car = (await detail("g-car")).analysis;
+      expect(car?.required).toMatchObject({ deterministic: null, probability: null });
+      expect(car?.status).toBe("off_track");
+    });
+
+    it("has no analysis when a price is missing, in the list and in the detail", async () => {
+      await loadSample();
+      sql("DELETE FROM price_point WHERE product_id = 'p-direct'");
+      expect((await detail("g-car")).analysis).toBeNull();
+      expect((await list()).goals.find((goal) => goal.id === "g-car")?.outlook).toBeNull();
+    });
   });
 });

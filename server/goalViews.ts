@@ -1,11 +1,11 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { z } from "zod";
-import type { GoalDetail, GoalListView, GoalWorld } from "../engine/goalViews.ts";
-import { detailOf, summaryOf } from "../engine/goalViews.ts";
+import type { GoalDetailView, GoalListView, GoalWorld } from "../engine/goalViews.ts";
+import { analysisOf, detailOf, listRowsOf } from "../engine/goalViews.ts";
 import { unitPrice } from "../engine/holdings.ts";
 import { monthEnd } from "../engine/months.ts";
-import { settingsSchema } from "../engine/schemas.ts";
+import { correlationsSchema, settingsSchema } from "../engine/schemas.ts";
 import { fromCents, fromScaled } from "../engine/units.ts";
 import type { DB } from "./db.ts";
 import { loadDocument } from "./documents.ts";
@@ -29,6 +29,7 @@ export async function loadWorld(db: Kysely<DB>, today: string): Promise<GoalWorl
   const weights = await db.selectFrom("allocationWeight").selectAll().execute();
   const ledger = await loadLedger(db);
   const settings = await loadDocument(db, "settings", settingsSchema);
+  const correlations = await loadDocument(db, "correlations", correlationsSchema);
   const pension = await loadPensionPlan(db);
 
   const regimeOf = new Map(products.map((product) => [product.id, product.regime]));
@@ -54,6 +55,7 @@ export async function loadWorld(db: Kysely<DB>, today: string): Promise<GoalWorl
       target: fromCents(goal.targetCents),
       targetYear: goal.targetYear,
       contributionGrowth: goal.contributionGrowth,
+      minProb: goal.minProb,
     })),
     plans: plans.map((version) => ({
       goalId: version.goalId,
@@ -63,6 +65,7 @@ export async function loadWorld(db: Kysely<DB>, today: string): Promise<GoalWorl
     weights,
     ledger: ledger.map((entry) => ({ ...entry, amount: fromCents(entry.amountCents) })),
     settings,
+    correlations: correlations.matrix,
     pension,
     voluntaryYtdCents: voluntaryYtdCents(ledger, monthEnd(month)),
     month,
@@ -77,14 +80,14 @@ export function registerGoalViewRoutes(router: Router, db: Kysely<DB>, today: ()
     return {
       asOf: monthEnd(world.month),
       sampleAvailable: await isEmpty(db),
-      goals: world.goals.map((goal) => summaryOf(world, goal)),
+      goals: listRowsOf(world),
     };
   });
 
-  router.route("GET", "/api/goal-detail", idQuery, async ({ id }): Promise<GoalDetail> => {
+  router.route("GET", "/api/goal-detail", idQuery, async ({ id }): Promise<GoalDetailView> => {
     const world = await loadWorld(db, today());
     const goal = world.goals.find((candidate) => candidate.id === id);
     if (!goal) throw new HttpError(404, "goal not found");
-    return detailOf(world, goal);
+    return { ...detailOf(world, goal), analysis: analysisOf(world, goal) };
   });
 }
