@@ -313,7 +313,12 @@ describe("pension goal (AC-47)", () => {
   // AC-95. RAL 30,000 flat, TFR 6.91%, worker 1%, employer 1%, voluntary 7,850 = room 7,350 + 500.
   // Per year: TFR 2,073 + worker 300 + employer 300 + voluntary 7,850 = 10,523; the 500 over the
   // limit 7,950 is not deductible.
-  const overLimit = (voluntary: number, targetYear: number, asOf: string, voluntaryYtd = 0) =>
+  const overLimit = (
+    voluntary: number | null,
+    targetYear: number,
+    asOf: string,
+    voluntaryYtd = 0,
+  ) =>
     projectGoal(
       input({
         asOf,
@@ -350,14 +355,30 @@ describe("pension goal (AC-47)", () => {
     expect(atRoom.perProduct[0]?.basis).toBeCloseTo(10_023, 6);
   });
 
-  it("takes the Y0 non-deducted part x f out of the stub's basis", () => {
+  it("takes the Y0 non-deducted part in full out of the stub's basis (AC-97)", () => {
     // asOf 31 October (f = 2/12), due 2026, voluntary 0, YTD 7,700: Y0 non-deducted
     // 600 + 7,700 - 7,950 = 350. Stub contribution (2,073 + 600) x 2/12 = 445.50;
-    // basis 445.50 - 350 x 2/12 = 387.1666...
+    // basis 445.50 - 350 = 95.50 (the whole 350, not x f).
     const stub = overLimit(0, 2026, "2026-10-31", 770_000);
     expect(stub.gross).toBeCloseTo(445.5, 6);
-    expect(stub.perProduct[0]?.basis).toBeCloseTo(445.5 - 350 / 6, 6);
+    expect(stub.perProduct[0]?.basis).toBeCloseTo(445.5 - 350, 6);
   });
+
+  // AC-97. Worker + employer 600 here, so the room is 7,350; to cap, asOf 31 October (f = 2/12).
+  it.each([
+    // YTD 7,950: the room is full, stub voluntary 0, non-deducted 600 + 7,950 - 7,950 = 600.
+    { ytd: 795_000, voluntaryStub: 0, nonDeducted: 600 },
+    // YTD 7,000: stub 350, tax-year voluntary 7,350, non-deducted 0.
+    { ytd: 700_000, voluntaryStub: 350, nonDeducted: 0 },
+  ])(
+    "adds the to-cap stub as the rest of the room and takes the non-deducted part out of the basis, YTD $ytd (AC-97)",
+    ({ ytd, voluntaryStub, nonDeducted }) => {
+      const stub = overLimit(null, 2026, "2026-10-31", ytd);
+      // Work (2,073 + 600) x 2/12 = 445.50, plus the stub voluntary in full.
+      expect(stub.gross).toBeCloseTo(445.5 + voluntaryStub, 6);
+      expect(stub.perProduct[0]?.basis).toBeCloseTo(445.5 + voluntaryStub - nonDeducted, 6);
+    },
+  );
 
   it("splits each year's Work and Voluntary flows by product", () => {
     const result = pensionGoal(2027, "2026-12-31", [

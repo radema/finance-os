@@ -49,8 +49,9 @@ describe("Pension plan and Pension view API", () => {
     // used = 400 + 400 + 650; still available = 7,950 - 1,450
     expect(thisYear?.used).toBeCloseTo(1_450, 6);
     expect(thisYear?.available).toBeCloseTo(6_500, 6);
-    // refund = (650 + 7,150 x 2/12) x 35%, paid in 2027
-    expect(thisYear?.refund).toBeCloseTo((650 + 7_150 / 6) * 0.35, 6);
+    // To cap: the stub is the rest of the room, 7,150 - 650 = 6,500 (AC-97), so the refund is
+    // 7,150 x 35%, paid in 2027
+    expect(thisYear?.refund).toBeCloseTo(7_150 * 0.35, 6);
     expect(thisYear?.refundYear).toBe(2027);
     expect(schedule).toHaveLength(10);
     expect(schedule[0]).toMatchObject({ year: 2026, tfr: 2_764, worker: 400, employer: 400 });
@@ -60,7 +61,7 @@ describe("Pension plan and Pension view API", () => {
     // The exit tax is the engine's liquidation of the pension goal: the same as the Goal detail.
     const goal = (await call<GoalDetail>("GET", "/api/goal-detail?id=g-retirement")).body;
     expect(thisYear?.exitTax).toBeCloseTo(goal.projection?.tax ?? Number.NaN, 6);
-    expect(thisYear?.exitTax).toBeCloseTo(28_927.4, 1);
+    expect(thisYear?.exitTax).toBeCloseTo(29_548.48, 1);
     // 2046 - 2020 - 15 = 11 extra years: 15% - 3.3%
     expect(thisYear?.exitRate).toBeCloseTo(0.117, 10);
   });
@@ -188,6 +189,34 @@ describe("Pension plan and Pension view API", () => {
     expect(thisYear?.available).toBe(0);
     expect(thisYear?.nonDeducted).toBeCloseTo(500, 6);
   });
+
+  // AC-97. Sample plan, voluntary to cap: worker + employer 800, limit 7,950, room 7,150, YTD 650
+  // already in. A contribution of 7,000 or 6,350 makes the voluntary YTD 7,650 or 7,000.
+  it.each([
+    // Room full: stub 0, used 8,450, 500 not deductible, still available 0, refund on the room.
+    { cents: 700_000, ytd: 7_650, used: 8_450, available: 0, nonDeducted: 500, refund: 7_150 },
+    // 150 of room left: the stub fills it, so nothing is over the limit.
+    { cents: 635_000, ytd: 7_000, used: 7_800, available: 150, nonDeducted: 0, refund: 7_150 },
+  ])(
+    "fills only the rest of the room this year, voluntary YTD $ytd (AC-97)",
+    async ({ cents, ytd, used, available, nonDeducted, refund }) => {
+      await call("POST", "/api/sample-data");
+      await call("POST", "/api/transactions", {
+        date: "2026-10-20",
+        goalId: "g-retirement",
+        productId: "p-pension-equity",
+        type: "pensionContribution",
+        amountCents: cents,
+        price: 13,
+      });
+      const { thisYear } = await view();
+      expect(thisYear?.voluntaryYtd).toBeCloseTo(ytd, 6);
+      expect(thisYear?.used).toBeCloseTo(used, 6);
+      expect(thisYear?.available).toBeCloseTo(available, 6);
+      expect(thisYear?.nonDeducted).toBeCloseTo(nonDeducted, 6);
+      expect(thisYear?.refund).toBeCloseTo(Math.min(ytd + available, refund) * 0.35, 6);
+    },
+  );
 
   it("ends the schedule at the pension goal's target year (AC-96)", async () => {
     await call("POST", "/api/sample-data");
