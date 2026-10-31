@@ -1,10 +1,12 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { RecordPreview } from "../engine/recordImport.ts";
 import { guessRecordMapping } from "../engine/recordImport.ts";
 import type { Goal, Product } from "../engine/schemas.ts";
+import type { DB } from "./db.ts";
 import { openDatabase } from "./db.ts";
 import { startServer } from "./index.ts";
 import { undoCreatedRows } from "./recordImport.ts";
@@ -159,6 +161,99 @@ describe("products and goals import API", () => {
       ...payload("products", "Ticker\nABC\n"),
     });
     expect(response.status).toBe(400);
+  });
+
+  describe("undo of a batch over the API (AC-32)", () => {
+    type Undone = { undoneAt: string | null; kept: string[] };
+    const undo = (id: string | null) => call<Undone>("POST", "/api/import/batches/undo", { id });
+    const undoneAts = async () =>
+      (await db().selectFrom("importBatch").select("undoneAt").execute()).map((b) => b.undoneAt);
+    const db = () => openedDb as Kysely<DB>;
+    let openedDb: Kysely<DB> | undefined;
+    beforeEach(async () => {
+      openedDb = await openDatabase(dataDir);
+    });
+    afterEach(async () => {
+      await openedDb?.destroy();
+    });
+
+    it("deletes the created products, keeps one with a transaction and reports it", async () => {
+      const batch = await commit("products", PRODUCTS);
+      const used = (await products()).find((p) => p.isin === "IE00TEST0001") as Product;
+      await call("POST", "/api/goals", {
+        name: "G",
+        priority: "Need",
+        targetCents: 1,
+        targetYear: 2040,
+        contributionGrowth: 0,
+      });
+      await db()
+        .insertInto("transaction")
+        .values({
+          id: "t1",
+          date: "2026-01-02",
+          goalId: ((await goals())[0] as Goal).id,
+          productId: used.id,
+          type: "buy",
+          qtyScaled: 1_000_000,
+          priceScaled: 1_000_000,
+          commissionCents: null,
+          amountCents: 100,
+          note: "",
+          importBatchId: null,
+        })
+        .execute();
+
+      const undone = await undo(batch.batchId);
+
+      expect(undone.status).toBe(200);
+      expect(undone.body.kept).toEqual([used.id]);
+      expect(undone.body.undoneAt).toBeTruthy();
+      expect((await products()).map((p) => p.name)).toEqual(["World ETF"]);
+      expect(await undoneAts()).toEqual([undone.body.undoneAt]);
+    });
+
+    it("leaves a row the batch updated with its new values", async () => {
+      await commit("products", PRODUCTS);
+      const second = await commit(
+        "products",
+        PRODUCTS.replace(
+          "World ETF;IE00TEST0001;Equity;etf;5;",
+          "World ETF;IE00TEST0001;Equity;etf;6;",
+        ) + "Gold;IE00TEST0003;Gold/Commodities;etf;3;18;0,4\n",
+      );
+      expect(second).toMatchObject({ created: 1, updated: 1 });
+
+      const undone = await undo(second.batchId);
+
+      expect(undone.body.kept).toEqual([]);
+      expect((await products()).map((p) => p.name)).toEqual(["Euro bond", "World ETF"]);
+      expect((await products()).find((p) => p.name === "World ETF")).toMatchObject({
+        expReturn: 0.06,
+      });
+    });
+
+    it("deletes the created goals, keeps the zainetto goal and reports it", async () => {
+      const batch = await commit("goals", GOALS);
+      const house = (await goals()).find((g) => g.name === "House") as Goal;
+      const settings = (await call<Record<string, unknown>>("GET", "/api/settings")).body;
+      await call("PUT", "/api/settings", {
+        ...settings,
+        zainetto: { ...(settings.zainetto as object), goalId: house.id },
+      });
+
+      const undone = await undo(batch.batchId);
+
+      expect(undone.body.kept).toEqual([house.id]);
+      expect((await goals()).map((g) => g.name)).toEqual(["House"]);
+      expect(await undoneAts()).toEqual([undone.body.undoneAt]);
+    });
+
+    it("refuses a second undo of the same batch", async () => {
+      const batch = await commit("goals", GOALS);
+      await undo(batch.batchId);
+      expect((await undo(batch.batchId)).status).toBe(409);
+    });
   });
 
   describe("undoCreatedRows", () => {

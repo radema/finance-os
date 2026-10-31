@@ -15,12 +15,20 @@ const KIND_LABEL: Record<BatchRow["kind"], string> = {
 export function PastImports({ batches }: { batches: Loaded<BatchRow[]> }) {
   const [error, setError] = useState<string>();
   const [undoing, setUndoing] = useState<string>();
+  const [notice, setNotice] = useState<string>();
 
   const undo = async (id: string) => {
     setUndoing(id);
     setError(undefined);
+    setNotice(undefined);
     try {
-      await api("POST", "/api/import/batches/undo", { body: { id } });
+      const done = await api<{ kept: string[] }>("POST", "/api/import/batches/undo", {
+        body: { id },
+      });
+      if (done.kept.length > 0) {
+        const kind = batches.data?.find((batch) => batch.id === id)?.kind;
+        setNotice(`${done.kept.length} created ${kind} kept because they are in use.`);
+      }
     } catch (failure) {
       setError(messageOf(failure));
     } finally {
@@ -34,6 +42,11 @@ export function PastImports({ batches }: { batches: Loaded<BatchRow[]> }) {
       {error ? (
         <p className="note" role="alert">
           {error}
+        </p>
+      ) : null}
+      {notice ? (
+        <p className="note" role="status">
+          {notice}
         </p>
       ) : null}
       <Resource loaded={batches}>
