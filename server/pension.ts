@@ -2,7 +2,7 @@ import type { Kysely } from "kysely";
 import { z } from "zod";
 import { type PensionYear, pensionSchedule } from "../engine/pension.ts";
 import type { PensionThisYear, PensionView, PensionYearView } from "../engine/pensionView.ts";
-import { pensionPlanSchema } from "../engine/schemas.ts";
+import { PENSION_FLOWS, pensionPlanSchema } from "../engine/schemas.ts";
 import { pensionExitRate } from "../engine/tax.ts";
 import { fromCents } from "../engine/units.ts";
 import type { DB } from "./db.ts";
@@ -14,6 +14,9 @@ import { HttpError } from "./router.ts";
 
 /** The screen shows this many years of the schedule, Y0 first. */
 const SCHEDULE_YEARS = 10;
+
+/** Percentages typed in the form become fractions rounded to 12 digits. */
+const FLOW_SUM_TOLERANCE = 1e-9;
 
 const inEuros = (row: PensionYear): PensionYearView => ({
   year: row.year,
@@ -40,11 +43,24 @@ export function registerPensionRoutes(router: Router, db: Kysely<DB>, today: () 
       .where("id", "=", plan.goalId)
       .executeTakeFirst();
     if (!goal) throw new HttpError(400, "the pension goal does not exist");
-    const products = new Set(
-      (await db.selectFrom("product").select("id").execute()).map((row) => row.id),
+    const regimes = new Map(
+      (await db.selectFrom("product").select(["id", "regime"]).execute()).map((row) => [
+        row.id,
+        row.regime,
+      ]),
     );
-    const unknown = plan.flows.find((flow) => !products.has(flow.productId));
-    if (unknown) throw new HttpError(400, `the product ${unknown.productId} does not exist`);
+    for (const { productId } of plan.flows) {
+      const regime = regimes.get(productId);
+      if (regime === undefined) throw new HttpError(400, `the product ${productId} does not exist`);
+      if (regime !== "pension")
+        throw new HttpError(400, `the product ${productId} is not a pension fund`);
+    }
+    for (const kind of PENSION_FLOWS) {
+      const shares = plan.flows.filter((flow) => flow.flow === kind);
+      const sum = shares.reduce((total, flow) => total + flow.pct, 0);
+      if (shares.length > 0 && Math.abs(sum - 1) > FLOW_SUM_TOLERANCE)
+        throw new HttpError(400, `the ${kind} flow shares must add up to 100%`);
+    }
     await saveDocument(db, "pensionPlan", plan);
     return plan;
   });

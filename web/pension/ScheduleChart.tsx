@@ -2,10 +2,10 @@ import { BarChart } from "echarts/charts";
 import { GridComponent } from "echarts/components";
 import * as echarts from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
-import { useEffect, useRef } from "react";
+import { useCallback } from "react";
 import type { PensionYearView } from "../../engine/pensionView.ts";
-import { readTokens } from "../goals/ValueChart.tsx";
 import { formatAmount } from "../money.ts";
+import { readTokens, useEchart } from "../useEchart.ts";
 
 echarts.use([BarChart, GridComponent, SVGRenderer]);
 
@@ -62,27 +62,8 @@ export function ScheduleChart({
   rows: readonly PensionYearView[];
   label: string;
 }) {
-  const box = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const element = box.current;
-    if (!element) return;
-    const chart = echarts.init(element, undefined, { renderer: "svg" });
-    const draw = () => chart.setOption(buildOption(rows), true);
-    let live = true;
-    // Draw after the fonts load, so the axis text is measured with Geist.
-    void document.fonts.ready.then(() => live && draw());
-    const resize = new ResizeObserver(() => chart.resize());
-    resize.observe(element);
-    const scheme = window.matchMedia("(prefers-color-scheme: dark)");
-    scheme.addEventListener("change", draw);
-    return () => {
-      live = false;
-      scheme.removeEventListener("change", draw);
-      resize.disconnect();
-      chart.dispose();
-    };
-  }, [rows]);
+  const build = useCallback(() => buildOption(rows), [rows]);
+  const box = useEchart(build);
 
   return <div className="chart" ref={box} role="img" aria-label={label} />;
 }

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { GoalDetail } from "../engine/goalViews.ts";
 import type { PensionView } from "../engine/pensionView.ts";
 import type { PensionPlan } from "../engine/schemas.ts";
+import sampleJson from "../fixtures/sample.json" with { type: "json" };
 import { startServer } from "./index.ts";
 
 describe("Pension plan and Pension view API", () => {
@@ -93,6 +94,56 @@ describe("Pension plan and Pension view API", () => {
     expect((await call("PUT", "/api/pension-plan", { ...plan, goalId: "nope" })).status).toBe(400);
     const badFlow = [{ productId: "nope", flow: "Work", pct: 1 }];
     expect((await call("PUT", "/api/pension-plan", { ...plan, flows: badFlow })).status).toBe(400);
+  });
+
+  it("refuses a flow on a product that is not a pension fund, or that does not exist", async () => {
+    await call("POST", "/api/sample-data");
+    const plan = (await call<PensionPlan>("GET", "/api/pension-plan")).body;
+    const flows = (productId: string) => [{ productId, flow: "Work", pct: 1 }];
+    const etf = await call<{ error: string }>("PUT", "/api/pension-plan", {
+      ...plan,
+      flows: flows("p-world-etf"),
+    });
+    expect(etf.status).toBe(400);
+    expect(etf.body.error).toContain("not a pension fund");
+    const gone = await call("PUT", "/api/pension-plan", { ...plan, flows: flows("nope") });
+    expect(gone.status).toBe(400);
+  });
+
+  it("refuses flows that do not add up to 100% for a flow with entries", async () => {
+    await call("POST", "/api/sample-data");
+    const plan = (await call<PensionPlan>("GET", "/api/pension-plan")).body;
+    const split = (work: number, voluntary: number) => [
+      { productId: "p-pension-balanced", flow: "Work", pct: work },
+      { productId: "p-pension-equity", flow: "Work", pct: 0.4 },
+      { productId: "p-pension-equity", flow: "Voluntary", pct: voluntary },
+    ];
+    const save = (flows: unknown) => call("PUT", "/api/pension-plan", { ...plan, flows });
+    expect((await save(split(0.6, 1))).status).toBe(200);
+    const workShort = await save(split(0.5, 1));
+    expect(workShort.status).toBe(400);
+    expect((workShort.body as { error: string }).error).toContain("Work");
+    expect((await save(split(0.6, 0.5))).status).toBe(400);
+    // A flow with no entry is allowed: the plan then has no Voluntary flow.
+    expect((await save(split(0.6, 1).slice(0, 2))).status).toBe(200);
+  });
+
+  it("refuses to delete a product named in the pension flows", async () => {
+    await call("POST", "/api/sample-data");
+    const { id: _id, ...fund } = sampleJson.products.find((p) => p.id === "p-pension-balanced") ?? {
+      id: "",
+    };
+    const created = await call<{ id: string }>("POST", "/api/products", fund);
+    const plan = (await call<PensionPlan>("GET", "/api/pension-plan")).body;
+    const flows = [{ productId: created.body.id, flow: "Work", pct: 1 }];
+    expect((await call("PUT", "/api/pension-plan", { ...plan, flows })).status).toBe(200);
+    const refused = await call<{ error: string }>("DELETE", `/api/products?id=${created.body.id}`);
+    expect(refused.status).toBe(409);
+    expect(refused.body.error).toContain("pension plan");
+    // Out of the flows, the same product can be deleted, and the view still loads.
+    await call("PUT", "/api/pension-plan", { ...plan, flows: [] });
+    expect((await call("DELETE", `/api/products?id=${created.body.id}`)).status).toBe(200);
+    expect((await call("GET", "/api/pension-view")).status).toBe(200);
   });
 
   it("accepts the partial plan and shows no schedule for it", async () => {
