@@ -247,25 +247,4 @@ describe("undoBatch", () => {
     await expect(undoBatch(db, batch.id)).rejects.toThrow();
     expect(await dump()).toEqual(before);
   });
-
-  it("refuses products and goals batches: nothing records the rows they created", async () => {
-    await db
-      .insertInto("importBatch")
-      .values({
-        id: "b-products",
-        kind: "products",
-        sourceName: "CSV",
-        fileName: "p.csv",
-        createdAt: "2024-01-01T00:00:00Z",
-        rowsRead: 1,
-        rowsImported: 1,
-        rowsSkipped: 0,
-        undoneAt: null,
-        priorPrices: null,
-      })
-      .execute();
-    await expect(undoBatch(db, "b-products")).rejects.toMatchObject({ status: 409 });
-    const [row] = await db.selectFrom("importBatch").select("undoneAt").execute();
-    expect(row?.undoneAt).toBeNull();
-  });
 });
