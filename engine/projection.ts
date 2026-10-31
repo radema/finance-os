@@ -154,14 +154,15 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
         position.basis = Math.max(0, position.basis - stampDuty);
       }
 
-      // Pension: that year's flows, the stub being the Y0 row x f. The schedule is in cents.
+      // Pension: that year's flows. Work is the Y0 row x f; voluntary is already the stub. The schedule is in cents.
       const flow = yearFlows?.find((candidate) => candidate.productId === productId);
       const added = yearFlows
-        ? fromCents(flow?.total ?? 0) * phi
+        ? fromCents((flow?.work ?? 0) * phi + (flow?.voluntary ?? 0))
         : contribution * (shares.get(productId) ?? 0);
       position.value += added;
-      // The non-deducted part of the year (the stub: x f) is left out of the exit-tax basis.
-      position.basis += added - fromCents(flow?.nonDeducted ?? 0) * phi;
+      // The non-deducted part of the year, Y0 too, is left out of the exit-tax basis in full. It is
+      // voluntary money; in Y0 it can be money already in the opening basis, so the basis floors at 0.
+      position.basis = Math.max(0, position.basis + added - fromCents(flow?.nonDeducted ?? 0));
       if (regime === "cash") position.basis = position.value;
     }
   }

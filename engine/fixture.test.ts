@@ -190,7 +190,8 @@ describe("synthetic fixture", () => {
   });
 
   // Hand check of the Retirement goal basis. Y0 row: RAL 40,000, TFR 2,764 + worker 400 + employer
-  // 400 = 3,564 Work; voluntary to cap = 5,300 + 2,650 - 800 = 7,150. Stub x 2/12; Work grows 2% a
+  // 400 = 3,564 Work; voluntary to cap = 5,300 + 2,650 - 800 = 7,150. Work stub x 2/12; the voluntary
+  // stub is the rest of the room after the YTD 650: 6,500 (AC-97). Work grows 2% a
   // year through 2046 (sum 3,564 x 1.02 x (1.02^20 - 1)/0.02 = 88,327.6); the voluntary room is
   // 7,950 - 800 x 1.02^k (sum 159,000 - 19,826.7 = 139,173.3). Work goes to the Balanced fund,
   // Voluntary to the Equity fund. Opening + bought units: Balanced 12,506, Equity 5,450.
@@ -199,7 +200,7 @@ describe("synthetic fixture", () => {
     const result = project(sample, "g-retirement");
     const basisOf = (id: string) => result.perProduct.find((p) => p.productId === id)?.basis ?? 0;
     expect(basisOf("p-pension-balanced")).toBeCloseTo(12_506 + 3_564 / 6 + 88_327.6, 0);
-    expect(basisOf("p-pension-equity")).toBeCloseTo(5_450 + 7_150 / 6 + 139_173.3, 0);
+    expect(basisOf("p-pension-equity")).toBeCloseTo(5_450 + 6_500 + 139_173.3, 0);
     const basis = basisOf("p-pension-balanced") + basisOf("p-pension-equity");
     expect(result.tax).toBeCloseTo(0.117 * basis, 6);
   });

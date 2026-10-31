@@ -71,8 +71,11 @@ export function projectCashFlow(input: CashFlowInput): CashFlowYear[] {
   for (const goal of goals) {
     for (const step of timeGrid(asOf, goal.targetYear).steps) {
       if (goal.id === pension?.goalId) {
-        const voluntary = pension.schedule.find((row) => row.year === step.year)?.voluntary ?? 0;
-        plan(step.year, voluntary * step.fraction);
+        // The voluntary still to be paid: the Y0 stub is already in the row, so it is not scaled by f.
+        plan(
+          step.year,
+          pension.schedule.find((row) => row.year === step.year)?.voluntaryAhead ?? 0,
+        );
       } else {
         plan(step.year, stepContribution(step, y0, goal.monthly, goal.contributionGrowth));
       }

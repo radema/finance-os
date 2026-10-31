@@ -106,27 +106,59 @@ describe("pensionSchedule (AC-45)", () => {
   });
 
   it("keeps the Y0 contribution fields full-year and puts YTD plus stub in the tax year", () => {
-    // Stub = 6,750 x 6/12 = 3,375. YTD 2,000 gives a tax-year voluntary of 5,375; refund
-    // 5,375 x 35% in 2027. The row itself stays full-year, so "row x f" is the stub.
+    // To cap: the stub is the rest of the room, 6,750 - 2,000 = 4,750 (AC-97), so the tax-year
+    // voluntary fills the room: 6,750. The row itself stays full-year ("row x f" for the rest).
     const [y0, y1] = pensionSchedule(plan, settings, "2026-06-30", eur(2_000), 2);
     expect(y0?.voluntary).toBeCloseTo(eur(6_750), 6);
+    expect(y0?.voluntaryAhead).toBeCloseTo(eur(4_750), 6);
     expect(y0?.tfr).toBeCloseTo(eur(2_764), 6);
-    expect(y0?.voluntaryTaxYear).toBeCloseTo(eur(5_375), 6);
-    expect(y0?.deductible).toBeCloseTo(eur(1_200 + 5_375), 6);
-    expect(y0?.refund).toBeCloseTo(eur(5_375 * 0.35), 6);
+    expect(y0?.voluntaryTaxYear).toBeCloseTo(eur(6_750), 6);
+    expect(y0?.deductible).toBeCloseTo(eur(7_950), 6);
+    expect(y0?.refund).toBeCloseTo(eur(6_750 * 0.35), 6);
     expect(y0?.refundYear).toBe(2027);
-    // The next year does not use the YTD.
+    // The next year does not use the YTD: the whole year still goes in.
     expect(y1?.voluntary).toBeCloseTo(eur(6_630), 6);
+    expect(y1?.voluntaryAhead).toBeCloseTo(eur(6_630), 6);
     expect(y1?.voluntaryTaxYear).toBeCloseTo(eur(6_630), 6);
   });
 
-  it("caps the Y0 refund and deduction when YTD plus the stub passes the room", () => {
-    // 5,000 + 3,375 = 8,375 > room 6,750: refund on 6,750, deduction 7,950.
-    const [y0] = pensionSchedule(plan, settings, "2026-06-30", eur(5_000), 1);
-    expect(y0?.voluntary).toBeCloseTo(eur(6_750), 6);
-    expect(y0?.voluntaryTaxYear).toBeCloseTo(eur(8_375), 6);
+  it("keeps a given voluntary at amount x f in Y0, and caps the refund and deduction (AC-97)", () => {
+    // Given 9,000, YTD 5,000, f = 6/12: stub 4,500, tax year 9,500 against the room 6,750.
+    const given = pensionPlanSchema.parse({ ...plan, voluntary: eur(9_000) });
+    const [y0] = pensionSchedule(given, settings, "2026-06-30", eur(5_000), 1);
+    expect(y0?.voluntary).toBeCloseTo(eur(9_000), 6);
+    expect(y0?.voluntaryAhead).toBeCloseTo(eur(4_500), 6);
+    expect(y0?.voluntaryTaxYear).toBeCloseTo(eur(9_500), 6);
     expect(y0?.deductible).toBeCloseTo(eur(7_950), 6);
+    expect(y0?.nonDeducted).toBeCloseTo(eur(1_200 + 9_500 - 7_950), 6);
     expect(y0?.refund).toBeCloseTo(eur(6_750 * 0.35), 6);
+  });
+
+  // AC-97. Worker + employer 800, limit 7,950, room 7,150, asOf 2026-10-31, voluntary to cap.
+  describe("Y0 to cap fills only the rest of the room (AC-97)", () => {
+    const toCap = pensionPlanSchema.parse({
+      goalId: "g",
+      firstYear: 2020,
+      ral: eur(40_000),
+      workerPct: 0.01,
+      employerPct: 0.01,
+      extra: eur(2_650),
+    });
+
+    it("gives stub 0 and non-deducted 500 when the YTD 7,650 already passes the room", () => {
+      const [y0] = pensionSchedule(toCap, settings, "2026-10-31", eur(7_650), 1);
+      expect(y0?.voluntaryAhead).toBe(0);
+      expect(y0?.voluntaryTaxYear).toBeCloseTo(eur(7_650), 6);
+      expect(y0?.nonDeducted).toBeCloseTo(eur(500), 6);
+      expect(y0?.deductible).toBeCloseTo(eur(7_950), 6);
+    });
+
+    it("gives stub 150 and non-deducted 0 when the YTD is 7,000", () => {
+      const [y0] = pensionSchedule(toCap, settings, "2026-10-31", eur(7_000), 1);
+      expect(y0?.voluntaryAhead).toBeCloseTo(eur(150), 6);
+      expect(y0?.voluntaryTaxYear).toBeCloseTo(eur(7_150), 6);
+      expect(y0?.nonDeducted).toBeCloseTo(0, 6);
+    });
   });
 
   it("takes the non-deducted part where worker + employer + voluntary pass cap + extra (AC-95)", () => {
@@ -209,7 +241,8 @@ describe("pensionSchedule (AC-45)", () => {
 
 describe("pensionFlowsByProduct (AC-46)", () => {
   // Work (TFR + worker + employer): A 60%, B 40%. Voluntary: A 20%, B 80%.
-  // Work per year: 3,964 / 4,360.4 / 4,796.44. Voluntary to cap: 6,750 / 6,630 / 6,498.
+  // Work per year: 3,964 / 4,360.4 / 4,796.44. Voluntary to cap: 6,750 / 6,630 / 6,498; in Y0 the
+  // stub is the rest of the room after the YTD 1,000: 5,750 (AC-97).
   const flowPlan = pensionPlanSchema.parse({
     ...plan,
     flows: [
@@ -219,7 +252,7 @@ describe("pensionFlowsByProduct (AC-46)", () => {
       { productId: "b", flow: "Voluntary", pct: 0.8 },
     ],
   });
-  // The YTD (1,000) does not touch the split: Y0 splits the full-year amounts.
+  // Y0 splits the full-year work and the voluntary stub.
   const schedule = pensionSchedule(flowPlan, settings, "2026-06-30", eur(1_000), 3);
   const byYear = pensionFlowsByProduct(schedule, flowPlan.flows);
 
@@ -229,7 +262,7 @@ describe("pensionFlowsByProduct (AC-46)", () => {
   it("splits each year's flows by that year's amounts", () => {
     // A = 0.6 x work + 0.2 x voluntary; B = 0.4 x work + 0.8 x voluntary.
     const hand = [
-      { year: 2026, a: [0.6 * 3_964, 0.2 * 6_750], b: [0.4 * 3_964, 0.8 * 6_750] },
+      { year: 2026, a: [0.6 * 3_964, 0.2 * 5_750], b: [0.4 * 3_964, 0.8 * 5_750] },
       { year: 2027, a: [0.6 * 4_360.4, 0.2 * 6_630], b: [0.4 * 4_360.4, 0.8 * 6_630] },
       { year: 2028, a: [0.6 * 4_796.44, 0.2 * 6_498], b: [0.4 * 4_796.44, 0.8 * 6_498] },
     ];
@@ -245,17 +278,17 @@ describe("pensionFlowsByProduct (AC-46)", () => {
     expect(amount(2028, "b")?.total).toBeCloseTo(eur(7_116.976), 6);
   });
 
-  it("does not freeze the year-1 mix: the share of product A moves as voluntary shrinks", () => {
+  it("does not freeze the year-1 mix: the share of product A moves as the voluntary amount changes", () => {
     const share = (year: number) => {
       const a = amount(year, "a")?.total ?? 0;
       const b = amount(year, "b")?.total ?? 0;
       return a / (a + b);
     };
-    // Year 1 weights would give 3,728.4 / 10,714 = 34.80% in every year.
-    expect(share(2026)).toBeCloseTo(3_728.4 / 10_714, 9);
+    // Year 1 weights would give 3,528.4 / 9,714 = 36.32% in every year.
+    expect(share(2026)).toBeCloseTo(3_528.4 / 9_714, 9);
     expect(share(2027)).toBeCloseTo(3_942.24 / 10_990.4, 9);
     expect(share(2028)).toBeCloseTo(4_177.464 / 11_294.44, 9);
-    expect(share(2027)).toBeGreaterThan(share(2026) + 0.005);
+    expect(share(2028)).toBeGreaterThan(share(2026) + 0.005);
   });
 
   it("sums a product's repeated entries for one flow and drops nothing else", () => {

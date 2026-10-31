@@ -125,6 +125,27 @@ describe("projectCashFlow (AC-48), asOf 2026-10-31", () => {
   });
 });
 
+describe("projectCashFlow with voluntary to cap (AC-97)", () => {
+  it("plans the Y0 stub as the rest of the room, not scaled by f", () => {
+    // Worker + employer 600, limit 7,950, room 7,350, voluntary YTD 300: stub 7,050.
+    const toCap = pensionSchedule(
+      pensionPlanSchema.parse({ ...plan, voluntary: null }),
+      { pensionDeductionCapCents: eur(5_300) },
+      asOf,
+      eur(300),
+      10,
+    );
+    const rows = projectCashFlow({
+      asOf,
+      cashFlow,
+      goals: [goals[1] as (typeof goals)[number]],
+      pension: { goalId: "g-pension", schedule: toCap },
+    });
+    expect(rows[0]?.planned).toBeCloseTo(eur(7_050), 6);
+    expect(rows[1]?.planned).toBeCloseTo(eur(7_350), 6);
+  });
+});
+
 describe("projectCashFlow edge cases", () => {
   it("gives no pension planned amount and no refund when the plan has no schedule", () => {
     const rows = projectCashFlow({
