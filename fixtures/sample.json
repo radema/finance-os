@@ -3,7 +3,7 @@
   "settings": {
     "trackingStart": "2026-01",
     "seed": 42,
-    "mcPaths": 300,
+    "mcPaths": 1000,
     "zainetto": {
       "amountCents": 40000,
       "expiry": 2029,
