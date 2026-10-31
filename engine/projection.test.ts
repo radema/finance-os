@@ -318,10 +318,12 @@ describe("pension goal (AC-47)", () => {
     targetYear: number,
     asOf: string,
     voluntaryYtd = 0,
+    opening = 0,
   ) =>
     projectGoal(
       input({
         asOf,
+        positions: [{ productId: "p", value: opening, basis: opening }],
         goal: { id: "g", targetYear, target: 0, contributionGrowth: 0 },
         products: new Map([["p", { regime: "pension", mu: 0, ter: 0 }]]),
         firstYear: 2020,
@@ -365,6 +367,7 @@ describe("pension goal (AC-47)", () => {
   });
 
   // AC-97. Worker + employer 600 here, so the room is 7,350; to cap, asOf 31 October (f = 2/12).
+  // The voluntary YTD sits in the opening position (value and basis), as bought units do.
   it.each([
     // YTD 7,950: the room is full, stub voluntary 0, non-deducted 600 + 7,950 - 7,950 = 600.
     { ytd: 795_000, voluntaryStub: 0, nonDeducted: 600 },
@@ -373,12 +376,65 @@ describe("pension goal (AC-47)", () => {
   ])(
     "adds the to-cap stub as the rest of the room and takes the non-deducted part out of the basis, YTD $ytd (AC-97)",
     ({ ytd, voluntaryStub, nonDeducted }) => {
-      const stub = overLimit(null, 2026, "2026-10-31", ytd);
-      // Work (2,073 + 600) x 2/12 = 445.50, plus the stub voluntary in full.
-      expect(stub.gross).toBeCloseTo(445.5 + voluntaryStub, 6);
-      expect(stub.perProduct[0]?.basis).toBeCloseTo(445.5 + voluntaryStub - nonDeducted, 6);
+      const opening = ytd / 100;
+      const stub = overLimit(null, 2026, "2026-10-31", ytd, opening);
+      // Opening YTD + work (2,073 + 600) x 2/12 = 445.50 + the stub voluntary in full.
+      expect(stub.gross).toBeCloseTo(opening + 445.5 + voluntaryStub, 6);
+      expect(stub.perProduct[0]?.basis).toBeCloseTo(
+        opening + 445.5 + voluntaryStub - nonDeducted,
+        6,
+      );
     },
   );
+
+  it("floors the basis at 0 when the non-deducted part is above what the product holds (AC-97)", () => {
+    // No opening position: 445.50 added, 600 not deductible.
+    expect(overLimit(null, 2026, "2026-10-31", 795_000).perProduct[0]?.basis).toBe(0);
+  });
+
+  it("takes the non-deducted part off the Voluntary products, the Work ones when there is none (AC-97)", () => {
+    // Two funds: p takes all Work, q all Voluntary. YTD 7,950, to cap: 600 not deductible, all
+    // out of q's basis. Opening: p 0, q 7,950. q basis = 7,950 + 0 - 600; p basis = 445.5.
+    const split = (flows: PensionFlow[]) =>
+      projectGoal(
+        input({
+          asOf: "2026-10-31",
+          goal: { id: "g", targetYear: 2026, target: 0, contributionGrowth: 0 },
+          products: new Map([
+            ["p", { regime: "pension", mu: 0, ter: 0 }],
+            ["q", { regime: "pension", mu: 0, ter: 0 }],
+          ]),
+          positions: [{ productId: "q", value: 7_950, basis: 7_950 }],
+          firstYear: 2020,
+          pension: {
+            plan: pensionPlanSchema.parse({
+              goalId: "g",
+              firstYear: 2020,
+              ral: 3_000_000,
+              tfrPct: 0.0691,
+              workerPct: 0.01,
+              employerPct: 0.01,
+              voluntary: null,
+              flows,
+            }),
+            deductionCapCents: 530_000,
+            voluntaryYtd: 795_000,
+          },
+        }),
+      );
+    const basisOf = (result: ReturnType<typeof split>, id: string) =>
+      result.perProduct.find((p) => p.productId === id)?.basis;
+    const both = split([
+      { productId: "p", flow: "Work", pct: 1 },
+      { productId: "q", flow: "Voluntary", pct: 1 },
+    ]);
+    expect(basisOf(both, "p")).toBeCloseTo(445.5, 6);
+    expect(basisOf(both, "q")).toBeCloseTo(7_950 - 600, 6);
+    // No Voluntary flow in the plan: the Work flow's pct take it.
+    const workOnly = split([{ productId: "p", flow: "Work", pct: 1 }]);
+    expect(basisOf(workOnly, "p")).toBe(0);
+    expect(basisOf(workOnly, "q")).toBeCloseTo(7_950, 6);
+  });
 
   it("splits each year's Work and Voluntary flows by product", () => {
     const result = pensionGoal(2027, "2026-12-31", [

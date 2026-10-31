@@ -194,13 +194,20 @@ describe("Pension plan and Pension view API", () => {
   // already in. A contribution of 7,000 or 6,350 makes the voluntary YTD 7,650 or 7,000.
   it.each([
     // Room full: stub 0, used 8,450, 500 not deductible, still available 0, refund on the room.
-    { cents: 700_000, ytd: 7_650, used: 8_450, available: 0, nonDeducted: 500, refund: 7_150 },
+    { cents: 700_000, ytd: 7_650, used: 8_450, available: 0, stub: 0, nonDeducted: 500 },
     // 150 of room left: the stub fills it, so nothing is over the limit.
-    { cents: 635_000, ytd: 7_000, used: 7_800, available: 150, nonDeducted: 0, refund: 7_150 },
+    { cents: 635_000, ytd: 7_000, used: 7_800, available: 150, stub: 150, nonDeducted: 0 },
   ])(
     "fills only the rest of the room this year, voluntary YTD $ytd (AC-97)",
-    async ({ cents, ytd, used, available, nonDeducted, refund }) => {
+    async ({ cents, ytd, used, available, stub, nonDeducted }) => {
       await call("POST", "/api/sample-data");
+      // The pension exit tax is the exit rate x the basis, so the basis is tax / rate.
+      const exitBasis = async () => {
+        const { thisYear } = await view();
+        return (thisYear?.exitTax ?? Number.NaN) / (thisYear?.exitRate ?? Number.NaN);
+      };
+      const sampleBasis = await exitBasis();
+      expect(sampleBasis).toBeGreaterThan(100_000);
       await call("POST", "/api/transactions", {
         date: "2026-10-20",
         goalId: "g-retirement",
@@ -214,7 +221,13 @@ describe("Pension plan and Pension view API", () => {
       expect(thisYear?.used).toBeCloseTo(used, 6);
       expect(thisYear?.available).toBeCloseTo(available, 6);
       expect(thisYear?.nonDeducted).toBeCloseTo(nonDeducted, 6);
-      expect(thisYear?.refund).toBeCloseTo(Math.min(ytd + available, refund) * 0.35, 6);
+      expect(thisYear?.refund).toBeCloseTo(7_150 * 0.35, 6);
+      // The exit-tax basis: the sample's (YTD 650, stub 6,500) plus the extra YTD, minus the smaller
+      // stub, minus the non-deducted part in full. Both cases land on the sample's basis exactly.
+      expect(await exitBasis()).toBeCloseTo(
+        sampleBasis + (ytd - 650) + (stub - 6_500) - nonDeducted,
+        4,
+      );
     },
   );
 

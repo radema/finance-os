@@ -160,8 +160,9 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
         ? fromCents((flow?.work ?? 0) * phi + (flow?.voluntary ?? 0))
         : contribution * (shares.get(productId) ?? 0);
       position.value += added;
-      // The non-deducted part of the year, Y0 too, is left out of the exit-tax basis in full.
-      position.basis += added - fromCents(flow?.nonDeducted ?? 0);
+      // The non-deducted part of the year, Y0 too, is left out of the exit-tax basis in full. It is
+      // voluntary money; in Y0 it can be money already in the opening basis, so the basis floors at 0.
+      position.basis = Math.max(0, position.basis + added - fromCents(flow?.nonDeducted ?? 0));
       if (regime === "cash") position.basis = position.value;
     }
   }

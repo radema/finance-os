@@ -110,7 +110,7 @@ export type ProductFlow = {
   work: number;
   voluntary: number;
   total: number;
-  /** This product's share of the year's non-deducted part, by its share of the year's contributions. */
+  /** This product's share of the year's non-deducted part, by its pct of the Voluntary flow (the Work flow when the plan has none). */
   nonDeducted: number;
 };
 
@@ -119,7 +119,8 @@ export type PensionYearFlows = { year: number; products: ProductFlow[] };
 /**
  * Split each year's flows by product. The Work flow (TFR + worker + employer) and the Voluntary
  * flow (`voluntaryAhead`) are split separately by each product's pct of that flow, using that
- * year's amounts. The year's non-deducted part follows the products' shares of the year's contributions.
+ * year's amounts. The year's non-deducted part is voluntary money, so it follows the products' pct of the
+ * Voluntary flow, or of the Work flow when the plan has no Voluntary flow.
  */
 export function pensionFlowsByProduct(
   schedule: readonly PensionYear[],
@@ -137,14 +138,16 @@ export function pensionFlowsByProduct(
       const voluntary = row.voluntaryAhead * pct(productId, "Voluntary");
       return { productId, work, voluntary, total: work + voluntary };
     });
-    const total = amounts.reduce((sum, product) => sum + product.total, 0);
-    // Never more than what went into the products, so a basis cannot turn negative.
-    const nonDeducted = Math.min(row.nonDeducted, total);
+    const sharesOf = (kind: PensionFlow["flow"]) =>
+      productIds.map((productId) => pct(productId, kind));
+    const voluntaryShares = sharesOf("Voluntary");
+    const shares = voluntaryShares.some((share) => share > 0) ? voluntaryShares : sharesOf("Work");
+    const sharesTotal = shares.reduce((sum, share) => sum + share, 0);
     return {
       year: row.year,
-      products: amounts.map((product) => ({
+      products: amounts.map((product, index) => ({
         ...product,
-        nonDeducted: total > 0 ? (nonDeducted * product.total) / total : 0,
+        nonDeducted: sharesTotal > 0 ? (row.nonDeducted * (shares[index] ?? 0)) / sharesTotal : 0,
       })),
     };
   });
