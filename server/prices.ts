@@ -126,6 +126,7 @@ export async function importPrices(
         rowsSkipped: rows.length - kept.length,
         undoneAt: null,
         priorPrices: null,
+        createdIds: null,
       })
       .execute();
     const priors: PricePointTable[] = [];

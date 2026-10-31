@@ -13,6 +13,7 @@ import type { DB } from "./db.ts";
 import { parseFinecoMovimenti } from "./finecoMovimenti.ts";
 import type { ImportFile } from "./importFile.ts";
 import { readImportFile } from "./importFile.ts";
+import { registerRecordImportRoutes } from "./recordImport.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 import { commitTransactionImport, previewImport } from "./transactionImport.ts";
@@ -120,6 +121,7 @@ const toDecisions = (
 
 /** Import: read a file, preview and commit transactions, saved mappings, the list of batches. */
 export function registerImportRoutes(router: Router, db: Kysely<DB>): void {
+  registerRecordImportRoutes(router, db);
   router.route("POST", "/api/import/read", readBody, async ({ delimiter: asked, ...file }) => {
     const read = readImportFile(file, asked);
     const { headers } = read.table;

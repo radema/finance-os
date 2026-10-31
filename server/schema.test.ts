@@ -117,7 +117,11 @@ describe("database schema on a fresh data folder", () => {
         db.prepare("SELECT name, timestamp FROM kysely_migration ORDER BY name").all(),
       );
     const first = migrations();
-    expect(first.map((m) => m.name)).toEqual(["001-baseline", "002-domain"]);
+    expect(first.map((m) => m.name)).toEqual([
+      "001-baseline",
+      "002-domain",
+      "003-batch-created-ids",
+    ]);
 
     await startAndStop();
     expect(migrations()).toEqual(first);
