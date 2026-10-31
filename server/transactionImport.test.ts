@@ -3,13 +3,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { GoalDetail } from "../engine/goalViews.ts";
+import { holdingsAt } from "../engine/holdings.ts";
 import type { ImportRow, RowDecision } from "../engine/transactionImport.ts";
 import type { DB } from "./db.ts";
 import { openDatabase } from "./db.ts";
 import { saveDocument } from "./documents.ts";
 import { buildFinecoXlsx, buildLargeFinecoXlsx, SYNTHETIC_ISIN } from "./finecoFixture.ts";
 import { parseFinecoMovimenti } from "./finecoMovimenti.ts";
+import { registerGoalViewRoutes } from "./goalViews.ts";
+import { createRouter } from "./router.ts";
 import { commitTransactionImport, previewImport } from "./transactionImport.ts";
+import { loadLedger } from "./transactions.ts";
 import { readXlsx } from "./xlsx.ts";
 
 const SOURCE = { sourceName: "Fineco", fileName: "movimenti.xlsx" };
@@ -106,19 +111,22 @@ describe("transaction import", () => {
   it("imports the synthetic file once and the second import adds 0 rows (AC-31)", async () => {
     const rows = finecoRows(buildFinecoXlsx());
     const first = await commitTransactionImport(db, rows, splitRow8, SOURCE);
-    // 5 buys + 1 sell; the coupon row is not ready yet
+    // 5 buys + 1 sell + 1 coupon
     expect(first?.rowsRead).toBe(7);
-    expect(first?.rowsImported).toBe(6);
-    expect(first?.rowsSkipped).toBe(1);
+    expect(first?.rowsImported).toBe(7);
+    expect(first?.rowsSkipped).toBe(0);
     const stored = await db.selectFrom("transaction").selectAll().execute();
-    expect(stored).toHaveLength(7); // the split trade makes two parts
+    expect(stored).toHaveLength(8); // the split trade makes two parts
     expect(stored.every((t) => t.importBatchId === first?.id)).toBe(true);
+    // the BTP bought earlier in the same file is held in g1: the coupon goes there whole
+    const coupons = stored.filter((t) => t.type === "coupon");
+    expect(coupons.map((t) => [t.goalId, t.amountCents])).toEqual([["g1", 4050]]);
 
     const second = await commitTransactionImport(db, rows, splitRow8, SOURCE);
     expect(second).toBeNull();
     const batches = await db.selectFrom("importBatch").selectAll().execute();
     expect(batches).toHaveLength(1);
-    expect(await db.selectFrom("transaction").selectAll().execute()).toHaveLength(7);
+    expect(await db.selectFrom("transaction").selectAll().execute()).toHaveLength(8);
   });
 
   it("writes buy and sell parts as signed scaled rows with the commission split", async () => {
@@ -168,7 +176,7 @@ describe("transaction import", () => {
       8: { split: { confirmed: false, units: [{ goalId: "g1", units: 10 }] } },
     };
     const batch = await commitTransactionImport(db, rows, unconfirmed, SOURCE);
-    expect(batch?.rowsImported).toBe(5);
+    expect(batch?.rowsImported).toBe(6);
     const onDay = await db
       .selectFrom("transaction")
       .selectAll()
@@ -186,7 +194,7 @@ describe("transaction import", () => {
       { 9: { goalId: "g1" }, 13: { goalId: "g1" } },
       SOURCE,
     );
-    expect(batch?.rowsImported).toBe(5);
+    expect(batch?.rowsImported).toBe(6);
   });
 
   it("identical rows: needs fix, then after confirming they store and re-import adds 0 rows", async () => {
@@ -220,6 +228,111 @@ describe("transaction import", () => {
       "already in the opening position",
       "already in the opening position",
     ]);
+  });
+
+  describe("coupons (AC-33)", () => {
+    // The BTP is bought in one file and held in two buckets by a hand-made ledger.
+    const buyBtp = (goalId: string, units: number) =>
+      db
+        .insertInto("transaction")
+        .values({
+          id: `btp-${goalId}`,
+          date: "2024-04-15",
+          goalId,
+          productId: "p-btp",
+          type: "buy",
+          qtyScaled: units * 1_000_000,
+          priceScaled: 98_500_000,
+          commissionCents: null,
+          amountCents: units * 985,
+          note: "",
+          importBatchId: null,
+        })
+        .execute();
+    const couponOnly = () => finecoRows(buildFinecoXlsx()).filter((r) => r.type === "coupon");
+    const bondState = async () => {
+      const ledger = await loadLedger(db);
+      return holdingsAt(ledger, "9999-12-31");
+    };
+
+    it("writes one coupon per bucket held, 60/40, qty 0, units and PMC unchanged", async () => {
+      await buyBtp("g1", 1800);
+      await buyBtp("g2", 1200);
+      const before = await bondState();
+      const batch = await commitTransactionImport(db, couponOnly(), {}, SOURCE);
+      expect(batch?.rowsImported).toBe(1);
+      const stored = await db
+        .selectFrom("transaction")
+        .selectAll()
+        .where("type", "=", "coupon")
+        .orderBy("goalId")
+        .execute();
+      expect(
+        stored.map((t) => [
+          t.goalId,
+          t.date,
+          t.qtyScaled,
+          t.priceScaled,
+          t.commissionCents,
+          t.amountCents,
+          t.importBatchId,
+        ]),
+      ).toEqual([
+        ["g1", "2024-07-01", 0, 0, null, 2430, batch?.id],
+        ["g2", "2024-07-01", 0, 0, null, 1620, batch?.id],
+      ]);
+      expect(stored.reduce((sum, t) => sum + t.amountCents, 0)).toBe(4050);
+      const after = await bondState();
+      expect(after.accountUnits).toEqual(before.accountUnits);
+      expect(after.units).toEqual(before.units);
+      expect(after.pmc).toEqual(before.pmc);
+      expect(await db.selectFrom("transaction").select("id").execute()).toHaveLength(4);
+    });
+
+    it("does not raise a goal's money put in (not a contribution)", async () => {
+      await buyBtp("g1", 1800);
+      await buyBtp("g2", 1200);
+      const router = createRouter();
+      registerGoalViewRoutes(router, db, () => "2024-12-31");
+      const moneyIn = async (goalId: string) => {
+        const response = await router.handle(
+          new Request(`http://gbi.test/api/goal-detail?id=${goalId}`),
+        );
+        const detail = (await response.json()) as GoalDetail;
+        return detail.series.at(-1)?.moneyIn ?? Number.NaN;
+      };
+      const before = [await moneyIn("g1"), await moneyIn("g2")];
+      expect(before[0]).toBeGreaterThan(0);
+      await commitTransactionImport(db, couponOnly(), {}, SOURCE);
+      expect(await moneyIn("g1")).toBeLessThanOrEqual(before[0] ?? Number.NaN);
+      expect(await moneyIn("g2")).toBeLessThanOrEqual(before[1] ?? Number.NaN);
+    });
+
+    it("needs a goal when no bucket holds the bond, then writes one coupon for the picked bucket", async () => {
+      const [previewRow] = await previewImport(db, couponOnly(), {});
+      expect(previewRow?.status).toBe("needs a goal");
+      expect(await commitTransactionImport(db, couponOnly(), {}, SOURCE)).toBeNull();
+
+      const rowNumber = couponOnly()[0]?.rowNumber ?? 0;
+      await commitTransactionImport(db, couponOnly(), { [rowNumber]: { goalId: "g2" } }, SOURCE);
+      const stored = await db.selectFrom("transaction").selectAll().execute();
+      expect(stored.map((t) => [t.goalId, t.type, t.amountCents])).toEqual([
+        ["g2", "coupon", 4050],
+      ]);
+    });
+
+    it("a re-import adds 0 coupon rows, whichever bucket held the bond", async () => {
+      await buyBtp("g1", 1800);
+      await buyBtp("g2", 1200);
+      await commitTransactionImport(db, couponOnly(), {}, SOURCE);
+      expect(await commitTransactionImport(db, couponOnly(), {}, SOURCE)).toBeNull();
+      const coupons = await db
+        .selectFrom("transaction")
+        .select("id")
+        .where("type", "=", "coupon")
+        .execute();
+      expect(coupons).toHaveLength(2);
+    });
   });
 
   it("parse + preview of a 200-row Fineco XLSX takes under 2 s (AC-43)", async () => {

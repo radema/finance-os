@@ -19,6 +19,7 @@ const state = (over: Partial<ImportState> = {}): ImportState => ({
   weights: [{ goalId: "g1", productId: WORLD, weight: 1 }],
   ledger: [],
   storedTrades: [],
+  storedCoupons: [],
   openingAsOf: null,
   ...over,
 });
@@ -139,12 +140,6 @@ describe("needs fix (AC-29)", () => {
     expect(only([row({ qty: "0" })]).status).toBe("needs fix");
   });
 
-  it("a coupon row needs fix, with a plain reason that #30 handles coupons", () => {
-    const result = only([row({ type: "coupon", price: null, commission: null })]);
-    expect(result.status).toBe("needs fix");
-    expect(result.reasons.join(" ")).toMatch(/coupon.*#30/);
-  });
-
   it("a duplicate inside the file needs fix until the user confirms it as a real order", () => {
     const rows = [row({ rowNumber: 8 }), row({ rowNumber: 9 })];
     expect(preview(rows).map((r) => r.status)).toEqual(["needs fix", "needs fix"]);
@@ -249,5 +244,133 @@ describe("splits (AC-30, AC-31)", () => {
 
   it("a bucket that is not a goal needs a goal", () => {
     expect(only([row()], twoBuckets, { 8: { goalId: "nope" } }).status).toBe("needs a goal");
+  });
+});
+
+describe("coupon rows (AC-33)", () => {
+  const coupon = (over: Partial<ImportRow> = {}) =>
+    row({
+      rowNumber: 20,
+      type: "coupon",
+      isin: "IT00TEST0003",
+      date: "2024-07-01",
+      qty: "100",
+      price: null,
+      commission: null,
+      controvalore: "40.5",
+      description: "Stacco Cedole",
+      ...over,
+    });
+  const held = (goalId: string, qty: number, date = "2024-04-15") => ({
+    date,
+    goalId,
+    productId: BTP,
+    type: "buy" as const,
+    qty,
+    price: 0.985,
+  });
+  const couponState = (over: Partial<ImportState> = {}) =>
+    state({ ledger: [held("g1", 60), held("g2", 40)], ...over });
+
+  it("is ready and split 60/40 by units held on the coupon date, summing to the net cash", () => {
+    const result = only([coupon()], couponState());
+    expect(result.status).toBe("ready");
+    expect(result.couponParts).toEqual([
+      { goalId: "g1", amountCents: 2430 },
+      { goalId: "g2", amountCents: 1620 },
+    ]);
+    expect(result.split).toBeNull();
+    expect(result.productId).toBe(BTP);
+  });
+
+  it("counts units bought on the coupon date, not after it", () => {
+    const sameDay = couponState({ ledger: [held("g1", 60), held("g2", 40, "2024-07-01")] });
+    expect(only([coupon()], sameDay).couponParts).toHaveLength(2);
+    const after = couponState({ ledger: [held("g1", 60), held("g2", 40, "2024-07-02")] });
+    expect(only([coupon()], after).couponParts).toEqual([{ goalId: "g1", amountCents: 4050 }]);
+  });
+
+  it("counts the units of an earlier ready row of the same file", () => {
+    const buy = row({
+      rowNumber: 9,
+      isin: "IT00TEST0003",
+      date: "2024-04-15",
+      qty: "3000",
+      price: "98.5",
+      controvalore: "2955",
+    });
+    const weights = [{ goalId: "g1", productId: BTP, weight: 1 }];
+    const [, result] = preview([buy, coupon()], state({ weights }));
+    expect(result?.status).toBe("ready");
+    expect(result?.couponParts).toEqual([{ goalId: "g1", amountCents: 4050 }]);
+  });
+
+  it("does not count a file row that is not ready", () => {
+    const buy = row({ rowNumber: 9, isin: "IT00TEST0003", date: "2024-04-15", currency: "USD" });
+    const [first, result] = preview([buy, coupon()], state());
+    expect(first?.status).toBe("needs fix");
+    expect(result?.status).toBe("needs a goal");
+  });
+
+  it("needs a goal when no bucket holds the bond, and the user picks one bucket", () => {
+    const empty = state({ weights: [{ goalId: "g1", productId: BTP, weight: 1 }] });
+    const result = only([coupon()], empty);
+    expect(result.status).toBe("needs a goal");
+    expect(result.candidates).toEqual(["g1"]);
+    expect(result.couponParts).toEqual([]);
+
+    const picked = only([coupon()], empty, { 20: { goalId: "g2" } });
+    expect(picked.status).toBe("ready");
+    expect(picked.couponParts).toEqual([{ goalId: "g2", amountCents: 4050 }]);
+    expect(only([coupon()], empty, { 20: { goalId: "nope" } }).status).toBe("needs a goal");
+  });
+
+  it("a bond sold out before the coupon date needs a goal", () => {
+    const sold = { ...held("g1", -60, "2024-06-01"), type: "sell" as const };
+    expect(only([coupon()], state({ ledger: [held("g1", 60), sold] })).status).toBe("needs a goal");
+  });
+
+  it("needs fix without a Controvalore above 0, or with an unknown product", () => {
+    expect(only([coupon({ controvalore: null })], couponState()).status).toBe("needs fix");
+    expect(only([coupon({ controvalore: "0" })], couponState()).status).toBe("needs fix");
+    expect(only([coupon({ isin: "XX0000000000" })], couponState()).status).toBe(
+      "product not found",
+    );
+  });
+
+  it("is skipped on or before the opening date", () => {
+    const s = couponState({ openingAsOf: "2024-07-01" });
+    expect(only([coupon()], s).status).toBe("already in the opening position");
+  });
+
+  it("is already in your records when the stored coupons of that date and product total the same", () => {
+    const stored = [
+      { date: "2024-07-01", productId: BTP, amountCents: 2430 },
+      { date: "2024-07-01", productId: BTP, amountCents: 1620 },
+    ];
+    expect(only([coupon()], couponState({ storedCoupons: stored })).status).toBe(
+      "already in your records",
+    );
+    const other = [{ date: "2024-07-01", productId: BTP, amountCents: 2430 }];
+    expect(only([coupon()], couponState({ storedCoupons: other })).status).toBe("ready");
+    const elsewhere = [{ date: "2024-07-02", productId: BTP, amountCents: 4050 }];
+    expect(only([coupon()], couponState({ storedCoupons: elsewhere })).status).toBe("ready");
+  });
+
+  it("two coupon rows of one date and product need fix until each is confirmed as real", () => {
+    const rows = [coupon({ rowNumber: 20 }), coupon({ rowNumber: 21 })];
+    const unconfirmed = preview(rows, couponState());
+    expect(unconfirmed.map((r) => r.status)).toEqual(["needs fix", "needs fix"]);
+    expect(unconfirmed[0]?.reasons.join(" ")).toContain("row 21");
+    const confirmed = preview(rows, couponState(), {
+      20: { confirmDuplicate: true },
+      21: { confirmDuplicate: true },
+    });
+    expect(confirmed.map((r) => r.status)).toEqual(["ready", "ready"]);
+  });
+
+  it("coupons of different dates or products in one file are not repeats", () => {
+    const rows = [coupon({ rowNumber: 20 }), coupon({ rowNumber: 21, date: "2024-07-02" })];
+    expect(preview(rows, couponState()).map((r) => r.status)).toEqual(["ready", "ready"]);
   });
 });

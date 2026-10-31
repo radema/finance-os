@@ -5,6 +5,7 @@ import {
   splitByUnits,
   splitByWeights,
   splitCommission,
+  splitCoupon,
 } from "./split.ts";
 
 const sum = (values: readonly number[]) => values.reduce((a, b) => a + b, 0);
@@ -205,5 +206,55 @@ describe("confirmSplit", () => {
     // @ts-expect-error a SplitPlan is not a ConfirmedSplit
     const forged: ReturnType<typeof confirmSplit> = proposal;
     expect(forged.parts).toBeUndefined();
+  });
+});
+
+describe("splitCoupon (AC-33)", () => {
+  it("splits the net cash 60/40 by units held and sums exactly", () => {
+    const parts = splitCoupon(4050, [
+      { goalId: "A", units: 60 },
+      { goalId: "B", units: 40 },
+    ]);
+    expect(parts).toEqual([
+      { goalId: "A", amountCents: 2430 },
+      { goalId: "B", amountCents: 1620 },
+    ]);
+  });
+
+  it("gives the leftover cent by largest remainder, ties to the lower goal id", () => {
+    const parts = splitCoupon(100, [
+      { goalId: "C", units: 1 },
+      { goalId: "A", units: 1 },
+      { goalId: "B", units: 1 },
+    ]);
+    expect(parts).toEqual([
+      { goalId: "C", amountCents: 33 },
+      { goalId: "A", amountCents: 34 },
+      { goalId: "B", amountCents: 33 },
+    ]);
+    expect(sum(parts.map((p) => p.amountCents))).toBe(100);
+  });
+
+  it("gives the whole amount to one bucket and drops a part of 0 cents", () => {
+    expect(splitCoupon(500, [{ goalId: "A", units: 3 }])).toEqual([
+      { goalId: "A", amountCents: 500 },
+    ]);
+    const parts = splitCoupon(1, [
+      { goalId: "A", units: 3 },
+      { goalId: "B", units: 1 },
+    ]);
+    expect(parts).toEqual([{ goalId: "A", amountCents: 1 }]);
+  });
+
+  it("ignores a bucket with no units and refuses an amount that is not whole cents above 0", () => {
+    expect(
+      splitCoupon(100, [
+        { goalId: "A", units: 0 },
+        { goalId: "B", units: 2 },
+      ]),
+    ).toEqual([{ goalId: "B", amountCents: 100 }]);
+    expect(() => splitCoupon(100, [{ goalId: "A", units: 0 }])).toThrow(RangeError);
+    expect(() => splitCoupon(0, [{ goalId: "A", units: 1 }])).toThrow(RangeError);
+    expect(() => splitCoupon(10.5, [{ goalId: "A", units: 1 }])).toThrow(RangeError);
   });
 });
