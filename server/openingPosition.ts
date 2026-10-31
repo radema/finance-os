@@ -10,6 +10,7 @@ import { saveDocument } from "./documents.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 import { findOr404 } from "./rows.ts";
+import { fromRow } from "./transactions.ts";
 
 /** The asOf date of the saved opening position, or null when none was saved. Read by the import. */
 export async function loadOpeningAsOf(db: Kysely<DB>): Promise<string | null> {
@@ -57,18 +58,7 @@ export function registerOpeningPositionRoutes(router: Router, db: Kysely<DB>): v
             importBatchId: null,
           };
           await trx.insertInto("transaction").values(row).execute();
-          saved.push({
-            id: row.id,
-            date: asOf,
-            goalId,
-            productId,
-            type: "opening",
-            amountCents: row.amountCents,
-            qty: units,
-            price: pmc,
-            commissionCents: null,
-            note: "",
-          });
+          saved.push(fromRow(row));
         }
       }
       await saveDocument(trx, "openingDate", { asOf });

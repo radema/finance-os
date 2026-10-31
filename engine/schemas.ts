@@ -104,7 +104,7 @@ export type Transaction = TransactionInput & { id: string; qty: number };
 
 // --- Opening position ------------------------------------------------------------------------
 
-const positiveNumber = z.number().positive().max(1e12);
+const positiveNumber = z.number().positive().max(1e9);
 
 const openingRowSchema = z
   .object({

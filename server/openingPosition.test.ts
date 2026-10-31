@@ -136,6 +136,23 @@ describe("Current portfolio API", () => {
     expect(body[0]).toMatchObject({ qty: 812.345678, price: 21.5, amountCents: 1_746_543 });
   });
 
+  it("returns what is stored when units or PMC have more than 6 decimals", async () => {
+    const { pensionId, retire } = await make();
+    const { body } = await save({
+      asOf: "2026-01-01",
+      positions: [
+        {
+          productId: pensionId,
+          totalUnits: 10.1234564,
+          pmc: 3.1234567,
+          parts: [{ goalId: retire, units: 10.1234564 }],
+        },
+      ],
+    });
+    expect(body[0]).toMatchObject({ qty: 10.123456, price: 3.123457 });
+    expect((await call<Transaction[]>("GET", "/api/transactions")).body).toEqual(body);
+  });
+
   it("refuses parts that do not sum to the total, and saves nothing", async () => {
     const { productId, home, retire } = await make();
     const position = {

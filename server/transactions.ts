@@ -22,7 +22,7 @@ const listQuery = z.object({
 });
 const lastPriceQuery = z.object({ productId: z.string().min(1) });
 
-const fromRow = (row: TransactionTable): Transaction => ({
+export const fromRow = (row: TransactionTable): Transaction => ({
   id: row.id,
   date: row.date,
   goalId: row.goalId,
