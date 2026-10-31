@@ -3,7 +3,10 @@ import type { AddressInfo } from "node:net";
 import { z } from "zod";
 import { registerAllocationRoutes } from "./allocation.ts";
 import { registerAssumptionRoutes } from "./assumptions.ts";
+import { runDailyBackup } from "./backup.ts";
 import { resolveToday } from "./config.ts";
+import { registerDataRoutes } from "./data.ts";
+import { isCloudSyncedPath } from "./dataFolder.ts";
 import { openDatabase } from "./db.ts";
 import { registerGoalRoutes } from "./goals.ts";
 import { registerGoalViewRoutes } from "./goalViews.ts";
@@ -47,6 +50,17 @@ export async function startServer({
   today,
 }: ServerOptions): Promise<RunningServer> {
   const db = await openDatabase(dataDir);
+  // The clock is read on each use, so an app left open overnight still knows the date.
+  const clock = () => today ?? resolveToday(process.env);
+  // A failed backup is logged and does not stop the app.
+  await runDailyBackup(db, dataDir, clock()).catch((error: unknown) =>
+    console.error("Backup failed:", error),
+  );
+  if (isCloudSyncedPath(dataDir)) {
+    console.warn(
+      `Warning: the data folder ${dataDir} is in a cloud-synced folder. Sync can corrupt the database. Move it with GBI_DATA_DIR.`,
+    );
+  }
   const router = createRouter();
   router.route("GET", "/api/health", z.object({}), () => ({ status: "ok" }));
   registerProductRoutes(router, db);
@@ -56,10 +70,9 @@ export async function startServer({
   registerSampleRoutes(router, db);
   registerTransactionRoutes(router, db);
   registerOpeningPositionRoutes(router, db);
-  // The clock is read on each request, so an app left open overnight still knows the date.
-  const clock = () => today ?? resolveToday(process.env);
-  registerGoalViewRoutes(router, db, clock);
   registerPriceRoutes(router, db, clock);
+  registerDataRoutes(router, db, dataDir, clock);
+  registerGoalViewRoutes(router, db, clock);
 
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];

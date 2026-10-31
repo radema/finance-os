@@ -1,3 +1,4 @@
+import { DataFolderBanner } from "./DataFolderBanner.tsx";
 import { GoalDetailScreen } from "./goals/GoalDetailScreen.tsx";
 import { GoalsListScreen } from "./goals/GoalsListScreen.tsx";
 import {
@@ -90,6 +91,7 @@ export function AppShell({ route }: { route: string }) {
     <div className="shell">
       <Sidebar route={route} />
       <main className="main">
+        <DataFolderBanner />
         {route === TRANSACTIONS_ROUTE ? (
           <TransactionsScreen />
         ) : route === CURRENT_PORTFOLIO_ROUTE ? (
