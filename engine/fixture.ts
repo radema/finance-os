@@ -37,13 +37,6 @@ export const sampleTransactionSchema = z.object({
   commission: z.number().min(0).optional(),
 });
 
-/**
- * The part of the pension plan that S1 needs: the goal and the year the membership started.
- * S3's full pension-plan schema must accept this document and extend it.
- */
-export const pensionPlanPartialSchema = pensionPlanSchema.pick({ goalId: true, firstYear: true });
-export type PensionPlanPartial = z.infer<typeof pensionPlanPartialSchema>;
-
 export const sampleDataSchema = z.object({
   /** The pinned "today": `YYYY-MM-DD`. */
   asOf: isoDate,

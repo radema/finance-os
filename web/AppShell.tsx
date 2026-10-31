@@ -11,11 +11,13 @@ import {
   goalIdOf,
   isBuilt,
   NAV,
+  PENSION_ROUTE,
   PRICES_ROUTE,
   TRANSACTIONS_ROUTE,
 } from "./nav.ts";
 import { TransactionsScreen } from "./operations/TransactionsScreen.tsx";
 import { FirstRunChecklist } from "./overview/FirstRunChecklist.tsx";
+import { PensionScreen } from "./pension/PensionScreen.tsx";
 import { PricesScreen } from "./prices/PricesScreen.tsx";
 import { SetupScreen } from "./setup/SetupScreen.tsx";
 
@@ -35,7 +37,7 @@ function Sidebar({ route }: { route: string }) {
                 aria-current={route === section.key ? "page" : undefined}
               >
                 {section.label}
-                <span className="soon">soon</span>
+                {isBuilt(section.key) ? null : <span className="soon">soon</span>}
               </a>
             ) : (
               <>
@@ -105,6 +107,8 @@ export function AppShell({ route }: { route: string }) {
           <GoalsListScreen />
         ) : route === GOALS_DETAIL_ROUTE || goalIdOf(route) !== undefined ? (
           <GoalDetailScreen goalId={goalIdOf(route)} />
+        ) : route === PENSION_ROUTE ? (
+          <PensionScreen />
         ) : isBuilt(route) ? (
           <SetupScreen route={route} />
         ) : (

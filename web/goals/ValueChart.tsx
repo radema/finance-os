@@ -11,7 +11,7 @@ echarts.use([LineChart, GridComponent, SVGRenderer]);
 const AREA_OPACITY = { light: 0.3, dark: 0.4 };
 
 /** The chart colours: custom properties of the page, read when the chart is drawn. */
-function readTokens(slot: number) {
+export function readTokens(slot: number) {
   const style = getComputedStyle(document.documentElement);
   const token = (name: string) => style.getPropertyValue(name).trim();
   return {
