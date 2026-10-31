@@ -13,6 +13,7 @@ import type { DB } from "./db.ts";
 import { parseFinecoMovimenti } from "./finecoMovimenti.ts";
 import type { ImportFile } from "./importFile.ts";
 import { readImportFile } from "./importFile.ts";
+import { undoBatch } from "./importUndo.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 import { commitTransactionImport, previewImport } from "./transactionImport.ts";
@@ -190,6 +191,10 @@ export function registerImportRoutes(router: Router, db: Kysely<DB>): void {
       .execute();
     return batches;
   });
+
+  router.route("POST", "/api/import/batches/undo", z.object({ id: z.string().min(1) }), ({ id }) =>
+    undoBatch(db, id),
+  );
 
   router.route("GET", "/api/import/mappings", kindQuery, ({ kind }) => loadSaved(db, kind));
 
