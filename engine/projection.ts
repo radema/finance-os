@@ -122,7 +122,7 @@ export type GrowthRule = (
 ) => number;
 
 /** The growth factor of the deterministic path: ((1 + mu - c)(1 - TER))^phi. */
-const deterministicGrowth: GrowthRule = (_productId, params, _stepIndex, phi) => {
+export const deterministicGrowth: GrowthRule = (_productId, params, _stepIndex, phi) => {
   const coupon = params.regime === "govt" ? (params.couponRate ?? 0) : 0;
   return ((1 + params.mu - coupon) * (1 - params.ter)) ** phi;
 };
@@ -246,10 +246,16 @@ export function runPath(
   return state.map(({ productId, value, basis }) => ({ productId, value, basis }));
 }
 
-/** Liquidate positions at the goal date with the goal's tax context. */
+/**
+ * Liquidate positions with the goal's tax context.
+ *
+ * @param goalDate ISO date of the liquidation: it sets the pension exit rate and whether the
+ *   zainetto is still valid. Default: 31 December of the goal's target year.
+ */
 export function liquidateGoal(
   input: ProjectionInput,
   positions: readonly ProductProjection[],
+  goalDate: string = `${input.goal.targetYear}-12-31`,
 ): Liquidation {
   const { goal, products, settings } = input;
   return liquidate(
@@ -263,7 +269,7 @@ export function liquidateGoal(
       };
     }),
     {
-      goalDate: `${goal.targetYear}-12-31`,
+      goalDate,
       goalId: goal.id,
       zainetto: settings.zainetto,
       taxStd: settings.taxStd,

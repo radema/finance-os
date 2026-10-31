@@ -60,6 +60,7 @@ export function lognormalParams(mu: number, sigma: number): { m: number; s: numb
   return { m: Math.log(1 + mu) - (s * s) / 2, s };
 }
 
+/** A goal resolved for simulation. */
 type Prepared = {
   input: MonteCarloGoal;
   plan: PathPlan;
@@ -68,7 +69,7 @@ type Prepared = {
   target: number;
 };
 
-function prepareGoal(input: MonteCarloGoal): Prepared {
+export function prepareGoal(input: MonteCarloGoal): Prepared {
   const plan = preparePath(input);
   const lognormal = new Map<string, { m: number; s: number; classIndex: number }>();
   for (const { productId, params } of plan.opening) {
@@ -85,6 +86,60 @@ function prepareGoal(input: MonteCarloGoal): Prepared {
     plan,
     lognormal,
     target: targetAtGoalDate(input.goal.target, input.settings.inflation, plan.grid.tau),
+  };
+}
+
+/** The Cholesky factor of the correlation matrix, shrunk first when it is not positive definite. */
+export function correlationFactor(correlations: readonly (readonly number[])[]): {
+  factor: number[][];
+  shrunk: boolean;
+} {
+  if (
+    correlations.length !== CLASS_COUNT ||
+    correlations.some((row) => row.length !== CLASS_COUNT)
+  ) {
+    throw new Error(`The correlation matrix must be ${CLASS_COUNT} x ${CLASS_COUNT}`);
+  }
+  const { matrix, shrunk } = shrinkToPositiveDefinite(correlations);
+  const factor = cholesky(matrix);
+  if (!factor) throw new Error("The correlation matrix does not factorise after shrinking");
+  return { factor, shrunk };
+}
+
+/**
+ * Draw one path's correlated class shocks into `shocks`: `steps` rows of 6 values. Rows are drawn
+ * in order, so the first rows do not depend on how many are asked for.
+ */
+export function drawShocks(
+  factor: readonly (readonly number[])[],
+  random: () => number,
+  steps: number,
+  shocks: Float64Array,
+): void {
+  const normals = new Float64Array(CLASS_COUNT);
+  for (let step = 0; step < steps; step++) {
+    fillNormals(random, normals);
+    for (let i = 0; i < CLASS_COUNT; i++) {
+      let z = 0;
+      for (let j = 0; j <= i; j++) z += (factor[i]?.[j] as number) * (normals[j] as number);
+      shocks[step * CLASS_COUNT + i] = z;
+    }
+  }
+}
+
+/**
+ * The Monte Carlo growth rule of a goal: exp(φ·m + √φ·s·z) × (1 − TER)^φ, z read from `shocks`
+ * at the step's row and the product's class.
+ */
+export function monteCarloGrowth(goal: Prepared, shocks: Float64Array): GrowthRule {
+  return (productId, params, stepIndex, phi) => {
+    const { m, s, classIndex } = goal.lognormal.get(productId) as {
+      m: number;
+      s: number;
+      classIndex: number;
+    };
+    const z = shocks[stepIndex * CLASS_COUNT + classIndex] as number;
+    return Math.exp(phi * m + Math.sqrt(phi) * s * z) * (1 - params.ter) ** phi;
   };
 }
 
@@ -110,15 +165,7 @@ export function simulatePaths(
   seed: number,
   paths: number,
 ): { nets: number[][][]; targets: number[]; correlationShrunk: boolean } {
-  if (
-    inputs.correlations.length !== CLASS_COUNT ||
-    inputs.correlations.some((row) => row.length !== CLASS_COUNT)
-  ) {
-    throw new Error(`The correlation matrix must be ${CLASS_COUNT} x ${CLASS_COUNT}`);
-  }
-  const { matrix, shrunk } = shrinkToPositiveDefinite(inputs.correlations);
-  const factor = cholesky(matrix);
-  if (!factor) throw new Error("The correlation matrix does not factorise after shrinking");
+  const { factor, shrunk } = correlationFactor(inputs.correlations);
 
   const goals = inputs.goals.map(prepareGoal);
   const stepCount = (goal: Prepared) => Math.max(1, goal.plan.grid.steps.length);
@@ -127,29 +174,13 @@ export function simulatePaths(
     Array.from({ length: stepCount(goal) }, () => new Array<number>(paths).fill(0)),
   );
 
-  const normals = new Float64Array(CLASS_COUNT);
   const shocks = new Float64Array(maxSteps * CLASS_COUNT);
+  const growthRules = goals.map((goal) => monteCarloGrowth(goal, shocks));
   for (let path = 0; path < paths; path++) {
-    const random = pathRandom(seed, path);
-    for (let step = 0; step < maxSteps; step++) {
-      fillNormals(random, normals);
-      for (let i = 0; i < CLASS_COUNT; i++) {
-        let z = 0;
-        for (let j = 0; j <= i; j++) z += (factor[i]?.[j] as number) * (normals[j] as number);
-        shocks[step * CLASS_COUNT + i] = z;
-      }
-    }
+    drawShocks(factor, pathRandom(seed, path), maxSteps, shocks);
 
     for (const [index, goal] of goals.entries()) {
-      const growth: GrowthRule = (productId, params, stepIndex, phi) => {
-        const { m, s, classIndex } = goal.lognormal.get(productId) as {
-          m: number;
-          s: number;
-          classIndex: number;
-        };
-        const z = shocks[stepIndex * CLASS_COUNT + classIndex] as number;
-        return Math.exp(phi * m + Math.sqrt(phi) * s * z) * (1 - params.ter) ** phi;
-      };
+      const growth = growthRules[index] as GrowthRule;
       const last = stepCount(goal) - 1;
       const series = nets[index] as number[][];
       const final = runPath(goal.plan, goal.input.settings, growth, (stepIndex, positions) => {
@@ -164,7 +195,7 @@ export function simulatePaths(
 }
 
 /** Quantile of a sorted sample, linear between ranks. */
-function quantile(sorted: readonly number[], p: number): number {
+export function quantile(sorted: readonly number[], p: number): number {
   const position = (sorted.length - 1) * p;
   const lower = Math.floor(position);
   const low = sorted[lower] as number;
