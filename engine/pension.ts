@@ -2,6 +2,7 @@
 // is never rounded here.
 
 import type { PensionFlow, PensionPlan, Settings } from "./schemas.ts";
+import { PENSION_FLOWS } from "./schemas.ts";
 import { timeGrid } from "./timeGrid.ts";
 
 /** The projection runs 40 years (t = 0 ... 40 in the spec). */
@@ -24,6 +25,16 @@ export type PensionYear = {
   refund: number;
   refundYear: number;
 };
+
+/** The flows a product takes in the plan: those with a share above 0, in `PENSION_FLOWS` order. */
+export function flowsTaken(
+  plan: Pick<PensionPlan, "flows"> | null | undefined,
+  productId: string,
+): PensionFlow["flow"][] {
+  return PENSION_FLOWS.filter((kind) =>
+    plan?.flows.some((f) => f.productId === productId && f.flow === kind && f.pct > 0),
+  );
+}
 
 /** How many schedule rows run from Y0 = year(asOf) through the goal's target year: 0 when it is due before Y0. */
 export function scheduleYears(asOf: string, targetYear: number): number {

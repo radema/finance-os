@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
 import { estimateCommission, isCostly, minEfficientTicket } from "../../engine/commission.ts";
 import type { TransactionType } from "../../engine/holdings.ts";
-import type {
-  Commission,
-  Goal,
-  PensionFlow,
-  PensionPlan,
-  Product,
-  Transaction,
-} from "../../engine/schemas.ts";
+import { flowsTaken } from "../../engine/pension.ts";
+import type { Commission, Goal, PensionPlan, Product, Transaction } from "../../engine/schemas.ts";
+import { PENSION_FLOWS } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { eurosToCents, num } from "../forms.ts";
 import { formatEuro, formatPercent } from "../money.ts";
@@ -95,9 +90,7 @@ function AddForm({
   // A fund that takes both flows needs the user's choice; with one flow the server picks it.
   const takesBothFlows =
     type === "pensionContribution" &&
-    (["Work", "Voluntary"] as const).every((kind) =>
-      pensionPlan?.flows.some((f) => f.productId === productId && f.flow === kind && f.pct > 0),
-    );
+    flowsTaken(pensionPlan, productId).length === PENSION_FLOWS.length;
   const costly = product && hasAmount && isCostly(commission, product, type, amountCents);
 
   const save = async () => {
@@ -160,7 +153,7 @@ function AddForm({
             onChange={setFlow}
             options={[
               { value: "", label: "Choose…" },
-              ...(["Work", "Voluntary"] satisfies PensionFlow["flow"][]).map((kind) => ({
+              ...PENSION_FLOWS.map((kind) => ({
                 value: kind,
                 label: kind,
               })),

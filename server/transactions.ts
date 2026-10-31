@@ -4,6 +4,7 @@ import { sql } from "kysely";
 import { z } from "zod";
 import type { LedgerRow } from "../engine/holdings.ts";
 import { holdingsAt, unitPrice } from "../engine/holdings.ts";
+import { flowsTaken } from "../engine/pension.ts";
 import type { PensionFlow, Transaction, TransactionInput } from "../engine/schemas.ts";
 import { transactionInputSchema } from "../engine/schemas.ts";
 import { fromCents, fromScaled, toScaled } from "../engine/units.ts";
@@ -98,14 +99,10 @@ export function registerTransactionRoutes(
     }
     if (input.flow) return input.flow;
     const plan = await loadPensionPlan(db);
-    const taken = new Set(
-      (plan?.flows ?? [])
-        .filter((flow) => flow.productId === input.productId && flow.pct > 0)
-        .map((flow) => flow.flow),
-    );
-    if (taken.size > 1)
+    const taken = flowsTaken(plan, input.productId);
+    if (taken.length > 1)
       throw new HttpError(400, "flow: choose Work or Voluntary, this fund takes both flows");
-    return [...taken][0] ?? null;
+    return taken[0] ?? null;
   };
 
   // The stored row. qty = amount / unit price, negative for a sell; a coupon has no quantity.

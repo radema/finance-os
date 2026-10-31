@@ -54,7 +54,7 @@ function ThisYear({ year }: { year: PensionThisYear }) {
           note={
             year.exitRate === null || year.exitTaxYear === null
               ? "Not available: the pension goal or a price is missing."
-              : `At 31 December ${year.exitTaxYear}: ${formatPercent(year.exitRate)} of your deducted contributions.`
+              : `At 31 December ${year.exitTaxYear}: ${formatPercent(year.exitRate)} of your contributions minus the non-deducted part.`
           }
         />
       </div>
