@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PRICE_SOURCES } from "../../engine/schemas.ts";
+import { canUseProvider, PRICE_SOURCES } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { formatUnitPrice } from "../money.ts";
 import { Alert, Card, ProductTag, Resource } from "../setup/ui.tsx";
@@ -68,7 +68,9 @@ export function PricesScreen() {
                             value={row.priceSource}
                             onChange={(event) => void setSource(row.productId, event.target.value)}
                           >
-                            {PRICE_SOURCES.map((source) => (
+                            {PRICE_SOURCES.filter(
+                              (source) => source !== "provider" || canUseProvider(row.regime),
+                            ).map((source) => (
                               <option key={source} value={source}>
                                 {SOURCE_LABEL[source]}
                               </option>

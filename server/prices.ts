@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import { z } from "zod";
 import { CsvError } from "../engine/csv.ts";
-import { monthEnd, monthsEnding } from "../engine/months.ts";
+import { addMonths, monthEnd, monthsEnding } from "../engine/months.ts";
 import type { PriceCsvOptions, PriceRow } from "../engine/priceCsv.ts";
 import { latestPerMonth, parsePriceCsv } from "../engine/priceCsv.ts";
-import { isoDate, monthSchema, PRICE_SOURCES } from "../engine/schemas.ts";
+import { canUseProvider, isoDate, monthSchema, PRICE_SOURCES } from "../engine/schemas.ts";
 import { fromScaled, toScaled } from "../engine/units.ts";
 import type { DB } from "./db.ts";
 import type { Router } from "./router.ts";
@@ -247,10 +247,11 @@ export function registerPriceRoutes(router: Router, db: Kysely<DB>, today: () =>
   // The price date of a typed price is the clock date for the current month, else the month's last day.
   router.route("PUT", "/api/prices", manualPriceBody, async ({ productId, month, price }) => {
     const now = today();
-    if (month < now.slice(0, 7)) {
+    const editable = [now.slice(0, 7), addMonths(now.slice(0, 7), 1)];
+    if (!editable.includes(month)) {
       throw new HttpError(
         400,
-        `Only ${now.slice(0, 7)} and later months can be typed. Correct an earlier month with a CSV.`,
+        `Only ${editable.join(" and ")} can be typed. Correct an earlier month with a CSV.`,
       );
     }
     await findOr404(db, "product", productId, "product");
@@ -293,7 +294,10 @@ export function registerPriceRoutes(router: Router, db: Kysely<DB>, today: () =>
   });
 
   router.route("PUT", "/api/prices/source", sourceBody, async ({ productId, priceSource }) => {
-    await findOr404(db, "product", productId, "product");
+    const { regime } = await findOr404(db, "product", productId, "product");
+    if (priceSource === "provider" && !canUseProvider(regime)) {
+      throw new HttpError(400, "A BTP or a pension fund has no provider: use manual or CSV.");
+    }
     await db.updateTable("product").set({ priceSource }).where("id", "=", productId).execute();
     return { productId, priceSource };
   });

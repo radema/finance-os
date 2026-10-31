@@ -302,6 +302,28 @@ describe("Prices API", () => {
     expect((await grid()).rows[0]?.prices).toEqual({});
   });
 
+  it("refuses to type a price two months ahead", async () => {
+    const productId = await addProduct();
+    const { status } = await call("PUT", "/api/prices", {
+      productId,
+      month: "2026-05",
+      price: 100,
+    });
+    expect(status).toBe(400);
+    expect((await grid("2026-05")).rows[0]?.prices).toEqual({});
+  });
+
+  it("refuses the provider source for a BTP and a pension fund, and allows it for an ETF", async () => {
+    const etf = await addProduct();
+    const btp = await addProduct({ name: "BTP", regime: "govt", assetClass: "Govt bonds" });
+    const pension = await addProduct({ name: "Fund", regime: "pension" });
+    const set = async (productId: string) =>
+      (await call("PUT", "/api/prices/source", { productId, priceSource: "provider" })).status;
+    expect([await set(btp), await set(pension), await set(etf)]).toEqual([400, 400, 200]);
+    const csv = await call("PUT", "/api/prices/source", { productId: btp, priceSource: "csv" });
+    expect(csv.status).toBe(200);
+  });
+
   it("answers 404 for a manual price of an unknown product", async () => {
     const { status } = await call("PUT", "/api/prices", {
       productId: "nope",

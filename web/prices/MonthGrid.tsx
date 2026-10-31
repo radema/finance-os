@@ -59,7 +59,7 @@ export function MonthGrid({ onChanged }: { onChanged: () => void }) {
   return (
     <Card
       title="Month-end prices"
-      note="Type the price of the current month, or add the next month. To correct an earlier month, import a CSV."
+      note="Type the price of the current month or the next one. To correct an earlier month, import a CSV."
     >
       <Resource loaded={grid}>
         {({ currentMonth, months, rows }) =>
@@ -89,7 +89,7 @@ export function MonthGrid({ onChanged }: { onChanged: () => void }) {
                           const stored = row.prices[month];
                           return (
                             <td className="num" key={month}>
-                              {month >= currentMonth ? (
+                              {month === currentMonth || month === addMonths(currentMonth, 1) ? (
                                 <PriceInput
                                   key={stored?.price}
                                   label={`${row.name} ${month}`}
