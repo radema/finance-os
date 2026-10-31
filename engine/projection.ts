@@ -36,6 +36,15 @@ export function timeGrid(asOf: string, targetYear: number): TimeGrid {
   return { y0, r, f, steps, tau: f + (targetYear - y0) };
 }
 
+/**
+ * What a plain goal contributes in one step: `months` of the monthly amount. The stub of Y0 uses the
+ * amount as is; full year k (k = 1 for Y0 + 1) grows it by (1 + growth)^(k - 1).
+ */
+export function stepContribution(step: Step, y0: number, monthly: number, growth: number): number {
+  const yearly = step.year === y0 ? monthly : monthly * (1 + growth) ** (step.year - y0 - 1);
+  return step.months * yearly;
+}
+
 /** Rescale non-negative weights to shares that sum to 1. All weights 0 gives all shares 0. */
 export function normaliseWeights(weights: ReadonlyMap<string, number>): Map<string, number> {
   let sum = 0;
@@ -128,11 +137,7 @@ export function projectGoal(input: ProjectionInput): GoalProjection {
 
   for (const step of grid.steps) {
     const phi = step.fraction;
-    const yearly =
-      step.year === grid.y0
-        ? monthly
-        : monthly * (1 + goal.contributionGrowth) ** (step.year - grid.y0 - 1);
-    const contribution = step.months * yearly;
+    const contribution = stepContribution(step, grid.y0, monthly, goal.contributionGrowth);
 
     for (const [productId, position] of state) {
       const params = products.get(productId);

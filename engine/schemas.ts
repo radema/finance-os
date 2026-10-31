@@ -218,6 +218,28 @@ export const pensionPlanSchema = z.object({
 });
 export type PensionPlan = z.infer<typeof pensionPlanSchema>;
 
+/** One one-off event of the cash flow: a signed amount (a cost is negative) in a calendar year. */
+export const cashFlowEventSchema = z.object({
+  year: z.number().int().min(2000).max(2200),
+  label: text,
+  amount: z.number().int(),
+});
+export type CashFlowEvent = z.infer<typeof cashFlowEventSchema>;
+
+/**
+ * The stored CashFlow document. Money is in cents: `income` is a year, `essential` and `optional`
+ * are a month. It also feeds the financial-independence levels (essential, optional, expenseGrowth).
+ */
+export const cashFlowSchema = z.object({
+  income: cents.default(0),
+  incomeGrowth: z.number().gt(-1).max(1).default(0),
+  essential: cents.default(0),
+  optional: cents.default(0),
+  expenseGrowth: z.number().gt(-1).max(1).default(0),
+  events: z.array(cashFlowEventSchema).default([]),
+});
+export type CashFlow = z.infer<typeof cashFlowSchema>;
+
 export const commissionSchema = z
   .object({
     plan: name.default("Fineco Trading"),

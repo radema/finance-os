@@ -1,5 +1,5 @@
 /* Verbatim copy of the GBI mock engine, from .scratch/gbi-v1/reference/mock-app.html:
- * lines 281-285, 287-289 (helpers) and 373-547 (goal model, analyse). Do not edit.
+ * lines 281-285, 287-289 (helpers), 373-547 (goal model, analyse) and 612-622 (cash flow). Do not edit.
  * It needs the globals CLASSES and mkey; tools/differential/mock.ts provides them. */
 function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function gauss(rnd) { let u = 0; while (u === 0) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()); }
@@ -183,4 +183,16 @@ function analyse(st, date, opts = {}) {
     fire = { levels: lv, rows, det: detRows, now: rows[0].p50, reach: lv.map((l, i) => { const a = rows.find(r => r.p50 >= l.target), d = detRows.findIndex(v => v >= l.target); return { median: a ? a.year : null, det: d >= 0 ? startYear + d : null }; }) };
   }
   return { date, startYear, results, fire, H: Hmax, holdings: H0 };
+}
+
+function cashflow(st, years) {
+  const c = st.cashflow, startYear = +st.asOf.slice(0, 4), ps = pensionSchedule(st, startYear, years), out = [];
+  for (let t = 1; t <= years; t++) {
+    const y = startYear + t - 1, inc = c.income * Math.pow(1 + c.incomeGrowth, t - 1), exp = 12 * (c.essential + c.optional) * Math.pow(1 + c.expenseGrowth, t - 1);
+    const ev = c.events.filter(e => +e.year === y).reduce((a, e) => a + +e.amount, 0), refund = t > 1 ? ps[t - 2].refund : 0;
+    const per = {}; let planned = 0;
+    st.goals.forEach(g => { let a = 0; if (y <= g.year) a = st.pension.goalId === g.id ? ps[t - 1].voluntary : 12 * (+g.contrib || 0) * Math.pow(1 + (+g.cgrowth || 0), t - 1); per[g.id] = a; planned += a; });
+    out.push({ t, year: y, income: inc, expenses: exp, events: ev, refund, capacity: inc - exp + ev + refund, per, planned, free: inc - exp + ev + refund - planned });
+  }
+  return out;
 }

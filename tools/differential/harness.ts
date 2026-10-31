@@ -1,6 +1,15 @@
-import { holdingsAt, type ProductParams, projectGoal } from "../../engine/index.ts";
-import { loadMockEngine, type MockState } from "./mock.ts";
-import type { Scenario } from "./scenario.ts";
+import {
+  type CashFlowYear,
+  cashFlowSchema,
+  holdingsAt,
+  type ProductParams,
+  pensionPlanSchema,
+  pensionSchedule,
+  projectCashFlow,
+  projectGoal,
+} from "../../engine/index.ts";
+import { loadMockEngine, type MockCashFlowRow, type MockState } from "./mock.ts";
+import type { CashFlowScenario, Scenario } from "./scenario.ts";
 
 const MOCK_CLASS: Record<string, string> = { cash: "Cash", govt: "Govt bonds" };
 // The mock only reads the correlation matrix to draw shocks; a deterministic run ignores them.
@@ -103,4 +112,94 @@ export function v1Net(scenario: Scenario): Map<string, number> {
     nets.set(goal.id, net);
   }
   return nets;
+}
+
+const CENTS = 100;
+
+/** The pension goal of a cash flow scenario: one of the scenario's goals. */
+const pensionGoalId = (scenario: Scenario, cf: CashFlowScenario): string =>
+  scenario.goals[cf.pension.goal % scenario.goals.length]?.id ?? "";
+
+/** The copied mock's 10-year cash flow, in euros. */
+export function mockCashFlow(scenario: Scenario, cf: CashFlowScenario): MockCashFlowRow[] {
+  const { pension } = cf;
+  const y0 = Number(scenario.asOf.slice(0, 4));
+  return mock.cashflow(
+    {
+      asOf: scenario.asOf,
+      cashflow: {
+        ...cf.cashFlow,
+        events: cf.cashFlow.events.map((e) => ({
+          year: y0 + e.yearOffset,
+          label: "",
+          amount: e.amount,
+        })),
+      },
+      pension: {
+        goalId: pensionGoalId(scenario, cf),
+        ral: pension.ral,
+        ralGrowth: 0,
+        tfrPct: 0.0691,
+        workerPct: pension.workerPct,
+        employerPct: pension.employerPct,
+        cap: pension.capCents / CENTS,
+        extra: pension.extra,
+        voluntary: pension.voluntary ?? "",
+        marginal: pension.marginalRate,
+      },
+      goals: scenario.goals.map((g) => ({
+        id: g.id,
+        year: g.targetYear,
+        contrib: g.monthly,
+        cgrowth: 0,
+      })),
+    },
+    10,
+  );
+}
+
+/** v1's 10-year cash flow in euros, from `projectCashFlow` (the engine works in cents). */
+export function v1CashFlow(scenario: Scenario, cf: CashFlowScenario): CashFlowYear[] {
+  const { pension } = cf;
+  const y0 = Number(scenario.asOf.slice(0, 4));
+  const plan = pensionPlanSchema.parse({
+    goalId: pensionGoalId(scenario, cf),
+    firstYear: scenario.firstYear,
+    ral: pension.ral * CENTS,
+    tfrPct: 0.0691,
+    workerPct: pension.workerPct,
+    employerPct: pension.employerPct,
+    voluntary: pension.voluntary === null ? null : pension.voluntary * CENTS,
+    marginalRate: pension.marginalRate,
+    extra: pension.extra * CENTS,
+  });
+  const schedule = pensionSchedule(
+    plan,
+    { pensionDeductionCapCents: pension.capCents },
+    scenario.asOf,
+    0,
+    10,
+  );
+  return projectCashFlow({
+    asOf: scenario.asOf,
+    cashFlow: cashFlowSchema.parse({
+      income: cf.cashFlow.income * CENTS,
+      incomeGrowth: cf.cashFlow.incomeGrowth,
+      essential: cf.cashFlow.essential * CENTS,
+      optional: cf.cashFlow.optional * CENTS,
+      expenseGrowth: cf.cashFlow.expenseGrowth,
+      events: cf.cashFlow.events.map((e) => ({
+        year: y0 + e.yearOffset,
+        label: "",
+        amount: e.amount * CENTS,
+      })),
+    }),
+    goals: scenario.goals.map((g) => ({
+      id: g.id,
+      targetYear: g.targetYear,
+      contributionGrowth: 0,
+      monthly: g.monthly * CENTS,
+    })),
+    pension: { goalId: plan.goalId, schedule },
+  });
 }
