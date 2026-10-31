@@ -8,6 +8,7 @@ import {
   type ProjectionInput,
   preparePath,
   runPath,
+  targetAtGoalDate,
 } from "./projection.ts";
 import { fillNormals, pathRandom } from "./random.ts";
 
@@ -83,7 +84,7 @@ function prepareGoal(input: MonteCarloGoal): Prepared {
     input,
     plan,
     lognormal,
-    target: input.goal.target * (1 + input.settings.inflation) ** plan.grid.tau,
+    target: targetAtGoalDate(input.goal.target, input.settings.inflation, plan.grid.tau),
   };
 }
 
