@@ -132,7 +132,7 @@ performance are always derived.
 | Goal | id, name, priority, target (today's €), targetYear, contributionGrowth, minProb?, countsTowardFI | Due on **31 December of targetYear** (t16). Exactly one goal may be the pension goal |
 | ContributionPlan | goalId, fromMonth (YYYY-MM), monthly € | Versioned plan (t10). Editing asks "from which month" (default current month) |
 | AllocationWeight | goalId, productId, weight | Rescaled to 100% per goal; not versioned |
-| Transaction | id, date, goalId, productId, type (`opening`, `buy`, `sell`, `pensionContribution`, `coupon`), qty (signed; 0 for coupon), price, commission? (actual), amount (coupon: net cash received), note, importBatchId? | Sell = negative qty (t08 adds `coupon`) |
+| Transaction | id, date, goalId, productId, type (`opening`, `buy`, `sell`, `pensionContribution`, `coupon`), qty (signed; 0 for coupon), price, commission? (actual), amount (coupon: net cash received), flow? (`Work`, `Voluntary`; `pensionContribution` only), note, importBatchId? | Sell = negative qty (t08 adds `coupon`). A pension contribution's flow defaults from the plan's flows when the product takes one flow only; a product with both flows needs the user to choose (S3 fix, AC-94) |
 | OpeningPosition | asOf date (default trackingStart) | One per account (t08) |
 | ImportBatch | id, kind (`transactions`, `prices`, `products`, `goals`), source name, file name, createdAt, rows read / imported / skipped, undoneAt?, prior state of overwritten prices | Unit of undo |
 | ImportMapping | name, kind, column map, delimiter, decimal and date format | Preset "Fineco movimenti (XLSX)" (t08) + saved user mappings |
@@ -157,7 +157,7 @@ One pure deterministic module. Same inputs and seed give the same outputs. `asOf
 regime: `etf` 26% − 13.5% × whiteListShare (redditi di capitale, not offsettable); `direct` 26%,
 `govt` 12.5%, both offsettable by losses and the zainetto; `cash` interest taxed yearly at 26%, no
 exit tax; `pension` return taxed yearly at pensionTax (20%), symmetric, no stamp duty, exit tax on
-basis.
+the taxable basis (contributions minus the non-deducted part, see Pension schedule).
 
 **Time grid (t12 E9, t16).** Y0 = year(asOf). r = 12 − month(asOf) (the asOf month counts as done);
 f = r / 12. Step 1 is the stub of Y0 with fraction f; steps 2… are the full years Y0+1 … targetYear.
@@ -187,7 +187,8 @@ This supersedes ticket 12's "goal date = 1 January" and its full years "… goal
 **Liquidation at the goal date.** Per product gain = value − basis, counted in tax euros (gives the
 48.08% rule for govt bonds). ETF gains taxed, ETF losses become credits. Direct/govt gains are summed
 and reduced by credits from losses in the same bucket plus the assigned zainetto (amount × 26%) if
-it expires on or after the goal date. Pension exit tax = rate × basis, rate = max(9%, 15% − 0.3% ×
+it expires on or after the goal date. Pension exit tax = rate × basis, basis = Σ contributions − Σ
+non-deducted (AC-95), rate = max(9%, 15% − 0.3% ×
 max(0, targetYear − firstYear − 15)), per goal from that goal's year (t12 E8). Net = gross − taxes.
 Monte Carlo liquidation applies credits and the zainetto too (t12 E4/E5).
 
@@ -211,12 +212,14 @@ minProb or the priority default.
 and employer = RAL × %; voluntary = given, or max(0, cap + extra − worker − employer) (TFR outside the
 cap, t12 E6). Deductible = min(cap + extra, worker + employer + voluntary). Refund (cash inflow in
 t + 1) = min(voluntary, room) × marginalRate, where room = max(0, cap + extra − worker − employer). For Y0 the voluntary amount is the actual voluntary
-YTD (from transactions) plus the stub schedule; its refund is paid in Y0+1. Each year's TFR, worker, employer and voluntary flows are
+YTD (this year's `pensionContribution` transactions with flow `Voluntary`, AC-94) plus the stub schedule; its refund is paid in Y0+1.
+Non-deducted(t) = max(0, worker + employer + voluntary − (cap + extra)) (Y0: with the YTD + stub voluntary); it is
+not deductible and is left out of the exit-tax basis (AC-95). The schedule ends at the pension goal's
+targetYear: the last refund is paid in targetYear + 1, none after (AC-96). Each year's TFR, worker, employer and voluntary flows are
 split separately by each product's % of that flow (t12 S5, no frozen year-1 weights). The engine
 values the whole pot net of exit tax; the Pension and Goal screens and the glossary state that usually
 at most 50% can be taken as capital, the rest as an annuity, and that a phased payout exists from
-31 Oct 2026 (t12 S4). Kept simplifications, written in the method notes: exit-tax base = all
-contributions (S3), extra deduction every year and refund at the marginal rate only (S6), pension
+31 Oct 2026 (t12 S4). Kept simplifications, written in the method notes: extra deduction every year and refund at the marginal rate only (S6), pension
 return taxed 20% flat (S7), cash stamp duty 0.2% (deposit account).
 
 **Cash flow (year t).** Capacity = income − 12 × (essential + optional) (each growing) + events +
@@ -392,7 +395,7 @@ Screens (content; acceptance in the Definition of done):
 | Optimizer | Bucket, mode, criterion (4 named options), max per product, product universe; "How the optimizer chooses" panel; suggested vs current weights; outcomes compared; switch tax; scatter of all mixes (x = P, y = median); top 10; rule text; "Use as contribution weights"; known-limit note |
 | Performance | Scope selector; value, gain, TWR since start/YTD/12m, XIRR, max drawdown; charts: value vs money put in, growth of €100, drawdown, monthly returns; table for all scopes |
 | Plan vs actual | Planned vs put in since trackingStart; monthly actual series; next contribution card with product split, commission and cost %; cumulative planned vs actual per goal |
-| Pension | This year: cap, used, still available, refund, exit tax; inputs; flows table; 10-year schedule and chart; capital/annuity note |
+| Pension | This year: cap, used, still available (never below 0; when used > cap + extra, a line "€X of this year's payments are not tax-deductible"), refund, exit tax; inputs; flows table; 10-year schedule and chart; capital/annuity note |
 | Transactions | Add form (date, bucket, product, type, amount, price prefilled from the product's last price, commission optional) with commission estimate and cost warning; list with filters by bucket and year; delete |
 | Import | Tabs: transactions, prices, products, goals; paste or upload CSV/XLSX; mapping with saved mappings; row check with status and the bucket/split control; import ready rows; past imports with undo; Current portfolio form |
 | Prices | Source per product with last price, date, age pill; Fetch latest prices; review list; month-end grid (6 months, current month editable; add next month); positions by product with account PMC, buckets and broker units entry |
@@ -522,8 +525,11 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-46: Yearly flow mix. Check: golden test with two pension products whose shares differ per flow and a worker % that changes the flow mix over years. Expected: each year's product contributions follow that year's flows, not year-1 weights.
 - AC-47: Exit tax per goal year. Check: engine test with two goals in different years. Expected: each uses its own rate.
 - AC-48: Cash flow. Check: golden test, asOf 2026-10-31. Expected: the 2026 row has income, expenses and contributions × 2/12 and events and refund whole; the pension goal counts only its voluntary part; a goal's contributions appear through its target year and not after.
-- AC-49: Pension screen. Check: `agent-browser` + API test. Expected: cap, used, still available, refund, exit tax for this year; voluntary YTD equals the sum of this year's `pensionContribution` transactions on Voluntary products; flows table; 10-year schedule and chart; the 50% capital note.
+- AC-49: Pension screen. Check: `agent-browser` + API test. Expected: cap, used, still available, refund, exit tax for this year; voluntary YTD equals the sum of this year's `pensionContribution` transactions with flow `Voluntary` (AC-94); flows table; 10-year schedule and chart; the 50% capital note.
 - AC-50: Setup Cash flow. Check: `agent-browser`. Expected: inputs and events editable; the 10-year table matches the engine's cash flow.
+- AC-94: Contribution flow. Check: migration + API test with one pension fund that takes both Work and Voluntary flows, a Work and a Voluntary contribution this year. Expected: voluntary YTD (Pension screen, cash flow refund, R2) counts only the Voluntary one; a contribution on a one-flow product gets that flow by default; on a two-flow product the API refuses a missing flow; existing rows are backfilled where the product has one flow; a row with no flow counts as Work.
+- AC-95: Non-deducted part. Check: golden engine test where worker + employer + voluntary exceed cap + extra by €500 in one year. Expected: that year's non-deducted = 500; the exit-tax basis is lower by 500 (plus nothing else); the Pension screen shows "€500 of this year's payments are not tax-deductible" and still available 0.
+- AC-96: Refund ends with the goal. Check: cash-flow golden test with the pension goal due inside the 10 years. Expected: refund in targetYear + 1 is the last; later rows show refund 0.
 - AC-51: S3 UI gate. Check: screenshots of Pension and Setup Cash flow. Expected: the user approves or skips.
 
 ### S4 — Monte Carlo, required contributions and FI
