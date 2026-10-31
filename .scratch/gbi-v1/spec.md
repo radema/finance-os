@@ -213,8 +213,10 @@ and employer = RAL × %; voluntary = given, or max(0, cap + extra − worker −
 cap, t12 E6). Deductible = min(cap + extra, worker + employer + voluntary). Refund (cash inflow in
 t + 1) = min(voluntary, room) × marginalRate, where room = max(0, cap + extra − worker − employer). For Y0 the voluntary amount is the actual voluntary
 YTD (this year's `pensionContribution` transactions with flow `Voluntary`, AC-94) plus the stub schedule; its refund is paid in Y0+1.
+When voluntary is blank ("to cap"), the Y0 stub voluntary is the rest of the room, max(0, room − voluntary YTD),
+not room × f; a given voluntary keeps the stub voluntary × f (AC-97).
 Non-deducted(t) = max(0, worker + employer + voluntary − (cap + extra)) (Y0: with the YTD + stub voluntary); it is
-not deductible and is left out of the exit-tax basis (AC-95). The schedule ends at the pension goal's
+not deductible and is left out of the exit-tax basis in full, Y0 included (AC-95, AC-97). The schedule ends at the pension goal's
 targetYear: the last refund is paid in targetYear + 1, none after (AC-96). Each year's TFR, worker, employer and voluntary flows are
 split separately by each product's % of that flow (t12 S5, no frozen year-1 weights). The engine
 values the whole pot net of exit tax; the Pension and Goal screens and the glossary state that usually
@@ -530,6 +532,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-94: Contribution flow. Check: migration + API test with one pension fund that takes both Work and Voluntary flows, a Work and a Voluntary contribution this year. Expected: voluntary YTD (Pension screen, cash flow refund, R2) counts only the Voluntary one; a contribution on a one-flow product gets that flow by default; on a two-flow product the API refuses a missing flow; existing rows are backfilled where the product has one flow; a row with no flow counts as Work.
 - AC-95: Non-deducted part. Check: golden engine test where worker + employer + voluntary exceed cap + extra by €500 in one year. Expected: that year's non-deducted = 500; the exit-tax basis is lower by 500 (plus nothing else); the Pension screen shows "€500 of this year's payments are not tax-deductible" and still available 0.
 - AC-96: Refund ends with the goal. Check: cash-flow golden test with the pension goal due inside the 10 years. Expected: refund in targetYear + 1 is the last; later rows show refund 0.
+- AC-97: Current year to cap. Check: engine and API tests with voluntary blank, worker + employer 800, limit 7,950, asOf 2026-10-31. Expected: voluntary YTD 7,650 → stub voluntary 0, non-deducted 500, the Pension screen says 500 is not deductible and the exit-tax basis is lower by exactly 500; voluntary YTD 7,000 → stub voluntary 150, non-deducted 0, no line, basis unchanged.
 - AC-51: S3 UI gate. Check: screenshots of Pension and Setup Cash flow. Expected: the user approves or skips.
 
 ### S4 — Monte Carlo, required contributions and FI
