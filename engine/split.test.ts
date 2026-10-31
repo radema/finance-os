@@ -55,6 +55,20 @@ describe("splitByWeights", () => {
     expect(reversed).toEqual([{ goalId: "A", units: 1 }]);
   });
 
+  it("breaks equal remainders by goal id even when float noise separates them", () => {
+    // exact shares 3.3, 1.3, 0.2, 0.2: the remainders of a and b are both 0.3
+    const parts = splitByWeights(5, [
+      { goalId: "a", weight: 33 },
+      { goalId: "b", weight: 13 },
+      { goalId: "c", weight: 2 },
+      { goalId: "d", weight: 2 },
+    ]);
+    expect(parts).toEqual([
+      { goalId: "a", units: 4 },
+      { goalId: "b", units: 1 },
+    ]);
+  });
+
   it("drops buckets that get 0 units", () => {
     const parts = splitByWeights(3, [
       { goalId: "A", weight: 90 },

@@ -45,7 +45,7 @@ function apportion(
     .map((e, index) => ({
       goalId: e.goalId,
       index,
-      remainder: (exact[index] ?? 0) - (shares[index] ?? 0),
+      remainder: Number(((exact[index] ?? 0) - (shares[index] ?? 0)).toPrecision(SHARE_PRECISION)),
     }))
     .sort((a, b) => b.remainder - a.remainder || (a.goalId < b.goalId ? -1 : 1));
   for (const { index } of byRemainder.slice(0, leftover)) shares[index] = (shares[index] ?? 0) + 1;
