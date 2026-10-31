@@ -1,4 +1,4 @@
-export type { CashFlowGoal, CashFlowInput, CashFlowYear } from "./cashFlow.ts";
+export type { CashFlowGoal, CashFlowInput, CashFlowView, CashFlowYear } from "./cashFlow.ts";
 export { projectCashFlow } from "./cashFlow.ts";
 export { estimateCommission, isCostly, minEfficientTicket } from "./commission.ts";
 export type {

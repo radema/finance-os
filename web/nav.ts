@@ -53,6 +53,7 @@ export const SETUP_TABS: readonly NavItem[] = [
   { key: "setup/products", label: "Products" },
   { key: "setup/allocation", label: "Allocation" },
   { key: "setup/goals", label: "Goals" },
+  { key: "setup/cash-flow", label: "Cash flow" },
   { key: "setup/assumptions", label: "Assumptions" },
 ];
 

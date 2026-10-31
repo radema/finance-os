@@ -45,6 +45,14 @@ export type CashFlowYear = {
   gap: number;
 };
 
+/** What the Setup Cash flow screen reads: the stored document and the rows computed from it. */
+export type CashFlowView = {
+  /** The valuation date the rows start from. */
+  asOf: string;
+  cashFlow: CashFlow;
+  rows: CashFlowYear[];
+};
+
 /**
  * The cash flow for `years` years from Y0 = year(asOf).
  *

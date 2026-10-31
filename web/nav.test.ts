@@ -81,7 +81,8 @@ describe("AppShell", () => {
     const item = (label: string) =>
       html.match(new RegExp(`class="nav-item"[^>]*>${label}(.*?)</a>`))?.[1] ?? "";
     expect(item("Products")).not.toContain("soon");
-    expect(item("Cash flow")).toContain("soon");
+    expect(item("Cash flow")).not.toContain("soon");
+    expect(item("Glossary")).toContain("soon");
   });
 });
 
@@ -114,15 +115,17 @@ describe("Goals screens", () => {
 });
 
 describe("SETUP_TABS", () => {
-  it("lists the four Setup tabs, and the sidebar items keep the spec list", () => {
+  it("lists the five Setup tabs, and the sidebar items keep the spec list", () => {
     expect(SETUP_TABS.map((tab) => tab.label)).toEqual([
       "Products",
       "Allocation",
       "Goals",
+      "Cash flow",
       "Assumptions",
     ]);
     expect(isBuilt("setup/goals")).toBe(true);
-    expect(isBuilt("setup/cash-flow")).toBe(false);
+    expect(isBuilt("setup/cash-flow")).toBe(true);
+    expect(isBuilt("setup/glossary")).toBe(false);
     expect(isBuilt("operations/transactions")).toBe(true);
     expect(isBuilt("operations/prices")).toBe(true);
   });
