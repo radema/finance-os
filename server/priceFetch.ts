@@ -237,14 +237,22 @@ async function takeItem(db: Kysely<DB>, id: string) {
 
 /**
  * Stores a review item as a `provider` price and removes it from the list. The user chose to
- * accept it, so it replaces a manual price of the same month, like an explicit re-fetch.
+ * accept it, so it replaces a manual price of the same month, like an explicit re-fetch. A price
+ * in another currency cannot be accepted: it would be stored as euros.
  *
- * @throws HttpError 404 when the item or its product does not exist.
+ * @throws HttpError 404 when the item does not exist, or its product is gone or no longer uses
+ *   the provider. HttpError 400 for a `non-eur` item.
  */
 export async function acceptReviewItem(db: Kysely<DB>, id: string): Promise<void> {
   await db.transaction().execute(async (trx) => {
     const { item, state } = await takeItem(trx, id);
-    await findOr404(trx, "product", item.productId, "product");
+    if (item.reason === "non-eur") {
+      throw new HttpError(400, `The price is in ${item.currency}, not EUR: discard it.`);
+    }
+    const product = await findOr404(trx, "product", item.productId, "product");
+    if (product.priceSource !== "provider") {
+      throw new HttpError(404, "review item not found");
+    }
     await storePrice(
       trx,
       {

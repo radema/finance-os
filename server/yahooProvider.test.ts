@@ -137,6 +137,18 @@ describe("Yahoo provider", () => {
     expect(calls).toHaveLength(1);
   });
 
+  it("does not retry an answer that fails the library's validation", async () => {
+    const { provider, calls } = harness([
+      Object.assign(new Error("Failed Yahoo Schema validation"), {
+        name: "FailedYahooValidationError",
+      }),
+    ]);
+    await expect(provider.fetch(["VWCE.MI"], "2026-02-01", "2026-03-15")).rejects.toThrow(
+      /validation/,
+    );
+    expect(calls).toHaveLength(1);
+  });
+
   it("refuses a ticker that is not a .MI ETF, without a request", async () => {
     const { provider, calls } = harness([]);
     await expect(provider.fetch(["AAPL"], "2026-02-01", "2026-03-15")).rejects.toThrow(/\.MI/);

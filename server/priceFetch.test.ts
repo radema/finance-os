@@ -276,6 +276,24 @@ describe("fetchPrices", () => {
       expect((await priceFetchProblems(db)).map((p) => p.productId)).toEqual(["down", "usd"]);
     });
 
+    it("refuses to accept a price in another currency, and keeps the item", async () => {
+      await run(ANSWERS);
+      await expect(acceptReviewItem(db, "usd|2026-03")).rejects.toMatchObject({ status: 400 });
+      expect((await stored()).map((p) => p.productId)).toEqual(["good"]);
+      expect((await readReviewList(db)).map((i) => i.productId)).toEqual(["usd", "jump"]);
+    });
+
+    it("answers 404 when accepting for a product that no longer uses the provider", async () => {
+      await run(ANSWERS);
+      await db
+        .updateTable("product")
+        .set({ priceSource: "csv" })
+        .where("id", "=", "jump")
+        .execute();
+      await expect(acceptReviewItem(db, "jump|2026-03")).rejects.toMatchObject({ status: 404 });
+      expect((await stored()).map((p) => p.productId)).toEqual(["good"]);
+    });
+
     it("discard removes the item and stores nothing", async () => {
       await run(ANSWERS);
       await discardReviewItem(db, "usd|2026-03");
@@ -398,30 +416,29 @@ describe("Prices fetch API", () => {
   it("accepts and discards review items over the API, and keeps them after a restart", async () => {
     await start({
       "USD.MI": [close("USD.MI", 110, "USD")],
-      "GOOD.MI": [close("GOOD.MI", 50, "GBP")],
+      "JUMP.MI": [close("JUMP.MI", 130)],
     });
     await addProduct("Dollar ETF", "USD.MI");
-    await addProduct("Pound ETF", "GOOD.MI");
+    await addProduct("Jump ETF", "JUMP.MI");
+    await call("POST", "/api/prices/import", {
+      text: "date;product;price\n2026-02-28;JUMP.MI;100\n",
+    });
     await call("POST", "/api/prices/fetch", {});
     await stop?.();
     await start({});
     const items = (await call<Review>("GET", "/api/prices/review")).body.items;
-    expect(items.map((i) => i.productName)).toEqual(["Dollar ETF", "Pound ETF"]);
+    expect(items.map((i) => i.productName)).toEqual(["Dollar ETF", "Jump ETF"]);
+    const [dollar, jump] = items;
 
-    expect((await call("POST", "/api/prices/review/accept", { id: items[0]?.id })).status).toBe(
-      200,
-    );
-    expect((await call("POST", "/api/prices/review/discard", { id: items[1]?.id })).status).toBe(
-      200,
-    );
+    expect((await call("POST", "/api/prices/review/accept", { id: dollar?.id })).status).toBe(400);
+    expect((await call("POST", "/api/prices/review/accept", { id: jump?.id })).status).toBe(200);
+    expect((await call("POST", "/api/prices/review/discard", { id: dollar?.id })).status).toBe(200);
     expect((await call<Review>("GET", "/api/prices/review")).body.items).toEqual([]);
-    expect((await call("POST", "/api/prices/review/accept", { id: items[0]?.id })).status).toBe(
-      404,
-    );
+    expect((await call("POST", "/api/prices/review/accept", { id: jump?.id })).status).toBe(404);
     const grid = await call<{ rows: { prices: Record<string, { source: string }> }[] }>(
       "GET",
       "/api/prices/grid",
     );
-    expect(grid.body.rows.map((r) => r.prices["2026-03"]?.source)).toEqual(["provider", undefined]);
+    expect(grid.body.rows.map((r) => r.prices["2026-03"]?.source)).toEqual([undefined, "provider"]);
   });
 });

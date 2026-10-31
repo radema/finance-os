@@ -45,7 +45,13 @@ class Permanent extends Error {}
 const isPermanent = (error: unknown): boolean => {
   if (error instanceof Permanent) return true;
   const { name, code } = error as { name?: string; code?: unknown };
-  if (name === "BadRequestError" || name === "InvalidOptionsError") return true;
+  if (
+    name === "BadRequestError" ||
+    name === "InvalidOptionsError" ||
+    name === "FailedYahooValidationError"
+  ) {
+    return true;
+  }
   return (
     name === "HTTPError" && typeof code === "number" && code >= 400 && code < 500 && code !== 429
   );
