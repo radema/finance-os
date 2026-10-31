@@ -27,7 +27,11 @@ export function PastImports({ batches }: { batches: Loaded<BatchRow[]> }) {
       });
       if (done.kept.length > 0) {
         const kind = batches.data?.find((batch) => batch.id === id)?.kind;
-        setNotice(`${done.kept.length} created ${kind} kept because they are in use.`);
+        const noun = kind === "goals" ? "goal" : "product";
+        const count = done.kept.length;
+        setNotice(
+          `${count} created ${noun}${count === 1 ? "" : "s"} kept because they are in use.`,
+        );
       }
     } catch (failure) {
       setError(messageOf(failure));
