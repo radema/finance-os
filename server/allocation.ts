@@ -6,6 +6,7 @@ import { normaliseWeights } from "../engine/weights.ts";
 import type { DB } from "./db.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
+import { findOr404 } from "./rows.ts";
 
 const weightKey = z.object({ goalId: z.string().min(1), productId: z.string().min(1) });
 
@@ -39,18 +40,8 @@ export function registerAllocationRoutes(router: Router, db: Kysely<DB>): void {
 
   // Sets one weight: creates the row, or edits it. The response is the goal's weights, rescaled.
   router.route("PUT", "/api/allocation", allocationWeightSchema, async (input) => {
-    const goal = await db
-      .selectFrom("goal")
-      .select("id")
-      .where("id", "=", input.goalId)
-      .executeTakeFirst();
-    if (!goal) throw new HttpError(404, "goal not found");
-    const product = await db
-      .selectFrom("product")
-      .select("id")
-      .where("id", "=", input.productId)
-      .executeTakeFirst();
-    if (!product) throw new HttpError(404, "product not found");
+    await findOr404(db, "goal", input.goalId, "goal");
+    await findOr404(db, "product", input.productId, "product");
     await db
       .insertInto("allocationWeight")
       .values(input)

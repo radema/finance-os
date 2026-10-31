@@ -22,10 +22,9 @@ import type { DB } from "./db.ts";
 import { loadDocument } from "./documents.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
+import { idQuery } from "./rows.ts";
 import { isEmpty } from "./sample.ts";
 import { loadLedger } from "./transactions.ts";
-
-const idQuery = z.object({ id: z.string().min(1) });
 
 const NO_PRICE_NOTE = "A held product has no price, so the projection is not shown.";
 const NO_FIRST_YEAR_NOTE =
