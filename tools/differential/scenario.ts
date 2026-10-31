@@ -1,5 +1,6 @@
 import fc from "fast-check";
 import type { LedgerRow, Regime } from "../../engine/index.ts";
+import { REGIMES } from "../../engine/schemas.ts";
 
 export type ScenarioProduct = {
   id: string;
@@ -43,7 +44,6 @@ export type Scenario = {
   ledger: LedgerRow[];
 };
 
-const REGIMES: readonly Regime[] = ["etf", "direct", "govt", "cash", "pension"];
 const MS_PER_DAY = 86_400_000;
 const MIN_YEAR = 2024;
 const MAX_YEAR = 2030;
