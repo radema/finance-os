@@ -91,19 +91,22 @@ export function registerGoalRoutes(router: Router, db: Kysely<DB>): void {
     if (n > 0) {
       throw new HttpError(409, `This goal has ${n} transaction(s). Delete or move them first.`);
     }
-    // The goal's weights and plan versions go with it (ON DELETE CASCADE).
-    const { numDeletedRows } = await db
-      .deleteFrom("goal")
-      .where("id", "=", id)
-      .executeTakeFirstOrThrow();
-    if (numDeletedRows === 0n) throw new HttpError(404, "goal not found");
-    const settings = await loadDocument(db, "settings", settingsSchema);
-    if (settings.zainetto.goalId === id) {
-      await saveDocument(db, "settings", {
-        ...settings,
-        zainetto: { ...settings.zainetto, goalId: null },
-      });
-    }
+    // One transaction: the goal and the zainetto link go together or not at all.
+    await db.transaction().execute(async (trx) => {
+      // The goal's weights and plan versions go with it (ON DELETE CASCADE).
+      const { numDeletedRows } = await trx
+        .deleteFrom("goal")
+        .where("id", "=", id)
+        .executeTakeFirstOrThrow();
+      if (numDeletedRows === 0n) throw new HttpError(404, "goal not found");
+      const settings = await loadDocument(trx, "settings", settingsSchema);
+      if (settings.zainetto.goalId === id) {
+        await saveDocument(trx, "settings", {
+          ...settings,
+          zainetto: { ...settings.zainetto, goalId: null },
+        });
+      }
+    });
     return { id };
   });
 
