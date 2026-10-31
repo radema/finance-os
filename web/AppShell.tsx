@@ -1,6 +1,7 @@
 import { GoalDetailScreen } from "./goals/GoalDetailScreen.tsx";
 import { GoalsListScreen } from "./goals/GoalsListScreen.tsx";
 import {
+  CURRENT_PORTFOLIO_ROUTE,
   DEFAULT_ROUTE,
   findPage,
   GOALS_DETAIL_ROUTE,
@@ -10,6 +11,7 @@ import {
   NAV,
   TRANSACTIONS_ROUTE,
 } from "./nav.ts";
+import { CurrentPortfolioScreen } from "./operations/CurrentPortfolioScreen.tsx";
 import { TransactionsScreen } from "./operations/TransactionsScreen.tsx";
 import { SetupScreen } from "./setup/SetupScreen.tsx";
 
@@ -88,6 +90,8 @@ export function AppShell({ route }: { route: string }) {
       <main className="main">
         {route === TRANSACTIONS_ROUTE ? (
           <TransactionsScreen />
+        ) : route === CURRENT_PORTFOLIO_ROUTE ? (
+          <CurrentPortfolioScreen />
         ) : route === GOALS_LIST_ROUTE ? (
           <GoalsListScreen />
         ) : route === GOALS_DETAIL_ROUTE || goalIdOf(route) !== undefined ? (
