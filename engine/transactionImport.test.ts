@@ -374,3 +374,33 @@ describe("coupon rows (AC-33)", () => {
     expect(preview(rows, couponState()).map((r) => r.status)).toEqual(["ready", "ready"]);
   });
 });
+
+describe("duplicateInFile flag", () => {
+  const coupon = (n: number) =>
+    row({
+      rowNumber: n,
+      isin: "IT00TEST0003",
+      type: "coupon",
+      qty: null,
+      price: null,
+      controvalore: "40.5",
+    });
+
+  it("is true for repeated trades and repeated coupons, false for other needs-fix rows", () => {
+    expect(
+      preview([row({ rowNumber: 2 }), row({ rowNumber: 3 })]).map((p) => p.duplicateInFile),
+    ).toEqual([true, true]);
+    expect(preview([coupon(2), coupon(3)]).map((p) => p.duplicateInFile)).toEqual([true, true]);
+    const bad = only([row({ qty: null })]);
+    expect(bad.status).toBe("needs fix");
+    expect(bad.duplicateInFile).toBe(false);
+  });
+
+  it("is false for a ready row and once the user confirmed the row", () => {
+    expect(only([row()]).duplicateInFile).toBe(false);
+    const [first] = preview([row({ rowNumber: 2 }), row({ rowNumber: 3 })], state(), {
+      2: { confirmDuplicate: true },
+    });
+    expect(first?.duplicateInFile).toBe(false);
+  });
+});

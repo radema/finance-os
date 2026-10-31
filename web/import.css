@@ -1,0 +1,61 @@
+/* Import screen: tabs as buttons, the row check table, status chips. Tokens only. */
+button.tab {
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+.import-scroll {
+  max-height: 60vh;
+  overflow: auto;
+}
+.import-section-title {
+  margin: var(--s3) 0 var(--s2);
+  font: 600 var(--t-body) / var(--lh-body) var(--font-display);
+  color: var(--ink);
+}
+.reasons {
+  margin: 0;
+  padding-left: var(--s3);
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 0 var(--s2);
+  border-radius: 999px;
+  background: var(--wash);
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  white-space: nowrap;
+}
+.status-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--ctx);
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+}
+.status-chip[data-status="needs a goal"],
+.status-chip[data-status="product not found"],
+.status-chip[data-status="needs fix"] {
+  background: var(--tint1);
+  font-weight: 600;
+}
+.status-chip[data-status="needs a goal"] .status-icon,
+.status-chip[data-status="product not found"] .status-icon,
+.status-chip[data-status="needs fix"] .status-icon {
+  border-color: var(--hl);
+}
+.table .row-actions {
+  white-space: normal;
+}
+.split-row-detail > td {
+  background: var(--surface);
+}

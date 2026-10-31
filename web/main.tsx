@@ -7,6 +7,7 @@ import "./app.css";
 import "./setup.css";
 import "./goals.css";
 import "./split.css";
+import "./import.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
