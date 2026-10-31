@@ -7,6 +7,7 @@ import { resolveToday } from "./config.ts";
 import { openDatabase } from "./db.ts";
 import { registerGoalRoutes } from "./goals.ts";
 import { registerGoalViewRoutes } from "./goalViews.ts";
+import { registerOpeningPositionRoutes } from "./openingPosition.ts";
 import { registerProductRoutes } from "./products.ts";
 import { createRouter } from "./router.ts";
 import { registerSampleRoutes } from "./sample.ts";
@@ -53,6 +54,7 @@ export async function startServer({
   registerAssumptionRoutes(router, db);
   registerSampleRoutes(router, db);
   registerTransactionRoutes(router, db);
+  registerOpeningPositionRoutes(router, db);
   // The clock is read on each request, so an app left open overnight still knows the date.
   registerGoalViewRoutes(router, db, () => today ?? resolveToday(process.env));
 

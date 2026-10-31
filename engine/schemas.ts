@@ -2,6 +2,7 @@
 // Rates and weights are fractions (0.26 is 26%). Money is integer cents. Months are `YYYY-MM`.
 import { z } from "zod";
 import { ASSET_CLASSES } from "./assetClasses.ts";
+import { toScaled } from "./units.ts";
 
 const fraction = z.number().min(0).max(1);
 const cents = z.number().int().min(0);
@@ -100,6 +101,45 @@ export type TransactionInput = z.infer<typeof transactionInputSchema>;
 
 /** A transaction as the API returns it: `qty` is signed, `price` is the quoted price. */
 export type Transaction = TransactionInput & { id: string; qty: number };
+
+// --- Opening position ------------------------------------------------------------------------
+
+const positiveNumber = z.number().positive().max(1e9);
+
+const openingRowSchema = z
+  .object({
+    productId: z.string().min(1),
+    totalUnits: positiveNumber,
+    /** The account PMC, quoted like a price (a BTP per 100). */
+    pmc: positiveNumber,
+    parts: z
+      .array(z.object({ goalId: z.string().min(1), units: positiveNumber }))
+      .min(1, "give at least one bucket"),
+  })
+  .refine(
+    ({ totalUnits, parts }) =>
+      parts.reduce((sum, part) => sum + toScaled(part.units), 0) === toScaled(totalUnits),
+    { message: "the parts must add up to the total units", path: ["parts"] },
+  )
+  .refine(({ parts }) => new Set(parts.map((part) => part.goalId)).size === parts.length, {
+    message: "a bucket appears once per product",
+    path: ["parts"],
+  });
+
+/** The Current portfolio form: one asOf date, and per product the total, the PMC and the split. */
+export const openingPositionInputSchema = z.object({
+  asOf: isoDate,
+  positions: z
+    .array(openingRowSchema)
+    .min(1, "add at least one product")
+    .refine((rows) => new Set(rows.map((row) => row.productId)).size === rows.length, {
+      message: "a product appears once",
+    }),
+});
+export type OpeningPositionInput = z.infer<typeof openingPositionInputSchema>;
+
+/** The stored OpeningPosition document: the date of the account's opening position. */
+export const openingDateSchema = z.object({ asOf: isoDate });
 
 // --- Assumption documents --------------------------------------------------------------------
 
