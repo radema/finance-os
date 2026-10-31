@@ -54,7 +54,8 @@ export function registerCashFlowRoutes(router: Router, db: Kysely<DB>, today: ()
 
     const plan = await loadPensionPlan(db);
     let pension: Parameters<typeof projectCashFlow>[0]["pension"];
-    if (plan) {
+    // A plan without RAL has no schedule: the pension goal falls back to its monthly plan, as on Goals.
+    if (plan && plan.ral !== undefined) {
       const voluntaryYtd = voluntaryYtdCents(await loadLedger(db), asOf);
       pension = {
         goalId: plan.goalId,

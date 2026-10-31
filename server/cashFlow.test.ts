@@ -85,8 +85,8 @@ describe("Cash flow API (AC-50)", () => {
     expect((await read()).cashFlow).toEqual(document);
 
     // Oracle: the engine on the fixture's goals at asOf 2026-10-31. Plans in force in October:
-    // holiday 100, car 450, home 600, retirement 350 (a pension goal: schedule only, and this
-    // plan has no RAL, so no schedule).
+    // holiday 100, car 450, home 600, retirement 350 (this plan has no RAL, so the pension goal
+    // falls back to its monthly plan, as on Goals).
     const expected = projectCashFlow({
       asOf: "2026-10-31",
       cashFlow: document,
@@ -96,12 +96,11 @@ describe("Cash flow API (AC-50)", () => {
         { id: "g-home", targetYear: 2031, contributionGrowth: 0.02, monthly: 60_000 },
         { id: "g-retirement", targetYear: 2046, contributionGrowth: 0.02, monthly: 35_000 },
       ],
-      pension: { goalId: "g-retirement", schedule: [] },
     });
     const rows = (await read()).rows;
     expect(rows).toEqual(expected);
-    // 2026: holiday 2 x 100 + car 2 x 450 + home 2 x 600; retirement's plan amount is not counted.
-    expect(rows[0]?.planned).toBeCloseTo(230_000, 6);
+    // 2026: holiday 2 x 100 + car 2 x 450 + home 2 x 600 + retirement 2 x 350.
+    expect(rows[0]?.planned).toBeCloseTo(300_000, 6);
   });
 
   it("uses the voluntary YTD of Voluntary products for the refund, and the schedule for planned", async () => {
