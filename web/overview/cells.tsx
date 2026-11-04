@@ -2,6 +2,7 @@ import { type CSSProperties, type ReactNode, useMemo } from "react";
 import type { GoalListRow } from "../../engine/goalViews.ts";
 import type { OverviewView } from "../../engine/overviewView.ts";
 import type { Alert } from "../../engine/rules.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { pVsRequired } from "../goals/outlook.ts";
 import { RangeChart } from "../goals/RangeChart.tsx";
@@ -35,10 +36,10 @@ export function Cell({
   children,
 }: {
   id: string;
-  title: string;
+  title: ReactNode;
   /** Omit when no one screen explains the cell: its rows link on their own. */
   href?: string;
-  unit?: string;
+  unit?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -191,7 +192,7 @@ export function RangeCell({ range }: { range: NonNullable<OverviewView["range"]>
     <>
       <p className="sub">
         <GoalChip id={range.goalId} name={range.name} slot={range.slot} /> has the smallest margin
-        over its required probability.
+        over its <TermPopover term="required">required probability</TermPopover>.
       </p>
       <RangeChart
         range={range.range}
@@ -313,7 +314,9 @@ export function LevelsCell({ levels, note }: { levels: readonly LevelRow[]; note
           <tr>
             <th>Level</th>
             <th className="num">Reached today</th>
-            <th className="num">Year, typical case</th>
+            <th className="num">
+              Year, <TermPopover term="typical">typical case</TermPopover>
+            </th>
             <th className="num">Year, deterministic</th>
           </tr>
         </thead>

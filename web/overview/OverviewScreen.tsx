@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { OverviewView } from "../../engine/overviewView.ts";
 import type { Alert } from "../../engine/rules.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { Kpi } from "../goals/Kpi.tsx";
 import { formatAmount } from "../money.ts";
 import { goalDetailHref } from "../nav.ts";
@@ -51,7 +52,8 @@ function Dashboard({ view }: { view: OverviewView }) {
       <div className="tag">Overview</div>
       <h1 className="title">{actionTitle(track, key.netWorth)}</h1>
       <p className="unit">
-        Values at the end of {view.asOf.slice(0, 7)}. Every number links to its screen.
+        Values at the end of {view.asOf.slice(0, 7)}. Every number links to its screen.{" "}
+        <TermPopover term="twr">TWR</TermPopover> is the time-weighted return.
       </p>
 
       <div className="kpis kpis-blue kpis-overview" data-cell="key-numbers">
@@ -91,7 +93,12 @@ function Dashboard({ view }: { view: OverviewView }) {
           id="p-success"
           title="Probability of success"
           href={hrefOf(ROUTES.pVsRequired)}
-          unit="Each goal against the probability it must reach."
+          unit={
+            <>
+              Each goal against the{" "}
+              <TermPopover term="required">probability it must reach</TermPopover>.
+            </>
+          }
         >
           <ProbabilityCell goals={goals} />
         </Cell>
@@ -124,7 +131,14 @@ function Dashboard({ view }: { view: OverviewView }) {
           id="range"
           title="Range of outcomes"
           href={view.range ? goalDetailHref(view.range.goalId) : hrefOf(ROUTES.goals)}
-          unit="Bad, typical and good case at the goal date, against the target."
+          unit={
+            <>
+              <TermPopover term="badcase">Bad case</TermPopover>,{" "}
+              <TermPopover term="typical">typical case</TermPopover> and{" "}
+              <TermPopover term="goodcase">good case</TermPopover> at the goal date, against the
+              target.
+            </>
+          }
         >
           {view.range ? (
             <RangeCell range={view.range} />
@@ -147,7 +161,12 @@ function Dashboard({ view }: { view: OverviewView }) {
           id="fi-progress"
           title="Share of the FI target, by year"
           href={hrefOf(ROUTES.fiProgress)}
-          unit="Typical case, as a percentage of each level target."
+          unit={
+            <>
+              <TermPopover term="typical">Typical case</TermPopover>, as a percentage of each level
+              target.
+            </>
+          }
         >
           <FiProgressCell fi={fi} />
         </Cell>

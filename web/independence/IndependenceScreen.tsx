@@ -2,6 +2,7 @@ import { type CSSProperties, useEffect, useRef, useState } from "react";
 import type { IndependenceView } from "../../engine/independenceView.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { fractionToPercent } from "../forms.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
 import { Alert, Card, CheckField, Field, NumberField, Resource } from "../setup/ui.tsx";
 import { FanChart, ProgressChart } from "./FiCharts.tsx";
@@ -111,12 +112,18 @@ function LevelsTable({ view }: { view: IndependenceView }) {
       <table className="table">
         <thead>
           <tr>
-            <th>Level</th>
+            <th>
+              <TermPopover term="fire">Level</TermPopover>
+            </th>
             <th className="num">Target</th>
             <th className="num">Progress</th>
             <th className="num">Year reached, deterministic</th>
-            <th className="num">Year reached, typical case</th>
-            <th className="num">Chance reached in {REACH_YEARS} years</th>
+            <th className="num">
+              Year reached, <TermPopover term="typical">typical case</TermPopover>
+            </th>
+            <th className="num">
+              <TermPopover term="prob">Chance</TermPopover> reached in {REACH_YEARS} years
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -139,8 +146,8 @@ function LevelsTable({ view }: { view: IndependenceView }) {
         </tbody>
       </table>
       <p className="sub">
-        Target and progress are in today's euros. The chance is read at 31 December {reachYear}.
-        Level 1 does not count the pension.
+        Target and progress are in <TermPopover term="real">today’s euros</TermPopover>. The chance
+        is read at 31 December {reachYear}. Level 1 does not count the pension.
       </p>
     </Card>
   );
@@ -165,11 +172,12 @@ function Charts({ view }: { view: IndependenceView }) {
         <ul className="legend">
           <li>
             <span className="swatch swatch-band" />
-            Bad case to good case
+            <TermPopover term="badcase">Bad case</TermPopover> to{" "}
+            <TermPopover term="goodcase">good case</TermPopover>
           </li>
           <li>
             <span className="swatch swatch-solid" />
-            Typical case
+            <TermPopover term="typical">Typical case</TermPopover>
           </li>
           <li>
             <span className="swatch swatch-dash" />

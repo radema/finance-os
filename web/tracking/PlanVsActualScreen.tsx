@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { NextContributionView, PlanVsActualView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { formatEuro, formatPercent } from "../money.ts";
 import { Card, Resource } from "../setup/ui.tsx";
@@ -120,7 +121,12 @@ function Totals({ view }: { view: PlanVsActualView }) {
           { label: "Put in", kind: "bar", colour: "--hl" },
           { label: "Planned", kind: "dash", colour: "--ctx" },
         ]}
-        callout="Put in counts buys and pension contributions with commissions. Opening positions and coupons are not contributions."
+        callout={
+          <>
+            Put in counts buys and pension contributions with commissions. Opening positions and{" "}
+            <TermPopover term="coupon">coupon</TermPopover>s are not contributions.
+          </>
+        }
         source={source}
       >
         <TimeChart

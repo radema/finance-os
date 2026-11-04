@@ -8,6 +8,7 @@ import {
 import type { MixView, OptimizerRunView } from "../../engine/optimizerView.ts";
 import type { AllocationRow, PensionPlan, Product } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { pVsRequired, requiredText } from "../goals/outlook.ts";
 import { formatAmount, formatPercent } from "../money.ts";
@@ -74,12 +75,13 @@ function HowItChooses({ requiredP }: { requiredP: number | undefined }) {
           dropped.
         </li>
         <li>
-          <strong>Same markets.</strong> Every mix runs on the same simulated markets, so the mixes
-          are compared fairly.
+          <strong>Same markets.</strong> Every mix runs on the same{" "}
+          <TermPopover term="simulated">simulated markets</TermPopover>, so the mixes are compared
+          fairly.
         </li>
         <li>
           <strong>Feasibility filter.</strong> It keeps the mixes whose chance of success reaches
-          the probability the goal must reach
+          the <TermPopover term="required">probability the goal must reach</TermPopover>
           {requiredP === undefined ? "" : `, ${formatPercent(requiredP)} for this goal`}. If no mix
           reaches it, it shows the mix with the highest chance and says so.
         </li>
@@ -237,13 +239,17 @@ function WeightsAndOutcomes({
             </tr>
           ))}
           <tr>
-            <th scope="row">Chance of success</th>
+            <th scope="row">
+              <TermPopover term="prob">Chance of success</TermPopover>
+            </th>
             <td className="num">{pVsRequired(current.p, view.requiredP)}</td>
             <td className="num">{pVsRequired(chosen.p, view.requiredP)}</td>
           </tr>
           {chosen.monthlyNeeded === undefined ? null : (
             <tr>
-              <th scope="row">Needed to reach the required chance</th>
+              <th scope="row">
+                Needed to reach the <TermPopover term="required">required</TermPopover> chance
+              </th>
               <td className="num">–</td>
               <td className="num">{requiredText(chosen.monthlyNeeded, unit)}</td>
             </tr>
@@ -252,7 +258,8 @@ function WeightsAndOutcomes({
       </table>
       <p className="sub">
         Net value in euros of the goal date. The target at that date is {formatAmount(view.target)}.
-        In the bad case 1 simulated outcome in 10 ends lower; in the good case 1 in 10 ends higher.
+        In the <TermPopover term="badcase">bad case</TermPopover> 1 simulated outcome in 10 ends
+        lower; in the <TermPopover term="goodcase">good case</TermPopover> 1 in 10 ends higher.
       </p>
     </>
   );
@@ -370,8 +377,8 @@ function Result({
       </div>
       {view.notFeasible ? (
         <p className="alert" role="alert">
-          No mix reaches the required probability of {formatPercent(view.requiredP)}. The mix with
-          the highest chance of success is shown.
+          No mix reaches the <TermPopover term="required">required probability</TermPopover> of{" "}
+          {formatPercent(view.requiredP)}. The mix with the highest chance of success is shown.
         </p>
       ) : null}
       <p className="callout">
@@ -407,12 +414,13 @@ function Exhibits({
       <figure className="exhibit">
         <div className="tag">All mixes</div>
         <h2 className="exhibit-title">
-          The suggested mix has a {formatPercent(chosen.p)} chance of success and a typical case of{" "}
-          {formatAmount(chosen.median)}
+          The suggested mix has a {formatPercent(chosen.p)}{" "}
+          <TermPopover term="prob">chance of success</TermPopover> and a{" "}
+          <TermPopover term="typical">typical case</TermPopover> of {formatAmount(chosen.median)}
         </h2>
         <p className="unit">
           Each dot is one of {view.mixes.length} {view.mixes.length === 1 ? "mix" : "mixes"}. Height
-          is the typical case in euros of the goal date.
+          is the <TermPopover term="typical">typical case</TermPopover> in euros of the goal date.
         </p>
         <ul className="legend">
           <li>
@@ -454,9 +462,15 @@ function Exhibits({
                 <th>#</th>
                 <th>Mix</th>
                 <th className="num">Chance of success</th>
-                <th className="num">Bad case</th>
-                <th className="num">Typical case</th>
-                <th className="num">Good case</th>
+                <th className="num">
+                  <TermPopover term="badcase">Bad case</TermPopover>
+                </th>
+                <th className="num">
+                  <TermPopover term="typical">Typical case</TermPopover>
+                </th>
+                <th className="num">
+                  <TermPopover term="goodcase">Good case</TermPopover>
+                </th>
                 {view.criterion === "O5" ? <th className="num">Needed</th> : null}
               </tr>
             </thead>

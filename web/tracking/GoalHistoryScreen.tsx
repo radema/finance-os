@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { GoalListView } from "../../engine/goalViews.ts";
 import type { SnapshotView } from "../../engine/snapshot.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatPercent } from "../money.ts";
 import { Alert, Card, ConfirmButton, Resource } from "../setup/ui.tsx";
 import { Exhibit } from "./Exhibit.tsx";
@@ -78,7 +79,16 @@ function History({
         <Exhibit
           tag="Goal history"
           title={`${current?.label} of ${known.length} ${known.length === 1 ? "goal" : "goals"} over ${history.months.length} monthly ${history.months.length === 1 ? "snapshot" : "snapshots"}, ${recomputed} of them recomputed`}
-          unit={current?.unit ?? ""}
+          unit={
+            metric === "prob" ? (
+              <>
+                Share of <TermPopover term="simulated">simulated markets</TermPopover> that reach
+                the target.
+              </>
+            ) : (
+              (current?.unit ?? "")
+            )
+          }
           legend={[
             ...known.map((goal) => ({
               label: goal.name,

@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { ASSET_CLASSES } from "../../engine/assetClasses.ts";
 import type { Commission, CorrelationsView, Goal, Settings } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, num, percentToFraction } from "../forms.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { DataCard } from "./DataCard.tsx";
 import {
   Alert,
@@ -127,7 +129,7 @@ function useDocumentForm<T>(
 function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }) {
   const form = useDocumentForm("/api/settings", settings, settingsToValues, valuesToSettings);
   const { values, set } = form;
-  const field = (key: string, label: string, hint?: string, step?: string) => (
+  const field = (key: string, label: ReactNode, hint?: string, step?: string) => (
     <NumberField
       label={label}
       value={values[key] ?? ""}
@@ -148,17 +150,44 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
           {field("inflation", "Inflation (% a year)", "Not in the spec: the mock's 2%.")}
           {field("taxStd", "Tax on ETF gains and direct holdings (%)")}
           {field("taxGovt", "Tax on government bonds (%)")}
-          {field("bollo", "Stamp duty, bollo (% a year)")}
+          {field(
+            "bollo",
+            <>
+              <TermPopover term="bollo">Stamp duty, bollo</TermPopover> (% a year)
+            </>,
+          )}
           {field("pensionTax", "Tax on pension returns (%)")}
           {field("pensionCap", "Pension deduction cap (EUR)", undefined, "0.01")}
         </div>
       </Card>
       <Card title="Probabilities and simulation">
         <div className="form-grid">
-          {field("need", "Required probability: Need (%)")}
-          {field("want", "Required probability: Want (%)")}
-          {field("wish", "Required probability: Wish (%)")}
-          {field("mcPaths", "Monte Carlo paths", undefined, "1")}
+          {field(
+            "need",
+            <>
+              <TermPopover term="required">Required probability</TermPopover>: Need (%)
+            </>,
+          )}
+          {field(
+            "want",
+            <>
+              <TermPopover term="required">Required probability</TermPopover>: Want (%)
+            </>,
+          )}
+          {field(
+            "wish",
+            <>
+              <TermPopover term="required">Required probability</TermPopover>: Wish (%)
+            </>,
+          )}
+          {field(
+            "mcPaths",
+            <>
+              <TermPopover term="simulated">Monte Carlo</TermPopover> paths
+            </>,
+            undefined,
+            "1",
+          )}
           {field("seed", "Random seed", "Not in the spec: the mock's 42.", "1")}
           <TextField
             label="Tracking starts (YYYY-MM)"
@@ -167,7 +196,13 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
           />
         </div>
       </Card>
-      <Card title="Tax-loss credit (zainetto)">
+      <Card
+        title={
+          <>
+            Tax-loss credit (<TermPopover term="zainetto">zainetto</TermPopover>)
+          </>
+        }
+      >
         <div className="form-grid">
           {field("zainettoAmount", "Amount (EUR)", undefined, "0.01")}
           {field("zainettoExpiry", "Expires in year", undefined, "1")}
@@ -242,7 +277,11 @@ function CommissionForm({ commission }: { commission: Commission }) {
                 step="0.01"
               />
               <NumberField
-                label="Minimum efficient ticket (EUR)"
+                label={
+                  <>
+                    <TermPopover term="minticket">Minimum efficient ticket</TermPopover> (EUR)
+                  </>
+                }
                 value={values.minTicket ?? ""}
                 onChange={set("minTicket")}
                 step="0.01"

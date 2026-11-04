@@ -10,7 +10,7 @@ export function Kpi({
   note,
   href,
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   note?: ReactNode;
   href?: string;

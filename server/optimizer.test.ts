@@ -54,7 +54,7 @@ describe("Optimizer run API (AC-84)", () => {
     expect(body.mode).toBe("new");
     expect(body.switchTax).toBe(0);
     expect(body.ruleName).toBe("O1 Protect the bad case");
-    expect(body.ruleText).toContain("10th percentile");
+    expect(body.ruleText).toContain("Highest bad case");
     expect(body.requiredP).toBeGreaterThan(0);
     expect(body.requiredP).toBeLessThanOrEqual(1);
     // Weights are an array of numbers that sum to 1, not a Map that serialises to {}.

@@ -7,7 +7,7 @@ export function Card({
   children,
   note,
 }: {
-  title: string;
+  title: ReactNode;
   children: ReactNode;
   note?: ReactNode;
 }) {
@@ -57,15 +57,18 @@ export function Field({
   hint,
   children,
 }: {
-  label: string;
+  label: ReactNode;
   hint?: string;
   children: ReactNode;
 }) {
+  // A term button is labelable, so it goes after the control in the DOM; CSS shows it first.
+  const isText = typeof label === "string";
   return (
     // biome-ignore lint/a11y/noLabelWithoutControl: the control is `children`, nested in the label
     <label className="field">
-      <span className="field-label">{label}</span>
+      {isText ? <span className="field-label">{label}</span> : null}
       {children}
+      {isText ? null : <span className="field-label field-label-first">{label}</span>}
       {hint ? <span className="field-hint">{hint}</span> : null}
     </label>
   );
@@ -77,7 +80,7 @@ export function TextField({
   onChange,
   hint,
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   hint?: string;
@@ -96,7 +99,7 @@ export function NumberField({
   hint,
   step = "any",
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   hint?: string;
@@ -121,7 +124,7 @@ export function SelectField({
   onChange,
   options,
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   options: readonly { value: string; label: string }[];

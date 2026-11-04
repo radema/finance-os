@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { GoalListView } from "../../engine/goalViews.ts";
 import type { Product, Settings, Transaction } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro } from "../money.ts";
 import { TRANSACTIONS_ROUTE } from "../nav.ts";
 import { Alert, Card, Field, NumberField, ProductTag, Resource } from "../setup/ui.tsx";
@@ -40,8 +41,8 @@ function Saved({
   return (
     <Card title="Current portfolio saved">
       <p className="saved" role="status">
-        The opening position is saved, as of {asOf}. Edit or delete its rows in{" "}
-        <a href={`#/${TRANSACTIONS_ROUTE}`}>Transactions</a>.
+        The <TermPopover term="opening">opening position</TermPopover> is saved, as of {asOf}. Edit
+        or delete its rows in <a href={`#/${TRANSACTIONS_ROUTE}`}>Transactions</a>.
       </p>
       {rows.length === 0 ? null : (
         <table className="table">
@@ -50,7 +51,9 @@ function Saved({
               <th>Product</th>
               <th>Bucket</th>
               <th className="num">Units</th>
-              <th className="num">PMC</th>
+              <th className="num">
+                <TermPopover term="pmc">PMC</TermPopover>
+              </th>
               <th className="num">Amount</th>
             </tr>
           </thead>
@@ -207,8 +210,9 @@ export function CurrentPortfolioScreen() {
     <>
       <h2 className="import-section-title">Current portfolio</h2>
       <p className="note">
-        Enter what you hold today: units and PMC per product, then split the units over the buckets.
-        Each part is saved as an opening transaction, not a contribution.
+        Enter what you hold today: units and <TermPopover term="pmc">PMC</TermPopover> per product,
+        then split the units over the buckets. Each part is saved as an opening transaction, not a
+        contribution.
       </p>
       <Resource loaded={goals}>
         {({ goals: goalList }) => (

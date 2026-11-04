@@ -36,7 +36,7 @@ export function Exhibit({
 }: {
   tag: string;
   title: string;
-  unit: string;
+  unit: ReactNode;
   legend?: readonly LegendItem[];
   callout: ReactNode;
   source: string;

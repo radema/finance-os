@@ -4,6 +4,7 @@ import type { SnapshotView } from "../../engine/snapshot.ts";
 import type { PlanVsActualView } from "../../engine/trackingViews.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { eurosToCents } from "../forms.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { currentMonth, formatEuro, formatPercent } from "../money.ts";
 import { CapitalNote } from "../pension/CapitalNote.tsx";
 import { Alert, Card, NumberField, Resource, TextField } from "../setup/ui.tsx";
@@ -54,7 +55,12 @@ function History({ goal, snapshots }: { goal: GoalDetailView; snapshots: Snapsho
           ? `${goal.name} could not be analysed at the last snapshot, ${month}`
           : `${goal.name} reached its target in ${formatPercent(last)} of simulated markets at ${month}`
       }
-      unit="Share of simulated markets that reach the target, at each monthly snapshot."
+      unit={
+        <>
+          Share of <TermPopover term="simulated">simulated markets</TermPopover> that reach the
+          target, at each monthly snapshot.
+        </>
+      }
       legend={[
         { label: "Saved", kind: "dot", colour: markColour(goal.slot) },
         { label: "Recomputed", kind: "ring", colour: markColour(goal.slot) },
