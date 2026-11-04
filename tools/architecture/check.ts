@@ -10,6 +10,7 @@ export type Violation = {
     | "engine-no-server"
     | "engine-no-web"
     | "web-no-server"
+    | "web-no-colour-literal"
     | "sql-only-in-server";
   detail: string;
 };
@@ -17,7 +18,7 @@ export type Violation = {
 const SKIPPED_DIRS = new Set(["node_modules", "dist", "coverage"]);
 // The checker and its tests hold import and SQL strings as data, so they are not scanned.
 const SELF_DIR = "tools/architecture/";
-const SOURCE_FILE = /\.(?:ts|tsx|mts|cts)$/;
+const SOURCE_FILE = /\.(?:ts|tsx|mts|cts|css)$/;
 
 // Static imports and re-exports, side-effect imports, dynamic import() and require().
 const IMPORT_SPECIFIER =
@@ -26,6 +27,11 @@ const IMPORT_SPECIFIER =
 // Keywords match in upper case only, so prose such as "Delete from history" stays quiet.
 const SQL_TEXT =
   /\bSELECT\s[^;]{1,200}?\sFROM\s+\w+|\b(?:INSERT\s+INTO|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\s+\w+|\bUPDATE\s+\w+\s+SET\s+\w+/g;
+
+// Hex colours and colour functions. Colours live in web/tokens.css; everything else reads a token.
+const COLOUR_LITERAL =
+  /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(/g;
+const TOKEN_FILE = "web/tokens.css";
 
 const isNodeModule = (specifier: string): boolean =>
   specifier.startsWith("node:") || builtinModules.includes(specifier.split("/")[0] ?? specifier);
@@ -51,7 +57,7 @@ function targetFolder(rootDir: string, file: string, specifier: string): string 
 }
 
 /**
- * Checks the structural rules 1-3 of CLAUDE.md on every source file under `rootDir`.
+ * Checks the structural rules 1-3 of CLAUDE.md and the no-colour-literal rule of DESIGN.md on every source file under `rootDir`.
  *
  * @param rootDir Folder that holds `engine/`, `server/` and `web/`.
  * @returns The violations found; an empty array means the tree is clean.
@@ -78,6 +84,10 @@ export function checkArchitecture(rootDir: string): Violation[] {
       }
       if (folder === "web" && target === "server") add("web-no-server", specifier);
       if (folder !== "server" && isSqlModule(specifier)) add("sql-only-in-server", specifier);
+    }
+
+    if (folder === "web" && rel !== TOKEN_FILE) {
+      for (const match of text.matchAll(COLOUR_LITERAL)) add("web-no-colour-literal", match[0]);
     }
 
     if (folder !== "server") {

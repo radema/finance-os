@@ -45,7 +45,7 @@
   height: 10px;
   background: var(--slot);
 }
-.swatch-band {
+.swatch-fi-band {
   height: 10px;
   background: color-mix(in srgb, var(--slot5) 30%, transparent);
 }
