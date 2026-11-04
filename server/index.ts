@@ -14,6 +14,7 @@ import { registerGoalRoutes } from "./goals.ts";
 import { registerGoalViewRoutes } from "./goalViews.ts";
 import { registerImportRoutes } from "./importRoutes.ts";
 import { registerIndependenceRoutes } from "./independence.ts";
+import { registerMonthlyJobRoutes } from "./monthlyJob.ts";
 import { registerOpeningPositionRoutes } from "./openingPosition.ts";
 import { registerPensionRoutes } from "./pension.ts";
 import { registerPriceFetchRoutes } from "./priceFetch.ts";
@@ -92,6 +93,7 @@ export async function startServer({
   registerIndependenceRoutes(router, db, clock);
   registerSetupProgressRoutes(router, db);
   registerSnapshotRoutes(router, db, clock);
+  const monthlyJob = registerMonthlyJobRoutes(router, { db, provider: priceProvider, clock });
 
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];
@@ -120,11 +122,18 @@ export async function startServer({
     throw error;
   }
 
+  // On the first start of a new month: prices, then the snapshot. Not awaited: a slow provider must
+  // not hold the app back.
+  const startupJob = monthlyJob
+    .startup()
+    .catch((error: unknown) => console.error("Monthly job failed:", error));
+
   const bound = server.address() as AddressInfo;
   return {
     address: bound.address,
     url: `http://${bound.address}:${bound.port}`,
     async close() {
+      await startupJob;
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
         server.closeAllConnections();
