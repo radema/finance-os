@@ -38,7 +38,7 @@ export function createRouter() {
    * @param method HTTP method.
    * @param path Exact path, for example `/api/health`.
    * @param schema Validates the request input: the query object for GET and DELETE, the JSON body otherwise.
-   * @param handler Receives the validated input and returns a JSON-serialisable value.
+   * @param handler Receives the validated input and returns a JSON-serialisable value, or nothing for a 204.
    */
   function route<T>(
     method: Method,
@@ -55,7 +55,8 @@ export function createRouter() {
       }
       const parsed = schema.safeParse(raw);
       if (!parsed.success) return failure(400, "invalid request", parsed.error.issues);
-      return Response.json(await handler(parsed.data));
+      const result = await handler(parsed.data);
+      return result === undefined ? new Response(null, { status: 204 }) : Response.json(result);
     };
     const methods = routes.get(path) ?? new Map<string, Run>();
     methods.set(method, run);

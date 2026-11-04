@@ -273,7 +273,7 @@ function costlyTrades(input: RuleInput): Alert[] {
       "R7",
       NO_SCOPE,
       latest.id,
-      `${costly.length} trades in the last ${COSTLY_WINDOW_MONTHS} months paid a commission above ${multiple} times the plan rate of ${percent(rate)}. The latest, on ${latest.date}: ${money(fee)} on ${money(latest.amountCents)} (${percent(fee / latest.amountCents)}).`,
+      `${costly.length} ${costly.length === 1 ? "trade" : "trades"} in the last ${COSTLY_WINDOW_MONTHS} months paid a commission above ${multiple} times the plan rate of ${percent(rate)}. The latest, on ${latest.date}: ${money(fee)} on ${money(latest.amountCents)} (${percent(fee / latest.amountCents)}).`,
     ),
   ];
 }
