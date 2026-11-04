@@ -1,15 +1,10 @@
-import {
-  type CashFlowYear,
-  cashFlowSchema,
-  holdingsAt,
-  type ProductParams,
-  pensionPlanSchema,
-  pensionSchedule,
-  planVsActual,
-  projectCashFlow,
-  projectGoal,
-} from "../../engine/index.ts";
+import { type CashFlowYear, projectCashFlow } from "../../engine/cashFlow.ts";
+import { holdingsAt } from "../../engine/holdings.ts";
 import { addMonths } from "../../engine/months.ts";
+import { pensionSchedule } from "../../engine/pension.ts";
+import { planVsActual } from "../../engine/planVsActual.ts";
+import { type ProductParams, projectGoal } from "../../engine/projection.ts";
+import { cashFlowSchema, pensionPlanSchema } from "../../engine/schemas.ts";
 import { loadMockEngine, type MockCashFlowRow, type MockState } from "./mock.ts";
 import type { CashFlowScenario, Scenario } from "./scenario.ts";
 
