@@ -67,7 +67,7 @@ export function registerOptimizerApplyRoutes(router: Router, db: Kysely<DB>): vo
 
     if (!input.confirm) return { preview: change };
     await db.transaction().execute(async (trx) => {
-      if (isPension && plan && change.flows) {
+      if (change.flows) {
         await saveDocument(trx, "pensionPlan", { ...plan, flows: change.flows });
         return;
       }
