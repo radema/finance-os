@@ -296,6 +296,15 @@ describe("Goals list and Goal detail API", () => {
       expect(car?.required.probability ?? Number.NaN).toBeGreaterThanOrEqual(amount);
     });
 
+    it("keeps the plan in force at the valuation month when a newer version starts later (#86)", async () => {
+      await loadSample();
+      sql(
+        "INSERT INTO contribution_plan (goal_id, from_month, monthly_cents) VALUES ('g-car', '2026-12', 99900)",
+      );
+      expect((await list()).asOf).toBe("2026-10-31");
+      expect((await detail("g-car")).analysis?.required.currentMonthly).toBe(450);
+    });
+
     it("gives the pension goal's required contribution as a multiplier of its schedule", async () => {
       await loadSample();
       const retirement = (await detail("g-retirement")).analysis;
