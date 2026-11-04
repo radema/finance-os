@@ -257,7 +257,6 @@ function costlyTrades(input: RuleInput): Alert[] {
         trade.commissionCents !== null &&
         trade.commissionCents > 0 &&
         trade.amountCents > 0 &&
-        trade.date <= input.asOf &&
         window.includes(trade.date.slice(0, 7)),
     )
     .filter((trade) => (trade.commissionCents as number) > multiple * rate * trade.amountCents);
