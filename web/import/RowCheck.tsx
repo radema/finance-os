@@ -7,6 +7,7 @@ import type {
 } from "../../engine/transactionImport.ts";
 import { parseDecimal } from "../../engine/transactionImport.ts";
 import { toCents } from "../../engine/units.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { SelectField } from "../setup/ui.tsx";
 import { SplitControl } from "../split/SplitControl.tsx";
 import type { Bucket } from "../split/splitState.ts";
@@ -59,7 +60,11 @@ function CouponGoal({
   const options = goals.filter((g) => candidates.length === 0 || candidates.includes(g.id));
   return (
     <SelectField
-      label="Bucket for this coupon"
+      label={
+        <>
+          Bucket for this <TermPopover term="coupon">coupon</TermPopover>
+        </>
+      }
       value={value}
       onChange={onPick}
       options={[

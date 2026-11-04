@@ -1,4 +1,5 @@
 import { DataFolderBanner } from "./DataFolderBanner.tsx";
+import { GlossaryScreen } from "./glossary/GlossaryScreen.tsx";
 import { GoalDetailScreen } from "./goals/GoalDetailScreen.tsx";
 import { GoalsListScreen } from "./goals/GoalsListScreen.tsx";
 import { ImportScreen } from "./import/ImportScreen.tsx";
@@ -7,6 +8,7 @@ import {
   CURRENT_PORTFOLIO_ROUTE,
   DEFAULT_ROUTE,
   findPage,
+  GLOSSARY_ROUTE,
   GOALS_DETAIL_ROUTE,
   GOALS_HISTORY_ROUTE,
   GOALS_LIST_ROUTE,
@@ -130,6 +132,8 @@ export function AppShell({ route }: { route: string }) {
           <PensionScreen />
         ) : route === INDEPENDENCE_ROUTE ? (
           <IndependenceScreen />
+        ) : route === GLOSSARY_ROUTE ? (
+          <GlossaryScreen />
         ) : isBuilt(route) ? (
           <SetupScreen route={route} />
         ) : (

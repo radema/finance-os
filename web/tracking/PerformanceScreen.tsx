@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { PerformanceScopesView, PerformanceView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { Kpi } from "../goals/Kpi.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
 import { Card, Resource, SelectField } from "../setup/ui.tsx";
@@ -33,15 +34,47 @@ function Kpis({ summary }: { summary: NonNullable<PerformanceView["summary"]> })
         note={`Value minus ${formatAmount(summary.moneyIn)} put in.`}
       />
       <Kpi
-        label="TWR since start"
+        label={
+          <>
+            <TermPopover term="twr">TWR</TermPopover> since start
+          </>
+        }
         value={percentText(twr.sinceStart)}
         note={twrNote(twr.sinceStart)}
       />
-      <Kpi label="TWR this year" value={percentText(twr.ytd)} note={twrNote(twr.ytd)} />
-      <Kpi label="TWR 12 months" value={percentText(twr.last12m)} note={twrNote(twr.last12m)} />
-      <Kpi label="XIRR a year" value={percentText(summary.xirr)} note={xirrNote(summary.xirr)} />
       <Kpi
-        label="Max drawdown"
+        label={
+          <>
+            <TermPopover term="twr">TWR</TermPopover> this year
+          </>
+        }
+        value={percentText(twr.ytd)}
+        note={twrNote(twr.ytd)}
+      />
+      <Kpi
+        label={
+          <>
+            <TermPopover term="twr">TWR</TermPopover> 12 months
+          </>
+        }
+        value={percentText(twr.last12m)}
+        note={twrNote(twr.last12m)}
+      />
+      <Kpi
+        label={
+          <>
+            <TermPopover term="xirr">XIRR</TermPopover> a year
+          </>
+        }
+        value={percentText(summary.xirr)}
+        note={xirrNote(summary.xirr)}
+      />
+      <Kpi
+        label={
+          <>
+            Max <TermPopover term="drawdown">drawdown</TermPopover>
+          </>
+        }
         value={formatPercent(summary.maxDrawdown)}
         note="The deepest fall of the index from its highest point."
       />
@@ -177,11 +210,21 @@ function ScopesTable({ scopes }: { scopes: PerformanceScopesView }) {
               <th>Scope</th>
               <th className="num">Value</th>
               <th className="num">Gain</th>
-              <th className="num">TWR since start</th>
-              <th className="num">TWR this year</th>
-              <th className="num">TWR 12 months</th>
-              <th className="num">XIRR a year</th>
-              <th className="num">Max drawdown</th>
+              <th className="num">
+                <TermPopover term="twr">TWR</TermPopover> since start
+              </th>
+              <th className="num">
+                <TermPopover term="twr">TWR</TermPopover> this year
+              </th>
+              <th className="num">
+                <TermPopover term="twr">TWR</TermPopover> 12 months
+              </th>
+              <th className="num">
+                <TermPopover term="xirr">XIRR</TermPopover> a year
+              </th>
+              <th className="num">
+                Max <TermPopover term="drawdown">drawdown</TermPopover>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -204,8 +247,9 @@ function ScopesTable({ scopes }: { scopes: PerformanceScopesView }) {
         </table>
       </div>
       <p className="sub">
-        TWR is the time-weighted return, chained from monthly returns. XIRR is the annual rate of
-        your dated cash flows and the final value.
+        <TermPopover term="twr">TWR</TermPopover> is the time-weighted return, chained from monthly
+        returns. <TermPopover term="xirr">XIRR</TermPopover> is the annual rate of your dated cash
+        flows and the final value.
       </p>
     </Card>
   );

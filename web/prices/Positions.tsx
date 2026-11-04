@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Goal } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { num } from "../forms.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatUnitPrice } from "../money.ts";
 import { Alert, Card, Field, ProductTag, Resource } from "../setup/ui.tsx";
 import type { PriceOverviewRow } from "./types.ts";
@@ -83,7 +84,9 @@ export function Positions({
                   <tr>
                     <th>Product</th>
                     <th className="num">Units</th>
-                    <th className="num">PMC</th>
+                    <th className="num">
+                      <TermPopover term="pmc">PMC</TermPopover>
+                    </th>
                     <th>Buckets</th>
                     <th>Broker units</th>
                   </tr>
@@ -127,8 +130,8 @@ export function Positions({
         </Resource>
       )}
       <p className="sub">
-        PMC is for one unit: a government bond is quoted per 100. Broker units are checked against
-        your buckets later (rule R9).
+        <TermPopover term="pmc">PMC</TermPopover> is for one unit: a government bond is quoted per
+        100. Broker units are checked against your buckets later (rule R9).
       </p>
     </Card>
   );

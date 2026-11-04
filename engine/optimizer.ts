@@ -94,7 +94,7 @@ export function defaultCriterion(priority: Goal["priority"]): "O1" | "O2" {
 export const CRITERION_RULES: Record<OptimizerCriterion, { name: string; text: string }> = {
   O1: {
     name: "O1 Protect the bad case",
-    text: "Highest bad case (10th percentile) among the mixes that reach the required probability; a tie goes to the higher chance of success.",
+    text: "Highest bad case (the result 1 simulated market in 10 falls below) among the mixes that reach the required probability; a tie goes to the higher chance of success.",
   },
   O2: {
     name: "O2 Grow the typical outcome",

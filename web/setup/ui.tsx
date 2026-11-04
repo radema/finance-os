@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { Loaded } from "../api.ts";
 
 export function Card({
@@ -7,7 +7,7 @@ export function Card({
   children,
   note,
 }: {
-  title: string;
+  title: ReactNode;
   children: ReactNode;
   note?: ReactNode;
 }) {
@@ -57,16 +57,34 @@ export function Field({
   hint,
   children,
 }: {
-  label: string;
+  label: ReactNode;
   hint?: string;
-  children: ReactNode;
+  /** The control. A function gets the id of the label text, for `aria-labelledby`. */
+  children: ReactNode | ((labelId: string) => ReactNode);
 }) {
+  const labelId = useId();
+  const control = typeof children === "function" ? children(labelId) : children;
+  const hintText = hint ? <span className="field-hint">{hint}</span> : null;
+  // A term button in the label is a second labelable element, so a term label is a div, not a label.
+  if (typeof label !== "string") {
+    return (
+      <div className="field">
+        <span id={labelId} className="field-label">
+          {label}
+        </span>
+        {control}
+        {hintText}
+      </div>
+    );
+  }
   return (
     // biome-ignore lint/a11y/noLabelWithoutControl: the control is `children`, nested in the label
     <label className="field">
-      <span className="field-label">{label}</span>
-      {children}
-      {hint ? <span className="field-hint">{hint}</span> : null}
+      <span id={labelId} className="field-label">
+        {label}
+      </span>
+      {control}
+      {hintText}
     </label>
   );
 }
@@ -77,14 +95,21 @@ export function TextField({
   onChange,
   hint,
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   hint?: string;
 }) {
   return (
     <Field label={label} hint={hint}>
-      <input type="text" value={value} onChange={(event) => onChange(event.target.value)} />
+      {(labelId) => (
+        <input
+          type="text"
+          aria-labelledby={labelId}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
     </Field>
   );
 }
@@ -96,7 +121,7 @@ export function NumberField({
   hint,
   step = "any",
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   hint?: string;
@@ -104,13 +129,16 @@ export function NumberField({
 }) {
   return (
     <Field label={label} hint={hint}>
-      <input
-        type="number"
-        inputMode="decimal"
-        step={step}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      {(labelId) => (
+        <input
+          type="number"
+          inputMode="decimal"
+          aria-labelledby={labelId}
+          step={step}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
     </Field>
   );
 }
@@ -121,20 +149,26 @@ export function SelectField({
   onChange,
   options,
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   options: readonly { value: string; label: string }[];
 }) {
   return (
     <Field label={label}>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      {(labelId) => (
+        <select
+          aria-labelledby={labelId}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      )}
     </Field>
   );
 }

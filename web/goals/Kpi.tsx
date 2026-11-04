@@ -10,23 +10,29 @@ export function Kpi({
   note,
   href,
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   note?: ReactNode;
   href?: string;
 }) {
-  const body = (
+  const text = (
     <>
-      <div className="kpi-label">{label}</div>
       <div className="kpi-value">{value}</div>
       {note ? <p className="sub">{note}</p> : null}
     </>
   );
+  // The link wraps value and note only: a term button in the label cannot sit inside an <a>.
   return href ? (
-    <a className="kpi kpi-link" href={href}>
-      {body}
-    </a>
+    <div className="kpi kpi-link">
+      <div className="kpi-label">{label}</div>
+      <a className="kpi-main" href={href}>
+        {text}
+      </a>
+    </div>
   ) : (
-    <div className="kpi">{body}</div>
+    <div className="kpi">
+      <div className="kpi-label">{label}</div>
+      {text}
+    </div>
   );
 }

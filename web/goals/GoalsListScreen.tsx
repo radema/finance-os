@@ -1,6 +1,7 @@
 import type { GoalListView } from "../../engine/goalViews.ts";
 import type { PlanVsActualView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatAmount, formatEuro, formatPercent } from "../money.ts";
 import { SampleCard } from "../setup/SampleCard.tsx";
 import { Card, PriorityTag, Resource } from "../setup/ui.tsx";
@@ -33,7 +34,8 @@ export function GoalsListScreen() {
               </h1>
               {goals.length > 0 ? (
                 <p className="unit">
-                  Value at the end of {asOf.slice(0, 7)}. Targets in today's euros.
+                  Value at the end of {asOf.slice(0, 7)}. Targets in{" "}
+                  <TermPopover term="real">today’s euros</TermPopover>.
                 </p>
               ) : null}
 
@@ -52,9 +54,14 @@ export function GoalsListScreen() {
                       <thead>
                         <tr>
                           <th>Goal</th>
-                          <th>Priority</th>
+                          <th>
+                            <TermPopover term="need">Priority</TermPopover>
+                          </th>
                           <th>Status</th>
-                          <th>P vs required</th>
+                          <th>
+                            <TermPopover term="prob">P</TermPopover> vs{" "}
+                            <TermPopover term="required">required</TermPopover>
+                          </th>
                           <th className="num">Value</th>
                           <th className="num">Target</th>
                           <th>Value vs target</th>

@@ -1,0 +1,65 @@
+/* Jargon popovers and the Glossary & method screen. Tokens only. */
+.term {
+  margin: 0 -2px;
+  padding: var(--s1) 2px;
+  border: 0;
+  border-bottom: 1px dotted var(--muted);
+  border-radius: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: help;
+}
+.term:hover {
+  border-bottom-color: var(--ink);
+  background: var(--wash);
+}
+.term-popover {
+  --term-width: 320px;
+  inset: auto;
+  left: clamp(var(--s2), var(--term-left, 0px), calc(100vw - var(--term-width) - var(--s2)));
+  margin: 0;
+  width: var(--term-width);
+  max-width: calc(100vw - 2 * var(--s2));
+  padding: var(--s3);
+  border: 1px solid var(--grid);
+  border-radius: var(--s1);
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-family: var(--font-text);
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: left;
+}
+.term-popover:popover-open {
+  display: grid;
+  gap: var(--s1);
+}
+.term-it {
+  font-weight: 600;
+}
+.term-explanation {
+  color: var(--ink2);
+}
+.method {
+  display: grid;
+  gap: var(--s3);
+}
+.method p,
+.method ul {
+  max-width: 46em;
+  margin: 0;
+}
+.method ul {
+  display: grid;
+  gap: var(--s2);
+  padding-left: var(--s4);
+}
+.method .card-body {
+  display: grid;
+  gap: var(--s2);
+}
