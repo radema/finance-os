@@ -10,6 +10,7 @@ import "./split.css";
 import "./import.css";
 import "./pension.css";
 import "./independence.css";
+import "./tracking.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
