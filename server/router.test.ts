@@ -14,6 +14,7 @@ describe("createRouter", () => {
   router.route("GET", "/api/refused", z.object({}), () => {
     throw new HttpError(409, "still in use");
   });
+  router.route("POST", "/api/nothing", z.object({}), () => undefined);
   router.route("GET", "/api/boom", z.object({}), () => {
     throw new Error("boom");
   });
@@ -22,6 +23,12 @@ describe("createRouter", () => {
     const response = await router.handle(post("/api/echo", '{"n":4}'));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ doubled: 8 });
+  });
+
+  it("answers 204 with no body when the handler returns nothing", async () => {
+    const response = await router.handle(post("/api/nothing", "{}"));
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
   });
 
   it("answers 400 when the body fails the schema", async () => {

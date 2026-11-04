@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { z } from "zod";
 import type { PriceProvider } from "../engine/priceFetch.ts";
+import { registerAlertRoutes } from "./alerts.ts";
 import { registerAllocationRoutes } from "./allocation.ts";
 import { registerAssumptionRoutes } from "./assumptions.ts";
 import { runDailyBackup } from "./backup.ts";
@@ -93,6 +94,7 @@ export async function startServer({
   registerIndependenceRoutes(router, db, clock);
   registerSetupProgressRoutes(router, db);
   registerSnapshotRoutes(router, db, clock);
+  registerAlertRoutes(router, db, clock);
   const monthlyJob = registerMonthlyJobRoutes(router, { db, provider: priceProvider, clock });
 
   const server = createServer(async (req, res) => {
