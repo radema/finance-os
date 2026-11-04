@@ -80,7 +80,9 @@ export function Field({
   return (
     // biome-ignore lint/a11y/noLabelWithoutControl: the control is `children`, nested in the label
     <label className="field">
-      <span className="field-label">{label}</span>
+      <span id={labelId} className="field-label">
+        {label}
+      </span>
       {control}
       {hintText}
     </label>
