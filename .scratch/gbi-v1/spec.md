@@ -244,6 +244,8 @@ median ÷ target(t) per level.
 (opening included; coupons are outflows). TWR: r(m) = (V(m) − F(m)) / V(m−1) − 1, chained; a month
 with V(m−1) = 0 contributes no return. Drawdown = index / running max − 1. XIRR on dated flows plus
 final value, bisection in [−99%, 100%]. Scopes: all, all except pension, each bucket.
+Market change in month m = V(m) − V(m−1) − F'(m), where F'(m) is the money put in during m; it is empty
+with fewer than two months.
 
 **Plan vs actual (t10).** Planned since trackingStart = Σ over months of the plan in force that month
 (pension: schedule total / 12); contributionGrowth is never used here. Actual = Σ cash amounts of
@@ -357,7 +359,8 @@ dismissal is cleared, so the alert returns the next time it is true.
 
 On the first app start in a new month: fetch month-end prices, then save the snapshot of the previous
 month (`saved`). Missing older months are caught up from month-end prices with the current
-assumptions and labelled `recomputed`. "Save snapshot" saves one by hand. Saved snapshots never
+assumptions and labelled `recomputed`. If any price fetch fails, no snapshot is saved and the run counts
+as failed. "Save snapshot" saves one by hand. Saved snapshots never
 change; recomputed ones are labelled wherever they show (trend chart, Goal history).
 
 ### UI (t11, t13, t16)

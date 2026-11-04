@@ -2,7 +2,6 @@ import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { z } from "zod";
 import type { GoalStatus } from "../engine/goalStatus.ts";
-import { listRowsOf } from "../engine/goalViews.ts";
 import { monthEnd } from "../engine/months.ts";
 import { pensionSchedule } from "../engine/pension.ts";
 import { planVsActual } from "../engine/planVsActual.ts";
@@ -11,6 +10,7 @@ import type { Alert, RuleInput, RuleTrade } from "../engine/rules.ts";
 import { evaluateRules } from "../engine/rules.ts";
 import { commissionSchema } from "../engine/schemas.ts";
 import type { SnapshotGoal } from "../engine/snapshot.ts";
+import { computeSnapshot } from "../engine/snapshot.ts";
 import { fromScaled } from "../engine/units.ts";
 import type { DB } from "./db.ts";
 import { loadDocument } from "./documents.ts";
@@ -64,8 +64,9 @@ async function loadRuleInput(db: Kysely<DB>, today: string): Promise<RuleInput> 
     valuationMonth: world.month,
   });
 
+  // The same computation as a snapshot (seed and paths), so R4 never fires on Monte Carlo noise.
   const statuses = new Map<string, GoalStatus | null>(
-    listRowsOf(world).map((row) => [row.id, row.outlook?.status ?? null]),
+    computeSnapshot(world).map((goal) => [goal.goalId, goal.status]),
   );
   const snapshot = await db
     .selectFrom("snapshot")
