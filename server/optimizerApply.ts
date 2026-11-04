@@ -1,10 +1,11 @@
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import { flowsForMix } from "../engine/optimizer.ts";
 import { normaliseWeights } from "../engine/projection.ts";
 import type { PensionFlow } from "../engine/schemas.ts";
-import { PENSION_FLOWS } from "../engine/schemas.ts";
 import type { DB } from "./db.ts";
 import { saveDocument } from "./documents.ts";
+import { assertProductsFit } from "./optimizer.ts";
 import { loadPensionPlan } from "./pensionPlan.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
@@ -20,19 +21,6 @@ const applyInput = z.object({
 
 /** What an apply call writes, or would write: the goal's weights and, for the pension goal, its flows. */
 type Change = { weights: { productId: string; weight: number }[]; flows?: PensionFlow[] };
-
-/**
- * The pension goal's flows for one weight vector: every flow the plan has (both, when it has none)
- * gets the optimizer weights as its `pct` values.
- */
-function flowsFor(weights: Change["weights"], current: readonly PensionFlow[]): PensionFlow[] {
-  const kinds = PENSION_FLOWS.filter(
-    (kind) => current.length === 0 || current.some((flow) => flow.flow === kind),
-  );
-  return kinds.flatMap((flow) =>
-    weights.map(({ productId, weight }) => ({ productId, flow, pct: weight })),
-  );
-}
 
 /** Applies the optimizer's chosen weights to a goal, only when the request confirms it. */
 export function registerOptimizerApplyRoutes(router: Router, db: Kysely<DB>): void {
@@ -60,10 +48,12 @@ export function registerOptimizerApplyRoutes(router: Router, db: Kysely<DB>): vo
 
     const plan = await loadPensionPlan(db);
     const isPension = plan?.goalId === input.goalId;
-    if (isPension && ids.some((id) => regimes.get(id) !== "pension"))
-      throw new HttpError(400, "the pension goal takes pension funds only");
+    assertProductsFit(
+      isPension,
+      ids.map((id) => regimes.get(id)),
+    );
     const change: Change =
-      isPension && plan ? { weights, flows: flowsFor(weights, plan.flows) } : { weights };
+      isPension && plan ? { weights, flows: flowsForMix(shares, plan.flows) } : { weights };
 
     if (!input.confirm) return { preview: change };
     await db.transaction().execute(async (trx) => {

@@ -1,7 +1,8 @@
 import { type GoalDistribution, type MonteCarloGoal, runMonteCarlo } from "./monteCarlo.ts";
-import { liquidateGoal, projectGoal } from "./projection.ts";
+import { liquidateGoal, normaliseWeights, projectGoal } from "./projection.ts";
 import { requiredContribution } from "./requiredContribution.ts";
-import type { Goal } from "./schemas.ts";
+import type { Goal, PensionFlow } from "./schemas.ts";
+import { PENSION_FLOWS } from "./schemas.ts";
 import type { Zainetto } from "./tax.ts";
 
 /** Paths per mix, as in the spec: 300, and 200 for "spend least" (a bisection runs per mix). */
@@ -85,6 +86,28 @@ export function generateMixes(products: readonly string[], maxPerProduct?: numbe
   return mixes;
 }
 
+/**
+ * The pension goal's flows for one mix: every flow kind the plan has (both, when it has none) gets
+ * the mix rescaled to 100% as its `pct` values. A zero weight keeps no row.
+ *
+ * @param mix Weights by product id, in any scale.
+ * @param current The plan's flows now; only the kinds they hold are read.
+ */
+export function flowsForMix(mix: Mix, current: readonly PensionFlow[]): PensionFlow[] {
+  const kinds = PENSION_FLOWS.filter(
+    (kind) => current.length === 0 || current.some((flow) => flow.flow === kind),
+  );
+  const shares = [...normaliseWeights(mix)].filter(([, pct]) => pct > 0);
+  return kinds.flatMap((flow) => shares.map(([productId, pct]) => ({ productId, flow, pct })));
+}
+
+/** The mix a plan's flows stand for: the inverse of `flowsForMix`, rescaled to 100%. */
+export function mixOfFlows(flows: readonly PensionFlow[]): Mix {
+  const sums = new Map<string, number>();
+  for (const { productId, pct } of flows) sums.set(productId, (sums.get(productId) ?? 0) + pct);
+  return normaliseWeights(sums);
+}
+
 /** The criterion a goal's priority starts with: Need protects the bad case, the others grow the median. */
 export function defaultCriterion(priority: Goal["priority"]): "O1" | "O2" {
   return priority === "Need" ? "O1" : "O2";
@@ -149,8 +172,7 @@ export function rankMixes(
  *
  * Feasible = P ≥ `requiredP`. O1, O2 and O5 choose among the feasible mixes; O4 looks at all of them.
  * With no feasible mix, the mix with the highest P is returned and `notFeasible` is set. For O4 the
- * flag is set when the best P is below `requiredP`: the spec does not say, this keeps it the same
- * for every criterion. A tie left after the tie-break keeps the candidate order.
+ * flag is set when the best P is below `requiredP`, as for every criterion. A tie left after the tie-break keeps the candidate order.
  *
  * @param mixes The mixes in candidate order, not empty.
  */
@@ -177,7 +199,8 @@ export function chooseMix(
 export type OptimizerInput = {
   /**
    * The goal's bucket as a Monte Carlo goal: its holdings, monthly amount, product parameters and
-   * settings. Its `weights` are ignored: each mix sets the weights of the new contributions.
+   * settings. Its `weights` are ignored: each mix sets the weights of the new contributions, or,
+   * for a pension plan, the `pct` of its flows (see `flowsForMix`).
    */
   bucket: MonteCarloGoal;
   /** The 1 to 6 products to mix, ids in `bucket.products`. */
@@ -285,6 +308,13 @@ export function runOptimizer(input: OptimizerInput): OptimizerResult {
   const goals = candidates.map((weights) => ({
     ...bucket,
     weights,
+    // The pension goal ignores weights: its mix is the pct of the plan's flows.
+    ...(bucket.pension && {
+      pension: {
+        ...bucket.pension,
+        plan: { ...bucket.pension.plan, flows: flowsForMix(weights, bucket.pension.plan.flows) },
+      },
+    }),
     // The basis of the reinvested money is its value; the zainetto is what the sale left.
     ...(rebalance && {
       settings: { ...bucket.settings, zainetto: sale.zainetto },

@@ -25,7 +25,7 @@ function buildOption(view: OptimizerRunView, slot: number, names: ReadonlyMap<st
   const point = (mix: MixView) => ({ value: [mix.p, mix.median], mix });
   const tip = (params: unknown) => {
     const { mix } = (params as { data: { mix: MixView } }).data;
-    return `${escapeHtml(mixText(mix, names))}<br/>Chance of success ${formatPercent(mix.p)}<br/>Typical case ${euros(mix.median)}`;
+    return `${escapeHtml(mixText(mix.weights, names))}<br/>Chance of success ${formatPercent(mix.p)}<br/>Typical case ${euros(mix.median)}`;
   };
   return {
     animation: false,

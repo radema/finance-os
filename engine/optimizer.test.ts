@@ -3,14 +3,17 @@ import { type MonteCarloGoal, type MonteCarloProduct, runMonteCarlo } from "./mo
 import {
   chooseMix,
   defaultCriterion,
+  flowsForMix,
   generateMixes,
   type MixResult,
+  mixOfFlows,
   type OptimizerCriterion,
   PensionRebalanceError,
   runOptimizer,
 } from "./optimizer.ts";
 import { projectGoal } from "./projection.ts";
 import { requiredContribution } from "./requiredContribution.ts";
+import { pensionPlanSchema } from "./schemas.ts";
 
 const names = (count: number) => Array.from({ length: count }, (_, i) => `p${i}`);
 const sum = (weights: ReadonlyMap<string, number>) =>
@@ -483,6 +486,95 @@ describe("runOptimizer, rebalance now (AC-81)", () => {
     expect(() =>
       runOptimizer({ ...rebalanceInput({ bucket: pensionBucket, products: ["f"] }), mode: "new" }),
     ).not.toThrow();
+  });
+});
+
+// The pension goal (AC-80): the mix sets the plan's flows, since the goal ignores its weights.
+describe("runOptimizer on the pension goal", () => {
+  const pensionProducts = new Map<string, MonteCarloProduct>([
+    ["a", { ...equity, regime: "pension" }],
+    ["f", { ...bonds, regime: "pension" }],
+  ]);
+  const pensionBucket = (flows: { productId: string; flow: "Work" | "Voluntary"; pct: number }[]) =>
+    ({
+      ...bucket,
+      goal: { id: "g", targetYear: 2036, target: 60_000, contributionGrowth: 0 },
+      positions: [],
+      products: pensionProducts,
+      weights: new Map([["f", 1]]),
+      firstYear: 2020,
+      pension: {
+        plan: pensionPlanSchema.parse({
+          goalId: "g",
+          firstYear: 2020,
+          ral: 4_000_000,
+          workerPct: 0.01,
+          employerPct: 0.02,
+          voluntary: 100_000,
+          flows,
+        }),
+        deductionCapCents: 530_000,
+        voluntaryYtd: 0,
+      },
+    }) satisfies MonteCarloGoal;
+  const run = (criterion: OptimizerCriterion, flows = [] as Parameters<typeof pensionBucket>[0]) =>
+    runOptimizer({
+      ...input(criterion, 0),
+      bucket: pensionBucket(flows),
+      products: ["a", "f"],
+    });
+
+  it("gives different outcomes to different mixes", () => {
+    const { mixes } = run("O2");
+    const medians = new Set(mixes.map((mix) => mix.median));
+    expect(medians.size).toBe(mixes.length);
+  });
+
+  it("chooses the mix the criterion picks, not the first candidate", () => {
+    const { chosen, mixes } = run("O2");
+    expect(chosen.median).toBe(Math.max(...mixes.map((mix) => mix.median)));
+    expect(chosen.weights).not.toEqual(mixes[0]?.weights);
+  });
+
+  it("works from the plan's own flows: a plan with no flows takes Work and Voluntary", () => {
+    const both = [
+      { productId: "f", flow: "Work" as const, pct: 1 },
+      { productId: "f", flow: "Voluntary" as const, pct: 1 },
+    ];
+    const workOnly = both.slice(0, 1);
+    // No flows runs as a plan with both kinds, and not as one with Work alone.
+    expect(run("O2").chosen.median).toBe(run("O2", both).chosen.median);
+    expect(run("O2").chosen.median).not.toBe(run("O2", workOnly).chosen.median);
+  });
+});
+
+describe("flowsForMix and mixOfFlows", () => {
+  const mix = new Map([
+    ["a", 3],
+    ["f", 1],
+    ["z", 0],
+  ]);
+
+  it("gives every flow the plan has the rescaled weights, and drops a zero weight", () => {
+    const current = [{ productId: "f", flow: "Voluntary" as const, pct: 1 }];
+    expect(flowsForMix(mix, current)).toEqual([
+      { productId: "a", flow: "Voluntary", pct: 0.75 },
+      { productId: "f", flow: "Voluntary", pct: 0.25 },
+    ]);
+  });
+
+  it("gives Work and Voluntary to a plan with no flows", () => {
+    expect(flowsForMix(new Map([["a", 1]]), []).map((flow) => flow.flow)).toEqual([
+      "Work",
+      "Voluntary",
+    ]);
+  });
+
+  it("round-trips: the weights of the flows are the mix", () => {
+    const back = mixOfFlows(flowsForMix(mix, []));
+    expect(back.get("a")).toBeCloseTo(0.75);
+    expect(back.get("f")).toBeCloseTo(0.25);
+    expect(back.has("z")).toBe(false);
   });
 });
 

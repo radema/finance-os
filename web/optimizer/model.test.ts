@@ -89,7 +89,7 @@ describe("mixText", () => {
             ["btp", 0.35],
           ],
           0.5,
-        ),
+        ).weights,
         names,
       ),
     ).toBe("World ETF 65%, Govt 2029 35%");
