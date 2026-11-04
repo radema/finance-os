@@ -269,6 +269,12 @@ and say so.
 | O5 Spend least | min monthly needed | higher median | – |
 | O4 Maximise the chance | max P, no feasibility filter | higher median | – |
 
+For O4 the "not feasible" flag is set when the best P is below the required probability. For O5,
+feasibility is P ≥ required at the goal's current monthly amount; there is no maximum monthly amount
+(ceiling). With no feasible mix O5 returns the highest-P mix with the "not feasible" flag, like the
+other criteria. A tie left after the tie-break keeps the candidate order (the first product's weight
+rising from 0).
+
 Modes: new money only (default, no tax); rebalance now (holdings sold first, tax deducted, basis
 reset; pension buckets excluded). "Use as contribution weights" writes AllocationWeights after
 confirmation; pension weights change only through the pension flows. Per-product caps only; class
