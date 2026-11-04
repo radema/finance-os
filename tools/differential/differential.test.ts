@@ -1,6 +1,14 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { mockCashFlow, mockNet, v1CashFlow, v1Net } from "./harness.ts";
+import {
+  mockCashFlow,
+  mockNet,
+  mockPlanVsActual,
+  trackingStartOf,
+  v1CashFlow,
+  v1Net,
+  v1PlanVsActual,
+} from "./harness.ts";
 import { cashFlowScenarioArb, type Scenario, scenarioArb } from "./scenario.ts";
 
 const TOLERANCE_EUR = 0.01;
@@ -68,6 +76,29 @@ describe("mock differential (AC-18)", () => {
     });
   });
 
+  describe("plan vs actual: cumulative planned, actual and gap per goal", () => {
+    it("agrees within 0.01 euro on buy-only ledgers", () => {
+      fc.assert(
+        fc.property(scenarioArb, fc.integer({ min: 0, max: 48 }), (scenario, monthsBack) => {
+          const buyOnly = { ...scenario, ledger: scenario.ledger.filter((r) => r.type !== "sell") };
+          const trackingStart = trackingStartOf(buyOnly, monthsBack);
+          const mock = mockPlanVsActual(buyOnly, trackingStart);
+          const v1 = v1PlanVsActual(buyOnly, trackingStart);
+          expect([...v1.keys()]).toEqual([...mock.keys()]);
+          for (const [goalId, totals] of v1) {
+            const expected = mock.get(goalId);
+            for (const key of ["planned", "actual", "gap"] as const) {
+              expect(Math.abs(totals[key] - (expected?.[key] ?? Number.NaN))).toBeLessThanOrEqual(
+                TOLERANCE_EUR,
+              );
+            }
+          }
+        }),
+        { numRuns: 1_000 },
+      );
+    });
+  });
+
   describe("generator coverage", () => {
     const sample = fc.sample(scenarioArb, { numRuns: 500, seed: 1 });
     const dueNow = (s: Scenario) => s.goals.some((g) => g.targetYear < Number(s.asOf.slice(0, 4)));
@@ -97,6 +128,16 @@ describe("mock differential (AC-18)", () => {
         s.zainetto.amount > 0 &&
         s.goals.some((g) => g.id === s.zainetto?.goalId && g.targetYear <= s.zainetto.expiryYear);
       expect(sample.some(applies)).toBe(true);
+    });
+
+    it("has plan vs actual with money put in, and rows before the tracking start", () => {
+      const totals = (s: Scenario) => v1PlanVsActual(s, trackingStartOf(s, 12));
+      const put = sample.some((s) => [...totals(s).values()].some((t) => t.actual > 0));
+      expect(put).toBe(true);
+      const before = sample.some((s) =>
+        s.ledger.some((row) => row.type === "buy" && row.date.slice(0, 7) < trackingStartOf(s, 12)),
+      );
+      expect(before).toBe(true);
     });
 
     it("has sells in the ledger", () => {

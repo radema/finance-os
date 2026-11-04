@@ -5,6 +5,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
 import { Alert, Card, NumberField, PriorityTag, Resource, SelectField } from "../setup/ui.tsx";
+import { CapitalNote } from "./CapitalNote.tsx";
 import { flowKey, type PlanValues, planToValues, valuesToPlan } from "./planForm.ts";
 import { ScheduleChart } from "./ScheduleChart.tsx";
 
@@ -279,11 +280,7 @@ function Pension({ view, onSaved }: { view: PensionView; onSaved: () => void }) 
       {view.thisYear ? <ThisYear year={view.thisYear} /> : null}
       <PlanForm view={view} onSaved={onSaved} />
       <Schedule rows={view.schedule} />
-      <p className="note capital-note">
-        Usually at most 50% of the pension pot can be taken as capital; the rest is paid as an
-        annuity. A phased payout exists from 31 October 2026. The projection values the whole pot
-        net of exit tax.
-      </p>
+      <CapitalNote />
     </div>
   );
 }

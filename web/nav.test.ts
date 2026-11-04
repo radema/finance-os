@@ -92,8 +92,15 @@ describe("Goals screens", () => {
   it("builds the Goals list and the Goal detail, and drops their soon tags", () => {
     expect(isBuilt("goals/list")).toBe(true);
     expect(isBuilt("goals/detail")).toBe(true);
-    expect(isBuilt("goals/history")).toBe(false);
     expect(render("goals/list")).not.toContain("This page is not built yet");
+  });
+
+  it("builds Goal history, Performance and Plan vs actual, and drops their soon tags", () => {
+    for (const route of ["goals/history", "analysis/performance", "analysis/plan-vs-actual"]) {
+      expect(isBuilt(route)).toBe(true);
+      expect(render(route)).not.toContain("This page is not built yet");
+    }
+    expect(isBuilt("analysis/optimizer")).toBe(false);
   });
 
   it("builds the Independence screen, and drops its soon tag", () => {

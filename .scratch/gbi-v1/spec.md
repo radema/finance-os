@@ -244,6 +244,8 @@ median ÷ target(t) per level.
 (opening included; coupons are outflows). TWR: r(m) = (V(m) − F(m)) / V(m−1) − 1, chained; a month
 with V(m−1) = 0 contributes no return. Drawdown = index / running max − 1. XIRR on dated flows plus
 final value, bisection in [−99%, 100%]. Scopes: all, all except pension, each bucket.
+Market change in month m = V(m) − V(m−1) − F'(m), where F'(m) is the money put in during m; it is empty
+with fewer than two months.
 
 **Plan vs actual (t10).** Planned since trackingStart = Σ over months of the plan in force that month
 (pension: schedule total / 12); contributionGrowth is never used here. Actual = Σ cash amounts of
@@ -357,7 +359,8 @@ dismissal is cleared, so the alert returns the next time it is true.
 
 On the first app start in a new month: fetch month-end prices, then save the snapshot of the previous
 month (`saved`). Missing older months are caught up from month-end prices with the current
-assumptions and labelled `recomputed`. "Save snapshot" saves one by hand. Saved snapshots never
+assumptions and labelled `recomputed`. If any price fetch fails, no snapshot is saved and the run counts
+as failed. "Save snapshot" saves one by hand. Saved snapshots never
 change; recomputed ones are labelled wherever they show (trend chart, Goal history).
 
 ### UI (t11, t13, t16)
@@ -398,7 +401,7 @@ Screens (content; acceptance in the Definition of done):
 | Performance | Scope selector; value, gain, TWR since start/YTD/12m, XIRR, max drawdown; charts: value vs money put in, growth of €100, drawdown, monthly returns; table for all scopes |
 | Plan vs actual | Planned vs put in since trackingStart; monthly actual series; next contribution card with product split, commission and cost %; cumulative planned vs actual per goal |
 | Pension | This year: cap, used, still available (never below 0; when used > cap + extra, a line "€X of this year's payments are not tax-deductible"), refund, exit tax; inputs; flows table; 10-year schedule and chart; capital/annuity note |
-| Transactions | Add form (date, bucket, product, type, amount, price prefilled from the product's last price, commission optional) with commission estimate and cost warning; list with filters by bucket and year; delete |
+| Transactions | Add form (date, bucket, product, type, amount, price prefilled from the product's last price, commission optional) with commission estimate and cost warning; list with filters by bucket and year; edit (the add form prefilled); delete |
 | Import | Tabs: transactions, prices, products, goals; paste or upload CSV/XLSX; mapping with saved mappings; row check with status and the bucket/split control; import ready rows; past imports with undo; Current portfolio form |
 | Prices | Source per product with last price, date, age pill; Fetch latest prices; review list; month-end grid (6 months, current month editable; add next month); positions by product with account PMC, buckets and broker units entry |
 | Setup | Products, Allocation (pension weights read-only), Goals (with plan history), Cash flow (+ 10-year table), Assumptions (tax, probabilities, MC, trackingStart, commission, thresholds, correlations, reset) |
@@ -496,7 +499,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-21: Schema and migrations. Check: API test on a fresh data folder, start twice. Expected: all tables `STRICT`; money columns integer cents; second start applies no migration.
 - AC-22: Transactions via API. Check: API tests. Expected: qty = amount / price (BTP: amount / (price/100)); sells stored as negative qty; editing or deleting a transaction re-derives holdings in the next read.
 - AC-23: Setup (Products, Allocation, Goals with plan history, Assumptions incl. Commission plan and fee model). Check: API tests + `agent-browser`. Expected: create/edit/delete work; weights are rescaled to 100% per goal; the correlation matrix stays symmetric; a non-positive-definite matrix is shrunk and flagged.
-- AC-24: Transactions screen. Check: `agent-browser`. Expected: add form with price prefilled from the product's last price, commission estimate and a cost warning below the min efficient ticket; list filters by bucket and year; delete.
+- AC-24: Transactions screen. Check: `agent-browser`. Expected: add form with price prefilled from the product's last price, commission estimate and a cost warning below the min efficient ticket; list filters by bucket and year; edit; delete.
 - AC-25: Goals list and detail (deterministic). Check: `agent-browser` on the sample data. Expected: list rows show name + priority and value vs target (status, P and plan gap arrive in S4 and S5); detail shows value, deterministic net, target at goal date, holdings (units, price, PMC, gain, tax if sold), value vs money put in.
 - AC-26: Sample data. Check: "Load the sample data" on an empty data folder. Expected: the synthetic fixture is loaded and the Goals list shows its 4 goals.
 - AC-27: S1 UI gate. Check: screenshots of S1 screens at 1440 px, light. Expected: the user approves or skips; adding one transaction takes under 20 seconds.

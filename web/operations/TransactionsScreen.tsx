@@ -5,7 +5,7 @@ import { flowsTaken } from "../../engine/pension.ts";
 import type { Commission, Goal, PensionPlan, Product, Transaction } from "../../engine/schemas.ts";
 import { PENSION_FLOWS } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
-import { eurosToCents, num } from "../forms.ts";
+import { eurosToCents } from "../forms.ts";
 import { formatEuro, formatPercent } from "../money.ts";
 import {
   Alert,
@@ -18,6 +18,7 @@ import {
   SelectField,
   TextField,
 } from "../setup/ui.tsx";
+import { fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
 
 // `opening` is written by the Current portfolio form in S2, so the form does not offer it.
 const FORM_TYPES: readonly { value: TransactionType; label: string }[] = [
@@ -38,14 +39,19 @@ interface LastPrice {
   priceDate: string;
 }
 
+/** The form of Add, and of Edit when `editing` is a row: then it starts from that row. */
 function AddForm({
+  editing,
   today,
   goals,
   products,
   commission,
   pensionPlan,
   onSaved,
+  onCancel,
 }: {
+  /** The row being edited, or none to add. Give the form a new `key` to switch rows. */
+  editing?: Transaction;
   /** The server's app clock: the default date of a new transaction. */
   today: string;
   goals: Goal[];
@@ -54,20 +60,36 @@ function AddForm({
   /** The saved plan: it says which flows a pension fund takes. */
   pensionPlan: PensionPlan | null | undefined;
   onSaved: () => void;
+  /** Edit only: leave the row as it is. */
+  onCancel: () => void;
 }) {
-  const [date, setDate] = useState(today);
-  const [goalId, setGoalId] = useState(goals[0]?.id ?? "");
-  const [productId, setProductId] = useState(products[0]?.id ?? "");
-  const [type, setType] = useState<TransactionType>("buy");
-  const [amount, setAmount] = useState("");
-  const [price, setPrice] = useState("");
-  const [fee, setFee] = useState("");
-  const [flow, setFlow] = useState("");
+  const start = editing
+    ? fieldsFromTransaction(editing)
+    : {
+        date: today,
+        goalId: goals[0]?.id ?? "",
+        productId: products[0]?.id ?? "",
+        type: "buy" as TransactionType,
+        amount: "",
+        price: "",
+        fee: "",
+        flow: "",
+      };
+  const [date, setDate] = useState(start.date);
+  const [goalId, setGoalId] = useState(start.goalId);
+  const [productId, setProductId] = useState(start.productId);
+  const [type, setType] = useState<TransactionType>(start.type);
+  const [amount, setAmount] = useState(start.amount);
+  const [price, setPrice] = useState(start.price);
+  const [fee, setFee] = useState(start.fee);
+  const [flow, setFlow] = useState(start.flow);
   const [priceNote, setPriceNote] = useState<string>();
   const [error, setError] = useState<string>();
 
-  // The price starts from the product's last price; the user can still change it.
+  // The price starts from the product's last price; the user can still change it. An edited row
+  // keeps its own price until the product changes.
   useEffect(() => {
+    if (editing && productId === editing.productId) return;
     let live = true;
     api<LastPrice | null>("GET", "/api/last-price", { query: { productId } }).then(
       (last) => {
@@ -80,7 +102,7 @@ function AddForm({
     return () => {
       live = false;
     };
-  }, [productId]);
+  }, [productId, editing]);
 
   const product = products.find((p) => p.id === productId);
   const amountCents = eurosToCents(amount);
@@ -95,17 +117,13 @@ function AddForm({
 
   const save = async () => {
     try {
-      await api("POST", "/api/transactions", {
-        body: {
-          date,
-          goalId,
-          productId,
-          type,
-          amountCents,
-          price: type === "coupon" ? 0 : num(price),
-          commissionCents: fee.trim() === "" ? null : eurosToCents(fee),
-          flow: takesBothFlows && flow !== "" ? flow : undefined,
-        },
+      const body = transactionBody(
+        { date, goalId, productId, type, amount, price, fee, flow },
+        takesBothFlows,
+      );
+      // The form has no note field: an edit sends the stored note back so it is kept.
+      await api(editing ? "PUT" : "POST", "/api/transactions", {
+        body: editing ? { ...body, id: editing.id, note: editing.note } : body,
       });
       setError(undefined);
       setAmount("");
@@ -117,7 +135,7 @@ function AddForm({
   };
 
   return (
-    <Card title="Add transaction">
+    <Card title={editing ? "Edit transaction" : "Add transaction"}>
       <form
         className="form-grid"
         onSubmit={(event) => {
@@ -181,8 +199,13 @@ function AddForm({
         />
         <div className="actions">
           <button className="btn btn-primary" type="submit">
-            Add transaction
+            {editing ? "Save changes" : "Add transaction"}
           </button>
+          {editing ? (
+            <button className="btn btn-quiet" type="button" onClick={onCancel}>
+              Cancel
+            </button>
+          ) : null}
         </div>
       </form>
       {hasAmount && (type === "buy" || type === "sell") ? (
@@ -201,7 +224,7 @@ function AddForm({
   );
 }
 
-/** Operations > Transactions: add form, and the list with filters by bucket and year. */
+/** Operations > Transactions: add form, and the list with filters by bucket and year; edit; delete. */
 export function TransactionsScreen() {
   const goals = useLoad<Goal[]>("/api/goals");
   const products = useLoad<Product[]>("/api/products");
@@ -211,6 +234,7 @@ export function TransactionsScreen() {
   const [goalFilter, setGoalFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [error, setError] = useState<string>();
+  const [editing, setEditing] = useState<Transaction>();
 
   const query = new URLSearchParams();
   if (goalFilter) query.set("goalId", goalFilter);
@@ -221,6 +245,7 @@ export function TransactionsScreen() {
     try {
       await api("DELETE", "/api/transactions", { query: { id } });
       setError(undefined);
+      if (editing?.id === id) setEditing(undefined);
       list.reload();
     } catch (failure) {
       setError(messageOf(failure));
@@ -249,12 +274,18 @@ export function TransactionsScreen() {
                     <Resource loaded={clock}>
                       {({ today }) => (
                         <AddForm
+                          key={editing?.id ?? "add"}
+                          editing={editing}
                           today={today}
                           goals={goalList}
                           products={productList}
                           commission={plan}
                           pensionPlan={pensionPlan.data}
-                          onSaved={list.reload}
+                          onSaved={() => {
+                            setEditing(undefined);
+                            list.reload();
+                          }}
+                          onCancel={() => setEditing(undefined)}
                         />
                       )}
                     </Resource>
@@ -329,6 +360,18 @@ export function TransactionsScreen() {
                           {t.commissionCents === null ? "–" : formatEuro(t.commissionCents)}
                         </td>
                         <td className="row-actions">
+                          {t.type === "opening" ? null : (
+                            <button
+                              className="btn btn-quiet"
+                              type="button"
+                              onClick={() => {
+                                setEditing(t);
+                                window.scrollTo({ top: 0 });
+                              }}
+                            >
+                              Edit
+                            </button>
+                          )}
                           <ConfirmButton
                             label="Delete"
                             confirmLabel="Delete transaction"

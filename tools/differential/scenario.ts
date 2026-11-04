@@ -1,5 +1,5 @@
 import fc from "fast-check";
-import type { LedgerRow, Regime } from "../../engine/index.ts";
+import type { LedgerRow, Regime } from "../../engine/holdings.ts";
 import { REGIMES } from "../../engine/schemas.ts";
 
 export type ScenarioProduct = {

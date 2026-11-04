@@ -38,7 +38,7 @@ function usesPensionProduct(goal: MonteCarloGoal): boolean {
 }
 
 /** The Independence read model: settings, expense split, goals with their ticks, and the FI projection. */
-async function loadIndependence(db: Kysely<DB>, today: string): Promise<IndependenceView> {
+export async function loadIndependence(db: Kysely<DB>, today: string): Promise<IndependenceView> {
   const world = await loadWorld(db, today);
   const ticked = await loadCountsTowardFi(db);
   const fire = await loadDocument(db, "fiSettings", fireSettingsSchema);

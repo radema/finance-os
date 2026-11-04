@@ -1,0 +1,90 @@
+/* The Overview: the grid of ten cells and its list rows. Colours, type and spacing come from tokens.css. */
+.kpi-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.kpi-link:hover,
+.kpi-link:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: var(--s4);
+  margin-top: var(--s4);
+}
+.overview-grid .cell {
+  min-width: 0;
+}
+.overview-grid .chart {
+  height: 240px;
+}
+.overview-grid .chart-range {
+  height: 160px;
+}
+.overview-grid .legend {
+  margin-bottom: var(--s2);
+}
+
+.pbars,
+.alerts,
+.prices {
+  display: grid;
+  gap: var(--s3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pbars li {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  align-items: center;
+  gap: var(--s1) var(--s3);
+}
+.pbars .sub-line {
+  grid-column: 1 / -1;
+}
+.pbar {
+  position: relative;
+  display: block;
+  height: var(--s2);
+  border-radius: 4px;
+  background: var(--wash);
+}
+.pbar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--slot);
+}
+.pbar-req {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--ink2);
+}
+.pbar-text {
+  grid-column: 1 / -1;
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+}
+.alerts li {
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--grid);
+}
+.alert-rule {
+  font-weight: 600;
+}
+.prices li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1) var(--s3);
+}
+.kpis-overview {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}

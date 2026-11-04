@@ -1,13 +1,10 @@
-import {
-  type CashFlowYear,
-  cashFlowSchema,
-  holdingsAt,
-  type ProductParams,
-  pensionPlanSchema,
-  pensionSchedule,
-  projectCashFlow,
-  projectGoal,
-} from "../../engine/index.ts";
+import { type CashFlowYear, projectCashFlow } from "../../engine/cashFlow.ts";
+import { holdingsAt } from "../../engine/holdings.ts";
+import { addMonths } from "../../engine/months.ts";
+import { pensionSchedule } from "../../engine/pension.ts";
+import { planVsActual } from "../../engine/planVsActual.ts";
+import { type ProductParams, projectGoal } from "../../engine/projection.ts";
+import { cashFlowSchema, pensionPlanSchema } from "../../engine/schemas.ts";
 import { loadMockEngine, type MockCashFlowRow, type MockState } from "./mock.ts";
 import type { CashFlowScenario, Scenario } from "./scenario.ts";
 
@@ -213,4 +210,46 @@ export function v1CashFlow(scenario: Scenario, cf: CashFlowScenario): CashFlowYe
     })),
     pension: { goalId: plan.goalId, schedule },
   });
+}
+
+/** Cumulative planned, actual and gap of one goal, in euros. */
+export type Totals = { planned: number; actual: number; gap: number };
+
+/** The tracking start of a scenario: `monthsBack` months before the asOf month. */
+export const trackingStartOf = (scenario: Scenario, monthsBack: number): string =>
+  addMonths(scenario.asOf.slice(0, 7), -monthsBack);
+
+/** Cumulative totals to the asOf month per goal, from the copied mock's `planVsActual`. */
+export function mockPlanVsActual(scenario: Scenario, trackingStart: string): Map<string, Totals> {
+  const state = mockState(scenario);
+  const rows = mock.planVsActual({ ...state, settings: { ...state.settings, trackingStart } });
+  return new Map(rows.map(({ id, planned, actual, gap }) => [id, { planned, actual, gap }]));
+}
+
+/** The same totals, from v1's `planVsActual` (cents in, euros out). */
+export function v1PlanVsActual(scenario: Scenario, trackingStart: string): Map<string, Totals> {
+  const result = planVsActual({
+    goals: scenario.goals.map((g) => ({ id: g.id, targetYear: g.targetYear })),
+    plans: scenario.goals.map((g) => ({
+      goalId: g.id,
+      fromMonth: trackingStart,
+      monthly: g.monthly * CENTS,
+    })),
+    transactions: scenario.ledger,
+    trackingStart,
+    valuationMonth: scenario.asOf.slice(0, 7),
+  });
+  return new Map(
+    result.map(({ goalId, months }) => {
+      const end = months.at(-1);
+      return [
+        goalId,
+        {
+          planned: (end?.cumPlanned ?? 0) / CENTS,
+          actual: (end?.cumActual ?? 0) / CENTS,
+          gap: (end?.gap ?? 0) / CENTS,
+        },
+      ];
+    }),
+  );
 }
