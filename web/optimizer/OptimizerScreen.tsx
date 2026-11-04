@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import type { GoalListRow, GoalListView } from "../../engine/goalViews.ts";
 import {
   CRITERION_RULES,
@@ -275,7 +275,11 @@ function UseWeights({
   const [asking, setAsking] = useState<Asking>();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
-  const body = (confirm: boolean) => ({ goalId: goal.id, weights: chosen.weights, confirm });
+  const body = (weights: Asking["weights"], confirm: boolean) => ({
+    goalId: goal.id,
+    weights,
+    confirm,
+  });
 
   const ask = async () => {
     setSaved(false);
@@ -283,7 +287,7 @@ function UseWeights({
       const { preview } = await api<{ preview: { weights: Asking["weights"]; flows?: unknown[] } }>(
         "POST",
         "/api/optimizer/apply",
-        { body: body(false) },
+        { body: body(chosen.weights, false) },
       );
       setAsking({ weights: preview.weights, flows: preview.flows !== undefined });
       setError(undefined);
@@ -292,8 +296,9 @@ function UseWeights({
     }
   };
   const confirm = async () => {
+    if (!asking) return;
     try {
-      await api("POST", "/api/optimizer/apply", { body: body(true) });
+      await api("POST", "/api/optimizer/apply", { body: body(asking.weights, true) });
       setAsking(undefined);
       setSaved(true);
       setError(undefined);
@@ -507,7 +512,10 @@ function Workbench({
   }));
   const [tick, setTick] = useState(0);
   const run = useRun(request, tick);
-  const names = new Map(products.map((product) => [product.id, product.name]));
+  const names = useMemo(
+    () => new Map(products.map((product) => [product.id, product.name])),
+    [products],
+  );
   const change = (changes: Partial<RunRequest>) => setRequest({ ...request, ...changes });
 
   return (

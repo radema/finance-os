@@ -108,6 +108,7 @@ describe("Optimizer run API (AC-84)", () => {
     ["an unknown goal", car({ goalId: "nope" }), 404],
     ["a product that does not exist", car({ products: ["p-world-etf", "nope"] }), 404],
     ["a product listed twice", car({ products: ["p-world-etf", "p-world-etf"] }), 400],
+    ["a pension fund on another goal", car({ products: ["p-world-etf", "p-pension-equity"] }), 400],
     ["no product", car({ products: [] }), 400],
     ["seven products", car({ products: ["a", "b", "c", "d", "e", "f", "g"] }), 400],
     ["a cap that leaves no mix", car({ maxPerProduct: 0.3 }), 400],

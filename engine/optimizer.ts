@@ -129,7 +129,7 @@ const COMPARE: Record<OptimizerCriterion, (a: MixResult, b: MixResult) => number
 
 /**
  * The mixes in the order of the rule: the feasible ones by the criterion, then the rest by P. O4 has
- * no feasibility filter. The first one is the mix `chooseMix` picks: both keep the candidate order on a tie.
+ * no feasibility filter. The first one is the chosen mix. The sort is stable: a tie keeps the candidate order.
  *
  * @param mixes The mixes in candidate order.
  */
@@ -144,15 +144,8 @@ export function rankMixes(
   return [...feasible, ...rest];
 }
 
-/** The first mix that no later mix beats: a tie keeps the candidate order. */
-function best(mixes: readonly MixResult[], compare: (a: MixResult, b: MixResult) => number) {
-  let chosen = mixes[0] as MixResult;
-  for (const mix of mixes) if (compare(mix, chosen) < 0) chosen = mix;
-  return chosen;
-}
-
 /**
- * Pick the mix by the criterion's rule (spec, Mix optimizer).
+ * Pick the mix by the criterion's rule (spec, Mix optimizer): the first of `rankMixes`.
  *
  * Feasible = P ≥ `requiredP`. O1, O2 and O5 choose among the feasible mixes; O4 looks at all of them.
  * With no feasible mix, the mix with the highest P is returned and `notFeasible` is set. For O4 the
@@ -167,25 +160,17 @@ export function chooseMix(
   requiredP: number,
 ): { chosen: MixResult; notFeasible: boolean; ruleName: string; ruleText: string } {
   const rule = CRITERION_RULES[criterion];
-  const feasible = mixes.filter((mix) => mix.p >= requiredP);
-
-  if (criterion === "O4") {
-    const chosen = best(mixes, COMPARE.O4);
-    const notFeasible = chosen.p < requiredP;
-    const ruleText = notFeasible
+  const chosen = rankMixes(mixes, criterion, requiredP)[0] as MixResult;
+  const notFeasible = chosen.p < requiredP;
+  const belowText =
+    criterion === "O4"
       ? "Highest chance of success, but it stays below the required probability."
-      : rule.text;
-    return { chosen, notFeasible, ruleName: rule.name, ruleText };
-  }
-  if (feasible.length === 0) {
-    const chosen = best(mixes, (a, b) => larger(a.p, b.p));
-    return { chosen, notFeasible: true, ruleName: rule.name, ruleText: NOT_FEASIBLE_TEXT };
-  }
+      : NOT_FEASIBLE_TEXT;
   return {
-    chosen: best(feasible, COMPARE[criterion]),
-    notFeasible: false,
+    chosen,
+    notFeasible,
     ruleName: rule.name,
-    ruleText: rule.text,
+    ruleText: notFeasible ? belowText : rule.text,
   };
 }
 

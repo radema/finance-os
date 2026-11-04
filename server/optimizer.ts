@@ -41,8 +41,11 @@ export function registerOptimizerRoutes(router: Router, db: Kysely<DB>, today: (
     }
     const isPension = world.pension?.goalId === goal.id;
     const regimes = input.products.map((id) => world.products.get(id)?.regime);
-    if (isPension && regimes.some((regime) => regime !== "pension"))
-      throw new HttpError(400, "the pension goal takes pension funds only");
+    if (regimes.some((regime) => (regime === "pension") !== isPension))
+      throw new HttpError(
+        400,
+        "pension funds go to the pension goal only, and it takes nothing else",
+      );
     if (regimes.includes("pension") && world.pension?.firstYear === undefined)
       throw new HttpError(400, "the pension plan has no first year of membership");
     if (generateMixes(input.products, input.maxPerProduct).length === 0)
