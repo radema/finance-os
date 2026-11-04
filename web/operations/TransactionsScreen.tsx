@@ -360,16 +360,18 @@ export function TransactionsScreen() {
                           {t.commissionCents === null ? "–" : formatEuro(t.commissionCents)}
                         </td>
                         <td className="row-actions">
-                          <button
-                            className="btn btn-quiet"
-                            type="button"
-                            onClick={() => {
-                              setEditing(t);
-                              window.scrollTo({ top: 0 });
-                            }}
-                          >
-                            Edit
-                          </button>
+                          {t.type === "opening" ? null : (
+                            <button
+                              className="btn btn-quiet"
+                              type="button"
+                              onClick={() => {
+                                setEditing(t);
+                                window.scrollTo({ top: 0 });
+                              }}
+                            >
+                              Edit
+                            </button>
+                          )}
                           <ConfirmButton
                             label="Delete"
                             confirmLabel="Delete transaction"
