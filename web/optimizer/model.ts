@@ -51,3 +51,10 @@ export const mixText = (weights: MixView["weights"], names: ReadonlyMap<string, 
   weights
     .map((row) => `${names.get(row.productId) ?? row.productId} ${formatPercent(row.weight)}`)
     .join(", ");
+
+const AXIS_STEP = 0.05;
+const AXIS_MARGIN = 0.02;
+
+/** Start of the scatter x-axis: below the lowest chance, in whole steps of 5 points, never below 0. Rounded to 2 decimals: float error (0.7000000000000001) makes ECharts throw. */
+export const scatterAxisStart = (lowest: number): number =>
+  Math.round(Math.max(0, Math.floor((lowest - AXIS_MARGIN) / AXIS_STEP) * AXIS_STEP) * 100) / 100;

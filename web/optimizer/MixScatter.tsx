@@ -6,12 +6,10 @@ import { useCallback } from "react";
 import type { MixView, OptimizerRunView } from "../../engine/optimizerView.ts";
 import { formatAmount, formatPercent } from "../money.ts";
 import { readTokens, useEchart } from "../useEchart.ts";
-import { mixText } from "./model.ts";
+import { mixText, scatterAxisStart } from "./model.ts";
 
 echarts.use([ScatterChart, GridComponent, MarkLineComponent, TooltipComponent, SVGRenderer]);
 
-const AXIS_STEP = 0.05;
-const AXIS_MARGIN = 0.02;
 const euros = (value: number) => formatAmount(value).replace(/,00/, "");
 const escapeHtml = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -21,7 +19,7 @@ function buildOption(view: OptimizerRunView, slot: number, names: ReadonlyMap<st
   const text = { color: colour.muted, fontFamily: colour.font, fontSize: 12 };
   // The axis starts below the lowest chance and the required one, so the dots are not squeezed to one side.
   const lowest = Math.min(view.requiredP, view.current.p, ...view.mixes.map((mix) => mix.p));
-  const axisMin = Math.max(0, Math.floor((lowest - AXIS_MARGIN) / AXIS_STEP) * AXIS_STEP);
+  const axisMin = scatterAxisStart(lowest);
   const point = (mix: MixView) => ({ value: [mix.p, mix.median], mix });
   const tip = (params: unknown) => {
     const { mix } = (params as { data: { mix: MixView } }).data;
