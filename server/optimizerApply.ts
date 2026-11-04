@@ -53,15 +53,7 @@ export function registerOptimizerApplyRoutes(router: Router, db: Kysely<DB>): vo
       ids.map((id) => regimes.get(id)),
     );
     const change: Change =
-      isPension && plan
-        ? {
-            weights,
-            flows: flowsForMix(
-              new Map(weights.map((row) => [row.productId, row.weight])),
-              plan.flows,
-            ),
-          }
-        : { weights };
+      isPension && plan ? { weights, flows: flowsForMix(shares, plan.flows) } : { weights };
 
     if (!input.confirm) return { preview: change };
     await db.transaction().execute(async (trx) => {

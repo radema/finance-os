@@ -172,8 +172,7 @@ export function rankMixes(
  *
  * Feasible = P ≥ `requiredP`. O1, O2 and O5 choose among the feasible mixes; O4 looks at all of them.
  * With no feasible mix, the mix with the highest P is returned and `notFeasible` is set. For O4 the
- * flag is set when the best P is below `requiredP`: the spec does not say, this keeps it the same
- * for every criterion. A tie left after the tie-break keeps the candidate order.
+ * flag is set when the best P is below `requiredP`, as for every criterion. A tie left after the tie-break keeps the candidate order.
  *
  * @param mixes The mixes in candidate order, not empty.
  */

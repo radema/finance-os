@@ -537,8 +537,14 @@ describe("runOptimizer on the pension goal", () => {
   });
 
   it("works from the plan's own flows: a plan with no flows takes Work and Voluntary", () => {
-    const own = [{ productId: "f", flow: "Work" as const, pct: 1 }];
-    expect(run("O2", own).chosen.weights).toEqual(run("O2").chosen.weights);
+    const both = [
+      { productId: "f", flow: "Work" as const, pct: 1 },
+      { productId: "f", flow: "Voluntary" as const, pct: 1 },
+    ];
+    const workOnly = both.slice(0, 1);
+    // No flows runs as a plan with both kinds, and not as one with Work alone.
+    expect(run("O2").chosen.median).toBe(run("O2", both).chosen.median);
+    expect(run("O2").chosen.median).not.toBe(run("O2", workOnly).chosen.median);
   });
 });
 
