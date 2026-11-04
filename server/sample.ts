@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import { z } from "zod";
+import type { SampleData } from "../engine/fixture.ts";
 import { sampleDataSchema } from "../engine/fixture.ts";
 import { unitPrice } from "../engine/holdings.ts";
 import { toCents, toScaled } from "../engine/units.ts";
@@ -13,7 +14,7 @@ import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 
 // Bundled into the server build: the installed app has no repo files at run time.
-const sample = sampleDataSchema.parse(sampleJson);
+const bundled = sampleDataSchema.parse(sampleJson);
 
 /** True when the data folder has nothing the sample loader would collide with. */
 export async function isEmpty(db: Kysely<DB>): Promise<boolean> {
@@ -37,10 +38,12 @@ export async function isEmpty(db: Kysely<DB>): Promise<boolean> {
  * Writes the synthetic fixture (products, prices, goals with plans, weights, ledger, settings and
  * the partial pension plan) in one transaction. It never touches existing data.
  *
+ * @param db Database handle.
+ * @param sample The data to write. Defaults to the bundled sample; tests pass a larger fixture.
  * @throws HttpError 409 when the data folder already has a product, a goal, a transaction, or a saved settings or
  * pension plan document.
  */
-export async function loadSampleData(db: Kysely<DB>): Promise<void> {
+export async function loadSampleData(db: Kysely<DB>, sample: SampleData = bundled): Promise<void> {
   await db.transaction().execute(async (trx) => {
     if (!(await isEmpty(trx))) {
       throw new HttpError(
@@ -114,9 +117,9 @@ export function registerSampleRoutes(router: Router, db: Kysely<DB>): void {
   router.route("POST", "/api/sample-data", z.unknown(), async () => {
     await loadSampleData(db);
     return {
-      products: sample.products.length,
-      goals: sample.goals.length,
-      transactions: sample.ledger.length,
+      products: bundled.products.length,
+      goals: bundled.goals.length,
+      transactions: bundled.ledger.length,
     };
   });
 }

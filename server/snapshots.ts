@@ -125,6 +125,11 @@ const toView = (row: DB["snapshot"]): SnapshotView => ({
   goals: JSON.parse(row.results) as SnapshotGoal[],
 });
 
+/** Every stored snapshot, oldest month first. */
+export async function loadSnapshots(db: Kysely<DB>): Promise<SnapshotView[]> {
+  return (await db.selectFrom("snapshot").selectAll().orderBy("month").execute()).map(toView);
+}
+
 const saveBody = z.object({ month: monthSchema.optional() }).optional();
 
 /** Snapshots: list, save one by hand, delete a saved one. */
@@ -138,9 +143,7 @@ export function registerSnapshotRoutes(router: Router, db: Kysely<DB>, today: ()
     return row ? toView(row) : undefined;
   };
 
-  router.route("GET", "/api/snapshots", z.object({}), async () =>
-    (await db.selectFrom("snapshot").selectAll().orderBy("month").execute()).map(toView),
-  );
+  router.route("GET", "/api/snapshots", z.object({}), () => loadSnapshots(db));
 
   // The month defaults to the valuation month: the last month that has prices, else the clock's.
   router.route("POST", "/api/snapshots", saveBody, async (input) => {

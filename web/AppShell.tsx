@@ -22,6 +22,7 @@ import {
 } from "./nav.ts";
 import { TransactionsScreen } from "./operations/TransactionsScreen.tsx";
 import { FirstRunChecklist } from "./overview/FirstRunChecklist.tsx";
+import { OverviewScreen } from "./overview/OverviewScreen.tsx";
 import { PensionScreen } from "./pension/PensionScreen.tsx";
 import { PricesScreen } from "./prices/PricesScreen.tsx";
 import { SetupScreen } from "./setup/SetupScreen.tsx";
@@ -104,7 +105,7 @@ export function AppShell({ route }: { route: string }) {
       <main className="main">
         <DataFolderBanner />
         {route === DEFAULT_ROUTE ? (
-          <FirstRunChecklist done={<SoonPage route={route} />} />
+          <FirstRunChecklist done={<OverviewScreen />} />
         ) : route === TRANSACTIONS_ROUTE ? (
           <TransactionsScreen />
         ) : route === CURRENT_PORTFOLIO_ROUTE ? (

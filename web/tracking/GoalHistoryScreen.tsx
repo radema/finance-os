@@ -9,13 +9,11 @@ import {
   HISTORY_METRICS,
   type HistoryMetric,
   historyOf,
-  lineColour,
+  historySeries,
+  knownGoals,
   percentText,
 } from "./model.ts";
 import { TimeChart } from "./TimeChart.tsx";
-
-/** A goal of the snapshots as the screen draws it: its name and line colour, or its id in grey. */
-type Known = { id: string; name: string; colour: string };
 
 function SourceLabel({ recomputed }: { recomputed: boolean }) {
   return recomputed ? (
@@ -39,28 +37,8 @@ function History({
   const [metric, setMetric] = useState<HistoryMetric>("prob");
   const [error, setError] = useState<string>();
   const history = useMemo(() => historyOf(snapshots, metric), [snapshots, metric]);
-  const known = useMemo(
-    () =>
-      history.lines.map(({ goalId }): Known => {
-        const goal = goals.find((candidate) => candidate.id === goalId);
-        return goal
-          ? { id: goalId, name: goal.name, colour: lineColour(goal.slot) }
-          : { id: goalId, name: goalId, colour: "--ink2" };
-      }),
-    [history, goals],
-  );
-  const series = useMemo(
-    () =>
-      history.lines.map((line, index) => ({
-        name: known[index]?.name ?? line.goalId,
-        data: line.values,
-        colour: known[index]?.colour ?? "--ink2",
-        markers: true,
-        hollow: history.recomputed,
-        endLabel: true,
-      })),
-    [history, known],
-  );
+  const known = useMemo(() => knownGoals(history, goals), [history, goals]);
+  const series = useMemo(() => historySeries(history, known), [history, known]);
   const current = HISTORY_METRICS.find((candidate) => candidate.key === metric);
   const recomputed = history.recomputed.filter(Boolean).length;
   const run = async (action: () => Promise<unknown>) => {

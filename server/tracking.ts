@@ -48,7 +48,7 @@ const scopeQuery = z
  * What the performance engine reads, with prices as quoted: it applies the bond's per-100 rule itself,
  * so the loaders of the Goals views, which already did, are not used here.
  */
-async function loadPerformanceInput(
+export async function loadPerformanceInput(
   db: Kysely<DB>,
   world: GoalWorld,
 ): Promise<Omit<PerformanceInput, "scope">> {
@@ -100,7 +100,7 @@ const labelOf = (world: GoalWorld, scope: PerformanceScope): string => {
 };
 
 /** The series and KPIs of a scope; a data problem becomes a note, never an error. */
-function performanceFor(
+export function performanceFor(
   input: Omit<PerformanceInput, "scope">,
   scope: PerformanceScope,
 ): { months: PerformanceView["months"]; summary: PerformanceSummary | null; note: string | null } {
