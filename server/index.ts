@@ -17,6 +17,7 @@ import { registerImportRoutes } from "./importRoutes.ts";
 import { registerIndependenceRoutes } from "./independence.ts";
 import { registerMonthlyJobRoutes } from "./monthlyJob.ts";
 import { registerOpeningPositionRoutes } from "./openingPosition.ts";
+import { registerOptimizerRoutes } from "./optimizer.ts";
 import { registerOptimizerApplyRoutes } from "./optimizerApply.ts";
 import { registerOverviewRoutes } from "./overview.ts";
 import { registerPensionRoutes } from "./pension.ts";
@@ -84,6 +85,7 @@ export async function startServer({
   registerGoalRoutes(router, db);
   registerAllocationRoutes(router, db);
   registerOptimizerApplyRoutes(router, db);
+  registerOptimizerRoutes(router, db, clock);
   registerAssumptionRoutes(router, db);
   registerSampleRoutes(router, db);
   registerTransactionRoutes(router, db, clock);

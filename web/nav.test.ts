@@ -59,10 +59,10 @@ describe("AppShell", () => {
   });
 
   it("marks the current page and shows the soon placeholder", () => {
-    const html = render("analysis/optimizer");
+    const html = render("setup/glossary");
     expect(html).toContain('aria-current="page"');
     expect(html).toContain("This page is not built yet");
-    expect(html).toContain("Optimizer");
+    expect(html).toContain("Glossary");
   });
 
   it("tells the user when the route is unknown", () => {
@@ -100,7 +100,11 @@ describe("Goals screens", () => {
       expect(isBuilt(route)).toBe(true);
       expect(render(route)).not.toContain("This page is not built yet");
     }
-    expect(isBuilt("analysis/optimizer")).toBe(false);
+  });
+
+  it("builds the Optimizer screen, and drops its soon tag", () => {
+    expect(isBuilt("analysis/optimizer")).toBe(true);
+    expect(render("analysis/optimizer")).not.toContain("This page is not built yet");
   });
 
   it("builds the Independence screen, and drops its soon tag", () => {
