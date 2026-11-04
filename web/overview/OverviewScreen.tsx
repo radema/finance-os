@@ -53,7 +53,6 @@ function Dashboard({ view }: { view: OverviewView }) {
       <h1 className="title">{actionTitle(track, key.netWorth)}</h1>
       <p className="unit">
         Values at the end of {view.asOf.slice(0, 7)}. Every number links to its screen.{" "}
-        <TermPopover term="twr">TWR</TermPopover> is the time-weighted return.
       </p>
 
       <div className="kpis kpis-blue kpis-overview" data-cell="key-numbers">
@@ -70,7 +69,11 @@ function Dashboard({ view }: { view: OverviewView }) {
           href={hrefOf(ROUTES.marketChange)}
         />
         <Kpi
-          label="TWR this year"
+          label={
+            <>
+              <TermPopover term="twr">TWR</TermPopover> this year
+            </>
+          }
           value={percentText(key.ytdTwr)}
           note="Time-weighted, since 1 January."
           href={hrefOf(ROUTES.ytdTwr)}

@@ -97,9 +97,6 @@
   flex-direction: column;
   gap: var(--s1);
 }
-.field-label-first {
-  order: -1;
-}
 .field-label {
   font-size: var(--t-label);
   line-height: var(--lh-label);

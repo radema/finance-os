@@ -30,11 +30,11 @@ function MethodNotes() {
       </Card>
       <Card title="Monte Carlo">
         <p>
-          The plan runs through 1,000 simulated markets (300 for snapshots and the optimizer). Each
-          run draws correlated random returns for the six asset classes. The same seed gives the
-          same result. A goal succeeds when its value after tax and costs reaches the target at the
-          goal date. The bad, typical and good case are the 1-in-10, the middle and the 9-in-10
-          result.
+          The plan runs through 1,000 simulated markets (300 for snapshots and the optimizer, 200
+          when the optimizer looks for the lowest monthly amount). Each run draws correlated random
+          returns for the six asset classes. The same seed gives the same result. A goal succeeds
+          when its value after tax and costs reaches the target at the goal date. The bad, typical
+          and good case are the 1-in-10, the middle and the 9-in-10 result.
         </p>
       </Card>
       <Card title="Required contribution">
@@ -68,9 +68,10 @@ function MethodNotes() {
       </Card>
       <Card title="Optimizer rules">
         <p>
-          It compares mixes of the products you pick, in 10-point steps, on the same simulated
-          markets. It keeps the mixes that reach the required probability, then applies the
-          criterion. It amplifies errors in the expected return and the volatility you enter.
+          It compares mixes of the products you pick, in 10-point steps for up to 4 products and
+          20-point steps for 5 or 6, on the same simulated markets. It keeps the mixes that reach
+          the required probability, then applies the criterion. It amplifies errors in the expected
+          return and the volatility you enter.
         </p>
         <ul>
           {Object.values(CRITERION_RULES).map((rule) => (

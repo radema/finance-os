@@ -36,7 +36,7 @@ export function Cell({
   children,
 }: {
   id: string;
-  title: ReactNode;
+  title: string;
   /** Omit when no one screen explains the cell: its rows link on their own. */
   href?: string;
   unit?: ReactNode;

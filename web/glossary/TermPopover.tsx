@@ -3,8 +3,6 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { GLOSSARY, type TermId } from "./terms.ts";
 
 const GAP = 6;
-const MARGIN = 8;
-const POPOVER_WIDTH = 320;
 
 /**
  * A jargon term as a button. The popover opens on click, tap and keyboard focus: the Italian term first,
@@ -32,7 +30,7 @@ export function TermPopover({
     const rect = button.current?.getBoundingClientRect();
     if (!box || !rect) return;
     box.style.top = `${rect.bottom + GAP}px`;
-    box.style.left = `${Math.max(MARGIN, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - MARGIN))}px`;
+    box.style.setProperty("--term-left", `${rect.left}px`);
   }, []);
   const close = () => {
     if (popover.current?.matches(":popover-open")) popover.current.hidePopover();
@@ -63,6 +61,7 @@ export function TermPopover({
         type="button"
         aria-expanded={shown}
         aria-controls={id}
+        aria-describedby={id}
         onFocus={open}
         onClick={open}
         onBlur={(event) => {
@@ -71,7 +70,7 @@ export function TermPopover({
       >
         {children ?? entry.en}
       </button>
-      <div
+      <span
         ref={popover}
         id={id}
         className="term-popover"
@@ -82,7 +81,7 @@ export function TermPopover({
         <span className="term-it">{entry.it}</span>
         <span className="term-explanation">{entry.explanation}</span>
         {note ? <span className="term-explanation">{note}</span> : null}
-      </div>
+      </span>
     </>
   );
 }

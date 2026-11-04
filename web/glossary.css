@@ -15,9 +15,11 @@
   background: var(--wash);
 }
 .term-popover {
+  --term-width: 320px;
   inset: auto;
+  left: clamp(var(--s2), var(--term-left, 0px), calc(100vw - var(--term-width) - var(--s2)));
   margin: 0;
-  width: 320px;
+  width: var(--term-width);
   max-width: calc(100vw - 2 * var(--s2));
   padding: var(--s3);
   border: 1px solid var(--grid);
