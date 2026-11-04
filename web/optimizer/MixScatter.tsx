@@ -33,7 +33,9 @@ function buildOption(view: OptimizerRunView, slot: number, names: ReadonlyMap<st
     tooltip: {
       trigger: "item" as const,
       formatter: tip,
-      textStyle: { fontFamily: colour.font, fontSize: 13 },
+      backgroundColor: colour.raised,
+      borderColor: colour.base,
+      textStyle: { color: colour.ink, fontFamily: colour.font, fontSize: 13 },
     },
     xAxis: {
       type: "value" as const,

@@ -171,7 +171,7 @@ function Charts({ view }: { view: IndependenceView }) {
         <p className="unit">Euros today, net of liquidation tax, to {last?.year}.</p>
         <ul className="legend">
           <li>
-            <span className="swatch swatch-band" />
+            <span className="swatch swatch-fi-band" />
             <TermPopover term="badcase">Bad case</TermPopover> to{" "}
             <TermPopover term="goodcase">good case</TermPopover>
           </li>
