@@ -10,7 +10,7 @@ import {
   monthSchema,
   settingsSchema,
 } from "../engine/schemas.ts";
-import type { SnapshotGoal } from "../engine/snapshot.ts";
+import type { SnapshotGoal, SnapshotSource, SnapshotView } from "../engine/snapshot.ts";
 import { computeSnapshot } from "../engine/snapshot.ts";
 import type { DB } from "./db.ts";
 import { loadDocument } from "./documents.ts";
@@ -21,16 +21,9 @@ import { HttpError } from "./router.ts";
 import { idQuery } from "./rows.ts";
 import { loadLedger } from "./transactions.ts";
 
-type Source = "saved" | "recomputed";
+type Source = SnapshotSource;
 
-/** A snapshot as the API shows it. `id` is the month: a month has at most one snapshot. */
-export interface SnapshotView {
-  id: string;
-  month: string;
-  source: Source;
-  assumptionsHash: string;
-  goals: SnapshotGoal[];
-}
+export type { SnapshotView };
 
 /**
  * A stable hash of every assumption document the analysis reads: settings, commission, FI settings,

@@ -25,6 +25,7 @@ import { registerSampleRoutes } from "./sample.ts";
 import { registerSetupProgressRoutes } from "./setupProgress.ts";
 import { registerSnapshotRoutes } from "./snapshots.ts";
 import { serveStatic } from "./static.ts";
+import { registerTrackingRoutes } from "./tracking.ts";
 import { registerTransactionRoutes } from "./transactions.ts";
 import { createYahooProvider } from "./yahooProvider.ts";
 
@@ -93,6 +94,7 @@ export async function startServer({
   registerIndependenceRoutes(router, db, clock);
   registerSetupProgressRoutes(router, db);
   registerSnapshotRoutes(router, db, clock);
+  registerTrackingRoutes(router, db, clock);
   const monthlyJob = registerMonthlyJobRoutes(router, { db, provider: priceProvider, clock });
 
   const server = createServer(async (req, res) => {

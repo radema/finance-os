@@ -1,0 +1,93 @@
+/* Performance, Goal history and Plan vs actual. Colours, type and spacing come from tokens.css.
+   Legend swatches take their colour from --swatch. */
+.swatch-dash {
+  height: 0;
+  border-top: 2px dashed var(--swatch);
+}
+.swatch-line {
+  border-top-color: var(--swatch);
+}
+.swatch-area,
+.swatch-bar {
+  height: 10px;
+  background: color-mix(in srgb, var(--swatch) 40%, transparent);
+}
+.swatch-bar {
+  background: var(--swatch);
+}
+.swatch-dot,
+.swatch-ring {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--swatch);
+}
+.swatch-dot {
+  background: var(--swatch);
+}
+
+.kpis-blue {
+  --slot: var(--blue);
+}
+.scope-bar,
+.switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s3);
+  margin: var(--s3) 0;
+}
+.switch {
+  gap: var(--s1);
+}
+.btn[aria-pressed="true"] {
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.grid-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: var(--s4);
+  margin-top: var(--s3);
+}
+.grid-charts .chart {
+  height: 240px;
+}
+.mini-title {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s2);
+}
+.exhibit + .exhibit,
+.exhibit + .card,
+.card + .exhibit {
+  margin-top: var(--s5);
+}
+
+.source-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+}
+.source-label-recomputed {
+  font-weight: 600;
+}
+.source-label-recomputed::before,
+.source-label-saved::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--ink2);
+  box-sizing: border-box;
+}
+.source-label-saved::before {
+  background: var(--ink2);
+}
+.wait {
+  font-weight: 600;
+}

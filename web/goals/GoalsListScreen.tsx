@@ -1,8 +1,10 @@
 import type { GoalListView } from "../../engine/goalViews.ts";
+import type { PlanVsActualView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
-import { formatAmount, formatPercent } from "../money.ts";
+import { formatAmount, formatEuro, formatPercent } from "../money.ts";
 import { SampleCard } from "../setup/SampleCard.tsx";
 import { Card, PriorityTag, Resource } from "../setup/ui.tsx";
+import { gapText, MISSING } from "../tracking/model.ts";
 import { GoalChip } from "./GoalChip.tsx";
 import { pVsRequired } from "./outlook.ts";
 import { StatusChip } from "./StatusChip.tsx";
@@ -10,6 +12,10 @@ import { StatusChip } from "./StatusChip.tsx";
 /** Goals > List: one row per goal with its priority, status, P against the required probability, and value against target. */
 export function GoalsListScreen() {
   const list = useLoad<GoalListView>("/api/goal-list");
+  const plan = useLoad<PlanVsActualView>("/api/plan-vs-actual");
+  /** A goal's cumulative gap against its plan, in cents; undefined while loading or before tracking starts. */
+  const gapOf = (goalId: string): number | undefined =>
+    plan.data?.goals.find((goal) => goal.goalId === goalId)?.months.at(-1)?.gap;
 
   return (
     <>
@@ -52,6 +58,7 @@ export function GoalsListScreen() {
                           <th className="num">Value</th>
                           <th className="num">Target</th>
                           <th>Value vs target</th>
+                          <th className="num">Plan gap</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -96,6 +103,19 @@ export function GoalsListScreen() {
                                     </span>
                                     {formatPercent(share)}
                                   </span>
+                                )}
+                              </td>
+                              <td className="num">
+                                {gapOf(goal.id) === undefined ? (
+                                  MISSING
+                                ) : (
+                                  <>
+                                    {formatEuro(gapOf(goal.id) ?? 0)}
+                                    <span className="sub-line">
+                                      {" "}
+                                      {gapText(gapOf(goal.id) ?? 0)}
+                                    </span>
+                                  </>
                                 )}
                               </td>
                             </tr>

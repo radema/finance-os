@@ -16,6 +16,10 @@ export function readTokens(slot: number) {
   };
 }
 
+/** One custom property of the page as a colour, for example `--hl`. Read when the chart is drawn. */
+export const readColour = (name: string): string =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
 /**
  * Draws an ECharts chart (SVG renderer) in the returned box. `build` is read when the chart is
  * drawn: after the fonts load, so the axis text is measured with Geist, and again when the colour

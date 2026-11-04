@@ -8,12 +8,15 @@ import {
   DEFAULT_ROUTE,
   findPage,
   GOALS_DETAIL_ROUTE,
+  GOALS_HISTORY_ROUTE,
   GOALS_LIST_ROUTE,
   goalIdOf,
   INDEPENDENCE_ROUTE,
   isBuilt,
   NAV,
   PENSION_ROUTE,
+  PERFORMANCE_ROUTE,
+  PLAN_VS_ACTUAL_ROUTE,
   PRICES_ROUTE,
   TRANSACTIONS_ROUTE,
 } from "./nav.ts";
@@ -22,6 +25,9 @@ import { FirstRunChecklist } from "./overview/FirstRunChecklist.tsx";
 import { PensionScreen } from "./pension/PensionScreen.tsx";
 import { PricesScreen } from "./prices/PricesScreen.tsx";
 import { SetupScreen } from "./setup/SetupScreen.tsx";
+import { GoalHistoryScreen } from "./tracking/GoalHistoryScreen.tsx";
+import { PerformanceScreen } from "./tracking/PerformanceScreen.tsx";
+import { PlanVsActualScreen } from "./tracking/PlanVsActualScreen.tsx";
 
 function Sidebar({ route }: { route: string }) {
   return (
@@ -109,6 +115,12 @@ export function AppShell({ route }: { route: string }) {
           <GoalsListScreen />
         ) : route === GOALS_DETAIL_ROUTE || goalIdOf(route) !== undefined ? (
           <GoalDetailScreen goalId={goalIdOf(route)} />
+        ) : route === GOALS_HISTORY_ROUTE ? (
+          <GoalHistoryScreen />
+        ) : route === PERFORMANCE_ROUTE ? (
+          <PerformanceScreen />
+        ) : route === PLAN_VS_ACTUAL_ROUTE ? (
+          <PlanVsActualScreen />
         ) : route === PENSION_ROUTE ? (
           <PensionScreen />
         ) : route === INDEPENDENCE_ROUTE ? (

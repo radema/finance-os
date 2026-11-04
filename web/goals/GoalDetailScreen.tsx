@@ -1,10 +1,14 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import type { GoalAnalysis, GoalDetailView } from "../../engine/goalViews.ts";
+import type { PerformanceView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
 import { formatAmount, formatPercent, formatUnitPrice } from "../money.ts";
 import { GOALS_LIST_ROUTE } from "../nav.ts";
 import { Card, PriorityTag, ProductTag, Resource } from "../setup/ui.tsx";
+import { percentText, scopeQuery, xirrNote } from "../tracking/model.ts";
 import { FanChart } from "./FanChart.tsx";
+import { GoalTracking } from "./GoalTracking.tsx";
+import { Kpi } from "./Kpi.tsx";
 import { horizonText, requiredText, usesSlotLine } from "./outlook.ts";
 import { RangeChart } from "./RangeChart.tsx";
 import { StatusChip } from "./StatusChip.tsx";
@@ -15,16 +19,6 @@ const NOT_FOUND = "goal not found";
 const MISSING = "–";
 
 const orMissing = (amount: number | null) => (amount === null ? MISSING : formatAmount(amount));
-
-function Kpi({ label, value, note }: { label: string; value: string; note?: ReactNode }) {
-  return (
-    <div className="kpi">
-      <div className="kpi-label">{label}</div>
-      <div className="kpi-value">{value}</div>
-      {note ? <p className="sub">{note}</p> : null}
-    </div>
-  );
-}
 
 function Exhibit({ goal }: { goal: GoalDetailView }) {
   const last = goal.series.at(-1);
@@ -236,6 +230,18 @@ function Analysis({ goal }: { goal: GoalDetailView }) {
   );
 }
 
+/** The goal's XIRR from the performance of its bucket; the dash and a reason when there is none. */
+function XirrKpi({ goalId }: { goalId: string }) {
+  const loaded = useLoad<PerformanceView>(
+    `/api/performance?${scopeQuery({ kind: "bucket", goalId })}`,
+  );
+  const { data } = loaded;
+  const note = data
+    ? (data.note ?? xirrNote(data.summary?.xirr ?? null))
+    : (loaded.error ?? "Loading.");
+  return <Kpi label="XIRR a year" value={percentText(data?.summary?.xirr ?? null)} note={note} />;
+}
+
 function Detail({ goal }: { goal: GoalDetailView }) {
   const net = goal.projection?.net ?? null;
   const goalDate = `31 December ${goal.targetYear}`;
@@ -280,6 +286,7 @@ function Detail({ goal }: { goal: GoalDetailView }) {
           value={formatAmount(goal.targetAtGoalDate)}
           note={`${formatAmount(goal.target)} in today's euros, grown by inflation.`}
         />
+        <XirrKpi goalId={goal.id} />
       </div>
 
       <Analysis goal={goal} />
@@ -336,6 +343,7 @@ function Detail({ goal }: { goal: GoalDetailView }) {
       </Card>
 
       <Exhibit goal={goal} />
+      <GoalTracking goal={goal} />
     </div>
   );
 }

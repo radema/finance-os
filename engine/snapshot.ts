@@ -36,6 +36,18 @@ export interface SnapshotGoal {
   status: GoalStatus | null;
 }
 
+/** Where a stored snapshot came from: taken by the app or the user at the time, or rebuilt later. */
+export type SnapshotSource = "saved" | "recomputed";
+
+/** A snapshot as the API shows it. `id` is the month: a month has at most one snapshot. */
+export interface SnapshotView {
+  id: string;
+  month: string;
+  source: SnapshotSource;
+  assumptionsHash: string;
+  goals: SnapshotGoal[];
+}
+
 /**
  * The analysis of every goal at `world.month`: holdings up to that month end, the latest price at or
  * before it, the world's assumptions and the Settings seed, 300 paths.
