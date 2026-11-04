@@ -348,12 +348,14 @@ describe("runOptimizer against a brute-force loop (AC-80)", () => {
       for (const w of mix.weights.values()) expect(w).toBeLessThanOrEqual(0.6);
   });
 
-  it("keeps the bucket's holdings: only the weights of new money change", () => {
-    const heavy = runOptimizer(input("O2", 0.5)).mixes;
-    const first = heavy[0] as MixResult; // the first candidate puts all new money in "b"
+  it("keeps the bucket's holdings: the mix changes only the weights of new money", () => {
+    const first = runOptimizer(input("O2", 0.5)).mixes[0] as MixResult; // all new money in "b"
     expect(first.weights.get("e")).toBe(0);
-    // The same mix, run by hand with the holdings kept, gives the same deterministic value.
-    expect(first.detValue).toBe(projectGoal({ ...bucket, weights: first.weights }).net);
+    const withoutHoldings = projectGoal({ ...bucket, positions: [], weights: first.weights });
+    // The 6,000 held in "e" stays in the bucket and grows at 7% less 0.2% TER for 5 years or more.
+    const holdingAtGoal = first.detValue - withoutHoldings.net;
+    expect(holdingAtGoal).toBeGreaterThan(6_000 * 1.3);
+    expect(holdingAtGoal).toBeLessThan(6_000 * 1.5);
   });
 
   it("is deterministic: same input and seed give the same result", () => {
