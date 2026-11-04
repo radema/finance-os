@@ -4,8 +4,10 @@ import { join } from "node:path";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Alert } from "../engine/rules.ts";
+import { computeSnapshot } from "../engine/snapshot.ts";
 import type { DB } from "./db.ts";
 import { openDatabase } from "./db.ts";
+import { loadWorld } from "./goalViews.ts";
 import { startServer } from "./index.ts";
 
 // The sample data has prices to 2026-10, four goals and the clock at 2026-10-31. It already fires
@@ -228,6 +230,30 @@ describe("Alerts and dismissals", () => {
       expect(await find(c.ruleId, c.nextKey), "the alert returns under its new key").toBeDefined();
     },
   );
+
+  it("does not fire R4 when the snapshot of the valuation month and now are the same computation", async () => {
+    // At 1,000 paths g-car at 1.29 x its target is At risk, at the 300 paths of a snapshot On track:
+    // Monte Carlo noise alone. R4 must compare like with like.
+    await db
+      .updateTable("goal")
+      .set((eb) => ({ targetCents: eb(eb("targetCents", "*", 129), "/", 100) }))
+      .where("id", "=", "g-car")
+      .execute();
+    const world = await loadWorld(db, "2026-10-31");
+    const goals = computeSnapshot(world);
+    expect(goals.find((goal) => goal.goalId === "g-car")?.status).toBe("on_track");
+    await db
+      .insertInto("snapshot")
+      .values({
+        month: world.month,
+        source: "saved",
+        assumptionsHash: "x",
+        results: JSON.stringify(goals),
+      })
+      .execute();
+
+    expect((await alerts()).filter((alert) => alert.ruleId === "R4")).toEqual([]);
+  });
 
   it("deletes the dismissal when the condition turns false, and shows the alert when it is true again (AC-73)", async () => {
     const alert = (await find("R3", "p-govt|2029-06")) as Alert;
