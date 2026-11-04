@@ -5,6 +5,7 @@ import { monteCarloGoalOf } from "../engine/goalViews.ts";
 import { monthEnd } from "../engine/months.ts";
 import {
   generateMixes,
+  mixOfFlows,
   PensionRebalanceError,
   rankMixes,
   runOptimizer,
@@ -28,6 +29,18 @@ const runInput = z.object({
   maxPerProduct: z.number().gt(0).max(1).optional(),
 });
 
+/** Pension funds go to the pension goal only, and it takes nothing else: a 400 for the optimizer's routes. */
+export function assertProductsFit(
+  isPension: boolean,
+  regimes: readonly (string | undefined)[],
+): void {
+  if (regimes.some((regime) => (regime === "pension") !== isPension))
+    throw new HttpError(
+      400,
+      "pension funds go to the pension goal only, and it takes nothing else",
+    );
+}
+
 /** The optimizer's run: the engine over the goal's bucket, with the bucket as it is for comparison. */
 export function registerOptimizerRoutes(router: Router, db: Kysely<DB>, today: () => string): void {
   router.route("POST", "/api/optimizer/run", runInput, async (input): Promise<OptimizerRunView> => {
@@ -41,11 +54,7 @@ export function registerOptimizerRoutes(router: Router, db: Kysely<DB>, today: (
     }
     const isPension = world.pension?.goalId === goal.id;
     const regimes = input.products.map((id) => world.products.get(id)?.regime);
-    if (regimes.some((regime) => (regime === "pension") !== isPension))
-      throw new HttpError(
-        400,
-        "pension funds go to the pension goal only, and it takes nothing else",
-      );
+    assertProductsFit(isPension, regimes);
     if (regimes.includes("pension") && world.pension?.firstYear === undefined)
       throw new HttpError(400, "the pension plan has no first year of membership");
     if (generateMixes(input.products, input.maxPerProduct).length === 0)
@@ -61,13 +70,10 @@ export function registerOptimizerRoutes(router: Router, db: Kysely<DB>, today: (
       const result = runOptimizer({ ...input, bucket, requiredP, correlations, seed });
       // The pension goal's weights are the pct of its plan's flows, not the allocation rows.
       const currentWeights = bucket.pension
-        ? bucket.pension.plan.flows.reduce(
-            (sum, flow) => sum.set(flow.productId, (sum.get(flow.productId) ?? 0) + flow.pct),
-            new Map<string, number>(),
-          )
-        : bucket.weights;
+        ? mixOfFlows(bucket.pension.plan.flows)
+        : normaliseWeights(bucket.weights);
       const current = simulateCurrent(
-        { ...bucket, weights: normaliseWeights(currentWeights) },
+        { ...bucket, weights: currentWeights },
         input.criterion,
         correlations,
         seed,

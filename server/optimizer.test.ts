@@ -104,6 +104,21 @@ describe("Optimizer run API (AC-84)", () => {
     expect(body.error).toContain("pension");
   });
 
+  it("optimizes the pension goal: the mixes differ and the chosen one is the criterion's pick", async () => {
+    const { status, body } = await run({
+      goalId: "g-retirement",
+      products: ["p-pension-balanced", "p-pension-equity"],
+      mode: "new",
+      criterion: "O2",
+    });
+    expect(status).toBe(200);
+    expect(new Set(body.mixes.map((mix) => mix.median)).size).toBe(body.mixes.length);
+    const feasible = body.mixes.filter((mix) => mix.p >= body.requiredP);
+    const pool = feasible.length > 0 ? feasible : body.mixes;
+    expect(body.chosen.median).toBe(Math.max(...pool.map((mix) => mix.median)));
+    expect(body.chosen.weights).not.toEqual(body.mixes[0]?.weights);
+  });
+
   it.each([
     ["an unknown goal", car({ goalId: "nope" }), 404],
     ["a product that does not exist", car({ products: ["p-world-etf", "nope"] }), 404],

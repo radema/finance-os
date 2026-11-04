@@ -322,15 +322,8 @@ function UseWeights({
         <div className="callout" role="alertdialog" aria-label="Confirm the new weights">
           <p>
             Replace the contribution weights of {goal.name} with{" "}
-            <strong>
-              {asking.weights
-                .map(
-                  (row) =>
-                    `${names.get(row.productId) ?? row.productId} ${formatPercent(row.weight)}`,
-                )
-                .join(", ")}
-            </strong>
-            ?{asking.flows ? " The weights are written to the flows of the pension plan." : ""}
+            <strong>{mixText(asking.weights, names)}</strong>?
+            {asking.flows ? " The weights are written to the flows of the pension plan." : ""}
           </p>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={confirm}>
@@ -373,7 +366,7 @@ function Result({
     <Card title="Suggested mix">
       <div className="result-head">
         <GoalChip id={goal.id} name={goal.name} slot={goal.slot} />
-        <span className="result-mix">{mixText(chosen, names)}</span>
+        <span className="result-mix">{mixText(chosen.weights, names)}</span>
       </div>
       {view.notFeasible ? (
         <p className="alert" role="alert">
@@ -476,9 +469,12 @@ function Exhibits({
             </thead>
             <tbody>
               {top.map((mix, index) => (
-                <tr key={mixText(mix, names)} className={index === 0 ? "top-chosen" : undefined}>
+                <tr
+                  key={mixText(mix.weights, names)}
+                  className={index === 0 ? "top-chosen" : undefined}
+                >
                   <td>{index + 1}</td>
-                  <td>{mixText(mix, names)}</td>
+                  <td>{mixText(mix.weights, names)}</td>
                   <td className="num">{formatPercent(mix.p)}</td>
                   <td className="num">{formatAmount(mix.p10)}</td>
                   <td className="num">{formatAmount(mix.median)}</td>

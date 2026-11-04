@@ -47,7 +47,7 @@ export function weightRows(current: MixView, suggested: MixView) {
 }
 
 /** A mix in words: "World ETF 65%, Govt 2029 35%". */
-export const mixText = (mix: MixView, names: ReadonlyMap<string, string>): string =>
-  mix.weights
+export const mixText = (weights: MixView["weights"], names: ReadonlyMap<string, string>): string =>
+  weights
     .map((row) => `${names.get(row.productId) ?? row.productId} ${formatPercent(row.weight)}`)
     .join(", ");

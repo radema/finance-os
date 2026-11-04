@@ -115,6 +115,15 @@ describe("Optimizer apply API (AC-82)", () => {
     expect(result.status).toBe(400);
   });
 
+  it("refuses a pension fund on a goal that is not the pension goal", async () => {
+    const result = await apply({
+      goalId: "g-car",
+      weights: [{ productId: "p-pension-equity", weight: 1 }],
+      confirm: true,
+    });
+    expect(result.status).toBe(400);
+  });
+
   it("refuses an unknown goal, an unknown product, bad weights and a missing confirm flag", async () => {
     const one = [{ productId: "p-govt", weight: 1 }];
     expect((await apply({ goalId: "nope", weights: one, confirm: true })).status).toBe(404);
