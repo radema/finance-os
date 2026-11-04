@@ -12,6 +12,7 @@ import "./pension.css";
 import "./independence.css";
 import "./tracking.css";
 import "./overview.css";
+import "./optimizer.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");

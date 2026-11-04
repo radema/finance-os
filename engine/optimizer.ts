@@ -1,4 +1,4 @@
-import { type MonteCarloGoal, runMonteCarlo } from "./monteCarlo.ts";
+import { type GoalDistribution, type MonteCarloGoal, runMonteCarlo } from "./monteCarlo.ts";
 import { liquidateGoal, projectGoal } from "./projection.ts";
 import { requiredContribution } from "./requiredContribution.ts";
 import type { Goal } from "./schemas.ts";
@@ -7,6 +7,9 @@ import type { Zainetto } from "./tax.ts";
 /** Paths per mix, as in the spec: 300, and 200 for "spend least" (a bisection runs per mix). */
 const PATHS = 300;
 const PATHS_SPEND_LEAST = 200;
+/** Paths per mix for a criterion: the current mix uses the same, so both run on the same shocks. */
+export const pathsFor = (criterion: OptimizerCriterion): number =>
+  criterion === "O5" ? PATHS_SPEND_LEAST : PATHS;
 const MIN_PRODUCTS = 1;
 const MAX_PRODUCTS = 6;
 /** Up to 4 products the weights move in steps of 10 points, from 5 products in steps of 20. */
@@ -87,7 +90,8 @@ export function defaultCriterion(priority: Goal["priority"]): "O1" | "O2" {
   return priority === "Need" ? "O1" : "O2";
 }
 
-const RULES: Record<OptimizerCriterion, { name: string; text: string }> = {
+/** The name and the plain-words text of the rule of each criterion. */
+export const CRITERION_RULES: Record<OptimizerCriterion, { name: string; text: string }> = {
   O1: {
     name: "O1 Protect the bad case",
     text: "Highest bad case (10th percentile) among the mixes that reach the required probability; a tie goes to the higher chance of success.",
@@ -123,6 +127,23 @@ const COMPARE: Record<OptimizerCriterion, (a: MixResult, b: MixResult) => number
   O4: (a, b) => larger(a.p, b.p) || larger(a.median, b.median),
 };
 
+/**
+ * The mixes in the order of the rule: the feasible ones by the criterion, then the rest by P. O4 has
+ * no feasibility filter. The first one is the mix `chooseMix` picks: both keep the candidate order on a tie.
+ *
+ * @param mixes The mixes in candidate order.
+ */
+export function rankMixes(
+  mixes: readonly MixResult[],
+  criterion: OptimizerCriterion,
+  requiredP: number,
+): MixResult[] {
+  if (criterion === "O4") return [...mixes].sort(COMPARE.O4);
+  const feasible = mixes.filter((mix) => mix.p >= requiredP).sort(COMPARE[criterion]);
+  const rest = mixes.filter((mix) => mix.p < requiredP).sort((a, b) => larger(a.p, b.p));
+  return [...feasible, ...rest];
+}
+
 /** The first mix that no later mix beats: a tie keeps the candidate order. */
 function best(mixes: readonly MixResult[], compare: (a: MixResult, b: MixResult) => number) {
   let chosen = mixes[0] as MixResult;
@@ -145,7 +166,7 @@ export function chooseMix(
   criterion: OptimizerCriterion,
   requiredP: number,
 ): { chosen: MixResult; notFeasible: boolean; ruleName: string; ruleText: string } {
-  const rule = RULES[criterion];
+  const rule = CRITERION_RULES[criterion];
   const feasible = mixes.filter((mix) => mix.p >= requiredP);
 
   if (criterion === "O4") {
@@ -191,6 +212,17 @@ export type OptimizerInput = {
    */
   mode: "new" | "rebalance";
 };
+
+/** What a simulated goal says about its mix. */
+const outcomeOf = (goal: MonteCarloGoal, distribution: GoalDistribution): MixResult => ({
+  weights: goal.weights,
+  p: distribution.pSuccess,
+  median: distribution.p50.at(-1) as number,
+  p10: distribution.p10.at(-1) as number,
+  p90: distribution.p90.at(-1) as number,
+  shortfall: distribution.avgShortfall,
+  detValue: projectGoal(goal).net,
+});
 
 /** A pension bucket cannot be sold and reinvested: its money moves only through the pension flows. */
 export class PensionRebalanceError extends Error {
@@ -263,7 +295,7 @@ export function runOptimizer(input: OptimizerInput): OptimizerResult {
   const candidates = generateMixes(input.products, input.maxPerProduct);
   if (candidates.length === 0) throw new Error("The per-product maximum leaves no mix");
 
-  const paths = criterion === "O5" ? PATHS_SPEND_LEAST : PATHS;
+  const paths = pathsFor(criterion);
   const sale = rebalance ? sellHoldings(bucket) : { tax: 0, proceeds: 0, zainetto: undefined };
   const goals = candidates.map((weights) => ({
     ...bucket,
@@ -281,16 +313,7 @@ export function runOptimizer(input: OptimizerInput): OptimizerResult {
   const { goals: distributions } = runMonteCarlo({ goals, correlations }, seed, paths);
 
   const mixes = goals.map((goal, index): MixResult => {
-    const distribution = distributions[index] as (typeof distributions)[number];
-    const mix: MixResult = {
-      weights: goal.weights,
-      p: distribution.pSuccess,
-      median: distribution.p50.at(-1) as number,
-      p10: distribution.p10.at(-1) as number,
-      p90: distribution.p90.at(-1) as number,
-      shortfall: distribution.avgShortfall,
-      detValue: projectGoal(goal).net,
-    };
+    const mix = outcomeOf(goal, distributions[index] as GoalDistribution);
     if (criterion === "O5") {
       mix.monthlyNeeded = requiredContribution(goal, "probability", {
         requiredP,
@@ -303,4 +326,18 @@ export function runOptimizer(input: OptimizerInput): OptimizerResult {
   });
 
   return { ...chooseMix(mixes, criterion, requiredP), mixes, switchTax: sale.tax };
+}
+
+/**
+ * The bucket as it is, with its own weights and holdings, on the same shocks and paths as
+ * `runOptimizer` uses for the criterion: the "current" the suggested mix is compared with.
+ */
+export function simulateCurrent(
+  bucket: MonteCarloGoal,
+  criterion: OptimizerCriterion,
+  correlations: OptimizerInput["correlations"],
+  seed: number,
+): MixResult {
+  const { goals } = runMonteCarlo({ goals: [bucket], correlations }, seed, pathsFor(criterion));
+  return outcomeOf(bucket, goals[0] as GoalDistribution);
 }
