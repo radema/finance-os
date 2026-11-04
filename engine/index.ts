@@ -29,6 +29,14 @@ export { lognormalParams, runMonteCarlo, simulatePaths } from "./monteCarlo.ts";
 export type { PensionYear, PensionYearFlows, ProductFlow } from "./pension.ts";
 export { pensionFlowsByProduct, pensionSchedule } from "./pension.ts";
 export type {
+  NextContribution,
+  NextContributionInput,
+  PlanVsActualGoal,
+  PlanVsActualInput,
+  PlanVsActualMonth,
+} from "./planVsActual.ts";
+export { nextContribution, planVsActual } from "./planVsActual.ts";
+export type {
   GoalProjection,
   Position,
   ProductParams,
