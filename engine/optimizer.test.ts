@@ -6,6 +6,7 @@ import {
   generateMixes,
   type MixResult,
   type OptimizerCriterion,
+  PensionRebalanceError,
   runOptimizer,
 } from "./optimizer.ts";
 import { projectGoal } from "./projection.ts";
@@ -367,4 +368,150 @@ describe("runOptimizer against a brute-force loop (AC-80)", () => {
       runOptimizer({ ...input("O1", 0.5), products: ["e"], maxPerProduct: 0.5 }),
     ).toThrow();
   });
+});
+
+// Rebalance now (AC-81). Holdings: 6,000 in "e" on a basis of 5,000, so a gain of 1,000 taxed at 26%.
+const TAXED = { ...SETTINGS, taxStd: 0.26, taxGovt: 0.125 };
+const taxedBucket: MonteCarloGoal = { ...bucket, settings: TAXED };
+const rebalanceInput = (over: object = {}) => ({
+  ...input("O2", 0.5),
+  bucket: taxedBucket,
+  mode: "rebalance" as const,
+  ...over,
+});
+
+describe("runOptimizer, rebalance now (AC-81)", () => {
+  it("reports the tax of selling the holdings at asOf: 1,000 gain x 26% = 260", () => {
+    const result = runOptimizer(rebalanceInput());
+    expect(result.switchTax).toBeCloseTo(260, 9);
+  });
+
+  it("reinvests the proceeds net of tax (6,000 - 260 = 5,740) on a basis equal to that value", () => {
+    // One product: the mix is 100% "e". Opening state after the switch: value 5,740, basis 5,740.
+    const result = runOptimizer(rebalanceInput({ products: ["e"] }));
+    const switched = projectGoal({
+      ...taxedBucket,
+      positions: [{ productId: "e", value: 5_740, basis: 5_740 }],
+      weights: new Map([["e", 1]]),
+    });
+    const notReset = projectGoal({
+      ...taxedBucket,
+      positions: [{ productId: "e", value: 5_740, basis: 5_000 }],
+      weights: new Map([["e", 1]]),
+    });
+    const [mix] = result.mixes as [MixResult];
+    expect(mix.detValue).toBeCloseTo(switched.net, 6);
+    // With the old basis the exit tax would be higher: the reset is what the result shows.
+    expect(mix.detValue).toBeGreaterThan(notReset.net + 100);
+  });
+
+  it("splits the reinvested value by the mix: 40% of 5,740 goes to 'b'", () => {
+    const { mixes } = runOptimizer(rebalanceInput());
+    const mix = mixes.find((m) => m.weights.get("e") === 0.6) as MixResult;
+    const goal = {
+      ...taxedBucket,
+      weights: mix.weights,
+      positions: [
+        { productId: "e", value: 5_740 * 0.6, basis: 5_740 * 0.6 },
+        { productId: "b", value: 5_740 * 0.4, basis: 5_740 * 0.4 },
+      ],
+    };
+    expect(mix.detValue).toBeCloseTo(projectGoal(goal).net, 6);
+  });
+
+  it("is the default of 'new money only': no tax, holdings kept", () => {
+    const result = runOptimizer({ ...rebalanceInput(), mode: "new" });
+    expect(result.switchTax).toBe(0);
+    const mix = result.mixes[0] as MixResult;
+    expect(mix.detValue).toBeCloseTo(projectGoal({ ...taxedBucket, weights: mix.weights }).net, 6);
+  });
+
+  it("charges no tax when the holdings are at a loss, and uses the zainetto of the goal", () => {
+    const loss = {
+      ...taxedBucket,
+      positions: [{ productId: "e", value: 4_000, basis: 5_000 }],
+    };
+    expect(runOptimizer(rebalanceInput({ bucket: loss })).switchTax).toBe(0);
+    const withZainetto = {
+      ...taxedBucket,
+      positions: [{ productId: "d", value: 1_000, basis: 500 }],
+      products: new Map([...taxedBucket.products, ["d", { ...equity, regime: "direct" as const }]]),
+      settings: { ...TAXED, zainetto: { amount: 500, expiry: "2027", goalId: "g" } },
+    };
+    // Gain 500 x 26% = 130, credit 500 x 26% = 130: no tax.
+    expect(runOptimizer(rebalanceInput({ bucket: withZainetto })).switchTax).toBeCloseTo(0, 9);
+  });
+
+  it("refuses a pension bucket with a typed error", () => {
+    const pensionProduct: MonteCarloProduct = { ...bonds, regime: "pension" };
+    const pensionBucket: MonteCarloGoal = {
+      ...taxedBucket,
+      positions: [{ productId: "f", value: 6_000, basis: 5_000 }],
+      products: new Map([["f", pensionProduct]]),
+      weights: new Map([["f", 1]]),
+      firstYear: 2020,
+    };
+    const run = () => runOptimizer(rebalanceInput({ bucket: pensionBucket, products: ["f"] }));
+    expect(run).toThrow(PensionRebalanceError);
+    // "New money only" is not refused: the holdings stay.
+    expect(() =>
+      runOptimizer({ ...rebalanceInput({ bucket: pensionBucket, products: ["f"] }), mode: "new" }),
+    ).not.toThrow();
+  });
+});
+
+// Speed (AC-83). A long goal (20 years) is the slowest case; each test times only runOptimizer.
+const SPEED_PRODUCTS = new Map<string, MonteCarloProduct>([
+  ["e", equity],
+  ["b", bonds],
+  ["w", { ...equity, mu: 0.06, sigma: 0.16 }],
+  ["g", { ...bonds, mu: 0.03, sigma: 0.08, assetClass: "Gold/Commodities" }],
+]);
+const speedBucket: MonteCarloGoal = {
+  ...bucket,
+  goal: { id: "g", targetYear: 2046, target: 150_000, contributionGrowth: 0.02 },
+  products: SPEED_PRODUCTS,
+};
+const ELAPSED_LIMIT_MS = { full: 3_000, spendLeast: 10_000 };
+// Own timeout, well above the budgets: a slow machine fails the budget assertion, not the runner.
+const TEST_TIMEOUT_MS = 60_000;
+
+function timed<T>(run: () => T): { value: T; ms: number } {
+  const start = performance.now();
+  const value = run();
+  return { value, ms: performance.now() - start };
+}
+
+describe("optimizer speed (AC-83)", () => {
+  it(
+    "runs 286 mixes x 300 paths in under 3 s",
+    () => {
+      const { value, ms } = timed(() =>
+        runOptimizer({
+          ...input("O2", 0.5),
+          bucket: speedBucket,
+          products: ["e", "b", "w", "g"],
+        }),
+      );
+      expect(value.mixes).toHaveLength(286);
+      expect(ms).toBeLessThan(ELAPSED_LIMIT_MS.full);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "runs 'spend least' with 3 products in under 10 s",
+    () => {
+      const { value, ms } = timed(() =>
+        runOptimizer({
+          ...input("O5", 0.8),
+          bucket: speedBucket,
+          products: ["e", "b", "w"],
+        }),
+      );
+      expect(value.mixes).toHaveLength(66);
+      expect(ms).toBeLessThan(ELAPSED_LIMIT_MS.spendLeast);
+    },
+    TEST_TIMEOUT_MS,
+  );
 });

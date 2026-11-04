@@ -1,5 +1,5 @@
 import { type MonteCarloGoal, runMonteCarlo } from "./monteCarlo.ts";
-import { projectGoal } from "./projection.ts";
+import { liquidateGoal, projectGoal } from "./projection.ts";
 import { requiredContribution } from "./requiredContribution.ts";
 import type { Goal } from "./schemas.ts";
 
@@ -183,9 +183,21 @@ export type OptimizerInput = {
   /** 6×6, in the order of ASSET_CLASSES. */
   correlations: readonly (readonly number[])[];
   seed: number;
-  /** "New money only": the holdings stay as they are, the mix sets the weights of new contributions. No tax is switched. */
-  mode: "new";
+  /**
+   * "New": the holdings stay as they are, the mix sets the weights of new contributions, no tax.
+   * "Rebalance": the holdings are sold at `bucket.asOf` first, the tax is deducted and the net
+   * proceeds are reinvested by the mix on a basis equal to their value. Not for a pension bucket.
+   */
+  mode: "new" | "rebalance";
 };
+
+/** A pension bucket cannot be sold and reinvested: its money moves only through the pension flows. */
+export class PensionRebalanceError extends Error {
+  constructor() {
+    super("A pension bucket cannot be rebalanced");
+    this.name = "PensionRebalanceError";
+  }
+}
 
 export type OptimizerResult = {
   chosen: MixResult;
@@ -196,22 +208,58 @@ export type OptimizerResult = {
   ruleText: string;
   /** Every candidate, in candidate order. */
   mixes: MixResult[];
+  /** Tax on selling the holdings at asOf: 0 in "new" mode. */
+  switchTax: number;
 };
+
+const isPensionBucket = (bucket: MonteCarloGoal): boolean =>
+  bucket.pension !== undefined ||
+  bucket.positions.some(({ productId }) => bucket.products.get(productId)?.regime === "pension");
+
+/**
+ * The holdings sold at asOf: the tax of #18 on the whole bucket, and the net proceeds as one
+ * value to reinvest. Sale commissions are not charged (spec is silent).
+ */
+function sellHoldings(bucket: MonteCarloGoal): { tax: number; proceeds: number } {
+  const { gross, tax } = liquidateGoal(bucket, bucket.positions, bucket.asOf);
+  return { tax, proceeds: gross - tax };
+}
 
 /**
  * Compare the mixes of a bucket's products on the same simulated markets and choose one by the
  * criterion. All mixes run on the same seed, so each path sees the same shocks. 300 paths; 200 for
  * O5, which also solves the monthly amount per mix by bisection (as in `requiredContribution`).
  *
- * @throws When the number of products is not 1 to 6, or the cap leaves no mix.
+ * @throws When the number of products is not 1 to 6, or the cap leaves no mix. A
+ *   `PensionRebalanceError` for a pension bucket in "rebalance" mode.
  */
 export function runOptimizer(input: OptimizerInput): OptimizerResult {
   const { bucket, criterion, requiredP, correlations, seed } = input;
+  const rebalance = input.mode === "rebalance";
+  if (
+    rebalance &&
+    (isPensionBucket(bucket) ||
+      input.products.some((id) => bucket.products.get(id)?.regime === "pension"))
+  ) {
+    throw new PensionRebalanceError();
+  }
   const candidates = generateMixes(input.products, input.maxPerProduct);
   if (candidates.length === 0) throw new Error("The per-product maximum leaves no mix");
 
   const paths = criterion === "O5" ? PATHS_SPEND_LEAST : PATHS;
-  const goals = candidates.map((weights) => ({ ...bucket, weights }));
+  const sale = rebalance ? sellHoldings(bucket) : { tax: 0, proceeds: 0 };
+  const goals = candidates.map((weights) => ({
+    ...bucket,
+    weights,
+    // The basis of the reinvested money is its value.
+    ...(rebalance && {
+      positions: [...weights].map(([productId, weight]) => ({
+        productId,
+        value: sale.proceeds * weight,
+        basis: sale.proceeds * weight,
+      })),
+    }),
+  }));
   const { goals: distributions } = runMonteCarlo({ goals, correlations }, seed, paths);
 
   const mixes = goals.map((goal, index): MixResult => {
@@ -236,5 +284,5 @@ export function runOptimizer(input: OptimizerInput): OptimizerResult {
     return mix;
   });
 
-  return { ...chooseMix(mixes, criterion, requiredP), mixes };
+  return { ...chooseMix(mixes, criterion, requiredP), mixes, switchTax: sale.tax };
 }
