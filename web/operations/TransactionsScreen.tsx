@@ -6,6 +6,7 @@ import type { Commission, Goal, PensionPlan, Product, Transaction } from "../../
 import { PENSION_FLOWS } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { eurosToCents } from "../forms.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro, formatPercent } from "../money.ts";
 import {
   Alert,
@@ -215,8 +216,9 @@ function AddForm({
       ) : null}
       {costly ? (
         <p className="flag" role="status" data-testid="cost-warning">
-          Below the minimum efficient ticket of {formatEuro(minEfficientTicket(commission))}: the
-          fee is about {formatPercent(estimate / amountCents)} of this amount.
+          Below the <TermPopover term="minticket">minimum efficient ticket</TermPopover> of{" "}
+          {formatEuro(minEfficientTicket(commission))}: the fee is about{" "}
+          {formatPercent(estimate / amountCents)} of this amount.
         </p>
       ) : null}
       <Alert message={error} />

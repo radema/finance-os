@@ -58,11 +58,10 @@ describe("AppShell", () => {
     for (const section of NAV) expect(html).toContain(section.label);
   });
 
-  it("marks the current page and shows the soon placeholder", () => {
-    const html = render("analysis/optimizer");
+  it("marks the current page", () => {
+    const html = render("setup/glossary");
     expect(html).toContain('aria-current="page"');
-    expect(html).toContain("This page is not built yet");
-    expect(html).toContain("Optimizer");
+    expect(html).toContain("Glossary and method");
   });
 
   it("tells the user when the route is unknown", () => {
@@ -76,13 +75,13 @@ describe("AppShell", () => {
     expect(html).toContain("Add goal");
   });
 
-  it("keeps the soon tag on the Setup items without a screen", () => {
+  it("drops the soon tag on every Setup item", () => {
     const html = render("setup/products");
     const item = (label: string) =>
       html.match(new RegExp(`class="nav-item"[^>]*>${label}(.*?)</a>`))?.[1] ?? "";
     expect(item("Products")).not.toContain("soon");
     expect(item("Cash flow")).not.toContain("soon");
-    expect(item("Glossary")).toContain("soon");
+    expect(item("Glossary")).not.toContain("soon");
   });
 });
 
@@ -100,7 +99,11 @@ describe("Goals screens", () => {
       expect(isBuilt(route)).toBe(true);
       expect(render(route)).not.toContain("This page is not built yet");
     }
-    expect(isBuilt("analysis/optimizer")).toBe(false);
+  });
+
+  it("builds the Optimizer screen, and drops its soon tag", () => {
+    expect(isBuilt("analysis/optimizer")).toBe(true);
+    expect(render("analysis/optimizer")).not.toContain("This page is not built yet");
   });
 
   it("builds the Independence screen, and drops its soon tag", () => {
@@ -137,7 +140,7 @@ describe("SETUP_TABS", () => {
     ]);
     expect(isBuilt("setup/goals")).toBe(true);
     expect(isBuilt("setup/cash-flow")).toBe(true);
-    expect(isBuilt("setup/glossary")).toBe(false);
+    expect(isBuilt("setup/glossary")).toBe(true);
     expect(isBuilt("operations/transactions")).toBe(true);
     expect(isBuilt("operations/prices")).toBe(true);
   });

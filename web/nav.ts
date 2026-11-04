@@ -64,10 +64,12 @@ export const PRICES_ROUTE = "operations/prices";
 export const GOALS_LIST_ROUTE = "goals/list";
 export const GOALS_DETAIL_ROUTE = "goals/detail";
 export const GOALS_HISTORY_ROUTE = "goals/history";
+export const OPTIMIZER_ROUTE = "analysis/optimizer";
 export const PERFORMANCE_ROUTE = "analysis/performance";
 export const PLAN_VS_ACTUAL_ROUTE = "analysis/plan-vs-actual";
 export const PENSION_ROUTE = "pension";
 export const INDEPENDENCE_ROUTE = "independence";
+export const GLOSSARY_ROUTE = "setup/glossary";
 
 /** The goal id of a detail route, or undefined when the route is not a detail route or has no id. */
 export function goalIdOf(route: string): string | undefined {
@@ -90,10 +92,12 @@ export const isBuilt = (key: string): boolean =>
   key === GOALS_LIST_ROUTE ||
   key === GOALS_DETAIL_ROUTE ||
   key === GOALS_HISTORY_ROUTE ||
+  key === OPTIMIZER_ROUTE ||
   key === PERFORMANCE_ROUTE ||
   key === PLAN_VS_ACTUAL_ROUTE ||
   key === PENSION_ROUTE ||
   key === INDEPENDENCE_ROUTE ||
+  key === GLOSSARY_ROUTE ||
   SETUP_TABS.some((tab) => tab.key === key);
 
 /** The page behind a route key: an item, or a section that has no items. */

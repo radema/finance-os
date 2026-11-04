@@ -1,7 +1,8 @@
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
 import type { PensionThisYear, PensionView, PensionYearView } from "../../engine/pensionView.ts";
 import type { PensionFlow } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
 import { Alert, Card, NumberField, PriorityTag, Resource, SelectField } from "../setup/ui.tsx";
@@ -13,7 +14,7 @@ const PENSION_SLOT = 1;
 const FLOWS: readonly PensionFlow["flow"][] = ["Work", "Voluntary"];
 const MISSING = "–";
 
-function Kpi({ label, value, note }: { label: string; value: string; note?: string }) {
+function Kpi({ label, value, note }: { label: ReactNode; value: string; note?: string }) {
   return (
     <div className="kpi">
       <div className="kpi-label">{label}</div>
@@ -50,7 +51,7 @@ function ThisYear({ year }: { year: PensionThisYear }) {
           note={`Paid in ${year.refundYear}, at your marginal rate.`}
         />
         <Kpi
-          label="Exit tax"
+          label={<TermPopover term="exitTax">Exit tax</TermPopover>}
           value={year.exitTax === null ? MISSING : formatAmount(year.exitTax)}
           note={
             year.exitRate === null || year.exitTaxYear === null

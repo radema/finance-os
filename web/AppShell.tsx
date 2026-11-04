@@ -1,4 +1,5 @@
 import { DataFolderBanner } from "./DataFolderBanner.tsx";
+import { GlossaryScreen } from "./glossary/GlossaryScreen.tsx";
 import { GoalDetailScreen } from "./goals/GoalDetailScreen.tsx";
 import { GoalsListScreen } from "./goals/GoalsListScreen.tsx";
 import { ImportScreen } from "./import/ImportScreen.tsx";
@@ -7,6 +8,7 @@ import {
   CURRENT_PORTFOLIO_ROUTE,
   DEFAULT_ROUTE,
   findPage,
+  GLOSSARY_ROUTE,
   GOALS_DETAIL_ROUTE,
   GOALS_HISTORY_ROUTE,
   GOALS_LIST_ROUTE,
@@ -14,6 +16,7 @@ import {
   INDEPENDENCE_ROUTE,
   isBuilt,
   NAV,
+  OPTIMIZER_ROUTE,
   PENSION_ROUTE,
   PERFORMANCE_ROUTE,
   PLAN_VS_ACTUAL_ROUTE,
@@ -21,6 +24,7 @@ import {
   TRANSACTIONS_ROUTE,
 } from "./nav.ts";
 import { TransactionsScreen } from "./operations/TransactionsScreen.tsx";
+import { OptimizerScreen } from "./optimizer/OptimizerScreen.tsx";
 import { FirstRunChecklist } from "./overview/FirstRunChecklist.tsx";
 import { OverviewScreen } from "./overview/OverviewScreen.tsx";
 import { PensionScreen } from "./pension/PensionScreen.tsx";
@@ -118,6 +122,8 @@ export function AppShell({ route }: { route: string }) {
           <GoalDetailScreen goalId={goalIdOf(route)} />
         ) : route === GOALS_HISTORY_ROUTE ? (
           <GoalHistoryScreen />
+        ) : route === OPTIMIZER_ROUTE ? (
+          <OptimizerScreen />
         ) : route === PERFORMANCE_ROUTE ? (
           <PerformanceScreen />
         ) : route === PLAN_VS_ACTUAL_ROUTE ? (
@@ -126,6 +132,8 @@ export function AppShell({ route }: { route: string }) {
           <PensionScreen />
         ) : route === INDEPENDENCE_ROUTE ? (
           <IndependenceScreen />
+        ) : route === GLOSSARY_ROUTE ? (
+          <GlossaryScreen />
         ) : isBuilt(route) ? (
           <SetupScreen route={route} />
         ) : (

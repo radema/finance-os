@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { GoalAnalysis, GoalDetailView } from "../../engine/goalViews.ts";
 import type { PerformanceView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatAmount, formatPercent, formatUnitPrice } from "../money.ts";
 import { GOALS_LIST_ROUTE } from "../nav.ts";
 import { Card, PriorityTag, ProductTag, Resource } from "../setup/ui.tsx";
@@ -77,11 +78,12 @@ const bandLegend = (
   <>
     <li>
       <span className="swatch swatch-band" />
-      Bad to good case
+      <TermPopover term="badcase">Bad case</TermPopover> to{" "}
+      <TermPopover term="goodcase">good case</TermPopover>
     </li>
     <li>
       <span className="swatch swatch-median" />
-      Typical case
+      <TermPopover term="typical">Typical case</TermPopover>
     </li>
     <li>
       <span className="swatch swatch-target" />
@@ -104,8 +106,9 @@ function FanExhibit({ goal, analysis }: { goal: GoalDetailView; analysis: GoalAn
       <div className="tag">Fan of outcomes</div>
       <h2 className="exhibit-title">{title}</h2>
       <p className="unit">
-        Net value if sold at the end of that year, in euros of that year. The band runs from the bad
-        case to the good case.
+        Net value if sold at the end of that year, in euros of that year. The band runs from the{" "}
+        <TermPopover term="badcase">bad case</TermPopover> to the{" "}
+        <TermPopover term="goodcase">good case</TermPopover>.
       </p>
       {fan.length > 1 ? (
         <>
@@ -124,8 +127,9 @@ function FanExhibit({ goal, analysis }: { goal: GoalDetailView; analysis: GoalAn
         </p>
       )}
       <p className="callout">
-        The target is {formatAmount(goal.target)} in today's euros, {formatAmount(targetAtGoalDate)}{" "}
-        at the goal date.
+        The target is {formatAmount(goal.target)} in{" "}
+        <TermPopover term="real">today’s euros</TermPopover>, {formatAmount(targetAtGoalDate)} at
+        the goal date.
         {last ? ` The typical case ends at ${formatAmount(last.typical)}.` : null}
       </p>
       <figcaption className="source">
@@ -216,7 +220,7 @@ function Analysis({ goal }: { goal: GoalDetailView }) {
   const { analysis } = goal;
   if (!analysis) {
     return (
-      <Card title="Monte Carlo">
+      <Card title={<TermPopover term="simulated">Monte Carlo</TermPopover>}>
         <p className="note">{goal.projectionNote ?? "The simulation cannot run for this goal."}</p>
       </Card>
     );
@@ -239,7 +243,13 @@ function XirrKpi({ goalId }: { goalId: string }) {
   const note = data
     ? (data.note ?? xirrNote(data.summary?.xirr ?? null))
     : (loaded.error ?? "Loading.");
-  return <Kpi label="XIRR a year" value={percentText(data?.summary?.xirr ?? null)} note={note} />;
+  return (
+    <Kpi
+      label={<TermPopover term="xirr">XIRR a year</TermPopover>}
+      value={percentText(data?.summary?.xirr ?? null)}
+      note={note}
+    />
+  );
 }
 
 function Detail({ goal }: { goal: GoalDetailView }) {
@@ -257,7 +267,7 @@ function Detail({ goal }: { goal: GoalDetailView }) {
 
       <div className="kpis">
         <Kpi
-          label="Chance of success"
+          label={<TermPopover term="prob">Chance of success</TermPopover>}
           value={goal.analysis ? formatPercent(goal.analysis.pSuccess) : MISSING}
           note={
             goal.analysis
@@ -284,7 +294,12 @@ function Detail({ goal }: { goal: GoalDetailView }) {
         <Kpi
           label="Target at the goal date"
           value={formatAmount(goal.targetAtGoalDate)}
-          note={`${formatAmount(goal.target)} in today's euros, grown by inflation.`}
+          note={
+            <>
+              {formatAmount(goal.target)} in <TermPopover term="real">today’s euros</TermPopover>,
+              grown by inflation.
+            </>
+          }
         />
         <XirrKpi goalId={goal.id} />
       </div>
@@ -302,7 +317,9 @@ function Detail({ goal }: { goal: GoalDetailView }) {
                   <th>Product</th>
                   <th className="num">Units</th>
                   <th className="num">Price</th>
-                  <th className="num">PMC</th>
+                  <th className="num">
+                    <TermPopover term="pmc">PMC</TermPopover>
+                  </th>
                   <th className="num">Value</th>
                   <th className="num">Gain</th>
                   <th className="num">Tax if sold</th>
@@ -337,8 +354,9 @@ function Detail({ goal }: { goal: GoalDetailView }) {
           </div>
         )}
         <p className="sub">
-          Price and PMC are for one unit: a government bond is quoted per 100. Each row's tax is for
-          that holding alone; the total uses the goal's loss credits and zainetto once.
+          Price and <TermPopover term="pmc">PMC</TermPopover> are for one unit: a government bond is
+          quoted per 100. Each row's tax is for that holding alone; the total uses the goal's loss
+          credits and <TermPopover term="zainetto">zainetto</TermPopover> once.
         </p>
       </Card>
 

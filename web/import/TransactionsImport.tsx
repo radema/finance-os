@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type { GoalListView } from "../../engine/goalViews.ts";
 import type { ImportMapping, TransactionField } from "../../engine/importMapping.ts";
@@ -5,16 +6,21 @@ import { FINECO_PRESET, TRANSACTION_FIELDS } from "../../engine/importMapping.ts
 import type { Product } from "../../engine/schemas.ts";
 import type { RowDecision } from "../../engine/transactionImport.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { Alert, Card, ConfirmButton, Field, SelectField, TextField } from "../setup/ui.tsx";
 import type { Bucket } from "../split/splitState.ts";
 import { missingFields } from "./importState.ts";
 import { RowCheck } from "./RowCheck.tsx";
 import type { CommitResult, FilePayload, PreviewResult, ReadResult } from "./types.ts";
 
-const FIELD_LABEL: Record<TransactionField, string> = {
+const FIELD_LABEL: Record<TransactionField, ReactNode> = {
   date: "Date",
   bucket: "Bucket (optional)",
-  product: "Product: ISIN, ticker or name",
+  product: (
+    <>
+      Product: <TermPopover term="isin">ISIN</TermPopover>, ticker or name
+    </>
+  ),
   type: "Type: buy, sell, A or V (empty: sign of qty)",
   qty: "Qty",
   price: "Price",

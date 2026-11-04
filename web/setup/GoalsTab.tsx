@@ -4,6 +4,7 @@ import type { Goal, GoalInput } from "../../engine/schemas.ts";
 import { PRIORITIES } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, percentToFraction } from "../forms.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { currentMonth, formatEuro, formatPercent } from "../money.ts";
 import { fromMonthInForce, monthlyInForce, valuationMonth } from "./goalPlan.ts";
 import {
@@ -234,7 +235,11 @@ export function GoalsTab() {
             options={PRIORITIES.map((value) => ({ value, label: value }))}
           />
           <NumberField
-            label="Target in today's euros (EUR)"
+            label={
+              <>
+                Target in <TermPopover term="real">today’s euros</TermPopover> (EUR)
+              </>
+            }
             value={form.target}
             onChange={(v) => set("target", v)}
             step="0.01"
@@ -251,7 +256,11 @@ export function GoalsTab() {
             onChange={(v) => set("contributionGrowth", v)}
           />
           <NumberField
-            label="Required probability (%)"
+            label={
+              <>
+                <TermPopover term="required">Required probability</TermPopover> (%)
+              </>
+            }
             value={form.minProb}
             onChange={(v) => set("minProb", v)}
             hint="Empty: use the default for the priority."

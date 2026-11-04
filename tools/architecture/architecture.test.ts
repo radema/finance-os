@@ -132,6 +132,18 @@ describe("checkArchitecture on planted violations", () => {
     expect(checkArchitecture(root)).toEqual([]);
   });
 
+  it("flags a colour literal in web/ CSS and TSX, but not in tokens.css", () => {
+    plant("web/tokens.css", ":root { --ink: #171b1f; --shadow: 0 1px rgba(0, 0, 0, 0.5); }\n");
+    plant("web/a.css", ".a { color: #fff; border-color: hsl(10 20% 30%); }\n");
+    plant("web/b.tsx", 'export const b = { color: "#b75a26", fill: "var(--hl)" };\n');
+    plant("web/c.css", ".c { background: color-mix(in srgb, var(--slot) 40%, transparent); }\n");
+    expect(checkArchitecture(root)).toEqual([
+      { file: "web/a.css", rule: "web-no-colour-literal", detail: "#fff" },
+      { file: "web/a.css", rule: "web-no-colour-literal", detail: "hsl(" },
+      { file: "web/b.tsx", rule: "web-no-colour-literal", detail: "#b75a26" },
+    ]);
+  });
+
   it("ignores node_modules and dot folders", () => {
     plant("node_modules/x/index.ts", 'import "node:fs";\nimport { Kysely } from "kysely";\n');
     plant(".scratch/p/a.ts", 'import { Kysely } from "kysely";\n');

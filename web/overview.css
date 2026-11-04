@@ -1,13 +1,29 @@
 /* The Overview: the grid of ten cells and its list rows. Colours, type and spacing come from tokens.css. */
 .kpi-link {
+  position: relative;
+}
+.kpi-main {
   display: block;
   color: inherit;
   text-decoration: none;
 }
+/* The link covers the whole card; the term button in the label stays above it. */
+.kpi-main::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.kpi-link .term {
+  position: relative;
+  z-index: 1;
+}
 .kpi-link:hover,
-.kpi-link:focus-visible {
+.kpi-link:has(.kpi-main:focus-visible) {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
+}
+.kpi-main:focus-visible {
+  outline: none;
 }
 
 .overview-grid {

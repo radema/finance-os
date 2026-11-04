@@ -4,6 +4,7 @@ import type { Product, ProductInput } from "../../engine/schemas.ts";
 import { PRICE_SOURCES, REGIMES } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { fractionToPercent, percentToFraction } from "../forms.ts";
+import { TermPopover } from "../glossary/TermPopover.tsx";
 import { hashParams } from "../hashQuery.ts";
 import { formatPercent } from "../money.ts";
 import {
@@ -148,7 +149,11 @@ export function ProductsTab() {
           }}
         >
           <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} />
-          <TextField label="ISIN" value={form.isin} onChange={(v) => set("isin", v)} />
+          <TextField
+            label={<TermPopover term="isin">ISIN</TermPopover>}
+            value={form.isin}
+            onChange={(v) => set("isin", v)}
+          />
           <TextField label="Ticker" value={form.ticker} onChange={(v) => set("ticker", v)} />
           <SelectField
             label="Asset class"
@@ -180,13 +185,21 @@ export function ProductsTab() {
           />
           <NumberField label="TER (% a year)" value={form.ter} onChange={(v) => set("ter", v)} />
           <NumberField
-            label="White-list share (%)"
+            label={
+              <>
+                <TermPopover term="whitelist">White-list share</TermPopover> (%)
+              </>
+            }
             value={form.whiteListShare}
             onChange={(v) => set("whiteListShare", v)}
             hint="ETFs only: the part in government bonds taxed at 12.5%."
           />
           <NumberField
-            label="Coupon rate (% a year)"
+            label={
+              <>
+                <TermPopover term="coupon">Coupon</TermPopover> rate (% a year)
+              </>
+            }
             value={form.couponRate}
             onChange={(v) => set("couponRate", v)}
             hint="Government bonds only."
