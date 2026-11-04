@@ -39,6 +39,14 @@ export type {
 } from "./performance.ts";
 export { computePerformance, performanceScopes } from "./performance.ts";
 export type {
+  NextContribution,
+  NextContributionInput,
+  PlanVsActualGoal,
+  PlanVsActualInput,
+  PlanVsActualMonth,
+} from "./planVsActual.ts";
+export { nextContribution, planVsActual } from "./planVsActual.ts";
+export type {
   GoalProjection,
   Position,
   ProductParams,

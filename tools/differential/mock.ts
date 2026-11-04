@@ -77,9 +77,13 @@ export type MockCashFlowRow = {
   free: number;
 };
 
+/** The cumulative totals of the copied `planVsActual` per goal, in euros, to the asOf month. */
+export type MockPlanVsActualRow = { id: string; planned: number; actual: number; gap: number };
+
 type MockEngine = {
   analyse(state: MockState, date: string, options: { paths: number }): MockAnalysis;
   cashflow(state: MockCashFlowState, years: number): MockCashFlowRow[];
+  planVsActual(state: MockState): MockPlanVsActualRow[];
 };
 
 // The copy is browser code. Its globals live here, not in the copy.
@@ -89,5 +93,8 @@ const mkey = (d: string): string => d.slice(0, 7);
 /** The mock engine, evaluated once in its own context. */
 export function loadMockEngine(): MockEngine {
   const source = readFileSync(join(import.meta.dirname, "mock-engine.js"), "utf8");
-  return runInNewContext(`${source}\n({ analyse, cashflow });`, { CLASSES, mkey }) as MockEngine;
+  return runInNewContext(`${source}\n({ analyse, cashflow, planVsActual });`, {
+    CLASSES,
+    mkey,
+  }) as MockEngine;
 }

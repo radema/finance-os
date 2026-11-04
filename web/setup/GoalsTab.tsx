@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { planInForce } from "../../engine/plan.ts";
-import type { Goal, GoalInput, PlanVersionRecord } from "../../engine/schemas.ts";
+import type { GoalListView } from "../../engine/goalViews.ts";
+import type { Goal, GoalInput } from "../../engine/schemas.ts";
 import { PRIORITIES } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, percentToFraction } from "../forms.ts";
 import { currentMonth, formatEuro, formatPercent } from "../money.ts";
+import { fromMonthInForce, monthlyInForce, valuationMonth } from "./goalPlan.ts";
 import {
   Alert,
   Card,
@@ -63,17 +64,20 @@ const toInput = (f: Form): GoalInput => ({
   countsTowardFi: f.countsTowardFi,
 });
 
-const monthlyOf = (versions: PlanVersionRecord[], month: string): number =>
-  planInForce(
-    versions.map((v) => ({ fromMonth: v.fromMonth, monthly: v.monthlyCents })),
-    month,
-  );
-
-function PlanHistory({ goal, reload }: { goal: Goal; reload: () => void }) {
+function PlanHistory({
+  goal,
+  month,
+  reload,
+}: {
+  goal: Goal;
+  /** The valuation month: the plan in force is the one for this month. */
+  month: string | undefined;
+  reload: () => void;
+}) {
   const [fromMonth, setFromMonth] = useState(currentMonth());
   const [monthly, setMonthly] = useState("");
   const [error, setError] = useState<string>();
-  const inForce = goal.plan.filter((v) => v.fromMonth <= currentMonth()).at(-1)?.fromMonth;
+  const inForce = month === undefined ? undefined : fromMonthInForce(goal.plan, month);
 
   const run = async (action: () => Promise<unknown>) => {
     try {
@@ -163,6 +167,7 @@ function PlanHistory({ goal, reload }: { goal: Goal; reload: () => void }) {
 
 export function GoalsTab() {
   const goals = useLoad<Goal[]>("/api/goals");
+  const valuation = useLoad<GoalListView>("/api/goal-list");
   const [form, setForm] = useState<Form>(emptyForm);
   const [editing, setEditing] = useState<string>();
   const [selected, setSelected] = useState<string>();
@@ -210,7 +215,7 @@ export function GoalsTab() {
     }
   };
 
-  const month = currentMonth();
+  const month = valuation.data ? valuationMonth(valuation.data.asOf) : undefined;
   return (
     <>
       <Card title={editing ? "Edit goal" : "Add goal"}>
@@ -313,7 +318,9 @@ export function GoalsTab() {
                       </td>
                       <td className="num">{formatEuro(g.targetCents)}</td>
                       <td className="num">{g.targetYear}</td>
-                      <td className="num">{formatEuro(monthlyOf(g.plan, month))}</td>
+                      <td className="num">
+                        {month === undefined ? "" : formatEuro(monthlyInForce(g.plan, month))}
+                      </td>
                       <td className="num">{formatPercent(g.contributionGrowth)}</td>
                       <td className="row-actions">
                         <button
@@ -352,6 +359,7 @@ export function GoalsTab() {
       {goals.data?.find((g) => g.id === selected) ? (
         <PlanHistory
           key={selected}
+          month={month}
           goal={goals.data.find((g) => g.id === selected) as Goal}
           reload={goals.reload}
         />

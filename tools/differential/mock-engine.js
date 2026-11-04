@@ -1,5 +1,5 @@
 /* Verbatim copy of the GBI mock engine, from .scratch/gbi-v1/reference/mock-app.html:
- * lines 281-285, 287-289 (helpers), 373-547 (goal model, analyse) and 612-622 (cash flow). Do not edit.
+ * lines 281-285, 287-289 (helpers), 373-547 (goal model, analyse), 612-622 (cash flow) and 590-600 (plan vs actual). Do not edit.
  * It needs the globals CLASSES and mkey; tools/differential/mock.ts provides them. */
 function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function gauss(rnd) { let u = 0; while (u === 0) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()); }
@@ -195,4 +195,16 @@ function cashflow(st, years) {
     out.push({ t, year: y, income: inc, expenses: exp, events: ev, refund, capacity: inc - exp + ev + refund, per, planned, free: inc - exp + ev + refund - planned });
   }
   return out;
+}
+
+function planVsActual(st) {
+  const ts = st.settings.trackingStart, now = mkey(st.asOf), months = monthsBetween(ts, now) + 1, startYear = +st.asOf.slice(0, 4);
+  return st.goals.map(g => {
+    const isP = st.pension.goalId === g.id; let planned = 0;
+    for (let i = 0; i < months; i++) { const k = addMonths(ts, i), y = +k.slice(0, 4);
+      if (y > g.year) continue;
+      planned += isP ? pensionSchedule(st, y, 1)[0].total / 12 : (+g.contrib || 0) * Math.pow(1 + (+g.cgrowth || 0), Math.max(0, y - +ts.slice(0, 4))); }
+    const actual = st.ledger.filter(t => t.goalId === g.id && t.type !== 'open' && mkey(t.date) >= ts).reduce((a, t) => a + txAmount(t), 0);
+    return { id: g.id, name: g.name, planned, actual, gap: actual - planned, pct: planned > 0 ? actual / planned : null };
+  });
 }
