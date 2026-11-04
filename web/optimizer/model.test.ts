@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { MixView } from "../../engine/optimizerView.ts";
-import { defaultUniverse, eligibleProducts, mixText, outcomeRows, weightRows } from "./model.ts";
+import {
+  defaultUniverse,
+  eligibleProducts,
+  mixText,
+  outcomeRows,
+  scatterAxisStart,
+  weightRows,
+} from "./model.ts";
 
 const products = [
   { id: "etf", name: "World ETF", regime: "etf" },
@@ -93,5 +100,16 @@ describe("mixText", () => {
         names,
       ),
     ).toBe("World ETF 65%, Govt 2029 35%");
+  });
+});
+
+describe("scatterAxisStart", () => {
+  it.each([
+    [0.75, 0.7],
+    [0.99, 0.95],
+    [0.02, 0],
+    [0.5, 0.45],
+  ])("starts the axis for a lowest chance of %s at exactly %s", (lowest, start) => {
+    expect(scatterAxisStart(lowest)).toBe(start);
   });
 });
