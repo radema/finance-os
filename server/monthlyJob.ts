@@ -106,34 +106,42 @@ export async function runMonthlyJob({
  */
 export function registerMonthlyJobRoutes(router: Router, deps: MonthlyJobDeps) {
   const { db, clock } = deps;
-  let running: Promise<MonthlyJobResult> | undefined;
-  const run = () => {
-    running = runMonthlyJob(deps).finally(() => {
-      running = undefined;
-    });
-    return running;
+  let running = false;
+  // The guard is set before the first await, so a manual run during start-up sees it.
+  const exclusive = async <T>(body: () => Promise<T>): Promise<T | "busy"> => {
+    if (running) return "busy";
+    running = true;
+    try {
+      return await body();
+    } finally {
+      running = false;
+    }
   };
 
   router.route("GET", "/api/jobs/monthly", z.object({}), async (): Promise<MonthlyJobStatus> => {
     const { lastRunDate, lastRunFailed } = await loadState(db);
-    return { lastRunDate, lastRunFailed, running: running !== undefined };
+    return { lastRunDate, lastRunFailed, running };
   });
 
   router.route("POST", "/api/jobs/monthly/run", z.object({}).optional(), async () => {
-    if (running) return { ran: false, reason: "already running" };
-    const state = await loadState(db);
-    if (state.lastRunDate === clock() && !state.lastRunFailed) {
-      return { ran: false, reason: "already ran today" };
-    }
-    return { ran: true, ...(await run()) };
+    const answer = await exclusive(async () => {
+      const state = await loadState(db);
+      if (state.lastRunDate === clock() && !state.lastRunFailed) {
+        return { ran: false, reason: "already ran today" };
+      }
+      return { ran: true, ...(await runMonthlyJob(deps)) };
+    });
+    return answer === "busy" ? { ran: false, reason: "already running" } : answer;
   });
 
   return {
     async startup(): Promise<void> {
-      const state = await loadState(db);
-      if (state.lastSuccessMonth === clock().slice(0, 7)) return;
-      if (!(await db.selectFrom("goal").select("id").limit(1).executeTakeFirst())) return;
-      await run();
+      await exclusive(async () => {
+        const state = await loadState(db);
+        if (state.lastSuccessMonth === clock().slice(0, 7)) return;
+        if (!(await db.selectFrom("goal").select("id").limit(1).executeTakeFirst())) return;
+        await runMonthlyJob(deps);
+      });
     },
   };
 }
