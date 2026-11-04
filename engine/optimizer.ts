@@ -2,6 +2,7 @@ import { type MonteCarloGoal, runMonteCarlo } from "./monteCarlo.ts";
 import { liquidateGoal, projectGoal } from "./projection.ts";
 import { requiredContribution } from "./requiredContribution.ts";
 import type { Goal } from "./schemas.ts";
+import type { Zainetto } from "./tax.ts";
 
 /** Paths per mix, as in the spec: 300, and 200 for "spend least" (a bisection runs per mix). */
 const PATHS = 300;
@@ -212,17 +213,39 @@ export type OptimizerResult = {
   switchTax: number;
 };
 
-const isPensionBucket = (bucket: MonteCarloGoal): boolean =>
+/** A pension bucket: a pension plan, or a pension product held or chosen for the mix. */
+const isPensionBucket = (bucket: MonteCarloGoal, products: readonly string[]): boolean =>
   bucket.pension !== undefined ||
-  bucket.positions.some(({ productId }) => bucket.products.get(productId)?.regime === "pension");
+  [...bucket.positions.map(({ productId }) => productId), ...products].some(
+    (id) => bucket.products.get(id)?.regime === "pension",
+  );
 
 /**
- * The holdings sold at asOf: the tax of #18 on the whole bucket, and the net proceeds as one
- * value to reinvest. Sale commissions are not charged (spec is silent).
+ * The holdings sold at asOf: the tax of #18 on the whole bucket, the net proceeds as one value to
+ * reinvest, and the zainetto left after the sale. The sale uses the zainetto once: what it took
+ * (the tax it saved, over the standard rate) is no longer there at the goal date. Sale
+ * commissions are not charged (spec is silent).
  */
-function sellHoldings(bucket: MonteCarloGoal): { tax: number; proceeds: number } {
+function sellHoldings(bucket: MonteCarloGoal): {
+  tax: number;
+  proceeds: number;
+  zainetto: Zainetto | undefined;
+} {
+  const { settings } = bucket;
   const { gross, tax } = liquidateGoal(bucket, bucket.positions, bucket.asOf);
-  return { tax, proceeds: gross - tax };
+  const { zainetto } = settings;
+  if (!zainetto || settings.taxStd <= 0) return { tax, proceeds: gross - tax, zainetto };
+  const withoutZainetto = liquidateGoal(
+    { ...bucket, settings: { ...settings, zainetto: undefined } },
+    bucket.positions,
+    bucket.asOf,
+  ).tax;
+  const used = (withoutZainetto - tax) / settings.taxStd;
+  return {
+    tax,
+    proceeds: gross - tax,
+    zainetto: { ...zainetto, amount: Math.max(0, zainetto.amount - used) },
+  };
 }
 
 /**
@@ -236,23 +259,18 @@ function sellHoldings(bucket: MonteCarloGoal): { tax: number; proceeds: number }
 export function runOptimizer(input: OptimizerInput): OptimizerResult {
   const { bucket, criterion, requiredP, correlations, seed } = input;
   const rebalance = input.mode === "rebalance";
-  if (
-    rebalance &&
-    (isPensionBucket(bucket) ||
-      input.products.some((id) => bucket.products.get(id)?.regime === "pension"))
-  ) {
-    throw new PensionRebalanceError();
-  }
+  if (rebalance && isPensionBucket(bucket, input.products)) throw new PensionRebalanceError();
   const candidates = generateMixes(input.products, input.maxPerProduct);
   if (candidates.length === 0) throw new Error("The per-product maximum leaves no mix");
 
   const paths = criterion === "O5" ? PATHS_SPEND_LEAST : PATHS;
-  const sale = rebalance ? sellHoldings(bucket) : { tax: 0, proceeds: 0 };
+  const sale = rebalance ? sellHoldings(bucket) : { tax: 0, proceeds: 0, zainetto: undefined };
   const goals = candidates.map((weights) => ({
     ...bucket,
     weights,
-    // The basis of the reinvested money is its value.
+    // The basis of the reinvested money is its value; the zainetto is what the sale left.
     ...(rebalance && {
+      settings: { ...bucket.settings, zainetto: sale.zainetto },
       positions: [...weights].map(([productId, weight]) => ({
         productId,
         value: sale.proceeds * weight,

@@ -419,7 +419,7 @@ describe("runOptimizer, rebalance now (AC-81)", () => {
     expect(mix.detValue).toBeCloseTo(projectGoal(goal).net, 6);
   });
 
-  it("is the default of 'new money only': no tax, holdings kept", () => {
+  it("'new' mode charges no tax and keeps the holdings", () => {
     const result = runOptimizer({ ...rebalanceInput(), mode: "new" });
     expect(result.switchTax).toBe(0);
     const mix = result.mixes[0] as MixResult;
@@ -440,6 +440,32 @@ describe("runOptimizer, rebalance now (AC-81)", () => {
     };
     // Gain 500 x 26% = 130, credit 500 x 26% = 130: no tax.
     expect(runOptimizer(rebalanceInput({ bucket: withZainetto })).switchTax).toBeCloseTo(0, 9);
+  });
+
+  it("uses the zainetto once: the sale takes 130 of its 260 tax credit, the goal date gets the rest", () => {
+    // Direct product held: value 1,500 on a basis of 1,000 (gain 500 x 26% = 130). Zainetto 1,000 of loss
+    // = 260 of credit, so the sale pays no tax and uses 130 of credit: 500 of loss is left.
+    const direct = { ...equity, regime: "direct" as const };
+    const zainetto = { amount: 1_000, expiry: "2035", goalId: "g" };
+    const zBucket: MonteCarloGoal = {
+      ...taxedBucket,
+      positions: [{ productId: "d", value: 1_500, basis: 1_000 }],
+      products: new Map([["d", direct]]),
+      weights: new Map([["d", 1]]),
+      settings: { ...TAXED, zainetto },
+    };
+    const result = runOptimizer(rebalanceInput({ bucket: zBucket, products: ["d"] }));
+    expect(result.switchTax).toBeCloseTo(0, 9);
+    const afterSale = (left: number) =>
+      projectGoal({
+        ...zBucket,
+        positions: [{ productId: "d", value: 1_500, basis: 1_500 }],
+        settings: { ...TAXED, zainetto: { ...zainetto, amount: left } },
+      }).net;
+    const [mix] = result.mixes as [MixResult];
+    expect(mix.detValue).toBeCloseTo(afterSale(500), 6);
+    // Counting the whole zainetto again would add 130 of credit at the goal date.
+    expect(afterSale(1_000)).toBeGreaterThan(afterSale(500) + 100);
   });
 
   it("refuses a pension bucket with a typed error", () => {
