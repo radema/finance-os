@@ -101,6 +101,21 @@ describe("coupon", () => {
     expect(result.months[1]?.flow).toBe(-5);
     expect(result.months[1]?.twrMonthly).toBeCloseTo(0.05, 10);
   });
+
+  it("is an input error when it has no amount", () => {
+    expect(() =>
+      computePerformance({
+        transactions: [
+          tx("2025-01-05", "buy", "etf", 10, 10),
+          tx("2025-02-10", "coupon", "etf", 0, 0),
+        ],
+        prices: series("etf", "2025-01", [10, 10]),
+        products: [etf],
+        scope: all,
+        valuationMonth: "2025-02",
+      }),
+    ).toThrow(/coupon .* has no amount/);
+  });
 });
 
 describe("zero previous value", () => {

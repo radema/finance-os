@@ -121,10 +121,14 @@ export function computePerformance(input: PerformanceInput): PerformanceResult {
     }
     return value;
   };
-  const cash = (t: PerformanceTransaction): number =>
-    t.type === "coupon"
-      ? -(t.amount ?? 0)
-      : t.qty * unitPrice(regimeOf(t.productId), t.price) + (t.commission ?? 0);
+  const cash = (t: PerformanceTransaction): number => {
+    if (t.type !== "coupon") {
+      return t.qty * unitPrice(regimeOf(t.productId), t.price) + (t.commission ?? 0);
+    }
+    if (t.amount === undefined)
+      throw new Error(`coupon on ${t.date} for ${t.productId} has no amount`);
+    return -t.amount;
+  };
 
   const months: PerformanceMonth[] = [];
   let previousValue = 0;
@@ -135,8 +139,7 @@ export function computePerformance(input: PerformanceInput): PerformanceResult {
     const flow = rows
       .filter((t) => t.date.slice(0, 7) === month)
       .reduce((sum, t) => sum + cash(t), 0);
-    const twrMonthly =
-      months.length === 0 || previousValue === 0 ? null : (value - flow) / previousValue - 1;
+    const twrMonthly = previousValue === 0 ? null : (value - flow) / previousValue - 1;
     if (twrMonthly !== null) index *= 1 + twrMonthly;
     peak = Math.max(peak, index);
     months.push({ month, value, flow, twrMonthly, index, drawdown: index / peak - 1 });
