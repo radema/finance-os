@@ -192,6 +192,28 @@ const brokerUnitsBody = z
   });
 const gridQuery = z.object({ through: monthSchema.optional() });
 
+/** Each product with its last price and the age flag of that price. */
+export async function loadPriceOverview(db: Kysely<DB>, today: string) {
+  const products = await db.selectFrom("product").selectAll().orderBy("name").execute();
+  const points = await db.selectFrom("pricePoint").selectAll().orderBy("month", "desc").execute();
+  const { thresholds } = await loadDocument(db, "settings", settingsSchema);
+  return products.map((product) => {
+    const own = points.filter((p) => p.productId === product.id);
+    const last = own[0];
+    return {
+      productId: product.id,
+      name: product.name,
+      regime: product.regime,
+      priceSource: product.priceSource,
+      lastPrice: last ? { price: fromScaled(last.priceScaled), priceDate: last.priceDate } : null,
+      age: priceAge(product, own, today, thresholds.dailyPriceAgeDays),
+      brokerUnits:
+        product.brokerUnitsScaled === null ? null : fromScaled(product.brokerUnitsScaled),
+      brokerUnitsDate: product.brokerUnitsDate,
+    };
+  });
+}
+
 /** Prices: month-end grid, manual entry, CSV import, source per product, broker units. */
 export function registerPriceRoutes(router: Router, db: Kysely<DB>, today: () => string): void {
   router.route("GET", "/api/prices/grid", gridQuery, async ({ through }) => {
@@ -229,26 +251,7 @@ export function registerPriceRoutes(router: Router, db: Kysely<DB>, today: () =>
     };
   });
 
-  router.route("GET", "/api/prices/overview", z.object({}), async () => {
-    const products = await db.selectFrom("product").selectAll().orderBy("name").execute();
-    const points = await db.selectFrom("pricePoint").selectAll().orderBy("month", "desc").execute();
-    const { thresholds } = await loadDocument(db, "settings", settingsSchema);
-    return products.map((product) => {
-      const own = points.filter((p) => p.productId === product.id);
-      const last = own[0];
-      return {
-        productId: product.id,
-        name: product.name,
-        regime: product.regime,
-        priceSource: product.priceSource,
-        lastPrice: last ? { price: fromScaled(last.priceScaled), priceDate: last.priceDate } : null,
-        age: priceAge(product, own, today(), thresholds.dailyPriceAgeDays),
-        brokerUnits:
-          product.brokerUnitsScaled === null ? null : fromScaled(product.brokerUnitsScaled),
-        brokerUnitsDate: product.brokerUnitsDate,
-      };
-    });
-  });
+  router.route("GET", "/api/prices/overview", z.object({}), () => loadPriceOverview(db, today()));
 
   // The price date of a typed price is the clock date for the current month, else the month's last day.
   router.route("PUT", "/api/prices", manualPriceBody, async ({ productId, month, price }) => {

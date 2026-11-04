@@ -156,27 +156,32 @@ const dismissBody = z.object({
   key: z.string().min(1),
 });
 
+/**
+ * The alerts that are true now and not dismissed. Reading clears the dismissals whose alert is gone:
+ * the only trigger the spec asks for.
+ */
+export async function visibleAlerts(db: Kysely<DB>, today: string): Promise<Alert[]> {
+  const dismissals = await db.selectFrom("dismissal").select(["ruleId", "scope", "key"]).execute();
+  const { visible, toDelete } = reconcileDismissals(
+    evaluateRules(await loadRuleInput(db, today)),
+    dismissals,
+  );
+  for (const { ruleId, scope, key } of toDelete) {
+    await db
+      .deleteFrom("dismissal")
+      .where("ruleId", "=", ruleId)
+      .where("scope", "=", scope)
+      .where("key", "=", key)
+      .execute();
+  }
+  return visible;
+}
+
 /** Alerts: the visible ones, and dismiss. Alerts are generated on each read and never stored. */
 export function registerAlertRoutes(router: Router, db: Kysely<DB>, today: () => string): void {
   const current = async () => evaluateRules(await loadRuleInput(db, today()));
 
-  // Reading clears the dismissals whose alert is gone: the only trigger the spec asks for.
-  router.route("GET", "/api/alerts", z.object({}), async () => {
-    const dismissals = await db
-      .selectFrom("dismissal")
-      .select(["ruleId", "scope", "key"])
-      .execute();
-    const { visible, toDelete } = reconcileDismissals(await current(), dismissals);
-    for (const { ruleId, scope, key } of toDelete) {
-      await db
-        .deleteFrom("dismissal")
-        .where("ruleId", "=", ruleId)
-        .where("scope", "=", scope)
-        .where("key", "=", key)
-        .execute();
-    }
-    return visible;
-  });
+  router.route("GET", "/api/alerts", z.object({}), () => visibleAlerts(db, today()));
 
   router.route("POST", "/api/alerts/dismiss", dismissBody, async (input) => {
     const alert = (await current()).find((candidate) => sameAlert(candidate, input));

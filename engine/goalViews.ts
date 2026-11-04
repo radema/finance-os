@@ -482,11 +482,18 @@ const outlookOf = (world: GoalWorld, goal: GoalWorldGoal, pSuccess: number): Out
   };
 };
 
+/** The range of net outcomes at a goal's date, against the target grown to that date. */
+export type OutcomeRange = GoalAnalysis["range"];
+
 /**
- * The goals of the list with their status and P(success) against the required probability. One
- * simulation runs every goal on the shared shocks, with the seed and the paths of the Settings.
+ * The goals of the list with their status and P(success) against the required probability, and the
+ * range of outcomes at each goal date. One simulation runs every goal on the shared shocks, with the
+ * seed and the paths of the Settings.
  */
-export function listRowsOf(world: GoalWorld): GoalListRow[] {
+export function listWithRangesOf(world: GoalWorld): {
+  rows: GoalListRow[];
+  ranges: ReadonlyMap<string, OutcomeRange>;
+} {
   const inputs = world.goals.map((goal) => monteCarloInputOf(world, goal));
   const runnable = inputs.filter((input) => input !== null);
   const { goals: distributions } = runnable.length
@@ -496,15 +503,33 @@ export function listRowsOf(world: GoalWorld): GoalListRow[] {
         world.settings.mcPaths,
       )
     : { goals: [] };
+  const ranges = new Map<string, OutcomeRange>();
   let next = 0;
-  return world.goals.map((goal, index) => {
-    const distribution = inputs[index] ? distributions[next++] : undefined;
+  const rows = world.goals.map((goal, index) => {
+    const input = inputs[index];
+    const distribution = input ? distributions[next++] : undefined;
+    if (input && distribution) {
+      ranges.set(goal.id, {
+        bad: distribution.p10.at(-1) as number,
+        typical: distribution.p50.at(-1) as number,
+        good: distribution.p90.at(-1) as number,
+        target: targetAtGoalDate(
+          goal.target,
+          world.settings.inflation,
+          timeGrid(input.asOf, goal.targetYear).tau,
+        ),
+      });
+    }
     return {
       ...summaryOf(world, goal),
       outlook: distribution ? outlookOf(world, goal, distribution.pSuccess) : null,
     };
   });
+  return { rows, ranges };
 }
+
+/** The goals of the list with their status and P(success) against the required probability. */
+export const listRowsOf = (world: GoalWorld): GoalListRow[] => listWithRangesOf(world).rows;
 
 /**
  * The Monte Carlo analysis of one goal: status, fan, range at the goal date, and what it would take.

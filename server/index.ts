@@ -17,6 +17,7 @@ import { registerImportRoutes } from "./importRoutes.ts";
 import { registerIndependenceRoutes } from "./independence.ts";
 import { registerMonthlyJobRoutes } from "./monthlyJob.ts";
 import { registerOpeningPositionRoutes } from "./openingPosition.ts";
+import { registerOverviewRoutes } from "./overview.ts";
 import { registerPensionRoutes } from "./pension.ts";
 import { registerPriceFetchRoutes } from "./priceFetch.ts";
 import { registerPriceRoutes } from "./prices.ts";
@@ -97,6 +98,7 @@ export async function startServer({
   registerSnapshotRoutes(router, db, clock);
   registerAlertRoutes(router, db, clock);
   registerTrackingRoutes(router, db, clock);
+  registerOverviewRoutes(router, db, clock);
   const monthlyJob = registerMonthlyJobRoutes(router, { db, provider: priceProvider, clock });
 
   const server = createServer(async (req, res) => {

@@ -20,6 +20,8 @@ export interface ChartSeries {
   colour: string;
   kind?: "line" | "area" | "bar";
   dashed?: boolean;
+  /** Areas with the same stack name are drawn one on top of the other. */
+  stack?: string;
   /** Draw a marker on every point. A `true` entry of `hollow` makes that marker hollow. */
   markers?: boolean;
   hollow?: readonly boolean[];
@@ -73,6 +75,7 @@ function buildOption(
             ? { value, itemStyle: { color: surface, borderColor: colour, borderWidth: 2 } }
             : value,
         ),
+        stack: s.stack,
         symbol: s.markers ? "circle" : "none",
         symbolSize: MARKER_SIZE,
         lineStyle: {

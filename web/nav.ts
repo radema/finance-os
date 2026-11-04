@@ -83,6 +83,7 @@ export const goalDetailHref = (goalId: string): string =>
 
 /** Route keys that have a screen. The sidebar shows "soon" on the others. */
 export const isBuilt = (key: string): boolean =>
+  key === DEFAULT_ROUTE ||
   key === TRANSACTIONS_ROUTE ||
   key === CURRENT_PORTFOLIO_ROUTE ||
   key === PRICES_ROUTE ||

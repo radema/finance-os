@@ -60,6 +60,38 @@ export function historyOf(snapshots: readonly SnapshotView[], metric: HistoryMet
   };
 }
 
+/** A goal of the snapshots as a chart draws it: its name and line colour, or its id in grey. */
+export interface KnownGoal {
+  id: string;
+  name: string;
+  colour: string;
+}
+
+/** The goals of a history, named and coloured from the goal list; a deleted goal shows its id in grey. */
+export function knownGoals(
+  history: History,
+  goals: readonly { id: string; name: string; slot: number }[],
+): KnownGoal[] {
+  return history.lines.map(({ goalId }) => {
+    const goal = goals.find((candidate) => candidate.id === goalId);
+    return goal
+      ? { id: goalId, name: goal.name, colour: lineColour(goal.slot) }
+      : { id: goalId, name: goalId, colour: "--ink2" };
+  });
+}
+
+/** The chart series of a history: a line per goal with a marker per snapshot, hollow when recomputed. */
+export function historySeries(history: History, known: readonly KnownGoal[]) {
+  return history.lines.map((line, index) => ({
+    name: known[index]?.name ?? line.goalId,
+    data: line.values,
+    colour: known[index]?.colour ?? "--ink2",
+    markers: true,
+    hollow: history.recomputed,
+    endLabel: true,
+  }));
+}
+
 /** The value of the scope selector: `all`, `allExceptPension` or `bucket:<goalId>`. */
 export const scopeKey = (scope: PerformanceScope): string =>
   scope.kind === "bucket" ? `bucket:${scope.goalId}` : scope.kind;
