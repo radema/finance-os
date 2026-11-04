@@ -22,6 +22,7 @@ import { registerProductRoutes } from "./products.ts";
 import { createRouter } from "./router.ts";
 import { registerSampleRoutes } from "./sample.ts";
 import { registerSetupProgressRoutes } from "./setupProgress.ts";
+import { registerSnapshotRoutes } from "./snapshots.ts";
 import { serveStatic } from "./static.ts";
 import { registerTransactionRoutes } from "./transactions.ts";
 import { createYahooProvider } from "./yahooProvider.ts";
@@ -90,6 +91,7 @@ export async function startServer({
   registerPensionRoutes(router, db, clock);
   registerIndependenceRoutes(router, db, clock);
   registerSetupProgressRoutes(router, db);
+  registerSnapshotRoutes(router, db, clock);
 
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];
