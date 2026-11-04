@@ -1,28 +1,28 @@
 /* Performance, Goal history and Plan vs actual. Colours, type and spacing come from tokens.css.
    Legend swatches take their colour from --swatch. */
-.swatch-dash {
+.legend-tracking .swatch-dash {
   height: 0;
   border-top: 2px dashed var(--swatch);
 }
-.swatch-line {
+.legend-tracking .swatch-line {
   border-top-color: var(--swatch);
 }
-.swatch-area,
-.swatch-bar {
+.legend-tracking .swatch-area,
+.legend-tracking .swatch-bar {
   height: 10px;
   background: color-mix(in srgb, var(--swatch) 40%, transparent);
 }
-.swatch-bar {
+.legend-tracking .swatch-bar {
   background: var(--swatch);
 }
-.swatch-dot,
-.swatch-ring {
+.legend-tracking .swatch-dot,
+.legend-tracking .swatch-ring {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   border: 2px solid var(--swatch);
 }
-.swatch-dot {
+.legend-tracking .swatch-dot {
   background: var(--swatch);
 }
 

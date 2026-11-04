@@ -10,7 +10,7 @@ export interface LegendItem {
 /** The compact legend above a multi-series chart. */
 export function Legend({ items }: { items: readonly LegendItem[] }) {
   return (
-    <ul className="legend">
+    <ul className="legend legend-tracking">
       {items.map((item) => (
         <li key={item.label}>
           <span
