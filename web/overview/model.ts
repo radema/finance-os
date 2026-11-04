@@ -86,7 +86,7 @@ export function actionTitle(
   return netWorth === null ? "No numbers to show yet" : `Net worth is ${worth}`;
 }
 
-/** An amount with its sign, for a change: "+100,00 €" or "-1.240,88 €". */
+/** An amount with its sign, for a change: "+100,00 €" or "-1240,88 €". */
 export const signedAmount = (euros: number | null): string =>
   euros === null ? MISSING : `${euros > 0 ? "+" : ""}${formatAmount(euros)}`;
 

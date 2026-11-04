@@ -190,8 +190,8 @@ export function RangeCell({ range }: { range: NonNullable<OverviewView["range"]>
   return (
     <>
       <p className="sub">
-        <GoalChip id={range.goalId} name={range.name} slot={range.slot} /> is the goal furthest
-        below its required probability.
+        <GoalChip id={range.goalId} name={range.name} slot={range.slot} /> has the smallest margin
+        over its required probability.
       </p>
       <RangeChart
         range={range.range}
