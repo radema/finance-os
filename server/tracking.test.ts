@@ -134,7 +134,7 @@ describe("Performance and Plan vs actual API", () => {
       expect(car.label).toBe("New car");
       expect(car.slot).toBe(3);
       expect(all.slot).toBeNull();
-      expect((await performance("?scope=bucket&goalId=g-retirement")).slot).toBe(1);
+      expect((await performance("?scope=bucket&goalId=g-retirement")).slot).toBe(5);
       expect(car.summary?.value).toBeCloseTo(goals.find((g) => g.id === "g-car")?.value ?? 0, 6);
       // 4000 + 2083.95 + 2960.61 - 1177.05 + 1502.95, as on the Goal detail.
       expect(car.summary?.moneyIn).toBeCloseTo(9_370.46, 2);

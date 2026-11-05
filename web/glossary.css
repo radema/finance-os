@@ -1,7 +1,7 @@
 /* Jargon popovers and the Glossary & method screen. Tokens only. */
 .term {
   margin: 0 -2px;
-  padding: var(--s1) 2px;
+  padding: 0 2px;
   border: 0;
   border-bottom: 1px dotted var(--muted);
   border-radius: 0;
@@ -48,6 +48,9 @@
 .method {
   display: grid;
   gap: var(--s3);
+}
+.method > .card {
+  margin-bottom: 0;
 }
 .method p,
 .method ul {

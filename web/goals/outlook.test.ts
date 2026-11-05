@@ -48,6 +48,6 @@ describe("horizonText", () => {
 
 describe("usesSlotLine", () => {
   it("allows slots 1, 2 and 5 for lines, and no other", () => {
-    expect([1, 2, 3, 4, 5, 6].filter(usesSlotLine)).toEqual([1, 2, 5]);
+    expect([1, 2, 3, 4, 5, 6].filter(usesSlotLine)).toEqual([2, 5]);
   });
 });

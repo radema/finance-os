@@ -37,6 +37,6 @@ export function horizonText(horizonYears: number): string {
   return `${years.format(horizonYears)} ${horizonYears === 1 ? "year" : "years"}`;
 }
 
-/** DESIGN.md: lines use only the goal colours of slots 1, 2 and 5. Other goals draw their lines in grey. */
-const LINE_SLOTS = [1, 2, 5];
+/** DESIGN.md: lines use only the goal colours of slots 2 and 5. Other goals draw their lines in grey. */
+const LINE_SLOTS = [2, 5];
 export const usesSlotLine = (slot: number): boolean => LINE_SLOTS.includes(slot);

@@ -2,8 +2,11 @@
    and the spacing scale. Light by default; dark follows prefers-color-scheme (manual toggle: #67).
    Roles:
    --hl                the one message (highlight). Marks only: bars, lines, dots, icons, rules. Never text or buttons.
-   --slot1..6          the six palette slots, one fixed colour per goal. Slot 1 = --hl, slot 2 = --hl2, slot 5 = --hl3.
+   --slot1..6          the six palette slots. Slot 1 = --hl is kept for the message; goals 1 to 5 take slots 2 to 6.
+                       Slot 2 = --hl2, slot 5 = --hl3.
+   --slot7             the neutral grey of goal 6 and later (an alias of --muted, so it follows the theme).
    --tint1..6          soft tints of the slots (light 12%, dark 18%) for chips, tags, card headers. Text on them stays --ink.
+   --tint7             the tint of the grey slot (an alias of --wash).
    --blue and tints    general information (KPI accents, priority, headers). The highlight family means attention.
    --ctx               context series grey.   --ink/--ink2/--muted  text greys.   --grid/--base  hairlines. */
 :root {
@@ -25,12 +28,14 @@
   --slot4: #c09036;
   --slot5: #226061;
   --slot6: #828231;
+  --slot7: var(--muted);
   --tint1: #f0e7e1;
   --tint2: #f7efea;
   --tint3: #e3eae6;
   --tint4: #f1ede3;
   --tint5: #dee8e9;
   --tint6: #eaece3;
+  --tint7: var(--wash);
   --tint1-strong: #e8d4c8;
   --blue: #116496;
   --tint-blue-faint: #eaf1f5;
@@ -66,6 +71,8 @@
   --s4: 24px;
   --s5: 32px;
   --s6: 48px;
+
+  --control-h: calc(var(--lh-sub) + 2 * var(--s1) + 2px);
 }
 
 @media (prefers-color-scheme: dark) {

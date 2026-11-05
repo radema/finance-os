@@ -66,6 +66,13 @@ describe("Pension plan and Pension view API", () => {
     expect(thisYear?.exitRate).toBeCloseTo(0.117, 10);
   });
 
+  it("gives the pension goal a goal slot, not the highlight slot 1 (#71)", async () => {
+    await call("POST", "/api/sample-data");
+    const { goals } = await view();
+    expect(goals.find((goal) => goal.id === "g-retirement")?.slot).toBe(5);
+    expect(goals.every((goal) => goal.slot >= 2)).toBe(true);
+  });
+
   it("sums this year's pensionContribution transactions on Voluntary products as the voluntary YTD", async () => {
     await call("POST", "/api/sample-data");
     const contribute = (date: string, productId: string, amountCents: number) =>

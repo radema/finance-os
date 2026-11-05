@@ -86,7 +86,7 @@ function GoalWeights({ goal, products, rows, onChange }: GoalWeightsProps) {
       {rows.length === 0 ? (
         <p className="note">No weights yet. Add a product below.</p>
       ) : (
-        <table className="table">
+        <table className="table table-weights">
           <thead>
             <tr>
               <th>Product</th>

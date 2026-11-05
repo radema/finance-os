@@ -23,8 +23,7 @@ async function loadOverview(db: Kysely<DB>, today: string): Promise<OverviewView
     kind: "all",
   });
 
-  const pensionGoalId = world.pension?.goalId;
-  const slotOf = (goal: { id: string }) => goalSlot(goal, world.goals, pensionGoalId);
+  const slotOf = (goal: { id: string }) => goalSlot(goal, world.goals);
   const series = new Map(world.goals.map((goal) => [goal.id, seriesOf(world, goal.id)]));
   const weakest = weakestGoal(rows);
   const range = weakest && ranges.get(weakest.id);

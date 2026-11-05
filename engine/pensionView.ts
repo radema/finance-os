@@ -42,7 +42,7 @@ export interface PensionView {
   asOf: string;
   /** The stored document, in cents. Null until a plan is saved. */
   plan: PensionPlan | null;
-  goals: { id: string; name: string; priority: Goal["priority"] }[];
+  goals: { id: string; name: string; priority: Goal["priority"]; slot: number }[];
   /** Products with the `pension` regime: the ones a flow can name. */
   pensionProducts: { id: string; name: string }[];
   /** Null without a plan or without a RAL. */
