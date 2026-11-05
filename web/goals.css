@@ -237,3 +237,19 @@
 .chart-range {
   height: 180px;
 }
+
+/* Top of a goal's page: the way back, and the switch to another goal. */
+.goal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2) var(--s3);
+  margin-bottom: var(--s3);
+  font-size: var(--t-sub);
+  line-height: var(--lh-sub);
+}
+.goal-nav select {
+  width: auto;
+  min-width: 14em;
+}

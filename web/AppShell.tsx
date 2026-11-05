@@ -9,13 +9,13 @@ import {
   DEFAULT_ROUTE,
   findPage,
   GLOSSARY_ROUTE,
-  GOALS_DETAIL_ROUTE,
   GOALS_HISTORY_ROUTE,
   GOALS_LIST_ROUTE,
   goalIdOf,
   INDEPENDENCE_ROUTE,
   isBuilt,
   NAV,
+  navKeyOf,
   OPTIMIZER_ROUTE,
   PENSION_ROUTE,
   PERFORMANCE_ROUTE,
@@ -35,6 +35,7 @@ import { PerformanceScreen } from "./tracking/PerformanceScreen.tsx";
 import { PlanVsActualScreen } from "./tracking/PlanVsActualScreen.tsx";
 
 function Sidebar({ route }: { route: string }) {
+  const current = navKeyOf(route);
   return (
     <aside className="side">
       <a className="brand" href={`#/${DEFAULT_ROUTE}`}>
@@ -60,9 +61,7 @@ function Sidebar({ route }: { route: string }) {
                     className="nav-item"
                     key={item.key}
                     href={`#/${item.key}`}
-                    aria-current={
-                      route === item.key || route.startsWith(`${item.key}/`) ? "page" : undefined
-                    }
+                    aria-current={current === item.key ? "page" : undefined}
                   >
                     {item.label}
                     {isBuilt(item.key) ? null : <span className="soon">soon</span>}
@@ -103,6 +102,7 @@ function SoonPage({ route }: { route: string }) {
 
 /** Sidebar plus content area. Every page shows the "soon" placeholder until it has a screen. */
 export function AppShell({ route }: { route: string }) {
+  const goalId = goalIdOf(route);
   return (
     <div className="shell">
       <Sidebar route={route} />
@@ -118,8 +118,8 @@ export function AppShell({ route }: { route: string }) {
           <PricesScreen />
         ) : route === GOALS_LIST_ROUTE ? (
           <GoalsListScreen />
-        ) : route === GOALS_DETAIL_ROUTE || goalIdOf(route) !== undefined ? (
-          <GoalDetailScreen goalId={goalIdOf(route)} />
+        ) : goalId !== undefined ? (
+          <GoalDetailScreen goalId={goalId} />
         ) : route === GOALS_HISTORY_ROUTE ? (
           <GoalHistoryScreen />
         ) : route === OPTIMIZER_ROUTE ? (

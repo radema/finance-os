@@ -44,7 +44,9 @@ export function GoalsListScreen() {
                   <SampleCard onLoaded={list.reload} />
                 ) : (
                   <Card title="Goals">
-                    <p className="note">There are no goals. Add one in Setup.</p>
+                    <p className="note">
+                      There are no goals. Add one in <a href="#/setup/goals">Setup</a>.
+                    </p>
                   </Card>
                 )
               ) : (

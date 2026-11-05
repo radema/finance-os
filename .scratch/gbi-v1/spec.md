@@ -375,7 +375,7 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
   as a UI reference. No prototype code is carried into the build.
 - English UI, Italian glossary; EUR and numbers in it-IT format. Light and dark themes. Desktop-first
   fluid layout, usable from ~1024 to 1920 px (mobile from 360 px is v2).
-- Sidebar: Overview; Goals (List, Detail, History); Independence; Analysis (Optimizer, Performance,
+- Sidebar: Overview; Goals (List, History; a goal's page opens from a goal chip, with no sidebar item of its own); Independence; Analysis (Optimizer, Performance,
   Plan vs actual); Pension; Operations (Transactions, Import, Prices); Setup (Products, Allocation,
   Cash flow, Assumptions, Glossary). Unbuilt items show a "soon" placeholder.
 - Colour: palette D (`reference/palette-substack-d.md`) with the OE Data Viz exhibit rules
@@ -399,8 +399,8 @@ Screens (content; acceptance in the Definition of done):
 | Screen | Content |
 |---|---|
 | Overview | Action title from the data; key numbers (net worth, market change this month, YTD TWR, FI wealth, goals on track); grid: P(success) per goal vs required, net worth by goal over time with money put in, needs attention (alerts), P(success) trend from snapshots, range of outcomes vs target, 10-year savings capacity vs plan, goals, % of FI target per year, price freshness; per FI level today's % reached and year reached (median, det.) (t07). Every number links to the screen that explains it |
-| Goals list | One row per goal: name + priority, status, P vs required, value vs target, plan gap (t11 replaces the 9-column table) |
-| Goal detail | Value, P vs required, XIRR, fan, P history, range chart, "what it would take" (needed det./prob., horizon), holdings (units, price + age, PMC, gain, tax if sold), value vs money put in, cumulative plan vs actual, change the monthly plan from month X, 50% capital note on the pension goal |
+| Goals list | One row per goal; its goal chip opens the goal's page: name + priority, status, P vs required, value vs target, plan gap (t11 replaces the 9-column table) |
+| Goal detail | A back link to the Goals list and a goal switch at the top (no sidebar item; `#/goals/detail` with no goal opens the Goals list). Value, P vs required, XIRR, fan, P history, range chart, "what it would take" (needed det./prob., horizon), holdings (units, price + age, PMC, gain, tax if sold), value vs money put in, cumulative plan vs actual, change the monthly plan from month X, 50% capital note on the pension goal |
 | Goal history | Metric switch (P, funded ratio, median/target); a line per goal over snapshots; snapshot table; Save snapshot; delete saved snapshots |
 | Independence | Three levels with % reached, bars split by goal (pension share visible); table with target, progress, year reached (det./median), P(reached in 20 y); "what counts" per goal; editable multipliers, efMonths and expense split; include-pension switch; % of target per year; projection fan in today's € with level lines following target(t) |
 | Optimizer | Bucket, mode, criterion (4 named options), max per product, product universe; "How the optimizer chooses" panel; suggested vs current weights; outcomes compared; switch tax; scatter of all mixes (x = P, y = median); top 10; rule text; "Use as contribution weights"; known-limit note |
@@ -410,7 +410,7 @@ Screens (content; acceptance in the Definition of done):
 | Transactions | Add form (date, bucket, product, type, amount, price prefilled from the product's last price, commission optional) with commission estimate and cost warning; list with filters by bucket and year; edit (the add form prefilled); delete |
 | Import | Tabs: transactions, prices, products, goals; paste or upload CSV/XLSX; mapping with saved mappings; row check with status and the bucket/split control; import ready rows; past imports with undo; Current portfolio form |
 | Prices | Source per product with last price, date, age pill; Fetch latest prices; review list; month-end grid (6 months, current month editable; add next month); positions by product with account PMC, buckets and broker units entry |
-| Setup | Products, Allocation (pension weights read-only), Goals (with plan history), Cash flow (+ 10-year table), Assumptions (tax, probabilities, MC, trackingStart, commission, thresholds, correlations, reset) |
+| Setup | Products, Allocation (pension weights read-only), Goal definitions (add and edit goals, with plan history; the analysis lives under Goals), Cash flow (+ 10-year table), Assumptions (tax, probabilities, MC, trackingStart, commission, thresholds, correlations, reset) |
 | Glossary & method | Italian term, English term, plain explanation; method notes |
 
 Glossary terms (wording written by the user later; initial text from `prototypes/11-ui/content.js`):
@@ -506,8 +506,8 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-22: Transactions via API. Check: API tests. Expected: qty = amount / price (BTP: amount / (price/100)); sells stored as negative qty; editing or deleting a transaction re-derives holdings in the next read.
 - AC-23: Setup (Products, Allocation, Goals with plan history, Assumptions incl. Commission plan and fee model). Check: API tests + `agent-browser`. Expected: create/edit/delete work; weights are rescaled to 100% per goal; the correlation matrix stays symmetric; a non-positive-definite matrix is shrunk and flagged.
 - AC-24: Transactions screen. Check: `agent-browser`. Expected: add form with price prefilled from the product's last price, commission estimate and a cost warning below the min efficient ticket; list filters by bucket and year; edit; delete.
-- AC-25: Goals list and detail (deterministic). Check: `agent-browser` on the sample data. Expected: list rows show name + priority and value vs target (status, P and plan gap arrive in S4 and S5); detail shows value, deterministic net, target at goal date, holdings (units, price, PMC, gain, tax if sold), value vs money put in.
-- AC-26: Sample data. Check: "Load the sample data" on an empty data folder. Expected: the synthetic fixture is loaded and the Goals list shows its 4 goals.
+- AC-25: Goals list and detail (deterministic). Check: `agent-browser` on the sample data. Expected: the sidebar has Goals > List and History, no Detail; a goal chip opens the goal's page, which has a back link and a goal switch; list rows show name + priority and value vs target (status, P and plan gap arrive in S4 and S5); detail shows value, deterministic net, target at goal date, holdings (units, price, PMC, gain, tax if sold), value vs money put in.
+- AC-26: Sample data. Check: "Load the sample data" on an empty data folder. Expected: the synthetic fixture is loaded and the Goals list shows its 4 goals, and Setup > Goal definitions lists the same 4.
 - AC-27: S1 UI gate. Check: screenshots of S1 screens at 1440 px, light. Expected: the user approves or skips; adding one transaction takes under 20 seconds.
 
 ### S2 — Import, prices and data safety
