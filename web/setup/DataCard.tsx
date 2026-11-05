@@ -1,6 +1,7 @@
 import type { ChangeEvent } from "react";
 import { useState } from "react";
 import { api, messageOf } from "../api.ts";
+import { download } from "../download.ts";
 import { Alert, Card } from "./ui.tsx";
 
 const EXPORT_FILE = "gbi-export.json";
@@ -8,15 +9,6 @@ const EXPORT_FILE = "gbi-export.json";
 interface Chosen {
   name: string;
   document: unknown;
-}
-
-function download(name: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 /** Export and import of all data as one JSON file. */
@@ -31,7 +23,7 @@ export function DataCard({ onImported }: { onImported: () => void }) {
     setDone(undefined);
     try {
       const data = await api<unknown>("GET", "/api/data/export");
-      download(EXPORT_FILE, JSON.stringify(data, null, 2));
+      download(EXPORT_FILE, JSON.stringify(data, null, 2), "application/json");
       setError(undefined);
       setDone(`Exported to ${EXPORT_FILE}.`);
     } catch (failure) {

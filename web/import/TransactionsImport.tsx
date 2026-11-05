@@ -11,6 +11,7 @@ import { Alert, Card, ConfirmButton, Field, SelectField, TextField } from "../se
 import type { Bucket } from "../split/splitState.ts";
 import { missingFields } from "./importState.ts";
 import { RowCheck } from "./RowCheck.tsx";
+import { TemplateButton } from "./TemplateButton.tsx";
 import type { CommitResult, FilePayload, PreviewResult, ReadResult } from "./types.ts";
 
 const FIELD_LABEL: Record<TransactionField, ReactNode> = {
@@ -260,6 +261,7 @@ export function TransactionsImport({ onImported }: { onImported: () => void }) {
           >
             Read pasted text
           </button>
+          <TemplateButton kind="transactions" />
         </div>
         <Field label="Or upload a file">
           <input
