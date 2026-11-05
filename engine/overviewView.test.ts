@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GoalListRow } from "./goalViews.ts";
-import { keyNumbersOf, netWorthByGoal, weakestGoal } from "./overviewView.ts";
+import { keyNumbersOf, netWorthByGoal, rangeRows } from "./overviewView.ts";
 import type { PerformancePoint } from "./trackingViews.ts";
 
 const point = (month: string, value: number, moneyIn: number): PerformancePoint => ({
@@ -79,24 +78,53 @@ describe("netWorthByGoal", () => {
   });
 });
 
-describe("weakestGoal", () => {
-  const row = (id: string, pSuccess: number | null, requiredP = 0.8): GoalListRow => ({
-    id,
-    name: id,
-    priority: "Need",
+describe("rangeRows", () => {
+  const entry = (goalId: string, bad: number, typical: number, good: number, target: number) => ({
+    goalId,
+    name: goalId,
     slot: 2,
-    target: 1,
-    value: 0,
-    missingPrices: false,
-    outlook: pSuccess === null ? null : { status: "on_track", pSuccess, requiredP },
+    range: { bad, typical, good, target },
   });
 
-  it("picks the goal furthest below its required probability", () => {
-    expect(weakestGoal([row("a", 0.9), row("b", 0.5), row("c", 0.7)])?.id).toBe("b");
+  it("gives bad, typical and good case as shares of the goal's own target", () => {
+    const view = rangeRows([
+      entry("home", 51_441, 63_512, 76_215, 44_309),
+      entry("hol", 6, 6, 6, 3),
+    ]);
+    const [home, hol] = view?.rows ?? [];
+    expect(home?.bad).toBeCloseTo(51_441 / 44_309, 10);
+    expect(home?.typical).toBeCloseTo(63_512 / 44_309, 10);
+    expect(home?.good).toBeCloseTo(76_215 / 44_309, 10);
+    expect(hol).toMatchObject({ bad: 2, typical: 2, good: 2, flat: true });
+    expect(home?.flat).toBe(false);
   });
 
-  it("skips goals that cannot be analysed, and returns undefined when none can", () => {
-    expect(weakestGoal([row("a", null), row("b", 0.9)])?.id).toBe("b");
-    expect(weakestGoal([row("a", null)])).toBeUndefined();
+  it("calls a goal flat from its euro range, to the cent", () => {
+    const view = rangeRows([entry("a", 2_004.89, 2_004.89, 2_004.89, 3_000)]);
+    expect(view?.rows[0]).toMatchObject({ flat: true });
+    expect(view?.rows[0]?.bad).toBeCloseTo(2_004.89 / 3_000, 10);
+  });
+
+  it("fits one axis to every goal and the 100% line", () => {
+    // Holiday 67%, Retirement up to 175%: the lowest bad case is 67% of the highest good case.
+    const view = rangeRows([
+      entry("hol", 2_005, 2_005, 2_005, 3_000),
+      entry("car", 9_600, 10_500, 11_500, 10_000),
+      entry("ret", 98_000, 128_000, 175_000, 100_000),
+    ]);
+    const axis = view?.axis;
+    expect(axis?.min).toBeGreaterThan(0);
+    expect(axis?.min).toBeLessThanOrEqual(2_005 / 3_000);
+    expect(axis?.max).toBeGreaterThanOrEqual(1.75);
+  });
+
+  it("starts at 0 when the lowest bad case is at most 20% of the highest good case", () => {
+    const view = rangeRows([entry("a", 100, 400, 900, 500), entry("b", 400, 500, 600, 500)]);
+    expect(view?.axis.min).toBe(0);
+  });
+
+  it("is null without a range, and skips a goal whose target is not above 0", () => {
+    expect(rangeRows([])).toBeNull();
+    expect(rangeRows([entry("a", 1, 1, 1, 0)])).toBeNull();
   });
 });

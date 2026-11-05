@@ -40,7 +40,7 @@ describe("GET /api/overview", () => {
       fiWealth: null,
     });
     expect(view.netWorth.months).toEqual([]);
-    expect(view.range).toBeNull();
+    expect(view.ranges).toEqual([]);
   });
 
   it("shows the number of the screen each one links to", async () => {
@@ -71,15 +71,18 @@ describe("GET /api/overview", () => {
     expect(view.snapshots).toEqual(await get<SnapshotView[]>("/api/snapshots"));
   });
 
-  it("draws the range of the weakest goal like its detail page, and the series like its chart", async () => {
+  it("draws the range of every goal like its detail page, and the series like its chart", async () => {
     await fetch(`${url}/api/sample-data`, { method: "POST" });
     const view = await get<OverviewView>("/api/overview");
-    const { range } = view;
-    expect(range).not.toBeNull();
-    const detail = await get<GoalDetailView>(`/api/goal-detail?id=${range?.goalId}`);
-    expect(range?.range).toEqual(detail.analysis?.range);
+    expect(view.ranges.length).toBeGreaterThan(1);
+    for (const { goalId, range } of view.ranges) {
+      const goal = await get<GoalDetailView>(`/api/goal-detail?id=${goalId}`);
+      expect(range).toEqual(goal.analysis?.range);
+    }
 
-    const line = view.netWorth.goals.find((goal) => goal.goalId === range?.goalId);
+    const first = view.ranges[0];
+    const detail = await get<GoalDetailView>(`/api/goal-detail?id=${first?.goalId}`);
+    const line = view.netWorth.goals.find((goal) => goal.goalId === first?.goalId);
     expect(line?.values.at(-1)).toBeCloseTo(detail.series.at(-1)?.value ?? Number.NaN, 6);
     expect(view.netWorth.moneyIn).toHaveLength(view.netWorth.months.length);
     expect(view.prices.map((price) => price.name)).toHaveLength(7);

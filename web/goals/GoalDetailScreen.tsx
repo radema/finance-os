@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { GoalAnalysis, GoalDetailView } from "../../engine/goalViews.ts";
+import { isZeroWidth } from "../../engine/outcomeChart.ts";
 import type { Goal } from "../../engine/schemas.ts";
 import type { PerformanceView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
@@ -142,26 +143,41 @@ function FanExhibit({ goal, analysis }: { goal: GoalDetailView; analysis: GoalAn
 }
 
 function RangeExhibit({ goal, analysis }: { goal: GoalDetailView; analysis: GoalAnalysis }) {
-  const { range } = analysis;
+  const { range, distribution } = analysis;
   const gap = range.typical - range.target;
   const title = `In the typical case ${goal.name} ends ${formatAmount(Math.abs(gap))} ${gap >= 0 ? "above" : "below"} its target`;
+  const flat = isZeroWidth(range);
   return (
     <figure className="exhibit" style={slotStyle(goal.slot)}>
       <div className="tag">Range of outcomes</div>
       <h2 className="exhibit-title">{title}</h2>
       <p className="unit">Net value at the goal date, 31 December {goal.targetYear}, in euros.</p>
-      <ul className="legend">{bandLegend}</ul>
-      <RangeChart
-        range={range}
-        slot={goal.slot}
-        label={`Range of outcomes for ${goal.name} at the goal date: bad ${formatAmount(range.bad)}, typical ${formatAmount(range.typical)}, good ${formatAmount(range.good)}, target ${formatAmount(range.target)}`}
-      />
-      <p className="callout">
-        The bad case is {formatAmount(range.bad)} and the good case is {formatAmount(range.good)}.
-        The target at the goal date is {formatAmount(range.target)}.
-      </p>
+      {flat ? (
+        <p className="range-flat">
+          <strong className="range-flat-value">{formatAmount(range.typical)}</strong>
+          <span>
+            The bad, typical and good case are the same, so there is no range to draw. The target at
+            the goal date is {formatAmount(range.target)}.
+          </span>
+        </p>
+      ) : (
+        <>
+          <ul className="legend">{bandLegend}</ul>
+          <RangeChart
+            range={range}
+            distribution={distribution}
+            slot={goal.slot}
+            label={`Range of outcomes for ${goal.name} at the goal date: bad ${formatAmount(range.bad)}, typical ${formatAmount(range.typical)}, good ${formatAmount(range.good)}, target ${formatAmount(range.target)}`}
+          />
+          <p className="callout">
+            The bad case is {formatAmount(range.bad)} and the good case is{" "}
+            {formatAmount(range.good)}. The target at the goal date is {formatAmount(range.target)}.
+          </p>
+        </>
+      )}
       <figcaption className="source">
         Source: {analysis.paths} simulated markets, seed {analysis.seed}; after tax and fund costs.
+        The chart counts the simulated outcomes in bins.
       </figcaption>
     </figure>
   );

@@ -235,7 +235,20 @@
   color: var(--muted);
 }
 .chart-range {
-  height: 180px;
+  height: 280px;
+}
+.range-flat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  margin: var(--s3) 0 0;
+  color: var(--ink2);
+}
+.range-flat-value {
+  font: var(--w-display) 26px / 32px var(--font-display);
+  letter-spacing: var(--ls-display);
+  color: var(--ink);
 }
 
 /* Top of a goal's page: the way back, and the switch to another goal. */
