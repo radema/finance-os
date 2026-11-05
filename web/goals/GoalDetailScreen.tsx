@@ -221,7 +221,7 @@ function Analysis({ goal }: { goal: GoalDetailView }) {
   const { analysis } = goal;
   if (!analysis) {
     return (
-      <Card title={<TermPopover term="simulated">Monte Carlo</TermPopover>}>
+      <Card memoryKey="Monte Carlo" title={<TermPopover term="simulated">Monte Carlo</TermPopover>}>
         <p className="note">{goal.projectionNote ?? "The simulation cannot run for this goal."}</p>
       </Card>
     );

@@ -197,6 +197,7 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
         </div>
       </Card>
       <Card
+        memoryKey="Tax-loss credit"
         title={
           <>
             Tax-loss credit (<TermPopover term="zainetto">zainetto</TermPopover>)
