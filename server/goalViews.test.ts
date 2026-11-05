@@ -135,7 +135,7 @@ describe("Goals list and Goal detail API", () => {
       "Home deposit",
       "Retirement",
     ]);
-    expect(view.goals.map((goal) => goal.slot)).toEqual([2, 3, 4, 1]);
+    expect(view.goals.map((goal) => goal.slot)).toEqual([2, 3, 4, 5]);
     const home = view.goals[2];
     expect(home).toMatchObject({ priority: "Need", target: 40_000, missingPrices: false });
     expect(home?.value).toBeCloseTo(18_000, 6);

@@ -116,6 +116,11 @@ a.nav-head:hover,
   letter-spacing: var(--ls-display);
   text-wrap: balance;
 }
+/* The first block under a page header (the title, or the title and its unit line) is one token gap away. */
+h1.title + :not(.unit),
+h1.title + .unit + * {
+  margin-top: var(--s4);
+}
 .unit {
   max-width: 46em;
   margin-top: var(--s2);

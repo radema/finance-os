@@ -28,9 +28,14 @@
 
 .overview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s4);
   margin-top: var(--s4);
+}
+@media (min-width: 1280px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .overview-grid .cell {
   min-width: 0;

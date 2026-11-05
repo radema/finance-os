@@ -1,6 +1,7 @@
 import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
 import type { PensionThisYear, PensionView, PensionYearView } from "../../engine/pensionView.ts";
 import type { PensionFlow } from "../../engine/schemas.ts";
+import { GREY_SLOT } from "../../engine/slots.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
@@ -10,7 +11,6 @@ import { CapitalNote } from "./CapitalNote.tsx";
 import { flowKey, type PlanValues, planToValues, valuesToPlan } from "./planForm.ts";
 import { ScheduleChart } from "./ScheduleChart.tsx";
 
-const PENSION_SLOT = 1;
 const FLOWS: readonly PensionFlow["flow"][] = ["Work", "Voluntary"];
 const MISSING = "–";
 
@@ -186,7 +186,7 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
   );
 }
 
-function Schedule({ rows }: { rows: PensionYearView[] }) {
+function Schedule({ rows, slot }: { rows: PensionYearView[]; slot: number }) {
   const first = rows[0];
   const last = rows.at(-1);
   if (!first || !last) return null;
@@ -211,6 +211,7 @@ function Schedule({ rows }: { rows: PensionYearView[] }) {
         </ul>
         <ScheduleChart
           rows={rows}
+          slot={slot}
           label={`Yearly pension contributions, Work and Voluntary, from ${first.year} to ${last.year}`}
         />
         <figcaption className="source">
@@ -258,19 +259,20 @@ function Schedule({ rows }: { rows: PensionYearView[] }) {
 
 function Pension({ view, onSaved }: { view: PensionView; onSaved: () => void }) {
   const goal = view.goals.find((candidate) => candidate.id === view.plan?.goalId);
+  const slot = goal?.slot ?? GREY_SLOT;
   const title = view.thisYear
     ? `You can still deduct ${formatAmount(view.thisYear.available)} in ${view.thisYear.year}`
     : view.plan
       ? "Add your RAL to see the pension schedule"
       : "No pension plan yet";
   return (
-    <div style={{ "--slot": `var(--slot${PENSION_SLOT})` } as CSSProperties}>
+    <div style={{ "--slot": `var(--slot${slot})` } as CSSProperties}>
       <div className="tag">Pension</div>
       <h1 className="title">{title}</h1>
       <p className="unit">
         {goal ? (
           <>
-            <GoalChip id={goal.id} name={goal.name} slot={PENSION_SLOT} />{" "}
+            <GoalChip id={goal.id} name={goal.name} slot={slot} />{" "}
             <PriorityTag priority={goal.priority} />{" "}
           </>
         ) : null}
@@ -280,7 +282,7 @@ function Pension({ view, onSaved }: { view: PensionView; onSaved: () => void }) 
       </p>
       {view.thisYear ? <ThisYear year={view.thisYear} /> : null}
       <PlanForm view={view} onSaved={onSaved} />
-      <Schedule rows={view.schedule} />
+      <Schedule rows={view.schedule} slot={slot} />
       <CapitalNote />
     </div>
   );

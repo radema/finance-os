@@ -62,7 +62,7 @@ export async function loadIndependence(db: Kysely<DB>, today: string): Promise<I
     goals: built.map(({ row }) => ({
       id: row.id,
       name: row.name,
-      slot: goalSlot(row, world.goals, pensionGoalId),
+      slot: goalSlot(row, world.goals),
       target: row.target,
       countsTowardFi: ticked.has(row.id),
       isPension: row.id === pensionGoalId,

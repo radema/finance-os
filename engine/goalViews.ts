@@ -24,7 +24,7 @@ export interface GoalSummary {
   id: string;
   name: string;
   priority: Goal["priority"];
-  /** Colour slot, 1..6. */
+  /** Colour slot, 2..7 (7 = grey). */
   slot: number;
   /** Today's euros. */
   target: number;
@@ -326,7 +326,7 @@ export function summaryOf(world: GoalWorld, goal: GoalWorldGoal): GoalSummary {
     id: goal.id,
     name: goal.name,
     priority: goal.priority,
-    slot: goalSlot(goal, world.goals, world.pension?.goalId),
+    slot: goalSlot(goal, world.goals),
     target: goal.target,
     value,
     missingPrices,

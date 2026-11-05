@@ -160,7 +160,7 @@ async function loadPlanVsActual(db: Kysely<DB>, today: string): Promise<PlanVsAc
     commission,
   });
   const nameOf = (goalId: string) => world.goals.find((goal) => goal.id === goalId)?.name ?? goalId;
-  const slotOf = (goalId: string) => goalSlot({ id: goalId }, world.goals, pension?.goalId);
+  const slotOf = (goalId: string) => goalSlot({ id: goalId }, world.goals);
   const next: NextContributionView | null = pick && {
     ...pick,
     goalName: nameOf(pick.goalId),
@@ -203,10 +203,7 @@ export function registerTrackingRoutes(router: Router, db: Kysely<DB>, today: ()
       asOf: monthEnd(world.month),
       scope,
       label: labelOf(world, scope),
-      slot:
-        scope.kind === "bucket"
-          ? goalSlot({ id: scope.goalId }, world.goals, world.pension?.goalId)
-          : null,
+      slot: scope.kind === "bucket" ? goalSlot({ id: scope.goalId }, world.goals) : null,
       ...performanceFor(input, scope),
     };
   });

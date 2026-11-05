@@ -54,6 +54,9 @@
 .sub {
   color: var(--muted);
 }
+.note + .card {
+  margin-top: var(--s3);
+}
 .sub-line {
   margin: 0;
 }
@@ -80,18 +83,6 @@
 }
 
 /* Forms */
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--s3);
-  align-items: start;
-}
-.inline-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s3);
-  align-items: end;
-}
 .field {
   display: flex;
   flex-direction: column;
@@ -102,6 +93,31 @@
   line-height: var(--lh-label);
   font-weight: 500;
   color: var(--ink2);
+}
+/* A form is a grid of equal columns. Each field spans three rows (label, control, hint) of the grid,
+   so the controls of one row share one top edge whatever the labels and hints do. */
+.form-grid,
+.inline-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  column-gap: var(--s3);
+  align-items: start;
+}
+.form-grid > .field,
+.inline-form > .field {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  margin-bottom: var(--s3);
+}
+.form-grid > .field > .field-label,
+.inline-form > .field > .field-label {
+  align-self: end;
+  margin-bottom: var(--s1);
+}
+.form-grid > .field > .field-hint,
+.inline-form > .field > .field-hint {
+  margin-top: var(--s1);
 }
 input[type="text"],
 input[type="number"],
@@ -118,6 +134,13 @@ textarea {
   font: inherit;
   font-size: var(--t-sub);
   line-height: var(--lh-sub);
+}
+/* One height for the single-line controls, so a date, a select and a text box line up. */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+  height: var(--control-h);
 }
 .check {
   display: flex;
@@ -176,6 +199,16 @@ form > .actions {
   display: inline-flex;
   gap: var(--s1);
 }
+/* A button or a message in an inline form: the button sits level with the controls. */
+.inline-form > .btn,
+.inline-form > .confirm {
+  grid-row: span 2;
+  align-self: end;
+  justify-self: start;
+}
+.inline-form > .alert {
+  grid-column: 1 / -1;
+}
 
 /* Tables: a sticky header on a raised surface, hairline rules. */
 .table {
@@ -204,6 +237,17 @@ form > .actions {
 .table .num {
   text-align: right;
 }
+/* The weight tables of all goals share one column layout, so the columns line up from card to card. */
+.table-weights {
+  table-layout: fixed;
+}
+.table-weights th:nth-child(2),
+.table-weights th:nth-child(3) {
+  width: 120px;
+}
+.table-weights th:nth-child(4) {
+  width: 240px;
+}
 .row-actions {
   text-align: right;
   white-space: nowrap;
@@ -216,8 +260,9 @@ form > .actions {
   color: var(--ink2);
   white-space: nowrap;
 }
-.inline-input {
-  width: 6em;
+/* A short number: as wide as its cell, up to 6em. The input rule above sets the width. */
+input.inline-input {
+  max-width: 6em;
   text-align: right;
 }
 

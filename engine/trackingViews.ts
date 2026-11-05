@@ -36,7 +36,7 @@ export interface PerformanceView {
   asOf: string;
   scope: PerformanceScope;
   label: string;
-  /** Colour slot of a bucket's goal, 1..6. Null for the scopes that are not one goal. */
+  /** Colour slot of a bucket's goal, 2..7 (7 = grey). Null for the scopes that are not one goal. */
   slot: number | null;
   months: PerformancePoint[];
   /** Null when the scope has no transactions, or a held product has no price (see `note`). */
@@ -93,7 +93,7 @@ export function performanceOf(result: PerformanceResult): {
 /** The next contribution with the names the card shows. Money in cents. */
 export interface NextContributionView extends NextContribution {
   goalName: string;
-  /** Colour slot of the goal, 1..6. */
+  /** Colour slot of the goal, 2..7 (7 = grey). */
   slot: number;
   /** The minimum efficient ticket, cents. */
   minTicket: number;
@@ -102,7 +102,7 @@ export interface NextContributionView extends NextContribution {
 
 export interface PlanVsActualGoalView extends PlanVsActualGoal {
   name: string;
-  /** Colour slot, 1..6. */
+  /** Colour slot, 2..7 (7 = grey). */
   slot: number;
 }
 

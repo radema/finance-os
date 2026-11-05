@@ -33,7 +33,8 @@ Text is never in a series colour. Identity comes from a coloured mark beside the
 
 ### Slots
 
-Six palette slots, the same in light and dark. One fixed slot per goal.
+Six palette slots, the same in light and dark. One fixed slot per goal. `--slot7` is the neutral grey of
+goal 6 and later (an alias of `--muted`); its tint `--tint7` is `--wash`.
 
 | Token | Value | Colour | Alias |
 |---|---|---|---|
@@ -67,7 +68,11 @@ Colour lives in dots, bars, fills and 1 px borders (the slot colour at 35-42%).
 - **Blue** means general information: KPI accents, priority tags, card headers.
 - **No red and no green** for status. Status is an icon plus a word, so colour is never the only channel.
 - Buttons and focus rings use `--ink`.
-- Open decisions: the highlight is also the pension goal's colour (#71); goal 7 and beyond (S7).
+- **Decided by the user on #71 (2026-11-05), as written:**
+  1. Highlight vs pension goal: `#b75a26` (slot 1, `--hl`) is kept for the message only (At risk / Off
+     track). Goals use slots 2 to 6; Retirement moves off slot 1.
+  2. Goals beyond the colour slots: grey, no cap. Goals 1-5 take slots 2-6; goal 6 and later use a
+     neutral grey token with a direct label.
 
 ## Type
 
@@ -89,7 +94,11 @@ The OE type scale, one step up:
 ## Spacing
 
 Scale: `--s1` 4, `--s2` 8, `--s3` 16, `--s4` 24, `--s5` 32, `--s6` 48 px. Every gap, padding and margin
-uses one of these tokens (S7 checks it). Layout is fluid and desktop-first, usable from about 1024 to
+uses one of these tokens. Allowed literals: `0`, `auto`, hairlines of 1-2 px (also negative), and the
+content padding. `tools/architecture` fails the gate on any other literal margin, padding or gap in `web/`.
+A page header (title, or title and unit line) sits `--s4` above the first block under it. A form is a grid of
+equal columns; every field spans a label row, a control row and a hint row, and every single-line control
+is `--control-h` high. KPI cards wrap in equal columns chosen from the card count. Layout is fluid and desktop-first, usable from about 1024 to
 1920 px: sidebar 232 px (248 px from 1280 px), content padding `clamp(24px, 3vw, 56px)`. Mobile is v2.
 
 ## Components
@@ -125,11 +134,11 @@ uses one of these tokens (S7 checks it). Layout is fluid and desktop-first, usab
 - **Exhibit anatomy.** Tag (mono, uppercase), action title that holds a number, unit line, chart,
   callout (2 px `--hl` rule on the left), source line. The source line ends with a period.
 - **Colours come from tokens, never literals.** ECharts options read the custom properties.
-- **One fixed slot colour per goal**, in every chart and beside the name in lists and chips. The pension
-  goal is slot 1, the emergency-fund goal is slot 6, the other goals take slots from 2 in order. Colours
-  repeat past six goals (to settle in S7).
+- **One fixed slot colour per goal**, in every chart and beside the name in lists and chips. Goals 1-5 take
+  slots 2-6 in creation order. Slot 1 is the highlight and no goal uses it. Goal 6 and later share the
+  neutral grey `--slot7`; the chip and the line label carry the name.
 - **Highlight plus grey is the default.** One series carries the message in `--hl`; the rest are `--ctx`.
-- **Lines use at most three goal colours:** slots 1, 2 and 5. Other goals are grey. Slots 3, 4 and 6
+- **Lines use at most two goal colours:** slots 2 and 5 (slot 1 is the highlight). Other goals are grey. Slots 3, 4 and 6
   appear only in stacked bars and areas, in slot order 1 to 6, with a surface-coloured edge between
   segments.
 - **A compact legend on every multi-series chart**, above the chart at the top left, with swatches for

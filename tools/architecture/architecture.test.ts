@@ -144,6 +144,45 @@ describe("checkArchitecture on planted violations", () => {
     ]);
   });
 
+  it("flags a literal margin, padding or gap in web/ CSS, with the value that broke the rule", () => {
+    plant(
+      "web/a.css",
+      [
+        ".a { margin: 12px; padding: var(--s1) 6px; }",
+        ".b { gap: 0.5em var(--s2); row-gap: 1rem; }",
+        ".c { margin-inline: 3px; padding-left: calc(var(--s1) + 1px); }",
+        ".d { column-gap: 8px }",
+        ".e { padding-block: 2.5px; margin-top: -4px; }",
+      ].join("\n"),
+    );
+    expect(checkArchitecture(root).map(({ rule, detail }) => [rule, detail])).toEqual([
+      ["web-no-spacing-literal", "margin: 12px"],
+      ["web-no-spacing-literal", "padding: var(--s1) 6px"],
+      ["web-no-spacing-literal", "gap: 0.5em var(--s2)"],
+      ["web-no-spacing-literal", "row-gap: 1rem"],
+      ["web-no-spacing-literal", "margin-inline: 3px"],
+      ["web-no-spacing-literal", "padding-left: calc(var(--s1) + 1px)"],
+      ["web-no-spacing-literal", "column-gap: 8px"],
+      ["web-no-spacing-literal", "padding-block: 2.5px"],
+      ["web-no-spacing-literal", "margin-top: -4px"],
+    ]);
+  });
+
+  it("allows tokens, 0, auto, 1-2 px hairlines and the content padding in web/ CSS", () => {
+    plant("web/tokens.css", ":root { --s1: 4px; } @media (min-width: 1px) { .x { gap: 99px; } }\n");
+    plant(
+      "web/a.css",
+      [
+        "/* margin: 99px in a comment is not a declaration */",
+        ".a { margin: 0 auto; padding: var(--s1) var(--s2) var(--s3) var(--s6); }",
+        ".b { gap: var(--s2) var(--s3); margin: 0 -2px; margin-bottom: -1px; padding: 2px 1px; }",
+        ".c { padding: var(--s5) clamp(24px, 3vw, 56px) var(--s6); }",
+        ".d { width: 12px; inset: 0; --pad: 12px; left: clamp(var(--s2), var(--x, 0px), 9px); }",
+      ].join("\n"),
+    );
+    expect(checkArchitecture(root)).toEqual([]);
+  });
+
   it("ignores node_modules and dot folders", () => {
     plant("node_modules/x/index.ts", 'import "node:fs";\nimport { Kysely } from "kysely";\n');
     plant(".scratch/p/a.ts", 'import { Kysely } from "kysely";\n');
