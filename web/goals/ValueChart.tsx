@@ -6,12 +6,15 @@ import { useCallback } from "react";
 import type { SeriesPoint } from "../../engine/goalViews.ts";
 import { formatAmount } from "../money.ts";
 import { readTokens, useEchart } from "../useEchart.ts";
+import { fitAxis, SPREAD_END_LABELS } from "./valueAxis.ts";
 
 echarts.use([LineChart, GridComponent, SVGRenderer]);
 
 const AREA_OPACITY = { light: 0.3, dark: 0.4 };
+/** Pixels kept clear between the two end labels. */
+const LABEL_MARGIN = 2;
 
-function buildOption(points: readonly SeriesPoint[], slot: number) {
+export function buildOption(points: readonly SeriesPoint[], slot: number) {
   const colour = readTokens(slot);
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const text = { color: colour.muted, fontFamily: colour.font, fontSize: 12 };
@@ -21,7 +24,11 @@ function buildOption(points: readonly SeriesPoint[], slot: number) {
     color: colour.ink2,
     fontFamily: colour.font,
     fontSize: 13,
+    minMargin: LABEL_MARGIN,
   };
+  const amounts = points.flatMap((point) =>
+    point.value === null ? [point.moneyIn] : [point.value, point.moneyIn],
+  );
   return {
     animation: false,
     grid: { left: 8, right: 96, top: 16, bottom: 8, containLabel: true },
@@ -35,6 +42,7 @@ function buildOption(points: readonly SeriesPoint[], slot: number) {
     },
     yAxis: {
       type: "value" as const,
+      ...fitAxis(Math.min(...amounts), Math.max(...amounts)),
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: colour.grid } },
@@ -49,6 +57,7 @@ function buildOption(points: readonly SeriesPoint[], slot: number) {
         lineStyle: { width: 0 },
         areaStyle: { color: colour.slot, opacity: dark ? AREA_OPACITY.dark : AREA_OPACITY.light },
         endLabel,
+        labelLayout: SPREAD_END_LABELS,
       },
       {
         name: "Money put in",
@@ -58,6 +67,7 @@ function buildOption(points: readonly SeriesPoint[], slot: number) {
         lineStyle: { width: 1.5, color: colour.ctx },
         itemStyle: { color: colour.ctx },
         endLabel,
+        labelLayout: SPREAD_END_LABELS,
       },
     ],
   };

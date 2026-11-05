@@ -7,14 +7,17 @@ import type { FanPoint } from "../../engine/goalViews.ts";
 import { formatAmount } from "../money.ts";
 import { readTokens, useEchart } from "../useEchart.ts";
 import { usesSlotLine } from "./outlook.ts";
+import { fitAxis, SPREAD_END_LABELS } from "./valueAxis.ts";
 
 echarts.use([LineChart, GridComponent, MarkLineComponent, SVGRenderer]);
 
 const BAND_OPACITY = { light: 0.22, dark: 0.3 };
 const EDGE_OPACITY = 0.6;
+/** Pixels kept clear between two end labels. */
+const LABEL_MARGIN = 2;
 const amount = (value: number) => formatAmount(value).replace(/,00/, "");
 
-function buildOption(fan: readonly FanPoint[], target: number, slot: number) {
+export function buildOption(fan: readonly FanPoint[], target: number, slot: number) {
   const colour = readTokens(slot);
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const line = usesSlotLine(slot) ? colour.slot : colour.ink2;
@@ -25,6 +28,7 @@ function buildOption(fan: readonly FanPoint[], target: number, slot: number) {
     color: colour.ink2,
     fontFamily: colour.font,
     fontSize: 13,
+    minMargin: LABEL_MARGIN,
   });
   const last = fan.at(-1) as FanPoint;
   const edge = (name: string, data: number[], endLabel: ReturnType<typeof label>) => ({
@@ -35,6 +39,7 @@ function buildOption(fan: readonly FanPoint[], target: number, slot: number) {
     lineStyle: { width: 1, color: line, opacity: EDGE_OPACITY },
     itemStyle: { color: line },
     endLabel,
+    labelLayout: SPREAD_END_LABELS,
     z: 2,
   });
   return {
@@ -50,7 +55,11 @@ function buildOption(fan: readonly FanPoint[], target: number, slot: number) {
     },
     yAxis: {
       type: "value" as const,
-      min: 0,
+      ...fitAxis(
+        Math.min(...fan.map((point) => point.bad)),
+        Math.max(...fan.map((point) => point.good)),
+        target,
+      ),
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: colour.grid } },
@@ -95,6 +104,7 @@ function buildOption(fan: readonly FanPoint[], target: number, slot: number) {
         lineStyle: { width: 2.25, color: line },
         itemStyle: { color: line },
         endLabel: label("Typical case", last.typical),
+        labelLayout: SPREAD_END_LABELS,
         z: 4,
         markLine: {
           silent: true,
