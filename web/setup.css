@@ -38,8 +38,42 @@
   text-transform: uppercase;
   color: var(--ink2);
 }
+.card-head-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.card-toggle {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.card-toggle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.card-head-row .term {
+  position: relative;
+  z-index: 1;
+}
+.card-toggle[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card-toggle svg {
+    transition: transform 120ms ease-out;
+  }
+}
 .card-body {
   padding: var(--s3);
+}
+.card .card-body[hidden] {
+  display: none;
 }
 .card-body > * + * {
   margin-top: var(--s3);

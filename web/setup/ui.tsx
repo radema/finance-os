@@ -1,20 +1,61 @@
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import type { Loaded } from "../api.ts";
+import { browserStorage, cardKey, readOpen, screenHash, writeOpen } from "./cardState.ts";
 
+/**
+ * A section. The header button folds the body; the state is remembered per screen in the browser,
+ * under `memoryKey` when the title is not plain text. The body stays mounted when folded, so a form
+ * keeps its edits.
+ */
 export function Card({
   title,
   children,
   note,
+  memoryKey,
 }: {
   title: ReactNode;
   children: ReactNode;
   note?: ReactNode;
+  memoryKey?: string;
 }) {
+  const titleId = useId();
+  const bodyId = useId();
+  const name = memoryKey ?? (typeof title === "string" ? title : undefined);
+  const key = name === undefined ? undefined : cardKey(screenHash(), name);
+  const [state, setState] = useState({ key, open: readOpen(browserStorage(), key) });
+  // A Card instance kept across a route change reads the memory of its new key.
+  const open = state.key === key ? state.open : readOpen(browserStorage(), key);
+  const toggle = () => {
+    setState({ key, open: !open });
+    if (key !== undefined) writeOpen(browserStorage(), key, !open);
+  };
   return (
     <section className="card">
-      <header className="card-head">{title}</header>
-      <div className="card-body">
+      <header className="card-head card-head-row">
+        <button
+          className="card-toggle"
+          type="button"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          aria-labelledby={titleId}
+          onClick={toggle}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 12 12"
+            width="12"
+            height="12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path d="M3 4.5 6 7.5 9 4.5" />
+          </svg>
+        </button>
+        <span id={titleId}>{title}</span>
+      </header>
+      <div className="card-body" id={bodyId} hidden={!open}>
         {note ? <p className="note">{note}</p> : null}
         {children}
       </div>
