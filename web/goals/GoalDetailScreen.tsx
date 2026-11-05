@@ -1,10 +1,11 @@
 import type { CSSProperties } from "react";
 import type { GoalAnalysis, GoalDetailView } from "../../engine/goalViews.ts";
+import type { Goal } from "../../engine/schemas.ts";
 import type { PerformanceView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatAmount, formatPercent, formatUnitPrice } from "../money.ts";
-import { GOALS_LIST_ROUTE } from "../nav.ts";
+import { GOALS_LIST_ROUTE, goalDetailHref } from "../nav.ts";
 import { Card, PriorityTag, ProductTag, Resource } from "../setup/ui.tsx";
 import { percentText, scopeQuery, xirrNote } from "../tracking/model.ts";
 import { FanChart } from "./FanChart.tsx";
@@ -252,11 +253,37 @@ function XirrKpi({ goalId }: { goalId: string }) {
   );
 }
 
+/** Back to the Goals list, and a switch to another goal without a trip through the list. */
+function GoalNav({ goalId }: { goalId: string }) {
+  const { data: goals } = useLoad<Goal[]>("/api/goals");
+  return (
+    <div className="goal-nav">
+      <a href={`#/${GOALS_LIST_ROUTE}`}>Back to the Goals list</a>
+      {goals && goals.length > 1 ? (
+        <select
+          aria-label="Switch goal"
+          value={goalId}
+          onChange={(event) => {
+            window.location.hash = goalDetailHref(event.target.value);
+          }}
+        >
+          {goals.map((goal) => (
+            <option key={goal.id} value={goal.id}>
+              {goal.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </div>
+  );
+}
+
 function Detail({ goal }: { goal: GoalDetailView }) {
   const net = goal.projection?.net ?? null;
   const goalDate = `31 December ${goal.targetYear}`;
   return (
     <div style={{ "--slot": `var(--slot${goal.slot})` } as CSSProperties}>
+      <GoalNav goalId={goal.id} />
       <div className="tag">Goal</div>
       <h1 className="title">{goal.name}</h1>
       <p className="unit">
@@ -383,18 +410,7 @@ function Loader({ goalId }: { goalId: string }) {
   return <Resource loaded={loaded}>{(goal) => <Detail goal={goal} />}</Resource>;
 }
 
-/** Goals > Detail: value, P vs required, fan, range, what it would take, holdings, value vs money put in. */
-export function GoalDetailScreen({ goalId }: { goalId: string | undefined }) {
-  if (goalId === undefined) {
-    return (
-      <>
-        <div className="tag">Goal</div>
-        <h1 className="title">Pick a goal</h1>
-        <p className="unit">
-          Open a goal from the <a href={`#/${GOALS_LIST_ROUTE}`}>Goals list</a>.
-        </p>
-      </>
-    );
-  }
-  return <Loader goalId={goalId} />;
+/** A goal's page, opened from the Goals list: value, P vs required, fan, range, what it would take, holdings, value vs money put in. */
+export function GoalDetailScreen({ goalId }: { goalId: string }) {
+  return <Loader key={goalId} goalId={goalId} />;
 }

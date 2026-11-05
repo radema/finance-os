@@ -2,7 +2,16 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AppShell } from "./AppShell.tsx";
-import { findPage, goalDetailHref, goalIdOf, isBuilt, NAV, SETUP_TABS } from "./nav.ts";
+import {
+  findPage,
+  goalDetailHref,
+  goalIdOf,
+  isBuilt,
+  NAV,
+  navKeyOf,
+  resolveRoute,
+  SETUP_TABS,
+} from "./nav.ts";
 
 describe("NAV", () => {
   it("has the seven sections of the spec, in order", () => {
@@ -20,7 +29,7 @@ describe("NAV", () => {
   it("lists the items of each section", () => {
     const labels = (section: string) =>
       NAV.find((s) => s.label === section)?.items.map((item) => item.label);
-    expect(labels("Goals")).toEqual(["List", "Detail", "History"]);
+    expect(labels("Goals")).toEqual(["List", "History"]);
     expect(labels("Analysis")).toEqual(["Optimizer", "Performance", "Plan vs actual"]);
     expect(labels("Operations")).toEqual(["Transactions", "Import", "Prices"]);
     expect(labels("Setup")).toEqual([
@@ -75,6 +84,12 @@ describe("AppShell", () => {
     expect(html).toContain("Add goal");
   });
 
+  it("names the Goals tab of Setup as goal definitions", () => {
+    const html = render("setup/goals");
+    expect(html).toMatch(/aria-current="page"[^>]*>Goal definitions/);
+    expect(html).not.toMatch(/class="tab"[^>]*>Goals</);
+  });
+
   it("drops the soon tag on every Setup item", () => {
     const html = render("setup/products");
     const item = (label: string) =>
@@ -88,9 +103,8 @@ describe("AppShell", () => {
 describe("Goals screens", () => {
   const render = (route: string) => renderToString(createElement(AppShell, { route }));
 
-  it("builds the Goals list and the Goal detail, and drops their soon tags", () => {
+  it("builds the Goals list, and drops its soon tag", () => {
     expect(isBuilt("goals/list")).toBe(true);
-    expect(isBuilt("goals/detail")).toBe(true);
     expect(render("goals/list")).not.toContain("This page is not built yet");
   });
 
@@ -118,14 +132,28 @@ describe("Goals screens", () => {
     expect(goalIdOf("goals/list")).toBeUndefined();
   });
 
-  it("marks Detail as the current page on a goal's detail route", () => {
+  it("has no Detail item in the sidebar, and marks List on a goal's page", () => {
     const html = render("goals/detail/g-car");
-    expect(html).toMatch(/aria-current="page"[^>]*>Detail/);
+    expect(html).not.toMatch(/class="nav-item"[^>]*>Detail/);
+    expect(html).toMatch(/aria-current="page"[^>]*>List/);
     expect(html).not.toContain("This page is not built yet");
   });
 
-  it("asks for a goal on the detail route without an id", () => {
-    expect(render("goals/detail")).toContain("Pick a goal");
+  it("sends the old routes without a goal to the Goals list", () => {
+    expect(resolveRoute("goals/detail")).toBe("goals/list");
+    expect(resolveRoute("goals/detail/")).toBe("goals/list");
+    expect(resolveRoute("goals")).toBe("goals/list");
+  });
+
+  it("keeps every other route as it is, and a goal's page too", () => {
+    expect(resolveRoute("goals/detail/g-car")).toBe("goals/detail/g-car");
+    expect(resolveRoute("setup/goals")).toBe("setup/goals");
+    expect(resolveRoute("overview")).toBe("overview");
+  });
+
+  it("maps a goal's page to the List item of the sidebar", () => {
+    expect(navKeyOf("goals/detail/g-car")).toBe("goals/list");
+    expect(navKeyOf("goals/history")).toBe("goals/history");
   });
 });
 
@@ -134,7 +162,7 @@ describe("SETUP_TABS", () => {
     expect(SETUP_TABS.map((tab) => tab.label)).toEqual([
       "Products",
       "Allocation",
-      "Goals",
+      "Goal definitions",
       "Cash flow",
       "Assumptions",
     ]);
