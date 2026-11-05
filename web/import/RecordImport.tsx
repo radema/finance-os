@@ -8,6 +8,7 @@ import {
 } from "../../engine/recordImport.ts";
 import { api, messageOf } from "../api.ts";
 import { Alert, Card, Field, SelectField } from "../setup/ui.tsx";
+import { TemplateButton } from "./TemplateButton.tsx";
 import { DATES, DECIMALS, DELIMITERS, toBase64 } from "./TransactionsImport.tsx";
 import type { FilePayload, ReadResult } from "./types.ts";
 
@@ -149,6 +150,7 @@ export function RecordImport({ kind, onImported }: { kind: RecordKind; onImporte
           >
             Read pasted text
           </button>
+          <TemplateButton kind={kind} />
         </div>
         <Field label="Or upload a file">
           <input

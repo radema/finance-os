@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, messageOf } from "../api.ts";
+import { TemplateButton } from "../import/TemplateButton.tsx";
 import { Alert, Card, Field, SelectField } from "../setup/ui.tsx";
 import type { ImportResult } from "./types.ts";
 
@@ -108,6 +109,7 @@ export function CsvImport({ onImported }: { onImported: () => void }) {
         >
           Import prices
         </button>
+        <TemplateButton kind="prices" />
       </div>
       <Alert message={error} />
       {result ? (
