@@ -5,7 +5,6 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { Kpi } from "../goals/Kpi.tsx";
 import { formatAmount } from "../money.ts";
-import { goalDetailHref } from "../nav.ts";
 import { Resource } from "../setup/ui.tsx";
 import { MISSING, percentText } from "../tracking/model.ts";
 import {
@@ -133,21 +132,17 @@ function Dashboard({ view }: { view: OverviewView }) {
         <Cell
           id="range"
           title="Range of outcomes"
-          href={view.range ? goalDetailHref(view.range.goalId) : hrefOf(ROUTES.goals)}
+          href={hrefOf(ROUTES.goals)}
           unit={
             <>
               <TermPopover term="badcase">Bad case</TermPopover>,{" "}
               <TermPopover term="typical">typical case</TermPopover> and{" "}
-              <TermPopover term="goodcase">good case</TermPopover> at the goal date, against the
-              target.
+              <TermPopover term="goodcase">good case</TermPopover> of each goal at its date, as a
+              percentage of its own target.
             </>
           }
         >
-          {view.range ? (
-            <RangeCell range={view.range} />
-          ) : (
-            <p className="note">No goal has an analysis yet.</p>
-          )}
+          <RangeCell ranges={view.ranges} />
         </Cell>
         <Cell
           id="cash-flow"

@@ -45,6 +45,8 @@ export type GoalDistribution = {
   p10: number[];
   p50: number[];
   p90: number[];
+  /** Net value at the goal date of every path, ascending: the sample the last quantiles come from. */
+  outcomes: number[];
   /** Mean over all paths of max(0, target at goal date − net at goal date). */
   avgShortfall: number;
 };
@@ -234,6 +236,7 @@ export function runMonteCarlo(
       p10: series.map((step) => quantile(step, P10)),
       p50: series.map((step) => quantile(step, P50)),
       p90: series.map((step) => quantile(step, P90)),
+      outcomes: series.at(-1) as number[],
       avgShortfall: shortfall / paths,
     };
   });

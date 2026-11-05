@@ -4,6 +4,7 @@ import {
   lognormalParams,
   type MonteCarloGoal,
   type MonteCarloProduct,
+  quantile,
   runMonteCarlo,
   simulatePaths,
 } from "./monteCarlo.ts";
@@ -79,6 +80,14 @@ describe("runMonteCarlo", () => {
     const a = runMonteCarlo(inputs, 42, 300);
     expect(runMonteCarlo(inputs, 42, 300)).toEqual(a);
     expect(runMonteCarlo(inputs, 43, 300)).not.toEqual(a);
+  });
+
+  it("returns the sorted net of every path at the goal date, the sample the quantiles come from", () => {
+    const [result] = runMonteCarlo(inputs, 42, 300).goals;
+    const outcomes = result?.outcomes ?? [];
+    expect(outcomes).toHaveLength(300);
+    expect(outcomes).toEqual(outcomes.toSorted((a, b) => a - b));
+    expect(quantile(outcomes, 0.5)).toBe(result?.p50.at(-1));
   });
 
   it("returns the median net equal to the deterministic net when sigma is 0 (AC-53)", () => {
