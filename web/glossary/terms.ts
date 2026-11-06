@@ -28,6 +28,12 @@ export const GLOSSARY = {
     explanation:
       "The same plan run 1,000 times with random but realistic market moves. The same seed gives the same result every time.",
   },
+  atrisk: {
+    en: "at-risk band",
+    it: "Fascia a rischio",
+    explanation:
+      "How far below its required probability a goal can fall and still count as At risk. By default, within 15 points it is At risk; further below it is Off track.",
+  },
   badcase: {
     en: "bad case",
     it: "Scenario sfavorevole",

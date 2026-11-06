@@ -127,7 +127,7 @@ function useDocumentForm<T>(
   };
 }
 
-function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }) {
+export function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }) {
   const form = useDocumentForm("/api/settings", settings, settingsToValues, valuesToSettings);
   const { values, set } = form;
   const field = (key: string, label: ReactNode, hint?: string, step?: string) => (
@@ -150,7 +150,11 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
       <Card title="Taxes and economy">
         <RequiredLegend />
         <div className="form-grid">
-          {field("inflation", "Inflation (% a year)", "Not in the spec: the mock's 2%.")}
+          {field(
+            "inflation",
+            "Inflation (% a year)",
+            "Used to turn today's euros into future euros.",
+          )}
           {field("taxStd", "Tax on ETF gains and direct holdings (%)")}
           {field("taxGovt", "Tax on government bonds (%)")}
           {field(
@@ -191,7 +195,7 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
             undefined,
             "1",
           )}
-          {field("seed", "Random seed", "Not in the spec: the mock's 42.", "1")}
+          {field("seed", "Random seed", "The same seed gives the same simulated results.", "1")}
           <TextField
             label="Tracking starts (YYYY-MM)"
             value={values.trackingStart ?? ""}
@@ -224,11 +228,37 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
       </Card>
       <Card title="Rule thresholds">
         <div className="form-grid">
-          {field("r1Months", "R1: months", undefined, "1")}
-          {field("r3Months", "R3: months", undefined, "1")}
-          {field("r7Multiple", "R7: multiple")}
-          {field("statusBand", "Status band (points)")}
-          {field("priceAge", "Daily price age (days)", undefined, "1")}
+          {field(
+            "r1Months",
+            "Behind plan: alert after (months)",
+            "Alert when your saving is behind plan by this many months of contributions.",
+            "1",
+          )}
+          {field(
+            "r3Months",
+            "Maturity ahead: warn within (months)",
+            "Warn when a product you hold matures within this many months.",
+            "1",
+          )}
+          {field(
+            "r7Multiple",
+            "Costly trades: alert above (times your fee rate)",
+            "Alert when a trade of the last 12 months costs more than this many times your fee rate.",
+          )}
+          {field(
+            "statusBand",
+            <>
+              <TermPopover term="atrisk">At-risk band</TermPopover> (points below the required
+              probability)
+            </>,
+            "A goal this close below its required probability is At risk. Further below is Off track.",
+          )}
+          {field(
+            "priceAge",
+            "Price counts as old after (days)",
+            "An online price older than this is marked old.",
+            "1",
+          )}
         </div>
       </Card>
       <div className="actions">

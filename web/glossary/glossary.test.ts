@@ -11,6 +11,7 @@ const LISTED = [
   "prob",
   "required",
   "simulated",
+  "atrisk",
   "badcase",
   "typical",
   "goodcase",
