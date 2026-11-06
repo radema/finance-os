@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { Card, Field, TextField } from "./ui.tsx";
+import { Card, Field, NumberField, TextField } from "./ui.tsx";
 
 type Props<T extends (props: never) => unknown> = Parameters<T>[0];
 const card = (props: Omit<Props<typeof Card>, "children">) =>
@@ -65,5 +65,26 @@ describe("Field with a term label (AC-89)", () => {
       ),
     );
     expect(text).toMatch(/<label[^>]*for="([^"]+)"/);
+  });
+});
+
+describe("NumberField unit (AC-89)", () => {
+  const number = (unit?: string) =>
+    render(
+      createElement(NumberField, { label: "RAL a year", value: "", onChange: () => {}, unit }),
+    );
+
+  it("shows the unit inside the field and names it with the control", () => {
+    const html = number("€");
+    const unitId = /<span id="([^"]+)" class="field-unit">€<\/span>/.exec(html)?.[1];
+    expect(unitId).toBeDefined();
+    expect(html).toMatch(new RegExp(`<input[^>]*aria-labelledby="[^"]+ ${unitId}"`));
+    expect(html).toMatch(/<span class="input-unit"><input.*field-unit.*<\/span><\/span>/);
+  });
+
+  it("is unchanged without a unit", () => {
+    const html = number();
+    expect(html).not.toContain("field-unit");
+    expect(html).not.toContain("input-unit");
   });
 });

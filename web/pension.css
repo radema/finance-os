@@ -12,6 +12,9 @@ input.flow-input {
   max-width: 7em;
   text-align: right;
 }
+input.flow-input::placeholder {
+  color: var(--muted);
+}
 .capital-note {
   max-width: 46em;
 }

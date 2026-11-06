@@ -180,6 +180,19 @@
 .inline-form > .field > .field-hint {
   margin-top: var(--s1);
 }
+/* A form that keeps the hint row of every field, so the rows of controls stay level. */
+.form-grid-hints > .field:not(:has(> .field-hint))::after {
+  content: "";
+  min-height: var(--lh-callout);
+  margin-top: var(--s1);
+}
+.form-section {
+  margin: 0;
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  font-weight: 500;
+  color: var(--ink2);
+}
 input[type="text"],
 input[type="number"],
 input[type="date"],
@@ -202,6 +215,35 @@ input[type="number"],
 input[type="date"],
 select {
   height: var(--control-h);
+}
+/* A number with its unit inside the box: the box takes the border, the input and the unit sit in it. */
+.input-unit {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: var(--control-h);
+  border: 1px solid var(--base);
+  border-radius: 4px;
+  background: var(--raised);
+}
+.input-unit:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.input-unit input[type="number"] {
+  flex: 1;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+.input-unit input[type="number"]:focus-visible {
+  outline: none;
+}
+.field-unit {
+  padding-right: var(--s2);
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  color: var(--ink2);
 }
 .check {
   display: flex;

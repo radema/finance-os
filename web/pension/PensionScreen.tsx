@@ -16,7 +16,7 @@ import {
   SelectField,
 } from "../setup/ui.tsx";
 import { CapitalNote } from "./CapitalNote.tsx";
-import { flowKey, type PlanValues, planToValues, valuesToPlan } from "./planForm.ts";
+import { flowKey, isPlanDirty, type PlanValues, planToValues, valuesToPlan } from "./planForm.ts";
 import { ScheduleChart } from "./ScheduleChart.tsx";
 
 const FLOWS: readonly PensionFlow["flow"][] = ["Work", "Voluntary"];
@@ -79,26 +79,35 @@ function ThisYear({ year }: { year: PensionThisYear }) {
 
 function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void }) {
   const productIds = view.pensionProducts.map((product) => product.id);
+  const storedValues = () => (view.plan ? planToValues(view.plan, view.goals[0]?.id ?? "") : null);
   const [values, setValues] = useState<PlanValues>(() =>
     planToValues(view.plan, view.goals[0]?.id ?? ""),
   );
+  // What is saved, as the form's text: edits are compared with it.
+  const [savedValues, setSavedValues] = useState<PlanValues | null>(storedValues);
   const [error, setError] = useState<string>();
-  const [saved, setSaved] = useState(false);
   // A reload replaces the stored plan: show it.
   // biome-ignore lint/correctness/useExhaustiveDependencies: only a new stored plan resets the form
   useEffect(() => {
     setValues(planToValues(view.plan, view.goals[0]?.id ?? ""));
+    setSavedValues(storedValues());
   }, [view.plan]);
 
-  const set = (key: string) => (value: string) => {
+  const set = (key: string) => (value: string) =>
     setValues((current) => ({ ...current, [key]: value }));
-    setSaved(false);
-  };
-  const field = (key: string, label: string, hint?: string, step?: string, required = true) => (
+  const field = (
+    key: string,
+    label: string,
+    unit?: string,
+    hint?: string,
+    step?: string,
+    required = true,
+  ) => (
     <NumberField
       label={label}
       value={values[key] ?? ""}
       onChange={set(key)}
+      unit={unit}
       hint={hint}
       step={step}
       required={required}
@@ -108,11 +117,10 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
     try {
       await api("PUT", "/api/pension-plan", { body: valuesToPlan(values, productIds) });
       setError(undefined);
-      setSaved(true);
+      setSavedValues(values);
       onSaved();
     } catch (failure) {
       setError(messageOf(failure));
-      setSaved(false);
     }
   };
 
@@ -123,30 +131,31 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
         void save();
       }}
     >
-      <Card title="Inputs">
+      <Card title="Pension plan">
+        <h3 className="form-section">Inputs</h3>
         <RequiredLegend />
-        <div className="form-grid">
+        <div className="form-grid form-grid-hints">
           <SelectField
             label="Pension goal"
             value={values.goalId ?? ""}
             onChange={set("goalId")}
             options={view.goals.map((goal) => ({ value: goal.id, label: goal.name }))}
           />
-          {field("firstYear", "First year of membership", undefined, "1")}
-          {field("ral", "RAL (EUR a year)", "Blank: no schedule.", "0.01", false)}
-          {field("ralGrowth", "RAL growth (% a year)")}
-          {field("tfrPct", "TFR (% of RAL)")}
-          {field("workerPct", "Worker (% of RAL)")}
-          {field("employerPct", "Employer (% of RAL)")}
-          {field("voluntary", "Voluntary (EUR a year)", "Blank: up to the cap.", "0.01", false)}
-          {field("marginalRate", "Marginal tax rate (%)")}
-          {field("extra", "Extra deduction (EUR a year)", undefined, "0.01")}
+          {field("firstYear", "First year of membership", undefined, undefined, "1")}
+          {field("ral", "RAL a year", "€", "Blank: no schedule.", "0.01", false)}
+          {field("ralGrowth", "RAL growth a year", "%")}
+          {field("tfrPct", "TFR share of RAL", "%")}
+          {field("workerPct", "Worker share of RAL", "%")}
+          {field("employerPct", "Employer share of RAL", "%")}
+          {field("voluntary", "Voluntary a year", "€", "Blank: up to the cap.", "0.01", false)}
+          {field("marginalRate", "Marginal tax rate", "%")}
+          {field("extra", "Extra deduction a year", "€", undefined, "0.01")}
         </div>
-      </Card>
-      <Card
-        title="Flows"
-        note="Each flow is split between your pension funds by these shares. Work is TFR, worker and employer; Voluntary is the rest."
-      >
+        <h3 className="form-section">Flows</h3>
+        <p className="note">
+          Each flow is split between your pension funds by these shares. Work is TFR, worker and
+          employer; Voluntary is the rest. A blank share is no flow.
+        </p>
         {view.pensionProducts.length === 0 ? (
           <p className="note">There is no pension fund yet. Add one in Setup, Products.</p>
         ) : (
@@ -172,6 +181,7 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
                           className="flow-input"
                           type="number"
                           step="any"
+                          placeholder="0"
                           aria-label={`${product.name}, ${flow} flow (%)`}
                           value={values[flowKey(flow, product.id)] ?? ""}
                           onChange={(event) => set(flowKey(flow, product.id))(event.target.value)}
@@ -184,14 +194,16 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
             </table>
           </div>
         )}
+        <Alert message={error} />
+        <div className="actions">
+          <button className="btn btn-primary" type="submit">
+            Save pension plan
+          </button>
+          <span className="saved" role="status">
+            {isPlanDirty(values, savedValues) ? "Unsaved changes" : "Saved"}
+          </span>
+        </div>
       </Card>
-      <div className="actions">
-        <button className="btn btn-primary" type="submit">
-          Save pension plan
-        </button>
-        {saved ? <span className="saved">Saved.</span> : null}
-      </div>
-      <Alert message={error} />
     </form>
   );
 }
