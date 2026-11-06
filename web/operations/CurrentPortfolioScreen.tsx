@@ -5,7 +5,15 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro } from "../money.ts";
 import { TRANSACTIONS_ROUTE } from "../nav.ts";
-import { Alert, Card, Field, NumberField, ProductTag, Resource } from "../setup/ui.tsx";
+import {
+  Alert,
+  Card,
+  Field,
+  NumberField,
+  ProductTag,
+  RequiredLegend,
+  Resource,
+} from "../setup/ui.tsx";
 import { SplitControl } from "../split/SplitControl.tsx";
 import type { Bucket } from "../split/splitState.ts";
 import { buildOpeningInput, defaultAsOf, type OpeningRow } from "./openingForm.ts";
@@ -169,8 +177,14 @@ function Form({
         title="As of"
         note={`The default is the first day of the tracking start month (${trackingStart}).`}
       >
-        <Field label="As-of date">
-          <input type="date" value={asOf} onChange={(event) => setAsOf(event.target.value)} />
+        <RequiredLegend />
+        <Field label="As-of date" required>
+          <input
+            type="date"
+            required
+            value={asOf}
+            onChange={(event) => setAsOf(event.target.value)}
+          />
         </Field>
       </Card>
       {products.map((product) => (

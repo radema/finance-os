@@ -15,6 +15,7 @@ import {
   Field,
   NumberField,
   ProductTag,
+  RequiredLegend,
   Resource,
   SelectField,
   TextField,
@@ -137,6 +138,7 @@ function AddForm({
 
   return (
     <Card title={editing ? "Edit transaction" : "Add transaction"}>
+      <RequiredLegend />
       <form
         className="form-grid"
         onSubmit={(event) => {
@@ -144,8 +146,13 @@ function AddForm({
           void save();
         }}
       >
-        <Field label="Date">
-          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+        <Field label="Date" required>
+          <input
+            type="date"
+            required
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+          />
         </Field>
         <SelectField
           label="Bucket"
@@ -183,6 +190,7 @@ function AddForm({
           label={type === "coupon" ? "Net cash received (€)" : "Amount (€)"}
           value={amount}
           onChange={setAmount}
+          required
           hint={
             product?.regime === "govt"
               ? "Government bonds: qty = amount / (price / 100)."
@@ -190,7 +198,7 @@ function AddForm({
           }
         />
         {type === "coupon" ? null : (
-          <NumberField label="Price" value={price} onChange={setPrice} hint={priceNote} />
+          <NumberField label="Price" value={price} onChange={setPrice} hint={priceNote} required />
         )}
         <NumberField
           label="Commission paid (€, optional)"

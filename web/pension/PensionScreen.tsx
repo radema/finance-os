@@ -6,7 +6,15 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
-import { Alert, Card, NumberField, PriorityTag, Resource, SelectField } from "../setup/ui.tsx";
+import {
+  Alert,
+  Card,
+  NumberField,
+  PriorityTag,
+  RequiredLegend,
+  Resource,
+  SelectField,
+} from "../setup/ui.tsx";
 import { CapitalNote } from "./CapitalNote.tsx";
 import { flowKey, type PlanValues, planToValues, valuesToPlan } from "./planForm.ts";
 import { ScheduleChart } from "./ScheduleChart.tsx";
@@ -86,13 +94,14 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
     setValues((current) => ({ ...current, [key]: value }));
     setSaved(false);
   };
-  const field = (key: string, label: string, hint?: string, step?: string) => (
+  const field = (key: string, label: string, hint?: string, step?: string, required = true) => (
     <NumberField
       label={label}
       value={values[key] ?? ""}
       onChange={set(key)}
       hint={hint}
       step={step}
+      required={required}
     />
   );
   const save = async () => {
@@ -115,6 +124,7 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
       }}
     >
       <Card title="Inputs">
+        <RequiredLegend />
         <div className="form-grid">
           <SelectField
             label="Pension goal"
@@ -123,12 +133,12 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
             options={view.goals.map((goal) => ({ value: goal.id, label: goal.name }))}
           />
           {field("firstYear", "First year of membership", undefined, "1")}
-          {field("ral", "RAL (EUR a year)", "Blank: no schedule.", "0.01")}
+          {field("ral", "RAL (EUR a year)", "Blank: no schedule.", "0.01", false)}
           {field("ralGrowth", "RAL growth (% a year)")}
           {field("tfrPct", "TFR (% of RAL)")}
           {field("workerPct", "Worker (% of RAL)")}
           {field("employerPct", "Employer (% of RAL)")}
-          {field("voluntary", "Voluntary (EUR a year)", "Blank: up to the cap.", "0.01")}
+          {field("voluntary", "Voluntary (EUR a year)", "Blank: up to the cap.", "0.01", false)}
           {field("marginalRate", "Marginal tax rate (%)")}
           {field("extra", "Extra deduction (EUR a year)", undefined, "0.01")}
         </div>

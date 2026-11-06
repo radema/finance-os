@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ASSET_CLASSES } from "../../engine/assetClasses.ts";
 import type { Product, ProductInput } from "../../engine/schemas.ts";
 import { PRICE_SOURCES, REGIMES } from "../../engine/schemas.ts";
@@ -7,6 +7,7 @@ import { fractionToPercent, percentToFraction } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { hashParams } from "../hashQuery.ts";
 import { formatPercent } from "../money.ts";
+import { regimeHint } from "./regime.ts";
 import {
   Alert,
   Card,
@@ -14,6 +15,7 @@ import {
   ConfirmButton,
   NumberField,
   ProductTag,
+  RequiredLegend,
   Resource,
   SelectField,
   TextField,
@@ -110,6 +112,8 @@ export function ProductsTab() {
   const [editing, setEditing] = useState<string>();
   const [error, setError] = useState<string>();
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm({ ...form, [key]: value });
+  const suggested = regimeHint(form.assetClass, form.regime);
+  const regimeSelect = useRef<HTMLSelectElement>(null);
 
   const reset = () => {
     setForm(EMPTY);
@@ -141,6 +145,7 @@ export function ProductsTab() {
   return (
     <>
       <Card title={editing ? "Edit product" : "Add product"}>
+        <RequiredLegend />
         <form
           className="form-grid"
           onSubmit={(event) => {
@@ -148,7 +153,7 @@ export function ProductsTab() {
             void save();
           }}
         >
-          <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} />
+          <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} required />
           <TextField
             label={<TermPopover term="isin">ISIN</TermPopover>}
             value={form.isin}
@@ -166,6 +171,25 @@ export function ProductsTab() {
             value={form.regime}
             onChange={(v) => set("regime", v)}
             options={options(REGIMES, REGIME_LABEL)}
+            wrap="div"
+            selectRef={regimeSelect}
+            hint={
+              suggested ? (
+                <>
+                  Usually {REGIME_LABEL[suggested]} for this class.{" "}
+                  <button
+                    className="link-button"
+                    type="button"
+                    onClick={() => {
+                      set("regime", suggested);
+                      regimeSelect.current?.focus();
+                    }}
+                  >
+                    Use it
+                  </button>
+                </>
+              ) : undefined
+            }
           />
           <SelectField
             label="Price source"
@@ -177,13 +201,20 @@ export function ProductsTab() {
             label="Expected return (% a year)"
             value={form.expReturn}
             onChange={(v) => set("expReturn", v)}
+            required
           />
           <NumberField
             label="Volatility (% a year)"
             value={form.volatility}
             onChange={(v) => set("volatility", v)}
+            required
           />
-          <NumberField label="TER (% a year)" value={form.ter} onChange={(v) => set("ter", v)} />
+          <NumberField
+            label="TER (% a year)"
+            value={form.ter}
+            onChange={(v) => set("ter", v)}
+            required
+          />
           <NumberField
             label={
               <>

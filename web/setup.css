@@ -128,6 +128,32 @@
   font-weight: 500;
   color: var(--ink2);
 }
+.field-required {
+  color: var(--hl);
+}
+.form-legend {
+  margin: 0;
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  color: var(--ink2);
+}
+.form-legend > span {
+  color: var(--hl);
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--base);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link-button:hover {
+  text-decoration-color: var(--ink);
+}
 /* A form is a grid of equal columns. Each field spans three rows (label, control, hint) of the grid,
    so the controls of one row share one top edge whatever the labels and hints do. */
 .form-grid,
