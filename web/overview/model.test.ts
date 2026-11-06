@@ -53,7 +53,7 @@ describe("actionTitle", () => {
 
 describe("signedAmount", () => {
   it("writes the sign of a change, and a dash when there is none", () => {
-    expect(signedAmount(-1_240.88)).toBe("-1240,88 €");
+    expect(signedAmount(-1_240.88)).toBe("-1.240,88 €");
     expect(signedAmount(100)).toBe("+100,00 €");
     expect(signedAmount(null)).toBe("–");
   });

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, messageOf, useLoad } from "../api.ts";
+import { formatPrice } from "../money.ts";
 import { Alert, Card, Resource } from "../setup/ui.tsx";
 import type { FetchResult, ReviewItem, ReviewState } from "./types.ts";
 
@@ -7,10 +8,6 @@ const REASON_LABEL: Record<ReviewItem["reason"], string> = {
   "non-eur": "Not in EUR",
   "move-above-25": "Moved more than 25%",
 };
-
-// The price is in the provider's currency, shown in its own column, so it is a plain number.
-const formatNumber = (value: number): string =>
-  value.toLocaleString("it-IT", { maximumFractionDigits: 4 });
 
 /** Fetch latest prices, the fetch problems and the review list of held-back prices. */
 export function OnlinePrices({ onChanged }: { onChanged: () => void }) {
@@ -91,7 +88,7 @@ export function OnlinePrices({ onChanged }: { onChanged: () => void }) {
                         <td>{item.productName}</td>
                         <td>{item.ticker}</td>
                         <td>{item.date}</td>
-                        <td className="num">{formatNumber(item.price)}</td>
+                        <td className="num">{formatPrice(item.price)}</td>
                         <td>{item.currency}</td>
                         <td>{REASON_LABEL[item.reason]}</td>
                         <td>
