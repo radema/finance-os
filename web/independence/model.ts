@@ -1,9 +1,12 @@
 import type { IndependenceView } from "../../engine/independenceView.ts";
 import type { FireSettings } from "../../engine/schemas.ts";
-import { eurosToCents, num } from "../forms.ts";
+import { eurosToCents, fractionToPercent, num } from "../forms.ts";
 
 /** "P(reached in 20 y)" reads the point at 31 December of Y0 + this many years. */
 export const REACH_YEARS = 20;
+
+/** The projection runs this many years: "not within" it means never reached. */
+export const HORIZON_YEARS = 40;
 
 export const LEVEL_NAMES = ["Level 1 Safety", "Level 2", "Level 3"] as const;
 /** The Level 1 wealth leaves the pension out. */
@@ -66,6 +69,65 @@ export function reachedWithin(
   const year = Number(view.asOf.slice(0, 4)) + REACH_YEARS;
   const point = view.result?.points.find((candidate) => candidate.year === year);
   return point ? { year, p: point.pReached[level] as number } : null;
+}
+
+/** One KPI tile: when a level is reached. */
+export interface LevelTile {
+  level: number;
+  name: string;
+  /** Target today, today's euros. */
+  target: number;
+  /** False when the target is 0: there is nothing to reach until expenses are set. */
+  set: boolean;
+  /** Calendar year the typical case reaches the level. Null when never within the projection. */
+  typical: number | null;
+  /** Calendar year the deterministic line reaches the level. Null when never. */
+  deterministic: number | null;
+  /** The chance of being there by 31 December of Y0 + `REACH_YEARS`. */
+  chance: number | null;
+}
+
+/** One tile per level. Null without a result. */
+export function levelTiles(view: IndependenceView): LevelTile[] | null {
+  const { result } = view;
+  if (!result) return null;
+  return result.levels.map((target, level) => {
+    const set = target > 0;
+    return {
+      level,
+      name: LEVEL_NAMES[level] ?? `Level ${level + 1}`,
+      target,
+      set,
+      typical: set ? (result.reached[level]?.median ?? null) : null,
+      deterministic: set ? (result.reached[level]?.deterministic ?? null) : null,
+      chance: set ? (reachedWithin(view, level)?.p ?? null) : null,
+    };
+  });
+}
+
+/** The chart title: which levels the typical case reaches, and when. */
+export function reachTitle(tiles: readonly LevelTile[]): string {
+  const set = tiles.filter((tile) => tile.set);
+  const reached = set.flatMap((tile) =>
+    tile.typical === null ? [] : [`Level ${tile.level + 1} in ${tile.typical}`],
+  );
+  if (reached.length === 0)
+    return `The typical case reaches no level within ${HORIZON_YEARS} years`;
+  const list =
+    reached.length === 1 ? reached[0] : `${reached.slice(0, -1).join(", ")} and ${reached.at(-1)}`;
+  const missing =
+    reached.length < set.length ? `; not every level within ${HORIZON_YEARS} years` : "";
+  return `The typical case reaches ${list}${missing}`;
+}
+
+/** Why the level lines are flat, rise or fall: expense growth is growth above inflation. */
+export function levelLinesNote(expenseGrowth: number): string {
+  if (expenseGrowth === 0) {
+    return "The level lines are flat because your expenses keep up with prices.";
+  }
+  const percent = `${fractionToPercent(Math.abs(expenseGrowth))}%`;
+  const [move, side] = expenseGrowth > 0 ? ["rise", "above"] : ["fall", "below"];
+  return `The level lines ${move} ${percent} a year because your expenses grow ${percent} a year ${side} inflation.`;
 }
 
 /** What the number fields hold while the user types. */
