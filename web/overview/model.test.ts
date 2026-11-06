@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GoalListRow } from "../../engine/goalViews.ts";
+import type { IndependenceView } from "../../engine/independenceView.ts";
 import type { Alert, RuleId } from "../../engine/rules.ts";
 import { goalIdOf, isBuilt } from "../nav.ts";
 import {
@@ -101,5 +102,34 @@ describe("levelRows", () => {
         note: null,
       }),
     ).toEqual([]);
+  });
+
+  const withLevels = (levels: number[]): IndependenceView => ({
+    asOf: "2026-10-31",
+    fire: {} as never,
+    expenses: { essentialCents: 0, optionalCents: 0, expenseGrowth: 0 },
+    inflation: 0,
+    goals: [{ id: "g", name: "Home", slot: 2, isPension: false, today: 18_000 } as never],
+    result: {
+      levels,
+      reached: [
+        { median: 2026, deterministic: 2026 },
+        { median: 2026, deterministic: 2026 },
+        { median: 2040, deterministic: 2041 },
+      ],
+    } as never,
+    note: null,
+  });
+
+  it("marks a level with target 0 as not set: no year, no share (AC-89)", () => {
+    const [unset] = levelRows(withLevels([0, 300_000, 400_000]));
+    expect(unset).toMatchObject({ set: false, progress: null, median: null, deterministic: null });
+  });
+
+  it("gives a reached level with a target above 0 the current year (AC-89)", () => {
+    const [reached, , later] = levelRows(withLevels([12_000, 300_000, 400_000]));
+    expect(reached).toMatchObject({ set: true, median: 2026, deterministic: 2026 });
+    expect(reached?.progress).toBeCloseTo(1.5, 12);
+    expect(later).toMatchObject({ set: true, median: 2040, deterministic: 2041 });
   });
 });
