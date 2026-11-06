@@ -79,6 +79,12 @@ describe("Glossary & method screen (AC-85)", () => {
     }
   });
 
+  it("makes the glossary card an h2 and each method note an h3 under the Method notes h2", () => {
+    expect(html).toMatch(/<h2[^>]*>.*?Glossary<\/span><\/h2>/);
+    expect(html).toContain('<h2 class="block-title">Method notes</h2>');
+    expect(html.match(/<h3 /g)).toHaveLength(METHOD_TOPICS.length);
+  });
+
   it("covers each method topic, the four simplifications and the capital note", () => {
     for (const topic of METHOD_TOPICS) expect(html).toContain(topic);
     expect(html).toContain("exit tax base is all contributions");

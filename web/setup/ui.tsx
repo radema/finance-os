@@ -4,7 +4,7 @@ import type { Loaded } from "../api.ts";
 import { browserStorage, cardKey, readOpen, screenHash, writeOpen } from "./cardState.ts";
 
 /**
- * A section. The header button folds the body; the state is remembered per screen in the browser,
+ * A section. Its title is a heading, and the button in it folds the body; the state is remembered per screen in the browser,
  * under `memoryKey` when the title is not plain text. The body stays mounted when folded, so a form
  * keeps its edits.
  */
@@ -13,12 +13,16 @@ export function Card({
   children,
   note,
   memoryKey,
+  level = 2,
 }: {
   title: ReactNode;
   children: ReactNode;
   note?: ReactNode;
   memoryKey?: string;
+  /** The heading level of the title: 3 inside a section that already has an h2. */
+  level?: 2 | 3;
 }) {
+  const Heading = level === 2 ? "h2" : "h3";
   const titleId = useId();
   const bodyId = useId();
   const name = memoryKey ?? (typeof title === "string" ? title : undefined);
@@ -32,7 +36,7 @@ export function Card({
   };
   return (
     <section className="card">
-      <header className="card-head card-head-row">
+      <Heading className="card-head card-head-row" aria-labelledby={titleId}>
         <button
           className="card-toggle"
           type="button"
@@ -54,7 +58,7 @@ export function Card({
           </svg>
         </button>
         <span id={titleId}>{title}</span>
-      </header>
+      </Heading>
       <div className="card-body" id={bodyId} hidden={!open}>
         {note ? <p className="note">{note}</p> : null}
         {children}
@@ -116,11 +120,12 @@ export function Field({
   required?: boolean;
   /** The root element. Keep it the same for the life of a field: a change remounts the control. */
   wrap?: "label" | "div";
-  /** The control. A function gets the id of the label text, for `aria-labelledby`. */
-  children: ReactNode | ((labelId: string) => ReactNode);
+  /** The control. A function gets the id of the label text, for `aria-labelledby`, and the id the control takes. */
+  children: ReactNode | ((labelId: string, controlId: string) => ReactNode);
 }) {
   const labelId = useId();
-  const control = typeof children === "function" ? children(labelId) : children;
+  const controlId = useId();
+  const control = typeof children === "function" ? children(labelId, controlId) : children;
   const hintText = hint ? <span className="field-hint">{hint}</span> : null;
   const mark = required ? (
     <span className="field-required" aria-hidden="true">
@@ -128,14 +133,16 @@ export function Field({
       *
     </span>
   ) : null;
-  // A term button in the label, or a button in the hint, is a second labelable element: the field is a div.
+  // A term button in the label, or a button in the hint, is a second labelable element: the field is a div,
+  // and the label row points at the control with `for`. A click on the term opens its popover; the rest of
+  // the row focuses the control.
   if (typeof label !== "string" || wrap === "div") {
     return (
       <div className="field">
-        <span className="field-label">
+        <label className="field-label" htmlFor={controlId}>
           <span id={labelId}>{label}</span>
           {mark}
-        </span>
+        </label>
         {control}
         {hintText}
       </div>
@@ -169,8 +176,9 @@ export function TextField({
 }) {
   return (
     <Field label={label} hint={hint} required={required}>
-      {(labelId) => (
+      {(labelId, controlId) => (
         <input
+          id={controlId}
           type="text"
           aria-labelledby={labelId}
           aria-required={required}
@@ -199,8 +207,9 @@ export function NumberField({
 }) {
   return (
     <Field label={label} hint={hint} required={required}>
-      {(labelId) => (
+      {(labelId, controlId) => (
         <input
+          id={controlId}
           type="number"
           inputMode="decimal"
           aria-labelledby={labelId}
@@ -233,8 +242,9 @@ export function SelectField({
 }) {
   return (
     <Field label={label} hint={hint} wrap={wrap}>
-      {(labelId) => (
+      {(labelId, controlId) => (
         <select
+          id={controlId}
           ref={selectRef}
           aria-labelledby={labelId}
           value={value}
