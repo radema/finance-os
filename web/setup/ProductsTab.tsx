@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { ASSET_CLASSES } from "../../engine/assetClasses.ts";
 import type { Product, ProductInput } from "../../engine/schemas.ts";
 import { PRICE_SOURCES, REGIMES } from "../../engine/schemas.ts";
-import { api, messageOf, useLoad } from "../api.ts";
+import { api, useLoad } from "../api.ts";
+import { checkFields, type Rule } from "../formErrors.ts";
 import { fractionToPercent, percentToFraction } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { hashParams } from "../hashQuery.ts";
@@ -22,6 +23,7 @@ import {
   SelectField,
   TextField,
 } from "./ui.tsx";
+import { useFormErrors } from "./useFormErrors.ts";
 
 const REGIME_LABEL: Record<string, string> = {
   etf: "ETF",
@@ -61,6 +63,28 @@ const EMPTY: Form = {
   zeroCommission: false,
   priceSource: "manual",
   ticker: "",
+};
+
+const LABELS = {
+  name: "Name",
+  expReturn: "Expected return",
+  volatility: "Volatility",
+  ter: "TER",
+  whiteListShare: "White-list share",
+  couponRate: "Coupon rate",
+  maturity: "Maturity",
+};
+
+const RULES: Record<
+  "name" | "expReturn" | "volatility" | "ter" | "whiteListShare" | "couponRate",
+  Rule
+> = {
+  name: "text",
+  expReturn: "number",
+  volatility: "number",
+  ter: "number",
+  whiteListShare: "number",
+  couponRate: "number",
 };
 
 const toForm = (p: Product): Form => ({
@@ -113,8 +137,11 @@ export function ProductsTab() {
   });
   const [editing, setEditing] = useState<string>();
   const [copying, setCopying] = useState(false);
-  const [error, setError] = useState<string>();
-  const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm({ ...form, [key]: value });
+  const { errors, alert, reject, fail, clear } = useFormErrors<keyof typeof LABELS>(LABELS);
+  const set = <K extends keyof Form>(key: K, value: Form[K]) => {
+    setForm({ ...form, [key]: value });
+    clear(key as keyof typeof LABELS);
+  };
   const setRegime = (regime: string) => setForm(resetHiddenFields({ ...form, regime }));
   const shown = regimeFields(form.regime);
   const suggested = regimeHint(form.assetClass, form.regime);
@@ -127,25 +154,27 @@ export function ProductsTab() {
     setCopying(false);
   };
   const save = async () => {
+    const problems = checkFields(form, RULES, LABELS);
+    if (Object.keys(problems).length > 0) return reject(problems);
     try {
       const body = toInput(form);
       if (editing) await api("PUT", "/api/products", { body: { id: editing, ...body } });
       else await api("POST", "/api/products", { body });
-      setError(undefined);
+      clear();
       reset();
       products.reload();
     } catch (failure) {
-      setError(messageOf(failure));
+      fail(failure);
     }
   };
   const remove = async (id: string) => {
     try {
       await api("DELETE", "/api/products", { query: { id } });
-      setError(undefined);
+      clear();
       if (editing === id) reset();
       products.reload();
     } catch (failure) {
-      setError(messageOf(failure));
+      fail(failure);
     }
   };
 
@@ -156,6 +185,7 @@ export function ProductsTab() {
         <form
           ref={formRef}
           className="product-form"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             void save();
@@ -163,7 +193,13 @@ export function ProductsTab() {
         >
           <h3 className="form-section">Identity</h3>
           <div className="form-grid">
-            <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} required />
+            <TextField
+              label="Name"
+              value={form.name}
+              onChange={(v) => set("name", v)}
+              error={errors.name}
+              required
+            />
             <TextField
               label={<TermPopover term="isin">ISIN</TermPopover>}
               value={form.isin}
@@ -219,6 +255,7 @@ export function ProductsTab() {
                 }
                 value={form.whiteListShare}
                 onChange={(v) => set("whiteListShare", v)}
+                error={errors.whiteListShare}
                 hint="The part in government bonds, taxed at the lower rate."
               />
             ) : null}
@@ -231,6 +268,7 @@ export function ProductsTab() {
                 }
                 value={form.couponRate}
                 onChange={(v) => set("couponRate", v)}
+                error={errors.couponRate}
               />
             ) : null}
             {shown.maturity ? (
@@ -238,6 +276,7 @@ export function ProductsTab() {
                 label="Maturity"
                 value={form.maturity}
                 onChange={(v) => set("maturity", v)}
+                error={errors.maturity}
                 hint="YYYY-MM, or empty."
               />
             ) : null}
@@ -248,18 +287,21 @@ export function ProductsTab() {
               label="Expected return (% a year)"
               value={form.expReturn}
               onChange={(v) => set("expReturn", v)}
+              error={errors.expReturn}
               required
             />
             <NumberField
               label="Volatility (% a year)"
               value={form.volatility}
               onChange={(v) => set("volatility", v)}
+              error={errors.volatility}
               required
             />
             <NumberField
               label="TER (% a year)"
               value={form.ter}
               onChange={(v) => set("ter", v)}
+              error={errors.ter}
               required
             />
             <CheckField
@@ -279,7 +321,7 @@ export function ProductsTab() {
             ) : null}
           </div>
         </form>
-        <Alert message={error} />
+        <Alert message={alert} />
       </Card>
 
       <Card title="Products">
@@ -322,7 +364,7 @@ export function ProductsTab() {
                             setEditing(p.id);
                             setCopying(false);
                             setForm(toForm(p));
-                            setError(undefined);
+                            clear();
                             reveal();
                           }}
                         >
@@ -335,7 +377,7 @@ export function ProductsTab() {
                             setEditing(undefined);
                             setCopying(true);
                             setForm(toForm(copyOfProduct(p)));
-                            setError(undefined);
+                            clear();
                             reveal();
                           }}
                         >

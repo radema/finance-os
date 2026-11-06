@@ -5,6 +5,7 @@ import { flowsTaken } from "../../engine/pension.ts";
 import type { Commission, Goal, PensionPlan, Product, Transaction } from "../../engine/schemas.ts";
 import { PENSION_FLOWS } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { checkFields, type FieldErrors } from "../formErrors.ts";
 import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro, formatPercent } from "../money.ts";
@@ -22,6 +23,7 @@ import {
   SelectField,
   TextField,
 } from "../setup/ui.tsx";
+import { useFormErrors } from "../setup/useFormErrors.ts";
 import { fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
 
 // `opening` is written by the Current portfolio form in S2, so the form does not offer it.
@@ -35,6 +37,19 @@ const TYPE_LABEL: Record<string, string> = {
   opening: "Opening",
   ...Object.fromEntries(FORM_TYPES.map((t) => [t.value, t.label])),
 };
+
+const LABELS = {
+  date: "Date",
+  goalId: "Bucket",
+  productId: "Product",
+  flow: "Flow",
+  amount: "Amount",
+  price: "Price",
+  fee: "Commission",
+};
+type FormKey = keyof typeof LABELS;
+// The API names these in cents; the form holds euros.
+const API_KEYS: Record<string, FormKey> = { amountCents: "amount", commissionCents: "fee" };
 
 const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
 
@@ -95,7 +110,7 @@ function AddForm({
   const [fee, setFee] = useState(start.fee);
   const [flow, setFlow] = useState(start.flow);
   const [priceNote, setPriceNote] = useState<string>();
-  const [error, setError] = useState<string>();
+  const { errors, alert, reject, fail, clear } = useFormErrors<FormKey>(LABELS, API_KEYS);
 
   // The price starts from the product's last price; the user can still change it. An edited or
   // duplicated row keeps its own price until the product changes.
@@ -127,6 +142,18 @@ function AddForm({
   const costly = product && hasAmount && isCostly(commission, product, type, amountCents);
 
   const save = async () => {
+    const problems: FieldErrors<FormKey> = checkFields(
+      { date, amount, price, fee },
+      {
+        date: "text",
+        amount: "number",
+        ...(type === "coupon" ? {} : { price: "number" as const }),
+        fee: "optionalNumber",
+      },
+      LABELS,
+    );
+    if (takesBothFlows && flow === "") problems.flow = "Choose a flow";
+    if (Object.keys(problems).length > 0) return reject(problems);
     try {
       const body = transactionBody(
         { date, goalId, productId, type, amount, price, fee, flow },
@@ -136,12 +163,12 @@ function AddForm({
       await api(editing ? "PUT" : "POST", "/api/transactions", {
         body: editing ? { ...body, id: editing.id, note: editing.note } : body,
       });
-      setError(undefined);
+      clear();
       setAmount("");
       setFee("");
       onSaved();
     } catch (failure) {
-      setError(messageOf(failure));
+      fail(failure);
     }
   };
 
@@ -151,29 +178,40 @@ function AddForm({
       <form
         ref={formRef}
         className="form-grid"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           void save();
         }}
       >
-        <Field label="Date" required>
-          <input
-            type="date"
-            required
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-          />
+        <Field label="Date" error={errors.date} required>
+          {(labelId, controlId, invalid) => (
+            <input
+              id={controlId}
+              type="date"
+              aria-labelledby={labelId}
+              required
+              {...invalid}
+              value={date}
+              onChange={(event) => {
+                setDate(event.target.value);
+                clear("date");
+              }}
+            />
+          )}
         </Field>
         <SelectField
           label="Bucket"
           value={goalId}
           onChange={setGoalId}
+          error={errors.goalId}
           options={goals.map((g) => ({ value: g.id, label: g.name }))}
         />
         <SelectField
           label="Product"
           value={productId}
           onChange={setProductId}
+          error={errors.productId}
           options={products.map((p) => ({ value: p.id, label: p.name }))}
         />
         <SelectField
@@ -186,7 +224,11 @@ function AddForm({
           <SelectField
             label="Flow"
             value={flow}
-            onChange={setFlow}
+            onChange={(value) => {
+              setFlow(value);
+              clear("flow");
+            }}
+            error={errors.flow}
             options={[
               { value: "", label: "Choose…" },
               ...PENSION_FLOWS.map((kind) => ({
@@ -199,7 +241,11 @@ function AddForm({
         <NumberField
           label={type === "coupon" ? "Net cash received (€)" : "Amount (€)"}
           value={amount}
-          onChange={setAmount}
+          onChange={(value) => {
+            setAmount(value);
+            clear("amount");
+          }}
+          error={errors.amount}
           required
           hint={
             product?.regime === "govt"
@@ -208,12 +254,26 @@ function AddForm({
           }
         />
         {type === "coupon" ? null : (
-          <NumberField label="Price" value={price} onChange={setPrice} hint={priceNote} required />
+          <NumberField
+            label="Price"
+            value={price}
+            onChange={(value) => {
+              setPrice(value);
+              clear("price");
+            }}
+            hint={priceNote}
+            error={errors.price}
+            required
+          />
         )}
         <NumberField
           label="Commission paid (€, optional)"
           value={fee}
-          onChange={setFee}
+          onChange={(value) => {
+            setFee(value);
+            clear("fee");
+          }}
+          error={errors.fee}
           hint="Leave empty to record none."
         />
         <div className="actions">
@@ -239,7 +299,7 @@ function AddForm({
           {formatPercent(estimate / amountCents)} of this amount.
         </p>
       ) : null}
-      <Alert message={error} />
+      <Alert message={alert} />
     </Card>
   );
 }

@@ -106,9 +106,16 @@ export function RequiredLegend() {
   );
 }
 
+/** What a control with an error takes: spread it on the control. */
+export interface InvalidProps {
+  "aria-invalid"?: true;
+  "aria-describedby"?: string;
+}
+
 export function Field({
   label,
   hint,
+  error,
   required,
   wrap = "label",
   children,
@@ -116,17 +123,44 @@ export function Field({
   label: ReactNode;
   /** A string, or a node. A hint with a control of its own needs `wrap="div"`. */
   hint?: ReactNode;
+  /** Plain words for what is wrong. It takes the place of the hint, under the control. */
+  error?: string;
   /** Shows the required mark. Put the `aria-required` on the control too. */
   required?: boolean;
   /** The root element. Keep it the same for the life of a field: a change remounts the control. */
   wrap?: "label" | "div";
-  /** The control. A function gets the id of the label text, for `aria-labelledby`, and the id the control takes. */
-  children: ReactNode | ((labelId: string, controlId: string) => ReactNode);
+  /**
+   * The control. A function gets the id of the label text, for `aria-labelledby`, the id the control takes,
+   * and the props that link the control to its error.
+   */
+  children: ReactNode | ((labelId: string, controlId: string, invalid: InvalidProps) => ReactNode);
 }) {
   const labelId = useId();
   const controlId = useId();
-  const control = typeof children === "function" ? children(labelId, controlId) : children;
-  const hintText = hint ? <span className="field-hint">{hint}</span> : null;
+  const errorId = useId();
+  const invalid: InvalidProps = error ? { "aria-invalid": true, "aria-describedby": errorId } : {};
+  const control = typeof children === "function" ? children(labelId, controlId, invalid) : children;
+  const hintText = error ? (
+    <span className="field-hint field-error" id={errorId}>
+      <svg
+        className="field-error-mark"
+        aria-hidden="true"
+        viewBox="0 0 12 12"
+        width="12"
+        height="12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M6 1.5 11 10.5H1Z M6 5v2.5 M6 9v.01" />
+      </svg>
+      {error}
+    </span>
+  ) : hint ? (
+    <span className="field-hint">{hint}</span>
+  ) : null;
   const mark = required ? (
     <span className="field-required" aria-hidden="true">
       {" "}
@@ -166,22 +200,25 @@ export function TextField({
   value,
   onChange,
   hint,
+  error,
   required,
 }: {
   label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   hint?: string;
+  error?: string;
   required?: boolean;
 }) {
   return (
-    <Field label={label} hint={hint} required={required}>
-      {(labelId, controlId) => (
+    <Field label={label} hint={hint} error={error} required={required}>
+      {(labelId, controlId, invalid) => (
         <input
           id={controlId}
           type="text"
           aria-labelledby={labelId}
           aria-required={required}
+          {...invalid}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -195,6 +232,7 @@ export function NumberField({
   value,
   onChange,
   hint,
+  error,
   required,
   step = "any",
   unit,
@@ -203,6 +241,7 @@ export function NumberField({
   value: string;
   onChange: (value: string) => void;
   hint?: string;
+  error?: string;
   required?: boolean;
   step?: string;
   /** The unit (€, %, years), shown inside the field after the value. Keep it out of the label. */
@@ -210,8 +249,8 @@ export function NumberField({
 }) {
   const unitId = useId();
   return (
-    <Field label={label} hint={hint} required={required}>
-      {(labelId, controlId) => {
+    <Field label={label} hint={hint} error={error} required={required}>
+      {(labelId, controlId, invalid) => {
         const input = (
           <input
             id={controlId}
@@ -219,6 +258,7 @@ export function NumberField({
             inputMode="decimal"
             aria-labelledby={unit ? `${labelId} ${unitId}` : labelId}
             aria-required={required}
+            {...invalid}
             step={step}
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -245,6 +285,7 @@ export function SelectField({
   onChange,
   options,
   hint,
+  error,
   wrap,
   selectRef,
 }: {
@@ -253,16 +294,18 @@ export function SelectField({
   onChange: (value: string) => void;
   options: readonly { value: string; label: string }[];
   hint?: ReactNode;
+  error?: string;
   wrap?: "label" | "div";
   selectRef?: Ref<HTMLSelectElement>;
 }) {
   return (
-    <Field label={label} hint={hint} wrap={wrap}>
-      {(labelId, controlId) => (
+    <Field label={label} hint={hint} error={error} wrap={wrap}>
+      {(labelId, controlId, invalid) => (
         <select
           id={controlId}
           ref={selectRef}
           aria-labelledby={labelId}
+          {...invalid}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         >
