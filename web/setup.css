@@ -193,6 +193,11 @@
   font-weight: 500;
   color: var(--ink2);
 }
+/* The group headings of a form that lays its groups out one after another. */
+form > .form-section {
+  margin-top: var(--s3);
+  margin-bottom: var(--s2);
+}
 input[type="text"],
 input[type="number"],
 input[type="date"],
@@ -250,6 +255,12 @@ select {
   align-items: center;
   gap: var(--s2);
   font-size: var(--t-sub);
+}
+/* A checkbox in a product form grid takes the three rows of a field and sits level with the controls. */
+.product-form .form-grid > .check {
+  grid-row: span 3;
+  align-self: center;
+  margin-bottom: var(--s3);
 }
 .actions {
   display: flex;

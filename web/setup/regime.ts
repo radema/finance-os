@@ -24,3 +24,39 @@ export const regimeHint = (assetClass: string, regime: string): Regime | undefin
   const suggested = suggestRegime(assetClass);
   return suggested === regime || regime === "pension" ? undefined : suggested;
 };
+
+/** The product fields that only some regimes use. */
+export interface RegimeFields {
+  whiteListShare: boolean;
+  couponRate: boolean;
+  maturity: boolean;
+}
+
+/**
+ * Which of the regime-specific fields apply. The engine reads the coupon of a government bond only,
+ * and the white-list share of an ETF only. R3 alerts on the maturity of any held product, but only
+ * bonds have one: government bonds and direct holdings (corporate bonds).
+ */
+export const regimeFields = (regime: string): RegimeFields => ({
+  whiteListShare: regime === "etf",
+  couponRate: regime === "govt",
+  maturity: regime === "govt" || regime === "direct",
+});
+
+/** The form values of the regime-specific fields, as the product schema defaults them. */
+const DEFAULTS = { whiteListShare: "0", couponRate: "0", maturity: "" };
+
+/** The form with every field its regime hides back at its default, so no hidden value is saved. */
+export const resetHiddenFields = <
+  T extends { regime: string; whiteListShare: string; couponRate: string; maturity: string },
+>(
+  form: T,
+): T => {
+  const shown = regimeFields(form.regime);
+  return {
+    ...form,
+    ...(shown.whiteListShare ? {} : { whiteListShare: DEFAULTS.whiteListShare }),
+    ...(shown.couponRate ? {} : { couponRate: DEFAULTS.couponRate }),
+    ...(shown.maturity ? {} : { maturity: DEFAULTS.maturity }),
+  };
+};

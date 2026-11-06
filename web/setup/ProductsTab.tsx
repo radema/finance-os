@@ -7,7 +7,7 @@ import { fractionToPercent, percentToFraction } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { hashParams } from "../hashQuery.ts";
 import { formatPercent } from "../money.ts";
-import { regimeHint } from "./regime.ts";
+import { regimeFields, regimeHint, resetHiddenFields } from "./regime.ts";
 import {
   Alert,
   Card,
@@ -22,9 +22,9 @@ import {
 } from "./ui.tsx";
 
 const REGIME_LABEL: Record<string, string> = {
-  etf: "ETF (26%, white-list share)",
-  direct: "Direct (26%)",
-  govt: "Government bond (12.5%)",
+  etf: "ETF",
+  direct: "Direct",
+  govt: "Government bond",
   cash: "Cash (interest taxed yearly)",
   pension: "Pension fund",
 };
@@ -112,6 +112,8 @@ export function ProductsTab() {
   const [editing, setEditing] = useState<string>();
   const [error, setError] = useState<string>();
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm({ ...form, [key]: value });
+  const setRegime = (regime: string) => setForm(resetHiddenFields({ ...form, regime }));
+  const shown = regimeFields(form.regime);
   const suggested = regimeHint(form.assetClass, form.regime);
   const regimeSelect = useRef<HTMLSelectElement>(null);
 
@@ -147,105 +149,119 @@ export function ProductsTab() {
       <Card title={editing ? "Edit product" : "Add product"}>
         <RequiredLegend />
         <form
-          className="form-grid"
+          className="product-form"
           onSubmit={(event) => {
             event.preventDefault();
             void save();
           }}
         >
-          <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} required />
-          <TextField
-            label={<TermPopover term="isin">ISIN</TermPopover>}
-            value={form.isin}
-            onChange={(v) => set("isin", v)}
-          />
-          <TextField label="Ticker" value={form.ticker} onChange={(v) => set("ticker", v)} />
-          <SelectField
-            label="Asset class"
-            value={form.assetClass}
-            onChange={(v) => set("assetClass", v)}
-            options={options(ASSET_CLASSES)}
-          />
-          <SelectField
-            label="Tax regime"
-            value={form.regime}
-            onChange={(v) => set("regime", v)}
-            options={options(REGIMES, REGIME_LABEL)}
-            wrap="div"
-            selectRef={regimeSelect}
-            hint={
-              suggested ? (
-                <>
-                  Usually {REGIME_LABEL[suggested]} for this class.{" "}
-                  <button
-                    className="link-button"
-                    type="button"
-                    onClick={() => {
-                      set("regime", suggested);
-                      regimeSelect.current?.focus();
-                    }}
-                  >
-                    Use it
-                  </button>
-                </>
-              ) : undefined
-            }
-          />
-          <SelectField
-            label="Price source"
-            value={form.priceSource}
-            onChange={(v) => set("priceSource", v)}
-            options={options(PRICE_SOURCES)}
-          />
-          <NumberField
-            label="Expected return (% a year)"
-            value={form.expReturn}
-            onChange={(v) => set("expReturn", v)}
-            required
-          />
-          <NumberField
-            label="Volatility (% a year)"
-            value={form.volatility}
-            onChange={(v) => set("volatility", v)}
-            required
-          />
-          <NumberField
-            label="TER (% a year)"
-            value={form.ter}
-            onChange={(v) => set("ter", v)}
-            required
-          />
-          <NumberField
-            label={
-              <>
-                <TermPopover term="whitelist">White-list share</TermPopover> (%)
-              </>
-            }
-            value={form.whiteListShare}
-            onChange={(v) => set("whiteListShare", v)}
-            hint="ETFs only: the part in government bonds taxed at 12.5%."
-          />
-          <NumberField
-            label={
-              <>
-                <TermPopover term="coupon">Coupon</TermPopover> rate (% a year)
-              </>
-            }
-            value={form.couponRate}
-            onChange={(v) => set("couponRate", v)}
-            hint="Government bonds only."
-          />
-          <TextField
-            label="Maturity"
-            value={form.maturity}
-            onChange={(v) => set("maturity", v)}
-            hint="YYYY-MM, or empty."
-          />
-          <CheckField
-            label="Zero commission"
-            checked={form.zeroCommission}
-            onChange={(v) => set("zeroCommission", v)}
-          />
+          <h3 className="form-section">Identity</h3>
+          <div className="form-grid">
+            <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} required />
+            <TextField
+              label={<TermPopover term="isin">ISIN</TermPopover>}
+              value={form.isin}
+              onChange={(v) => set("isin", v)}
+            />
+            <TextField label="Ticker" value={form.ticker} onChange={(v) => set("ticker", v)} />
+            <SelectField
+              label="Asset class"
+              value={form.assetClass}
+              onChange={(v) => set("assetClass", v)}
+              options={options(ASSET_CLASSES)}
+            />
+          </div>
+          <h3 className="form-section">Tax and price</h3>
+          <div className="form-grid">
+            <SelectField
+              label="Tax regime"
+              value={form.regime}
+              onChange={setRegime}
+              options={options(REGIMES, REGIME_LABEL)}
+              wrap="div"
+              selectRef={regimeSelect}
+              hint={
+                suggested ? (
+                  <>
+                    Usually {REGIME_LABEL[suggested]} for this class.{" "}
+                    <button
+                      className="link-button"
+                      type="button"
+                      onClick={() => {
+                        setRegime(suggested);
+                        regimeSelect.current?.focus();
+                      }}
+                    >
+                      Use it
+                    </button>
+                  </>
+                ) : undefined
+              }
+            />
+            <SelectField
+              label="Price source"
+              value={form.priceSource}
+              onChange={(v) => set("priceSource", v)}
+              options={options(PRICE_SOURCES)}
+            />
+            {shown.whiteListShare ? (
+              <NumberField
+                label={
+                  <>
+                    <TermPopover term="whitelist">White-list share</TermPopover> (%)
+                  </>
+                }
+                value={form.whiteListShare}
+                onChange={(v) => set("whiteListShare", v)}
+                hint="The part in government bonds, taxed at the lower rate."
+              />
+            ) : null}
+            {shown.couponRate ? (
+              <NumberField
+                label={
+                  <>
+                    <TermPopover term="coupon">Coupon</TermPopover> rate (% a year)
+                  </>
+                }
+                value={form.couponRate}
+                onChange={(v) => set("couponRate", v)}
+              />
+            ) : null}
+            {shown.maturity ? (
+              <TextField
+                label="Maturity"
+                value={form.maturity}
+                onChange={(v) => set("maturity", v)}
+                hint="YYYY-MM, or empty."
+              />
+            ) : null}
+          </div>
+          <h3 className="form-section">Expected numbers</h3>
+          <div className="form-grid">
+            <NumberField
+              label="Expected return (% a year)"
+              value={form.expReturn}
+              onChange={(v) => set("expReturn", v)}
+              required
+            />
+            <NumberField
+              label="Volatility (% a year)"
+              value={form.volatility}
+              onChange={(v) => set("volatility", v)}
+              required
+            />
+            <NumberField
+              label="TER (% a year)"
+              value={form.ter}
+              onChange={(v) => set("ter", v)}
+              required
+            />
+            <CheckField
+              label="Zero commission"
+              checked={form.zeroCommission}
+              onChange={(v) => set("zeroCommission", v)}
+            />
+          </div>
           <div className="actions">
             <button className="btn btn-primary" type="submit">
               {editing ? "Save product" : "Add product"}
