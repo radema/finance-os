@@ -88,3 +88,20 @@ describe("NumberField unit (AC-89)", () => {
     expect(html).not.toContain("input-unit");
   });
 });
+
+describe("NumberField text (AC-89)", () => {
+  const field = (value: string) =>
+    render(createElement(NumberField, { label: "Return", value, onChange: () => {} }));
+
+  it("is a text box for decimals, not a number input", () => {
+    const html = field("");
+    expect(html).toContain('type="text"');
+    expect(html).toContain('inputMode="decimal"');
+    expect(html).not.toContain('type="number"');
+  });
+
+  it("shows a stored dot as a comma", () => {
+    expect(field("6.5")).toContain('value="6,5"');
+    expect(field("42000")).toContain('value="42000"');
+  });
+});

@@ -1,6 +1,7 @@
-import type { ReactNode, Ref } from "react";
+import type { InputHTMLAttributes, ReactNode, Ref } from "react";
 import { useId, useState } from "react";
 import type { Loaded } from "../api.ts";
+import { num, showDecimal } from "../forms.ts";
 import { Loading } from "../Loading.tsx";
 import { browserStorage, cardKey, readOpen, screenHash, writeOpen } from "./cardState.ts";
 
@@ -228,6 +229,38 @@ export function TextField({
   );
 }
 
+/**
+ * A text box for a number. It shows a stored dot as the decimal comma and sends what the user types as typed,
+ * so a thousands dot (`1.234,5`) is not rewritten while it is typed. `num` reads the text.
+ */
+export function DecimalInput({
+  value,
+  onChange,
+  onBlur,
+  ...rest
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type" | "inputMode"> & {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [typed, setTyped] = useState<string>();
+  return (
+    <input
+      {...rest}
+      type="text"
+      inputMode="decimal"
+      value={typed === value || !Number.isFinite(num(value)) ? value : showDecimal(value)}
+      onChange={(event) => {
+        setTyped(event.target.value);
+        onChange(event.target.value);
+      }}
+      onBlur={(event) => {
+        setTyped(undefined);
+        onBlur?.(event);
+      }}
+    />
+  );
+}
+
 export function NumberField({
   label,
   value,
@@ -235,7 +268,6 @@ export function NumberField({
   hint,
   error,
   required,
-  step = "any",
   unit,
 }: {
   label: ReactNode;
@@ -244,7 +276,6 @@ export function NumberField({
   hint?: string;
   error?: string;
   required?: boolean;
-  step?: string;
   /** The unit (€, %, years), shown inside the field after the value. Keep it out of the label. */
   unit?: string;
 }) {
@@ -253,16 +284,13 @@ export function NumberField({
     <Field label={label} hint={hint} error={error} required={required}>
       {(labelId, controlId, invalid) => {
         const input = (
-          <input
+          <DecimalInput
             id={controlId}
-            type="number"
-            inputMode="decimal"
             aria-labelledby={unit ? `${labelId} ${unitId}` : labelId}
             aria-required={required}
             {...invalid}
-            step={step}
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={onChange}
           />
         );
         return unit ? (

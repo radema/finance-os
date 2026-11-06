@@ -229,7 +229,6 @@ form > .form-section {
   margin-bottom: var(--s2);
 }
 input[type="text"],
-input[type="number"],
 input[type="date"],
 select,
 textarea {
@@ -246,7 +245,6 @@ textarea {
 }
 /* One height for the single-line controls, so a date, a select and a text box line up. */
 input[type="text"],
-input[type="number"],
 input[type="date"],
 select {
   height: var(--control-h);
@@ -265,13 +263,13 @@ select {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
-.input-unit input[type="number"] {
+.input-unit input[type="text"] {
   flex: 1;
   height: 100%;
   border: 0;
   background: transparent;
 }
-.input-unit input[type="number"]:focus-visible {
+.input-unit input[type="text"]:focus-visible {
   outline: none;
 }
 .field-unit {

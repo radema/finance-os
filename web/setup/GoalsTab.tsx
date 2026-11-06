@@ -184,7 +184,6 @@ function PlanHistory({
           label="New monthly amount (EUR)"
           value={monthly}
           onChange={setMonthly}
-          step="0.01"
           required
         />
         <button className="btn btn-primary" type="submit">
@@ -296,7 +295,6 @@ export function GoalsTab() {
             value={form.target}
             onChange={(v) => set("target", v)}
             error={errors.target}
-            step="0.01"
             required
           />
           <TextField
@@ -332,7 +330,6 @@ export function GoalsTab() {
                 value={form.monthly}
                 onChange={(v) => set("monthly", v)}
                 error={errors.monthly}
-                step="0.01"
                 hint="Optional. Change it later on the plan history."
               />
               <TextField
