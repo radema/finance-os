@@ -8,6 +8,7 @@ import { TermPopover } from "../glossary/TermPopover.tsx";
 import { hashParams } from "../hashQuery.ts";
 import { formatPercent } from "../money.ts";
 import { regimeFields, regimeHint, resetHiddenFields } from "./regime.ts";
+import { useRevealForm } from "./revealForm.ts";
 import {
   Alert,
   Card,
@@ -116,6 +117,7 @@ export function ProductsTab() {
   const shown = regimeFields(form.regime);
   const suggested = regimeHint(form.assetClass, form.regime);
   const regimeSelect = useRef<HTMLSelectElement>(null);
+  const { formRef, reveal } = useRevealForm();
 
   const reset = () => {
     setForm(EMPTY);
@@ -149,6 +151,7 @@ export function ProductsTab() {
       <Card title={editing ? "Edit product" : "Add product"}>
         <RequiredLegend />
         <form
+          ref={formRef}
           className="product-form"
           onSubmit={(event) => {
             event.preventDefault();
@@ -316,6 +319,7 @@ export function ProductsTab() {
                             setEditing(p.id);
                             setForm(toForm(p));
                             setError(undefined);
+                            reveal();
                           }}
                         >
                           Edit

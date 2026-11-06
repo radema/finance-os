@@ -162,6 +162,8 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   column-gap: var(--s3);
   align-items: start;
+  /* Edit scrolls the form into view: keep a gap above it. */
+  scroll-margin-top: var(--s3);
 }
 .form-grid > .field,
 .inline-form > .field {

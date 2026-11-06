@@ -7,6 +7,7 @@ import { centsToEuros, eurosToCents, fractionToPercent, percentToFraction } from
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { currentMonth, formatEuro, formatPercent } from "../money.ts";
 import { fromMonthInForce, monthlyInForce, valuationMonth } from "./goalPlan.ts";
+import { useRevealForm } from "./revealForm.ts";
 import {
   Alert,
   Card,
@@ -178,6 +179,7 @@ export function GoalsTab() {
   const [selected, setSelected] = useState<string>();
   const [error, setError] = useState<string>();
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm({ ...form, [key]: value });
+  const { formRef, reveal } = useRevealForm();
 
   const reset = () => {
     setForm(emptyForm());
@@ -226,6 +228,7 @@ export function GoalsTab() {
       <Card title={editing ? "Edit goal" : "Add goal"}>
         <RequiredLegend />
         <form
+          ref={formRef}
           className="form-grid"
           onSubmit={(event) => {
             event.preventDefault();
@@ -354,6 +357,7 @@ export function GoalsTab() {
                             setEditing(g.id);
                             setForm(toForm(g));
                             setError(undefined);
+                            reveal();
                           }}
                         >
                           Edit
