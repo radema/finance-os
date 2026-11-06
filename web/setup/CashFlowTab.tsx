@@ -4,6 +4,7 @@ import type { CashFlow, CashFlowEvent } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, num, percentToFraction } from "../forms.ts";
 import { formatEuro } from "../money.ts";
+import { useRevealForm } from "./revealForm.ts";
 import {
   Alert,
   Card,
@@ -56,6 +57,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
   const [editing, setEditing] = useState<number>();
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState(false);
+  const { formRef, reveal } = useRevealForm("form");
 
   // One document: the inputs as typed, and the events as given.
   const save = async (events: CashFlowEvent[]): Promise<boolean> => {
@@ -166,6 +168,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
                           amount: centsToEuros(e.amount),
                         });
                         setError(undefined);
+                        reveal();
                       }}
                     >
                       Edit
@@ -185,6 +188,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
         )}
         <RequiredLegend />
         <form
+          ref={formRef}
           className="inline-form"
           onSubmit={(e) => {
             e.preventDefault();

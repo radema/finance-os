@@ -8,6 +8,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro, formatPercent } from "../money.ts";
+import { type RevealFormRef, useRevealForm } from "../setup/revealForm.ts";
 import {
   Alert,
   Card,
@@ -49,6 +50,7 @@ function AddForm({
   products,
   commission,
   pensionPlan,
+  formRef,
   onSaved,
   onCancel,
 }: {
@@ -61,6 +63,8 @@ function AddForm({
   commission: Commission;
   /** The saved plan: it says which flows a pension fund takes. */
   pensionPlan: PensionPlan | null | undefined;
+  /** On the form element: Edit reveals it. */
+  formRef: RevealFormRef;
   onSaved: () => void;
   /** Edit only: leave the row as it is. */
   onCancel: () => void;
@@ -140,6 +144,7 @@ function AddForm({
     <Card title={editing ? "Edit transaction" : "Add transaction"}>
       <RequiredLegend />
       <form
+        ref={formRef}
         className="form-grid"
         onSubmit={(event) => {
           event.preventDefault();
@@ -245,6 +250,7 @@ export function TransactionsScreen() {
   const [yearFilter, setYearFilter] = useState("");
   const [error, setError] = useState<string>();
   const [editing, setEditing] = useState<Transaction>();
+  const { formRef, reveal } = useRevealForm();
 
   const query = new URLSearchParams();
   if (goalFilter) query.set("goalId", goalFilter);
@@ -291,6 +297,7 @@ export function TransactionsScreen() {
                           products={productList}
                           commission={plan}
                           pensionPlan={pensionPlan.data}
+                          formRef={formRef}
                           onSaved={() => {
                             setEditing(undefined);
                             list.reload();
@@ -376,7 +383,7 @@ export function TransactionsScreen() {
                               type="button"
                               onClick={() => {
                                 setEditing(t);
-                                window.scrollTo({ top: 0 });
+                                reveal();
                               }}
                             >
                               Edit
