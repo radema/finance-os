@@ -39,6 +39,10 @@
 .overview-grid .cell {
   min-width: 0;
 }
+/* An empty cell is as tall as its content, not as its neighbour. */
+.overview-grid .cell:has(.empty-state) {
+  align-self: start;
+}
 .overview-grid .chart {
   height: 240px;
 }

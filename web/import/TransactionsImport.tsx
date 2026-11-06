@@ -7,6 +7,7 @@ import type { Product } from "../../engine/schemas.ts";
 import type { RowDecision } from "../../engine/transactionImport.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
+import { Loading } from "../Loading.tsx";
 import { Alert, Card, ConfirmButton, Field, SelectField, TextField } from "../setup/ui.tsx";
 import type { Bucket } from "../split/splitState.ts";
 import { missingFields } from "./importState.ts";
@@ -453,5 +454,5 @@ function WhenLoaded({
   children: React.ReactNode;
 }) {
   if (ready) return <>{children}</>;
-  return error ? <Alert message={error} /> : <p className="note">Loading…</p>;
+  return error ? <Alert message={error} /> : <Loading />;
 }

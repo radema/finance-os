@@ -260,7 +260,7 @@ function XirrKpi({ goalId }: { goalId: string }) {
   );
   const { data } = loaded;
   const tile = xirrTile(data?.summary?.xirr ?? null, data ? historyMonths(data) : 0);
-  const note = data ? (data.note ?? tile.note ?? XIRR_HELP) : (loaded.error ?? "Loading.");
+  const note = data ? (data.note ?? tile.note ?? XIRR_HELP) : loaded.error;
   return (
     <Kpi
       label={

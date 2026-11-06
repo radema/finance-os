@@ -6,6 +6,7 @@ import {
   ladderRows,
   levelLinesNote,
   levelTiles,
+  noLevelSet,
   parseDraft,
   reachedWithin,
   reachTitle,
@@ -246,5 +247,13 @@ describe("changedSettings", () => {
 
   it("is null when nothing changed", () => {
     expect(changedSettings({ ...parsed, l2Mult: 300 }, fire)).toBeNull();
+  });
+});
+
+describe("noLevelSet", () => {
+  it("is true only when every target is 0, so no expenses are set", () => {
+    expect(noLevelSet([0, 0, 0])).toBe(true);
+    expect(noLevelSet([0, 300_000, 0])).toBe(false);
+    expect(noLevelSet(view.result?.levels ?? [])).toBe(false);
   });
 });

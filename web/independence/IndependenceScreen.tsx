@@ -1,9 +1,11 @@
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import type { IndependenceView } from "../../engine/independenceView.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { EmptyState } from "../EmptyState.tsx";
 import { fractionToPercent } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
+import { openCard } from "../setup/revealForm.ts";
 import {
   Alert,
   Card,
@@ -83,12 +85,10 @@ function Tiles({ view, tiles }: { view: IndependenceView; tiles: LevelTile[] }) 
           </section>
         ))}
       </div>
-      {tiles.some((tile) => tile.set) ? (
-        <p className="sub">
-          Targets are in <TermPopover term="real">today’s euros</TermPopover>. The chance is read at
-          31 December {reachYear}. Level 1 does not count the pension.
-        </p>
-      ) : null}
+      <p className="sub">
+        Targets are in <TermPopover term="real">today’s euros</TermPopover>. The chance is read at
+        31 December {reachYear}. Level 1 does not count the pension.
+      </p>
     </>
   );
 }
@@ -96,12 +96,6 @@ function Tiles({ view, tiles }: { view: IndependenceView; tiles: LevelTile[] }) 
 function Chart({ view, tiles }: { view: IndependenceView; tiles: LevelTile[] }) {
   const { result } = view;
   if (!result) return null;
-  // With every target at 0 there is nothing to chart: ask for the expenses.
-  if (tiles.every((tile) => !tile.set)) {
-    return (
-      <p className="unit">Set your expenses below to see the levels and when you reach them.</p>
-    );
-  }
   const last = result.points.at(-1);
   return (
     <figure className="exhibit">
@@ -314,6 +308,15 @@ function Screen({
   onView: (view: IndependenceView) => void;
 }) {
   const tiles = levelTiles(view);
+  const controls = useRef<HTMLDivElement>(null);
+  // The expense fields are the first number fields of the controls.
+  // A folded Settings card is opened first, and the field takes focus once its body shows.
+  const focusExpenses = () => {
+    const input = controls.current?.querySelector<HTMLInputElement>("input[type=number]");
+    if (!input) return;
+    openCard(input);
+    requestAnimationFrame(() => input.focus());
+  };
   if (view.goals.length === 0) {
     return (
       <>
@@ -335,13 +338,21 @@ function Screen({
         the end of {view.asOf.slice(0, 7)}.
       </p>
       {view.note ? <p className="alert">{view.note}</p> : null}
-      {tiles ? (
+      {tiles?.every((tile) => !tile.set) ? (
+        <Card title="Levels">
+          <EmptyState
+            message="Set your expenses to see the levels and when you reach them."
+            action={{ label: "Set your expenses", onClick: focusExpenses }}
+          />
+        </Card>
+      ) : null}
+      {tiles?.some((tile) => tile.set) ? (
         <>
           <Tiles view={view} tiles={tiles} />
           <Chart view={view} tiles={tiles} />
         </>
       ) : null}
-      <div className="independence-controls">
+      <div className="independence-controls" ref={controls}>
         <WhatCounts view={view} onView={onView} />
         <Settings view={view} onView={onView} />
       </div>

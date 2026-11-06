@@ -2,12 +2,14 @@ import { type CSSProperties, type ReactNode, useMemo } from "react";
 import type { GoalListRow } from "../../engine/goalViews.ts";
 import { type OverviewView, rangeRows } from "../../engine/overviewView.ts";
 import type { Alert } from "../../engine/rules.ts";
+import { EmptyState } from "../EmptyState.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { pVsRequired } from "../goals/outlook.ts";
 import { SeverityChip } from "../goals/SeverityChip.tsx";
 import { StatusChip } from "../goals/StatusChip.tsx";
 import { ProgressChart } from "../independence/FiCharts.tsx";
+import { noLevelSet } from "../independence/model.ts";
 import { formatAmount, formatPercent } from "../money.ts";
 import { goalDetailHref } from "../nav.ts";
 import { PriceFreshnessPill } from "../prices/PriceFreshnessPill.tsx";
@@ -21,7 +23,7 @@ import {
   percentText,
 } from "../tracking/model.ts";
 import { TimeChart } from "../tracking/TimeChart.tsx";
-import { alertRoute, hrefOf, type LevelRow } from "./model.ts";
+import { alertRoute, hrefOf, type LevelRow, OVERVIEW_ROUTES } from "./model.ts";
 
 const euroAxis = (value: number) => formatAmount(value).replace(/,00/, "");
 const CENTS = 100;
@@ -30,6 +32,10 @@ const AXIS_PRECISION = 12;
 const TREND_NOTE =
   "A goal's probability falls steeply as its date nears: with less time left, there is less time to recover from a bad market.";
 const NOT_REACHED = "Not within 40 years";
+const SET_EXPENSES = {
+  message: "Set your expenses to see the levels and when you reach them.",
+  action: { label: "Set your expenses", href: hrefOf(OVERVIEW_ROUTES.fiLevels) },
+} as const;
 
 /** A grid cell: a title that links to the screen that explains it, an optional unit line and the content. */
 export function Cell({
@@ -168,13 +174,12 @@ export function TrendCell({
   const history = useMemo(() => historyOf(snapshots, "prob"), [snapshots]);
   const known = useMemo(() => knownGoals(history, goals), [history, goals]);
   const series = useMemo(() => historySeries(history, known), [history, known]);
-  const note = <p className="note">{TREND_NOTE}</p>;
   if (history.months.length === 0) {
     return (
-      <>
-        <p className="note">There are no snapshots yet.</p>
-        {note}
-      </>
+      <EmptyState
+        message="No snapshots yet."
+        action={{ label: "Save a snapshot", href: hrefOf(OVERVIEW_ROUTES.trend) }}
+      />
     );
   }
   return (
@@ -192,7 +197,7 @@ export function TrendCell({
         format={formatPercent}
         label="Probability of success of each goal over the monthly snapshots"
       />
-      {note}
+      <p className="note">{TREND_NOTE}</p>
     </>
   );
 }
@@ -341,7 +346,8 @@ export function GoalsCell({ goals }: { goals: readonly GoalListRow[] }) {
 
 /** Median wealth as a share of each level's target, year by year. */
 export function FiProgressCell({ fi }: { fi: OverviewView["fi"] }) {
-  if (!fi.result) return <p className="note">{fi.note ?? "There is no projection yet."}</p>;
+  if (!fi.result) return <EmptyState message={fi.note ?? "There is no projection yet."} />;
+  if (noLevelSet(fi.result.levels)) return <EmptyState {...SET_EXPENSES} />;
   return (
     <ProgressChart
       result={fi.result}
@@ -370,7 +376,8 @@ export function PricesCell({ prices }: { prices: OverviewView["prices"] }) {
 
 /** Per FI level: today's share of the target, and the year it is reached. */
 export function LevelsCell({ levels, note }: { levels: readonly LevelRow[]; note: string | null }) {
-  if (levels.length === 0) return <p className="note">{note ?? "There is no projection yet."}</p>;
+  if (levels.length === 0) return <EmptyState message={note ?? "There is no projection yet."} />;
+  if (levels.every((level) => !level.set)) return <EmptyState {...SET_EXPENSES} />;
   const year = (value: number | null) => (value === null ? NOT_REACHED : String(value));
   return (
     <div className="table-scroll">
