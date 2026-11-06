@@ -1,7 +1,7 @@
 import type { GoalStatus } from "../../engine/goalStatus.ts";
 import { statusLabel } from "./outlook.ts";
 
-const ICON_PROPS = {
+export const ICON_PROPS = {
   viewBox: "0 0 20 20",
   "aria-hidden": true,
   strokeWidth: 1.6,
@@ -9,7 +9,7 @@ const ICON_PROPS = {
   strokeLinejoin: "round",
 } as const;
 
-function Icon({ status }: { status: GoalStatus }) {
+export function Icon({ status }: { status: GoalStatus }) {
   if (status === "on_track") {
     return (
       // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, the word next to it is the label
