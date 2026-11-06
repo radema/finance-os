@@ -47,7 +47,7 @@ export function Cell({
 }) {
   return (
     <section className="card cell" data-cell={id}>
-      <header className="card-head">{href ? <a href={href}>{title}</a> : title}</header>
+      <h2 className="card-head">{href ? <a href={href}>{title}</a> : title}</h2>
       <div className="card-body">
         {unit ? <p className="unit">{unit}</p> : null}
         {children}

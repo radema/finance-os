@@ -5,7 +5,7 @@ import { GLOSSARY, type TermId } from "./terms.ts";
 const GAP = 6;
 
 /**
- * A jargon term as a button. The popover opens on click, tap and keyboard focus: the Italian term first,
+ * A jargon term as a button. The popover opens on click, tap, Enter and Space, never on focus: the Italian term first,
  * then the plain sentence. It uses the native `popover` attribute, so it sits above tables and cards, and
  * closes on Escape or a click outside. Pass `children` only to change the shown words (a column header).
  */
@@ -35,7 +35,6 @@ export function TermPopover({
   const close = () => {
     if (popover.current?.matches(":popover-open")) popover.current.hidePopover();
   };
-  // Focus fires before click on a mouse press, so both only open and never toggle.
   const open = () => {
     const box = popover.current;
     if (!box || box.matches(":popover-open")) return;
@@ -62,7 +61,6 @@ export function TermPopover({
         aria-expanded={shown}
         aria-controls={id}
         aria-describedby={id}
-        onFocus={open}
         onClick={open}
         onBlur={(event) => {
           if (!popover.current?.contains(event.relatedTarget)) close();
@@ -70,12 +68,15 @@ export function TermPopover({
       >
         {children ?? entry.en}
       </button>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions lint/a11y/useKeyWithClickEvents: the click only stops a label from running; the box has no action */}
       <span
         ref={popover}
         id={id}
         className="term-popover"
         popover="auto"
         tabIndex={-1}
+        // In a field label, a click on the box must not run the label and focus its control.
+        onClick={(event) => event.preventDefault()}
         onToggle={(event) => setShown(event.newState === "open")}
       >
         <span className="term-it">{entry.it}</span>

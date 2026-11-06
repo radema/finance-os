@@ -391,8 +391,9 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
   header on every table. A compact legend on every multi-series chart; direct labels where they help;
   exhibit anatomy (tag, action title with a number, unit line, chart, callout, source).
 - Fonts: Geist + Geist Mono, bundled (OFL). Charts are drawn after fonts load and resize with their box.
-- Jargon terms are popover buttons (plain sentence first, Italian term above it); touch friendly, no
-  `title=` hints (t16 finding 26). Raw "P10–P90" is never shown: bad / typical / good case.
+- Jargon terms are popover buttons that open on click, tap, Enter or Space, never on focus (plain
+  sentence first, Italian term above it); touch friendly, no `title=`
+  hints (t16 finding 26). Raw "P10–P90" is never shown: bad / typical / good case.
 - First run: the empty Overview is a checklist (products, goals, current portfolio) plus "Load the
   sample data".
 
@@ -589,7 +590,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-82: Apply weights. Check: API test. Expected: AllocationWeights change only after the confirm call; for the pension goal only the flows change.
 - AC-83: Optimizer speed. Check: timing test, largest candidate set the rules allow (286 mixes) × 300 paths; "spend least" with 3 products. Expected: under 3 s and under 10 s.
 - AC-84: Optimizer screen. Check: `agent-browser`. Expected: contents as in the screens table; the rule that chose the mix is shown; the known-limit note is next to the result.
-- AC-85: Glossary & method. Check: `agent-browser`. Expected: every listed term has Italian term, English term and explanation; every jargon term in the UI opens its popover by click, tap or focus; method notes cover the listed topics.
+- AC-85: Glossary & method. Check: `agent-browser`. Expected: every listed term has Italian term, English term and explanation; every jargon term in the UI opens its popover by click, tap, Enter or Space; method notes cover the listed topics.
 - AC-86: Dark mode. Check: `agent-browser` on every built screen in dark. Expected: no hard-coded colours, readable charts, zero console errors.
 - AC-87: Width. Check: `agent-browser` at 1024, 1440 and 1920 px on every screen. Expected: no horizontal overflow; every chart fills its box.
 - AC-88: S6 UI gate. Check: screenshots of Optimizer, Glossary, and dark mode. Expected: the user approves or skips.

@@ -31,6 +31,7 @@
   overflow: clip;
 }
 .card-head {
+  margin: 0;
   padding: var(--s2) var(--s3);
   background: var(--tint-blue-faint);
   font: 500 var(--t-axis) / var(--lh-axis) var(--font-mono);

@@ -6,7 +6,7 @@ import { GLOSSARY } from "./terms.ts";
 function MethodNotes() {
   return (
     <div className="method">
-      <Card title="Time grid and the 31 December due date">
+      <Card level={3} title="Time grid and the 31 December due date">
         <p>
           A goal is due on 31 December of its target year. This year is a part year: only the months
           after the valuation month are left, and they carry a part of the yearly contribution.
@@ -14,7 +14,7 @@ function MethodNotes() {
           grows with inflation over the real time to that date.
         </p>
       </Card>
-      <Card title="Taxes by regime">
+      <Card level={3} title="Taxes by regime">
         <ul>
           <li>
             ETF: 26% minus 13.5 points times the white-list share. Losses cannot offset ETF gains.
@@ -28,7 +28,7 @@ function MethodNotes() {
           <li>Stamp duty (bollo): 0.2% a year on the value, except on pension funds.</li>
         </ul>
       </Card>
-      <Card title="Monte Carlo">
+      <Card level={3} title="Monte Carlo">
         <p>
           The plan runs through 1,000 simulated markets (300 for snapshots and the optimizer, 200
           when the optimizer looks for the lowest monthly amount). Each run draws correlated random
@@ -37,14 +37,14 @@ function MethodNotes() {
           and good case are the 1-in-10, the middle and the 9-in-10 result.
         </p>
       </Card>
-      <Card title="Required contribution">
+      <Card level={3} title="Required contribution">
         <p>
           It finds the lowest monthly amount that reaches the target, in a plain projection and in
           the simulated markets, where the probability of success must reach the required
           probability. When no amount works after 12 doublings, the goal is shown as not reachable.
         </p>
       </Card>
-      <Card title="Financial independence levels">
+      <Card level={3} title="Financial independence levels">
         <p>
           Level 1 is the target of the emergency fund goal, or a number of months of essential
           spending. Level 2 is a multiple of monthly essential spending. Level 3 adds a multiple of
@@ -53,7 +53,7 @@ function MethodNotes() {
           counts only when you switch it on, and never in Level 1.
         </p>
       </Card>
-      <Card title="Performance formulas">
+      <Card level={3} title="Performance formulas">
         <ul>
           <li>
             Monthly return: (value minus money put in that month) divided by the previous value,
@@ -66,7 +66,7 @@ function MethodNotes() {
           </li>
         </ul>
       </Card>
-      <Card title="Optimizer rules">
+      <Card level={3} title="Optimizer rules">
         <p>
           It compares mixes of the products you pick, in 10-point steps for up to 4 products and
           20-point steps for 5 or 6, on the same simulated markets. It keeps the mixes that reach
@@ -81,7 +81,7 @@ function MethodNotes() {
           ))}
         </ul>
       </Card>
-      <Card title="Kept simplifications">
+      <Card level={3} title="Kept simplifications">
         <ul>
           <li>The exit tax base is all contributions.</li>
           <li>Pension: extra deduction every year, with the refund at the marginal rate only.</li>
@@ -89,7 +89,7 @@ function MethodNotes() {
           <li>Cash pays stamp duty of 0.2% a year on the deposit account.</li>
         </ul>
       </Card>
-      <Card title="Pension capital and annuity">
+      <Card level={3} title="Pension capital and annuity">
         <CapitalNote />
       </Card>
     </div>
