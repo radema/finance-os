@@ -117,6 +117,10 @@ const CENTS = 100;
 const pensionGoalId = (scenario: Scenario, cf: CashFlowScenario): string =>
   scenario.goals[cf.pension.goal % scenario.goals.length]?.id ?? "";
 
+/** The mock's nominal growth for a growth above inflation: (1 + inflation)(1 + g) - 1. */
+const nominalGrowth = (scenario: Scenario, growth: number): number =>
+  (1 + scenario.settings.inflation) * (1 + growth) - 1;
+
 /**
  * The copied mock's 10-year cash flow, in euros. The mock keeps paying the pension refund after the
  * pension goal ends; v1 stops with the last one in targetYear + 1 (AC-96). That listed difference is
@@ -130,8 +134,11 @@ export function mockCashFlow(scenario: Scenario, cf: CashFlowScenario): MockCash
   const rows = mock.cashflow(
     {
       asOf: scenario.asOf,
+      // The mock grows both fields in nominal euros; v1 grows them above inflation (#156).
       cashflow: {
         ...cf.cashFlow,
+        incomeGrowth: nominalGrowth(scenario, cf.cashFlow.incomeGrowth),
+        expenseGrowth: nominalGrowth(scenario, cf.cashFlow.expenseGrowth),
         events: cf.cashFlow.events.map((e) => ({
           year: y0 + e.yearOffset,
           label: "",
@@ -190,6 +197,7 @@ export function v1CashFlow(scenario: Scenario, cf: CashFlowScenario): CashFlowYe
   );
   return projectCashFlow({
     asOf: scenario.asOf,
+    inflation: scenario.settings.inflation,
     cashFlow: cashFlowSchema.parse({
       income: cf.cashFlow.income * CENTS,
       incomeGrowth: cf.cashFlow.incomeGrowth,

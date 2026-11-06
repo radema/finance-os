@@ -60,7 +60,11 @@ export async function loadCashFlowView(db: Kysely<DB>, today: string): Promise<C
     };
   }
 
-  return { asOf, cashFlow, rows: projectCashFlow({ asOf, cashFlow, goals, pension }) };
+  return {
+    asOf,
+    cashFlow,
+    rows: projectCashFlow({ asOf, cashFlow, inflation: settings.inflation, goals, pension }),
+  };
 }
 
 /** The Setup Cash flow screen's reads and writes. */

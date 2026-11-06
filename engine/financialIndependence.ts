@@ -46,7 +46,7 @@ export type FiInput = {
   /** Essential and optional expenses, euros a month today. */
   essential: number;
   optional: number;
-  /** Yearly growth of both expenses. */
+  /** Yearly growth of both expenses above inflation: 0 keeps up with prices, so the targets stay flat. */
   expenseGrowth: number;
   inflation: number;
   /** The pension goal's id: its bucket is dropped when `fire.includePension` is off, and from Level 1. */
@@ -66,7 +66,7 @@ export type FiPoint = {
   total: FiBand;
   /** FI wealth without the pension bucket. Level 1 reads this. */
   nonPension: FiBand;
-  /** Level target at this point: today's target × ((1 + expenseGrowth)/(1 + inflation))^t. */
+  /** Level target at this point: today's target × (1 + expenseGrowth)^t. */
   targets: number[];
   /** Share of paths whose wealth is at or above the target. */
   pReached: number[];
@@ -235,7 +235,7 @@ export function projectFinancialIndependence(
     }
   }
 
-  const growthOfTargets = (1 + input.expenseGrowth) / (1 + input.inflation);
+  const growthOfTargets = 1 + input.expenseGrowth;
   const points = Array.from({ length: POINTS }, (_, point): FiPoint => {
     const targets = levels.map((target) => target * growthOfTargets ** (times[point] as number));
     const result: FiPoint = {

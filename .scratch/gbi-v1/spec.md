@@ -137,7 +137,7 @@ performance are always derived.
 | ImportBatch | id, kind (`transactions`, `prices`, `products`, `goals`), source name, file name, createdAt, rows read / imported / skipped, undoneAt?, prior state of overwritten prices | Unit of undo |
 | ImportMapping | name, kind, column map, delimiter, decimal and date format | Preset "Fineco movimenti (XLSX)" (t08) + saved user mappings |
 | PensionPlan | ral, ralGrowth, tfrPct, workerPct, employerPct, voluntary (blank = to cap), marginalRate, firstYear, extra (€2,650), goalId, flows[{productId, flow Work/Voluntary, pct}] | |
-| CashFlow | income, incomeGrowth, essential €/month, optional €/month, expenseGrowth, events[{year, label, amount}] | Also feeds FI levels |
+| CashFlow | income, incomeGrowth, essential €/month, optional €/month, expenseGrowth, events[{year, label, amount}] | Also feeds FI levels. `incomeGrowth` and `expenseGrowth` are growth above inflation: 0% keeps up with prices (#156) |
 | Snapshot | month, source (`saved`, `recomputed`), assumptionsHash, per goal {prob, reqP, detNet, target, median, p10, p90, value, status} | Frozen at save time |
 | Dismissal | ruleId, scope (goal or product or none), key, dismissedAt | t10. Alerts themselves are generated, never stored |
 
@@ -225,13 +225,15 @@ at most 50% can be taken as capital, the rest as an annuity, and that a phased p
 return taxed 20% flat (S7), cash stamp duty 0.2% (deposit account).
 
 **Cash flow (year t).** Capacity = income − 12 × (essential + optional) (each growing) + events +
-pension refund of t − 1. Planned from savings = Σ goal contributions; the pension goal counts only
+pension refund of t − 1. The table is in nominal euros: income grows by
+((1 + inflation) × (1 + incomeGrowth))^t and expenses by ((1 + inflation) × (1 + expenseGrowth))^t,
+t = year − Y0, so both growth fields are growth above inflation (#156). Planned from savings = Σ goal contributions; the pension goal counts only
 its voluntary part. In the stub year income, expenses and contributions are × f; events and the
 refund are whole (t16). The first bar is labelled "rest of year".
 
 **Financial independence (t07, today's €).** Level 1 Safety = target of the `efFromGoal` goal, else
 efMonths × essential. Level 2 = l2Mult × essential monthly. Level 3 = Level 2 + l3Mult × optional
-monthly. Targets over time: target(t) = target(0) × ((1 + expenseGrowth)/(1 + inflation))^t, t in
+monthly. Targets over time: target(t) = target(0) × (1 + expenseGrowth)^t, expenseGrowth being growth above inflation (0 = flat), t in
 real years from asOf. FI wealth = Σ **net** value (liquidation rule; pension: value − exit-tax rate of
 that year × basis) of buckets with countsTowardFI, pension only if includePension, deflated by
 (1 + inflation)^t — today and projected (fixes mock bug M2). Level 1 uses FI wealth **without** the
@@ -460,6 +462,8 @@ to the next story if a story does not fit, keeping its id.
   first-year refund timing), plan vs actual on ledgers with buys only (no sells, coupons or plan
   versions). Listed expected differences outside that domain: M2, E9, S1, S2, S5, growth exponents of
   the first full year, and plan versions.
+  The mock's cash flow growth is nominal: the harness maps mock growth = (1 + inflation)(1 + g) − 1
+  for incomeGrowth and expenseGrowth, so the rows still compare (#156).
 - **Synthetic fixture** (one JSON in `fixtures/`; extended and its snapshot re-reviewed in S3 for
   pension and in S4 for Monte Carlo): 7 made-up products (ETF WL 0, ETF
   WL 50%, direct, govt with couponRate, deposit, two pension funds), 4 made-up goals (one with τ < 1,
@@ -553,7 +557,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-56: Cholesky fallback. Check: engine test with a non-positive-definite matrix. Expected: off-diagonals shrunk in 10% steps until it factorises; a flag is returned.
 - AC-57: Required contribution. Check: engine + property tests. Expected: the returned amount reaches the target (det.) or the required P (MC); `null` after 12 doublings; no contribution step left (r = 0 and targetYear = Y0, or τ = 0) → 0 if met, else `null`; a goal due this year with r > 0 is solved normally.
 - AC-58: Status. Check: engine test. Expected: P ≥ required → On track; within 15 points → At risk; else Off track; minProb overrides the priority default.
-- AC-59: FI levels. Check: engine tests (t07). Expected: essential 1,000, optional 500, expenseGrowth = inflation → L2 = 300,000, L3 = 400,000 flat in all years; expenseGrowth 3% vs inflation 2% → L2(10) ≈ 331,000.
+- AC-59: FI levels. Check: engine tests (t07). Expected: essential 1,000, optional 500, expenseGrowth = 0 → L2 = 300,000, L3 = 400,000 flat in all years; expenseGrowth 3% → L2(10) = 300,000 × 1.03^10 ≈ 403,000, whatever the inflation.
 - AC-60: FI wealth. Check: engine tests. Expected: net of liquidation tax today and projected; includePension defaults to true; Level 1 progress excludes the pension bucket; unticking a goal's countsTowardFI removes it.
 - AC-61: Goals with MC. Check: `agent-browser` on the sample data. Expected: list shows status and P vs required; detail shows fan, P vs required, range chart and "what it would take" (det./prob., "not reachable" when `null`); no raw "P10–P90" label.
 - AC-62: Independence screen. Check: `agent-browser`. Expected: ladder with pension share, table (target, progress, year reached det./median, P(reached in 20 y)), "what counts" ticks, include-pension switch, % of target per year, fan with level lines; changing a multiplier updates levels without a page reload.
