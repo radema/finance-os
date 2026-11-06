@@ -387,14 +387,23 @@ export function LevelsCell({ levels, note }: { levels: readonly LevelRow[]; note
           </tr>
         </thead>
         <tbody>
-          {levels.map((level) => (
-            <tr key={level.name}>
-              <td>{level.name}</td>
-              <td className="num">{percentText(level.progress)}</td>
-              <td className="num">{year(level.median)}</td>
-              <td className="num">{year(level.deterministic)}</td>
-            </tr>
-          ))}
+          {levels.map((level) =>
+            level.set ? (
+              <tr key={level.name}>
+                <td>{level.name}</td>
+                <td className="num">{percentText(level.progress)}</td>
+                <td className="num">{year(level.median)}</td>
+                <td className="num">{year(level.deterministic)}</td>
+              </tr>
+            ) : (
+              <tr key={level.name}>
+                <td>{level.name}</td>
+                <td className="num" colSpan={3}>
+                  Set your expenses
+                </td>
+              </tr>
+            ),
+          )}
         </tbody>
       </table>
     </div>

@@ -33,6 +33,9 @@ export interface LadderRow {
   pensionShare: number | null;
 }
 
+/** A level with target 0 has no expenses behind it: it is "not set", so it has no year and no share. */
+export const isLevelSet = (target: number): boolean => target > 0;
+
 /** The three rungs of the ladder, with the wealth of each split by goal. Null without a result. */
 export function ladderRows(view: IndependenceView): LadderRow[] | null {
   const { result } = view;
@@ -54,7 +57,7 @@ export function ladderRows(view: IndependenceView): LadderRow[] | null {
       name: LEVEL_NAMES[level] ?? `Level ${level + 1}`,
       target,
       wealth,
-      progress: target > 0 ? wealth / target : null,
+      progress: isLevelSet(target) ? wealth / target : null,
       segments,
       pensionShare: wealth > 0 ? pension / wealth : null,
     };
@@ -92,7 +95,7 @@ export function levelTiles(view: IndependenceView): LevelTile[] | null {
   const { result } = view;
   if (!result) return null;
   return result.levels.map((target, level) => {
-    const set = target > 0;
+    const set = isLevelSet(target);
     return {
       level,
       name: LEVEL_NAMES[level] ?? `Level ${level + 1}`,
