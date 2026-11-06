@@ -7,6 +7,7 @@ import { fractionToPercent, percentToFraction } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { hashParams } from "../hashQuery.ts";
 import { formatPercent } from "../money.ts";
+import { copyOfProduct } from "./duplicate.ts";
 import { regimeFields, regimeHint, resetHiddenFields } from "./regime.ts";
 import { useRevealForm } from "./revealForm.ts";
 import {
@@ -111,6 +112,7 @@ export function ProductsTab() {
     };
   });
   const [editing, setEditing] = useState<string>();
+  const [copying, setCopying] = useState(false);
   const [error, setError] = useState<string>();
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm({ ...form, [key]: value });
   const setRegime = (regime: string) => setForm(resetHiddenFields({ ...form, regime }));
@@ -122,6 +124,7 @@ export function ProductsTab() {
   const reset = () => {
     setForm(EMPTY);
     setEditing(undefined);
+    setCopying(false);
   };
   const save = async () => {
     try {
@@ -269,7 +272,7 @@ export function ProductsTab() {
             <button className="btn btn-primary" type="submit">
               {editing ? "Save product" : "Add product"}
             </button>
-            {editing ? (
+            {editing || copying ? (
               <button className="btn btn-quiet" type="button" onClick={reset}>
                 Cancel
               </button>
@@ -317,12 +320,26 @@ export function ProductsTab() {
                           type="button"
                           onClick={() => {
                             setEditing(p.id);
+                            setCopying(false);
                             setForm(toForm(p));
                             setError(undefined);
                             reveal();
                           }}
                         >
                           Edit
+                        </button>
+                        <button
+                          className="btn btn-quiet"
+                          type="button"
+                          onClick={() => {
+                            setEditing(undefined);
+                            setCopying(true);
+                            setForm(toForm(copyOfProduct(p)));
+                            setError(undefined);
+                            reveal();
+                          }}
+                        >
+                          Duplicate
                         </button>
                         <ConfirmButton
                           label="Delete"

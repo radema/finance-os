@@ -6,6 +6,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, percentToFraction } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { currentMonth, formatEuro, formatPercent } from "../money.ts";
+import { copyOfGoal } from "./duplicate.ts";
 import { fromMonthInForce, monthlyInForce, valuationMonth } from "./goalPlan.ts";
 import { useRevealForm } from "./revealForm.ts";
 import {
@@ -176,6 +177,7 @@ export function GoalsTab() {
   const valuation = useLoad<GoalListView>("/api/goal-list");
   const [form, setForm] = useState<Form>(emptyForm);
   const [editing, setEditing] = useState<string>();
+  const [copying, setCopying] = useState(false);
   const [selected, setSelected] = useState<string>();
   const [error, setError] = useState<string>();
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm({ ...form, [key]: value });
@@ -184,6 +186,7 @@ export function GoalsTab() {
   const reset = () => {
     setForm(emptyForm());
     setEditing(undefined);
+    setCopying(false);
   };
   const save = async () => {
     try {
@@ -223,6 +226,11 @@ export function GoalsTab() {
   };
 
   const month = valuation.data ? valuationMonth(valuation.data.asOf) : undefined;
+  // A copy keeps the plan: its monthly amount in force becomes the first version of the new goal.
+  const monthlyText = (g: Goal) => {
+    const cents = month === undefined ? 0 : monthlyInForce(g.plan, month);
+    return cents > 0 ? centsToEuros(cents) : "";
+  };
   return (
     <>
       <Card title={editing ? "Edit goal" : "Add goal"}>
@@ -301,7 +309,7 @@ export function GoalsTab() {
             <button className="btn btn-primary" type="submit">
               {editing ? "Save goal" : "Add goal"}
             </button>
-            {editing ? (
+            {editing || copying ? (
               <button className="btn btn-quiet" type="button" onClick={reset}>
                 Cancel
               </button>
@@ -355,12 +363,26 @@ export function GoalsTab() {
                           type="button"
                           onClick={() => {
                             setEditing(g.id);
+                            setCopying(false);
                             setForm(toForm(g));
                             setError(undefined);
                             reveal();
                           }}
                         >
                           Edit
+                        </button>
+                        <button
+                          className="btn btn-quiet"
+                          type="button"
+                          onClick={() => {
+                            setEditing(undefined);
+                            setCopying(true);
+                            setForm({ ...toForm(copyOfGoal(g)), monthly: monthlyText(g) });
+                            setError(undefined);
+                            reveal();
+                          }}
+                        >
+                          Duplicate
                         </button>
                         <ConfirmButton
                           label="Delete"

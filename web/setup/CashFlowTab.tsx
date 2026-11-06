@@ -4,6 +4,7 @@ import type { CashFlow, CashFlowEvent } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, num, percentToFraction } from "../forms.ts";
 import { formatEuro } from "../money.ts";
+import { copyOfEvent } from "./duplicate.ts";
 import { useRevealForm } from "./revealForm.ts";
 import {
   Alert,
@@ -55,6 +56,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
   const [values, setValues] = useState<Values>(() => toValues(cashFlow));
   const [event, setEvent] = useState<EventForm>(emptyEvent);
   const [editing, setEditing] = useState<number>();
+  const [copying, setCopying] = useState(false);
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState(false);
   const { formRef, reveal } = useRevealForm("form");
@@ -75,6 +77,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
     if (await save(events)) {
       setEvent(emptyEvent());
       setEditing(undefined);
+      setCopying(false);
     }
   };
   const submitEvent = () => {
@@ -162,6 +165,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
                       type="button"
                       onClick={() => {
                         setEditing(e.index);
+                        setCopying(false);
                         setEvent({
                           year: String(e.year),
                           label: e.label,
@@ -172,6 +176,24 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
                       }}
                     >
                       Edit
+                    </button>
+                    <button
+                      className="btn btn-quiet"
+                      type="button"
+                      onClick={() => {
+                        const copy = copyOfEvent(e);
+                        setEditing(undefined);
+                        setCopying(true);
+                        setEvent({
+                          year: String(copy.year),
+                          label: copy.label,
+                          amount: centsToEuros(copy.amount),
+                        });
+                        setError(undefined);
+                        reveal();
+                      }}
+                    >
+                      Duplicate
                     </button>
                     <ConfirmButton
                       label="Delete"
@@ -217,12 +239,13 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
           <button className="btn btn-primary" type="submit">
             {editing === undefined ? "Add event" : "Save event"}
           </button>
-          {editing === undefined ? null : (
+          {editing === undefined && !copying ? null : (
             <button
               className="btn btn-quiet"
               type="button"
               onClick={() => {
                 setEditing(undefined);
+                setCopying(false);
                 setEvent(emptyEvent());
               }}
             >

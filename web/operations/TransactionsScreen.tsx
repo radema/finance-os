@@ -8,6 +8,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro, formatPercent } from "../money.ts";
+import { copyOfTransaction } from "../setup/duplicate.ts";
 import { type RevealFormRef, useRevealForm } from "../setup/revealForm.ts";
 import {
   Alert,
@@ -42,9 +43,10 @@ interface LastPrice {
   priceDate: string;
 }
 
-/** The form of Add, and of Edit when `editing` is a row: then it starts from that row. */
+/** The form of Add. It starts from a row for Edit (`editing`) or Duplicate (`copying`). */
 function AddForm({
   editing,
+  copying,
   today,
   goals,
   products,
@@ -56,6 +58,8 @@ function AddForm({
 }: {
   /** The row being edited, or none to add. Give the form a new `key` to switch rows. */
   editing?: Transaction;
+  /** The row being duplicated: the form adds a new transaction that starts from it. */
+  copying?: Transaction;
   /** The server's app clock: the default date of a new transaction. */
   today: string;
   goals: Goal[];
@@ -63,14 +67,15 @@ function AddForm({
   commission: Commission;
   /** The saved plan: it says which flows a pension fund takes. */
   pensionPlan: PensionPlan | null | undefined;
-  /** On the form element: Edit reveals it. */
+  /** On the form element: Edit and Duplicate reveal it. */
   formRef: RevealFormRef;
   onSaved: () => void;
-  /** Edit only: leave the row as it is. */
+  /** Edit and Duplicate: leave the form without saving. */
   onCancel: () => void;
 }) {
-  const start = editing
-    ? fieldsFromTransaction(editing)
+  const from = editing ?? copying;
+  const start = from
+    ? fieldsFromTransaction(copying ? copyOfTransaction(copying, today) : from)
     : {
         date: today,
         goalId: goals[0]?.id ?? "",
@@ -92,10 +97,10 @@ function AddForm({
   const [priceNote, setPriceNote] = useState<string>();
   const [error, setError] = useState<string>();
 
-  // The price starts from the product's last price; the user can still change it. An edited row
-  // keeps its own price until the product changes.
+  // The price starts from the product's last price; the user can still change it. An edited or
+  // duplicated row keeps its own price until the product changes.
   useEffect(() => {
-    if (editing && productId === editing.productId) return;
+    if (from && productId === from.productId) return;
     let live = true;
     api<LastPrice | null>("GET", "/api/last-price", { query: { productId } }).then(
       (last) => {
@@ -108,7 +113,7 @@ function AddForm({
     return () => {
       live = false;
     };
-  }, [productId, editing]);
+  }, [productId, from]);
 
   const product = products.find((p) => p.id === productId);
   const amountCents = eurosToCents(amount);
@@ -215,7 +220,7 @@ function AddForm({
           <button className="btn btn-primary" type="submit">
             {editing ? "Save changes" : "Add transaction"}
           </button>
-          {editing ? (
+          {from ? (
             <button className="btn btn-quiet" type="button" onClick={onCancel}>
               Cancel
             </button>
@@ -250,6 +255,7 @@ export function TransactionsScreen() {
   const [yearFilter, setYearFilter] = useState("");
   const [error, setError] = useState<string>();
   const [editing, setEditing] = useState<Transaction>();
+  const [copying, setCopying] = useState<Transaction>();
   const { formRef, reveal } = useRevealForm();
 
   const query = new URLSearchParams();
@@ -262,6 +268,7 @@ export function TransactionsScreen() {
       await api("DELETE", "/api/transactions", { query: { id } });
       setError(undefined);
       if (editing?.id === id) setEditing(undefined);
+      if (copying?.id === id) setCopying(undefined);
       list.reload();
     } catch (failure) {
       setError(messageOf(failure));
@@ -290,8 +297,9 @@ export function TransactionsScreen() {
                     <Resource loaded={clock}>
                       {({ today }) => (
                         <AddForm
-                          key={editing?.id ?? "add"}
+                          key={editing ? editing.id : copying ? `copy-${copying.id}` : "add"}
                           editing={editing}
+                          copying={copying}
                           today={today}
                           goals={goalList}
                           products={productList}
@@ -300,9 +308,13 @@ export function TransactionsScreen() {
                           formRef={formRef}
                           onSaved={() => {
                             setEditing(undefined);
+                            setCopying(undefined);
                             list.reload();
                           }}
-                          onCancel={() => setEditing(undefined)}
+                          onCancel={() => {
+                            setEditing(undefined);
+                            setCopying(undefined);
+                          }}
                         />
                       )}
                     </Resource>
@@ -382,11 +394,25 @@ export function TransactionsScreen() {
                               className="btn btn-quiet"
                               type="button"
                               onClick={() => {
+                                setCopying(undefined);
                                 setEditing(t);
                                 reveal();
                               }}
                             >
                               Edit
+                            </button>
+                          )}
+                          {t.type === "opening" ? null : (
+                            <button
+                              className="btn btn-quiet"
+                              type="button"
+                              onClick={() => {
+                                setEditing(undefined);
+                                setCopying(t);
+                                reveal();
+                              }}
+                            >
+                              Duplicate
                             </button>
                           )}
                           <ConfirmButton
