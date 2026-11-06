@@ -178,7 +178,14 @@
   border-bottom: 1px solid var(--grid);
 }
 .alert-rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1) var(--s2);
   font-weight: 600;
+}
+.alert-rule .severity-Info {
+  font-weight: 400;
 }
 .prices li {
   display: flex;

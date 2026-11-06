@@ -111,6 +111,10 @@ is `--control-h` high. KPI cards wrap in equal columns chosen from the card coun
 - **Status chip.** Pill, icon plus word. On track: check in a circle on `--wash`. At risk: outline
   triangle on `--tint1`, weight 600, border highlight at 35%. Off track: filled triangle on
   `--tint1-strong`, border `--hl`.
+- **Alert severity chip.** Same pill as the status chip, icon plus word, after the alert name. Info:
+  neutral ring on `--wash`. Medium: outline triangle on `--tint1`, weight 600, border highlight at 35%.
+  High: filled triangle on `--tint1-strong`, border `--hl`. Colour marks only; the word stays in the text
+  grey. The rule id (R2, R7) is never shown.
 - **Product tag.** 4 px radius, 12 px uppercase, weight 600, 1 px `--grid` border. ETF `--tint-blue`,
   BTP `--tint-sand`, Pension `--tint-pink`.
 - **Price-freshness pill.** Pill, 13 px. Fresh: grey ring (`--ctx`) on `--wash`. Old: filled `--hl` dot,

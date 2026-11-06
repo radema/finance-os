@@ -5,6 +5,7 @@ import type { Alert } from "../../engine/rules.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { pVsRequired } from "../goals/outlook.ts";
+import { SeverityChip } from "../goals/SeverityChip.tsx";
 import { StatusChip } from "../goals/StatusChip.tsx";
 import { ProgressChart } from "../independence/FiCharts.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
@@ -124,7 +125,7 @@ export function NetWorthCell({ view }: { view: OverviewView["netWorth"] }) {
   );
 }
 
-/** The visible alerts, each with its rule, a link to the screen of the rule and a dismiss action. */
+/** The visible alerts, each with its name and severity, a link to the screen of the rule and a dismiss action. */
 export function AttentionCell({
   alerts,
   error,
@@ -142,10 +143,8 @@ export function AttentionCell({
         {alerts.map((alert) => (
           <li key={`${alert.ruleId}|${alert.scope.kind}|${alert.key}`}>
             <div className="alert-rule">
-              <a href={hrefOf(alertRoute(alert))}>
-                {alert.ruleId} {alert.name}
-              </a>
-              <span className="sub-line"> {alert.severity}</span>
+              <a href={hrefOf(alertRoute(alert))}>{alert.name}</a>
+              <SeverityChip severity={alert.severity} />
             </div>
             <p className="sub">{alert.condition}</p>
             <button className="btn" type="button" onClick={() => onDismiss(alert)}>

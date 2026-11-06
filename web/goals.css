@@ -150,7 +150,8 @@
   color: var(--muted);
 }
 
-.status {
+.status,
+.severity {
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
@@ -162,24 +163,30 @@
   line-height: var(--lh-label);
   white-space: nowrap;
 }
-.status svg {
+.status svg,
+.severity svg {
   width: 14px;
   height: 14px;
   flex: none;
   color: var(--muted);
 }
 .status-at_risk,
-.status-off_track {
+.status-off_track,
+.severity-Medium,
+.severity-High {
   border-color: color-mix(in srgb, var(--hl) 35%, transparent);
   background: var(--tint1);
   font-weight: 600;
 }
-.status-off_track {
+.status-off_track,
+.severity-High {
   border-color: var(--hl);
   background: var(--tint1-strong);
 }
 .status-at_risk svg,
-.status-off_track svg {
+.status-off_track svg,
+.severity-Medium svg,
+.severity-High svg {
   color: var(--hl);
 }
 
