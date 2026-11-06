@@ -6,9 +6,25 @@
   border-bottom: 1px dotted var(--muted);
   border-radius: 0;
   background: none;
+  position: relative;
   font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   color: inherit;
   cursor: help;
+}
+/* A small term keeps its look; an invisible box around it gives it a 24 px hit area. */
+.term::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, var(--s4));
+  height: max(100%, var(--s4));
+  transform: translate(-50%, -50%);
+}
+th .term {
+  white-space: nowrap;
 }
 .term:hover {
   border-bottom-color: var(--ink);

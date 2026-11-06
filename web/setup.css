@@ -59,7 +59,6 @@
   inset: 0;
 }
 .card-head-row .term {
-  position: relative;
   z-index: 1;
 }
 .card-toggle[aria-expanded="false"] svg {
