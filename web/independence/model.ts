@@ -36,6 +36,10 @@ export interface LadderRow {
 /** A level with target 0 has no expenses behind it: it is "not set", so it has no year and no share. */
 export const isLevelSet = (target: number): boolean => target > 0;
 
+/** True when every level target is 0: no expenses are set, so there is nothing to show. */
+export const noLevelSet = (levels: readonly number[]): boolean =>
+  levels.every((target) => !isLevelSet(target));
+
 /** The three rungs of the ladder, with the wealth of each split by goal. Null without a result. */
 export function ladderRows(view: IndependenceView): LadderRow[] | null {
   const { result } = view;

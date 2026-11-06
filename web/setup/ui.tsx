@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from "react";
 import { useId, useState } from "react";
 import type { Loaded } from "../api.ts";
+import { Loading } from "../Loading.tsx";
 import { browserStorage, cardKey, readOpen, screenHash, writeOpen } from "./cardState.ts";
 
 /**
@@ -86,7 +87,7 @@ export function Resource<T>({
   if (loaded.data !== undefined) return <>{children(loaded.data)}</>;
   if (loaded.error) {
     return (
-      <div className="alert" role="alert">
+      <div className="alert state-box" role="alert">
         <p>{loaded.error}</p>
         <button className="btn" type="button" onClick={loaded.reload}>
           Try again
@@ -94,7 +95,7 @@ export function Resource<T>({
       </div>
     );
   }
-  return <p className="note">Loading...</p>;
+  return <Loading />;
 }
 
 /** The one-line legend of a form that has required fields. */

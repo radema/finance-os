@@ -115,6 +115,24 @@
 .alert p {
   margin: 0 0 var(--s2);
 }
+/* Loading and error share one box with a reserved height, so the page does not jump on load. */
+.state-box {
+  min-height: calc(var(--s6) * 3);
+}
+/* A card or chart with nothing to show: a sentence and at most one action, at the height of its content. */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s3);
+}
+.empty-state .note {
+  margin: 0;
+}
+.empty-state-action {
+  display: inline-block;
+  text-decoration: none;
+}
 
 /* Forms */
 .field {
