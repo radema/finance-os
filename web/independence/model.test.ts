@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { FiPoint, FiResult } from "../../engine/financialIndependence.ts";
 import type { IndependenceView } from "../../engine/independenceView.ts";
-import { changedSettings, ladderRows, parseDraft, reachedWithin } from "./model.ts";
+import {
+  changedSettings,
+  ladderRows,
+  levelLinesNote,
+  levelTiles,
+  parseDraft,
+  reachedWithin,
+  reachTitle,
+} from "./model.ts";
 
 const band = { p10: 0, p50: 0, p90: 0, deterministic: 0 };
 const point = (year: number, t: number, pReached: number[]): FiPoint => ({
@@ -101,6 +109,104 @@ describe("reachedWithin", () => {
   it("reads the point of the calendar year Y0 + 20", () => {
     expect(reachedWithin(view, 1)).toEqual({ year: 2046, p: 0.2 });
     expect(reachedWithin(view, 2)).toEqual({ year: 2046, p: 0.1 });
+  });
+});
+
+describe("levelTiles (AC-62)", () => {
+  it("reads the typical and deterministic year and the chance in 20 years of each level", () => {
+    expect(levelTiles(view)).toEqual([
+      {
+        level: 0,
+        name: "Level 1 Safety",
+        target: 12_000,
+        set: true,
+        typical: 2026,
+        deterministic: 2026,
+        chance: 1,
+      },
+      {
+        level: 1,
+        name: "Level 2",
+        target: 300_000,
+        set: true,
+        typical: null,
+        deterministic: 2060,
+        chance: 0.2,
+      },
+      {
+        level: 2,
+        name: "Level 3",
+        target: 400_000,
+        set: true,
+        typical: null,
+        deterministic: null,
+        chance: 0.1,
+      },
+    ]);
+  });
+
+  it("marks a level with target 0 as not set and gives it no year or chance", () => {
+    const unset = { ...view, result: { ...result, levels: [0, 300_000, 400_000] } };
+    expect(levelTiles(unset)?.[0]).toMatchObject({
+      set: false,
+      typical: null,
+      deterministic: null,
+      chance: null,
+    });
+  });
+
+  it("is null without a result", () => {
+    expect(levelTiles({ ...view, result: null })).toBeNull();
+  });
+});
+
+describe("reachTitle", () => {
+  const tile = (level: number, typical: number | null, set = true) => ({
+    level,
+    name: `Level ${level + 1}`,
+    target: 1,
+    set,
+    typical,
+    deterministic: null,
+    chance: null,
+  });
+
+  it("names the levels the typical case reaches and says when one is missing", () => {
+    expect(reachTitle([tile(0, 2028), tile(1, 2066), tile(2, null)])).toBe(
+      "The typical case reaches Level 1 in 2028 and Level 2 in 2066; not every level within 40 years",
+    );
+  });
+
+  it("lists three levels with commas", () => {
+    expect(reachTitle([tile(0, 2028), tile(1, 2040), tile(2, 2050)])).toBe(
+      "The typical case reaches Level 1 in 2028, Level 2 in 2040 and Level 3 in 2050",
+    );
+  });
+
+  it("says so when no level is reached, and skips a level that is not set", () => {
+    expect(reachTitle([tile(0, null), tile(1, null)])).toBe(
+      "The typical case reaches no level within 40 years",
+    );
+    expect(reachTitle([tile(0, null, false), tile(1, 2040)])).toBe(
+      "The typical case reaches Level 2 in 2040",
+    );
+  });
+});
+
+describe("levelLinesNote (AC-59)", () => {
+  it("says the lines are flat when expenses keep up with prices", () => {
+    expect(levelLinesNote(0)).toBe(
+      "The level lines are flat because your expenses keep up with prices.",
+    );
+  });
+
+  it("reads expense growth as growth above inflation", () => {
+    expect(levelLinesNote(0.02)).toBe(
+      "The level lines rise 2% a year because your expenses grow 2% a year above inflation.",
+    );
+    expect(levelLinesNote(-0.01)).toBe(
+      "The level lines fall 1% a year because your expenses grow 1% a year below inflation.",
+    );
   });
 });
 
