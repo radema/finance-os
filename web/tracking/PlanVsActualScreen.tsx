@@ -97,13 +97,13 @@ function Totals({ view }: { view: PlanVsActualView }) {
     <>
       <Exhibit
         tag="Planned vs put in"
-        title={`Since ${view.trackingStart} you planned ${formatEuro(last.cumPlanned)} and put in ${formatEuro(last.cumActual)}`}
+        title={`You are ${gapLine(last.gap)}, ${formatEuro(last.cumActual)} put in against ${formatEuro(last.cumPlanned)} planned`}
         unit="Euros, cumulative, all goals."
         legend={[
           { label: "Planned", kind: "dash", colour: "--ctx" },
           { label: "Put in", kind: "line", colour: "--hl" },
         ]}
-        callout={`All goals together are ${gapLine(last.gap)}. A month with no contribution is not a failure: only the running total counts.`}
+        callout="A month with no contribution is not a failure: only the running total counts."
         source={source}
       >
         <CumulativeChart
@@ -187,11 +187,7 @@ function PlanVsActual({ view }: { view: PlanVsActualView }) {
   const last = view.total.at(-1);
   return (
     <>
-      <h1 className="title">
-        {last
-          ? `You are ${gapLine(last.gap)}, ${formatEuro(last.cumActual)} put in against ${formatEuro(last.cumPlanned)} planned`
-          : "Plan vs actual"}
-      </h1>
+      <h1 className="title">Plan vs actual</h1>
       <p className="unit">
         Planned against put in since the tracking start, {view.trackingStart}. Values at the end of{" "}
         {view.asOf.slice(0, 7)}.

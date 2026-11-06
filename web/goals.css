@@ -229,6 +229,10 @@
 .exhibit + .card {
   margin-top: var(--s5);
 }
+/* A finding above the card it summarises sits one token gap away. */
+.exhibit-title + .card {
+  margin-top: var(--s3);
+}
 .take-value {
   font-weight: 600;
   text-align: right;

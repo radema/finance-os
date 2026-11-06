@@ -49,11 +49,12 @@ function Dashboard({ view }: { view: OverviewView }) {
   return (
     <>
       <div className="tag">Overview</div>
-      <h1 className="title">{actionTitle(track, key.netWorth)}</h1>
+      <h1 className="title">Overview</h1>
       <p className="unit">
         Values at the end of {view.asOf.slice(0, 7)}. Every number links to its screen.
       </p>
 
+      <h2 className="exhibit-title">{actionTitle(track, key.netWorth)}</h2>
       <div className="kpis kpis-blue kpis-overview" data-cell="key-numbers">
         <Kpi
           label="Net worth"

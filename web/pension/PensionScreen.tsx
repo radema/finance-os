@@ -282,15 +282,10 @@ function Schedule({ rows, slot }: { rows: PensionYearView[]; slot: number }) {
 function Pension({ view, onSaved }: { view: PensionView; onSaved: () => void }) {
   const goal = view.goals.find((candidate) => candidate.id === view.plan?.goalId);
   const slot = goal?.slot ?? GREY_SLOT;
-  const title = view.thisYear
-    ? `You can still deduct ${formatAmount(view.thisYear.available)} in ${view.thisYear.year}`
-    : view.plan
-      ? "Add your RAL to see the pension schedule"
-      : "No pension plan yet";
   return (
     <div style={{ "--slot": `var(--slot${slot})` } as CSSProperties}>
       <div className="tag">Pension</div>
-      <h1 className="title">{title}</h1>
+      <h1 className="title">Pension</h1>
       <p className="unit">
         {goal ? (
           <>
@@ -299,10 +294,17 @@ function Pension({ view, onSaved }: { view: PensionView; onSaved: () => void }) 
           </>
         ) : null}
         {view.plan
-          ? `Euros. Values at the end of ${view.asOf.slice(0, 7)}.`
-          : "Fill in the inputs below to plan your pension fund. Nothing is saved until you press Save."}
+          ? `Euros. Values at the end of ${view.asOf.slice(0, 7)}.${view.thisYear ? "" : " Add your RAL to see the pension schedule."}`
+          : "No pension plan yet. Fill in the inputs below to plan your pension fund. Nothing is saved until you press Save."}
       </p>
-      {view.thisYear ? <ThisYear year={view.thisYear} /> : null}
+      {view.thisYear ? (
+        <>
+          <h2 className="exhibit-title">
+            {`You can still deduct ${formatAmount(view.thisYear.available)} in ${view.thisYear.year}`}
+          </h2>
+          <ThisYear year={view.thisYear} />
+        </>
+      ) : null}
       <PlanForm view={view} onSaved={onSaved} />
       <Schedule rows={view.schedule} slot={slot} />
       <CapitalNote />

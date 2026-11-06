@@ -390,6 +390,9 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
   tags, price-freshness pills, KPI cards with an accent bar, section cards with no outline. Sticky
   header on every table. A compact legend on every multi-series chart; direct labels where they help;
   exhibit anatomy (tag, action title with a number, unit line, chart, callout, source).
+- Page titles: the `h1` of every screen is the name of the screen (on a goal's page, the goal's name).
+  A finding with a number is never the `h1`: it is the action title (`h2`) of the first exhibit, or
+  of the key numbers where a screen opens with them.
 - Fonts: Geist + Geist Mono, bundled (OFL). Charts are drawn after fonts load and resize with their box.
 - Jargon terms are popover buttons that open on click, tap, Enter or Space, never on focus (plain
   sentence first, Italian term above it); touch friendly, no `title=`
@@ -401,7 +404,7 @@ Screens (content; acceptance in the Definition of done):
 
 | Screen | Content |
 |---|---|
-| Overview | Action title from the data; key numbers (net worth, market change this month, YTD TWR, FI wealth, goals on track); grid: P(success) per goal vs required, net worth by goal over time with money put in, needs attention (alerts), P(success) trend from snapshots, range of outcomes vs target, 10-year savings capacity vs plan, goals, % of FI target per year, price freshness; per FI level today's % reached and year reached (median, det.) (t07). Every number links to the screen that explains it |
+| Overview | Key numbers, under an action title from the data (the `h2` of the key numbers; the `h1` is "Overview") (net worth, market change this month, YTD TWR, FI wealth, goals on track); grid: P(success) per goal vs required, net worth by goal over time with money put in, needs attention (alerts), P(success) trend from snapshots, range of outcomes vs target, 10-year savings capacity vs plan, goals, % of FI target per year, price freshness; per FI level today's % reached and year reached (median, det.) (t07). Every number links to the screen that explains it |
 | Goals list | One row per goal; its goal chip opens the goal's page: name + priority, status, P vs required, value vs target, plan gap (t11 replaces the 9-column table) |
 | Goal detail | A back link to the Goals list and a goal switch at the top (no sidebar item; `#/goals/detail` with no goal opens the Goals list). Value, P vs required, XIRR, fan, P history, range chart, "what it would take" (needed det./prob., horizon), holdings (units, price + age, PMC, gain, tax if sold), value vs money put in, cumulative plan vs actual, change the monthly plan from month X, 50% capital note on the pension goal |
 | Goal history | Metric switch (P, funded ratio, median/target); a line per goal over snapshots; snapshot table; Save snapshot; delete saved snapshots |
