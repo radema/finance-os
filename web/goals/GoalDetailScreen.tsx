@@ -8,7 +8,7 @@ import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatAmount, formatPercent, formatUnitPrice } from "../money.ts";
 import { GOALS_LIST_ROUTE, goalDetailHref } from "../nav.ts";
 import { Card, PriorityTag, ProductTag, Resource } from "../setup/ui.tsx";
-import { percentText, scopeQuery, xirrNote } from "../tracking/model.ts";
+import { historyMonths, scopeQuery, xirrTile } from "../tracking/model.ts";
 import { FanChart } from "./FanChart.tsx";
 import { GoalTracking } from "./GoalTracking.tsx";
 import { Kpi } from "./Kpi.tsx";
@@ -251,19 +251,24 @@ function Analysis({ goal }: { goal: GoalDetailView }) {
   );
 }
 
+const XIRR_HELP = "Your own yearly return, counting when you put money in.";
+
 /** The goal's XIRR from the performance of its bucket; the dash and a reason when there is none. */
 function XirrKpi({ goalId }: { goalId: string }) {
   const loaded = useLoad<PerformanceView>(
     `/api/performance?${scopeQuery({ kind: "bucket", goalId })}`,
   );
   const { data } = loaded;
-  const note = data
-    ? (data.note ?? xirrNote(data.summary?.xirr ?? null))
-    : (loaded.error ?? "Loading.");
+  const tile = xirrTile(data?.summary?.xirr ?? null, data ? historyMonths(data) : 0);
+  const note = data ? (data.note ?? tile.note ?? XIRR_HELP) : (loaded.error ?? "Loading.");
   return (
     <Kpi
-      label={<TermPopover term="xirr">XIRR a year</TermPopover>}
-      value={percentText(data?.summary?.xirr ?? null)}
+      label={
+        <>
+          Return a year (<TermPopover term="xirr">XIRR</TermPopover>)
+        </>
+      }
+      value={tile.value}
       note={note}
     />
   );

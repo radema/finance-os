@@ -3,6 +3,7 @@
 
 import type { PerformanceScope } from "../../engine/performance.ts";
 import type { SnapshotGoal, SnapshotView } from "../../engine/snapshot.ts";
+import type { PerformanceView } from "../../engine/trackingViews.ts";
 import { usesSlotLine } from "../goals/outlook.ts";
 import { formatPercent } from "../money.ts";
 
@@ -122,6 +123,22 @@ export const MISSING = "–";
 /** A fraction as a percentage, or the dash when there is none. */
 export const percentText = (fraction: number | null): string =>
   fraction === null ? MISSING : formatPercent(fraction);
+
+/** Below this many months of history an annual rate is an extrapolation, so it is not shown. */
+const MIN_XIRR_MONTHS = 12;
+
+/** Months from the first cash flow to the valuation month: the series has one point per month. */
+export const historyMonths = (view: Pick<PerformanceView, "months">): number =>
+  Math.max(view.months.length - 1, 0);
+
+/** The XIRR tile: the rate and its note, or the dash and "Not enough history yet" when too short. */
+export const xirrTile = (
+  xirr: number | null,
+  months: number,
+): { value: string; note: string | undefined } =>
+  months < MIN_XIRR_MONTHS
+    ? { value: MISSING, note: "Not enough history yet" }
+    : { value: percentText(xirr), note: xirrNote(xirr) };
 
 /** The colour of a chart's main mark, as a custom property: the goal's slot, or the highlight. */
 export const markColour = (slot: number | null): string =>

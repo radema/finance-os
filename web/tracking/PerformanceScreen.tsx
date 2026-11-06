@@ -7,6 +7,7 @@ import { formatAmount, formatPercent } from "../money.ts";
 import { Card, Resource, SelectField } from "../setup/ui.tsx";
 import { Exhibit } from "./Exhibit.tsx";
 import {
+  historyMonths,
   lineColour,
   MISSING,
   markColour,
@@ -14,7 +15,7 @@ import {
   scopeKey,
   scopeOfKey,
   scopeQuery,
-  xirrNote,
+  xirrTile,
 } from "./model.ts";
 import { TimeChart } from "./TimeChart.tsx";
 
@@ -22,8 +23,15 @@ const euroAxis = (value: number) => formatAmount(value).replace(/,00/, "");
 const indexAxis = (value: number) => String(Math.round(value));
 const TWR_NOTE = "Needs a month that follows a month with a value.";
 
-function Kpis({ summary }: { summary: NonNullable<PerformanceView["summary"]> }) {
+function Kpis({
+  summary,
+  months,
+}: {
+  summary: NonNullable<PerformanceView["summary"]>;
+  months: number;
+}) {
   const { twr } = summary;
+  const xirr = xirrTile(summary.xirr, months);
   const twrNote = (value: number | null) => (value === null ? TWR_NOTE : undefined);
   return (
     <div className="kpis kpis-blue">
@@ -66,8 +74,8 @@ function Kpis({ summary }: { summary: NonNullable<PerformanceView["summary"]> })
             <TermPopover term="xirr">XIRR</TermPopover> a year
           </>
         }
-        value={percentText(summary.xirr)}
-        note={xirrNote(summary.xirr)}
+        value={xirr.value}
+        note={xirr.note}
       />
       <Kpi
         label={
@@ -288,7 +296,7 @@ export function PerformanceScreen() {
               </div>
               {summary ? (
                 <>
-                  <Kpis summary={summary} />
+                  <Kpis summary={summary} months={historyMonths(current)} />
                   <Charts view={current} summary={summary} />
                 </>
               ) : (
