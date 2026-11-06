@@ -175,6 +175,10 @@ export function AllocationTab() {
                 ) : (
                   <>
                     <p className="note">
+                      Weights split each new contribution across this goal&apos;s products. They do
+                      not move money already invested.
+                    </p>
+                    <p className="note">
                       Weights are rescaled to 100% for each goal. Use any numbers: 2, 1, 1 gives
                       50%, 25%, 25%.
                     </p>
