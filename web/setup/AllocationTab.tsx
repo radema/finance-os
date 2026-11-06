@@ -3,7 +3,16 @@ import type { AllocationRow, Goal, Product } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { num } from "../forms.ts";
 import { formatPercent } from "../money.ts";
-import { Alert, Card, ConfirmButton, Field, PriorityTag, RequiredLegend, Resource } from "./ui.tsx";
+import {
+  Alert,
+  Card,
+  ConfirmButton,
+  DecimalInput,
+  Field,
+  PriorityTag,
+  RequiredLegend,
+  Resource,
+} from "./ui.tsx";
 
 interface GoalWeightsProps {
   goal: Goal;
@@ -30,14 +39,11 @@ function WeightRow({
     <tr>
       <td>{product?.name ?? row.productId}</td>
       <td className="num">
-        <input
+        <DecimalInput
           className="inline-input"
-          type="number"
-          min="0"
-          step="any"
           aria-label={`Weight of ${product?.name ?? row.productId}`}
           value={text}
-          onChange={(event) => setText(event.target.value)}
+          onChange={setText}
         />
       </td>
       <td className="num">{formatPercent(row.share)}</td>
@@ -129,14 +135,7 @@ function GoalWeights({ goal, products, rows, onChange }: GoalWeightsProps) {
             </select>
           </Field>
           <Field label="Weight" required>
-            <input
-              type="number"
-              aria-required="true"
-              min="0"
-              step="any"
-              value={weight}
-              onChange={(event) => setWeight(event.target.value)}
-            />
+            <DecimalInput aria-required="true" value={weight} onChange={setWeight} />
           </Field>
           <button className="btn btn-primary" type="submit">
             Add weight

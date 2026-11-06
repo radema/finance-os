@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { addMonths } from "../../engine/months.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { checkFields } from "../formErrors.ts";
 import { num } from "../forms.ts";
 import { formatPrice } from "../money.ts";
-import { Alert, Card, ProductTag, Resource } from "../setup/ui.tsx";
+import { Alert, Card, DecimalInput, ProductTag, Resource } from "../setup/ui.tsx";
 import type { Grid, GridPrice } from "./types.ts";
 
 /** One editable cell: saves the typed price when the field loses focus and the text changed. */
@@ -18,20 +19,32 @@ function PriceInput({
 }) {
   const initial = stored ? String(stored.price) : "";
   const [text, setText] = useState(initial);
+  const [problem, setProblem] = useState<string>();
+  const errorId = useId();
   return (
-    <input
-      type="number"
-      inputMode="decimal"
-      step="any"
-      className="inline-input"
-      aria-label={label}
-      value={text}
-      onChange={(event) => setText(event.target.value)}
-      onBlur={() => {
-        const price = num(text);
-        if (text !== initial && Number.isFinite(price)) onSave(price);
-      }}
-    />
+    <>
+      <DecimalInput
+        className="inline-input"
+        aria-label={label}
+        {...(problem ? { "aria-invalid": true, "aria-describedby": errorId } : {})}
+        value={text}
+        onChange={(next) => {
+          setText(next);
+          setProblem(undefined);
+        }}
+        onBlur={() => {
+          const found = checkFields({ price: text }, { price: "optionalNumber" }, {}).price;
+          setProblem(found);
+          const price = num(text);
+          if (text !== initial && !found && Number.isFinite(price)) onSave(price);
+        }}
+      />
+      {problem ? (
+        <span className="field-hint field-error" id={errorId}>
+          {problem}
+        </span>
+      ) : null}
+    </>
   );
 }
 

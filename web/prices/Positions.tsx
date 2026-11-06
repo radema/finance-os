@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { Goal } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { checkFields } from "../formErrors.ts";
 import { num } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatUnitPrice } from "../money.ts";
-import { Alert, Card, Field, ProductTag, Resource } from "../setup/ui.tsx";
+import { Alert, Card, DecimalInput, Field, ProductTag, Resource } from "../setup/ui.tsx";
 import type { PriceOverviewRow } from "./types.ts";
 
 const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
@@ -19,9 +20,13 @@ function BrokerUnits({ row, onSaved }: { row: PriceOverviewRow; onSaved: () => v
   const [units, setUnits] = useState(row.brokerUnits === null ? "" : String(row.brokerUnits));
   const [date, setDate] = useState(row.brokerUnitsDate ?? "");
   const [error, setError] = useState<string>();
+  const [unitsError, setUnitsError] = useState<string>();
 
   const save = async () => {
     const empty = units.trim() === "" && date === "";
+    const problems = checkFields({ units }, { units: "optionalNumber" }, {});
+    setUnitsError(problems.units);
+    if (problems.units) return;
     try {
       await api("PUT", "/api/prices/broker-units", {
         body: {
@@ -39,14 +44,18 @@ function BrokerUnits({ row, onSaved }: { row: PriceOverviewRow; onSaved: () => v
 
   return (
     <div className="inline-form">
-      <Field label="Units at the broker">
-        <input
-          type="number"
-          inputMode="decimal"
-          step="any"
-          value={units}
-          onChange={(event) => setUnits(event.target.value)}
-        />
+      <Field label="Units at the broker" error={unitsError}>
+        {(_labelId, controlId, invalid) => (
+          <DecimalInput
+            id={controlId}
+            {...invalid}
+            value={units}
+            onChange={(text) => {
+              setUnits(text);
+              setUnitsError(undefined);
+            }}
+          />
+        )}
       </Field>
       <Field label="As of">
         <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />

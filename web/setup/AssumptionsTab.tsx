@@ -10,6 +10,7 @@ import {
   Alert,
   Card,
   ConfirmButton,
+  DecimalInput,
   NumberField,
   RequiredLegend,
   Resource,
@@ -130,15 +131,8 @@ function useDocumentForm<T>(
 export function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }) {
   const form = useDocumentForm("/api/settings", settings, settingsToValues, valuesToSettings);
   const { values, set } = form;
-  const field = (key: string, label: ReactNode, hint?: string, step?: string) => (
-    <NumberField
-      label={label}
-      value={values[key] ?? ""}
-      onChange={set(key)}
-      hint={hint}
-      step={step}
-      required
-    />
+  const field = (key: string, label: ReactNode, hint?: string) => (
+    <NumberField label={label} value={values[key] ?? ""} onChange={set(key)} hint={hint} required />
   );
   return (
     <form
@@ -164,7 +158,7 @@ export function SettingsForm({ settings, goals }: { settings: Settings; goals: G
             </>,
           )}
           {field("pensionTax", "Tax on pension returns (%)")}
-          {field("pensionCap", "Pension deduction cap (EUR)", undefined, "0.01")}
+          {field("pensionCap", "Pension deduction cap (EUR)")}
         </div>
       </Card>
       <Card title="Probabilities and simulation">
@@ -192,10 +186,8 @@ export function SettingsForm({ settings, goals }: { settings: Settings; goals: G
             <>
               <TermPopover term="simulated">Monte Carlo</TermPopover> paths
             </>,
-            undefined,
-            "1",
           )}
-          {field("seed", "Random seed", "The same seed gives the same simulated results.", "1")}
+          {field("seed", "Random seed", "The same seed gives the same simulated results.")}
           <TextField
             label="Tracking starts (YYYY-MM)"
             value={values.trackingStart ?? ""}
@@ -213,8 +205,8 @@ export function SettingsForm({ settings, goals }: { settings: Settings; goals: G
         }
       >
         <div className="form-grid">
-          {field("zainettoAmount", "Amount (EUR)", undefined, "0.01")}
-          {field("zainettoExpiry", "Expires in year", undefined, "1")}
+          {field("zainettoAmount", "Amount (EUR)")}
+          {field("zainettoExpiry", "Expires in year")}
           <SelectField
             label="Assigned to goal"
             value={values.zainettoGoal ?? ""}
@@ -232,13 +224,11 @@ export function SettingsForm({ settings, goals }: { settings: Settings; goals: G
             "r1Months",
             "Behind plan: alert after (months)",
             "Alert when your saving is behind plan by this many months of contributions.",
-            "1",
           )}
           {field(
             "r3Months",
             "Maturity ahead: warn within (months)",
             "Warn when a product you hold matures within this many months.",
-            "1",
           )}
           {field(
             "r7Multiple",
@@ -257,7 +247,6 @@ export function SettingsForm({ settings, goals }: { settings: Settings; goals: G
             "priceAge",
             "Price counts as old after (days)",
             "An online price older than this is marked old.",
-            "1",
           )}
         </div>
       </Card>
@@ -310,7 +299,6 @@ function CommissionForm({ commission }: { commission: Commission }) {
                 label="Flat fee (EUR)"
                 value={values.flatFee ?? ""}
                 onChange={set("flatFee")}
-                step="0.01"
                 required
               />
               <NumberField
@@ -321,7 +309,6 @@ function CommissionForm({ commission }: { commission: Commission }) {
                 }
                 value={values.minTicket ?? ""}
                 onChange={set("minTicket")}
-                step="0.01"
                 required
               />
             </>
@@ -337,14 +324,12 @@ function CommissionForm({ commission }: { commission: Commission }) {
                 label="Minimum fee (EUR)"
                 value={values.min ?? ""}
                 onChange={set("min")}
-                step="0.01"
                 required
               />
               <NumberField
                 label="Maximum fee (EUR)"
                 value={values.max ?? ""}
                 onChange={set("max")}
-                step="0.01"
                 required
               />
             </>
@@ -359,6 +344,34 @@ function CommissionForm({ commission }: { commission: Commission }) {
         <Alert message={form.error} />
       </Card>
     </form>
+  );
+}
+
+/** A matrix cell. It keeps the typed text, so a comma that is not yet followed by a digit stays in the box. */
+function CorrelationInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (text: string) => void;
+}) {
+  const [text, setText] = useState(String(value));
+  // A value that changed outside the box (a save, a reload) replaces the text; the typed text that reads as the value stays.
+  useEffect(() => {
+    setText((current) => (Object.is(num(current), value) ? current : String(value)));
+  }, [value]);
+  return (
+    <DecimalInput
+      className="inline-input"
+      aria-label={label}
+      value={text}
+      onChange={(next) => {
+        setText(next);
+        onChange(next);
+      }}
+    />
   );
 }
 
@@ -419,15 +432,10 @@ function CorrelationsForm({ view }: { view: CorrelationsView }) {
                 {ASSET_CLASSES.map((colName, j) => (
                   <td key={colName} className="num">
                     {j < i ? (
-                      <input
-                        className="inline-input"
-                        type="number"
-                        min="-1"
-                        max="1"
-                        step="0.05"
-                        aria-label={`Correlation ${rowName} and ${colName}`}
-                        value={Number.isNaN(matrix[i]?.[j]) ? "" : (matrix[i]?.[j] ?? "")}
-                        onChange={(event) => edit(i, j, event.target.value)}
+                      <CorrelationInput
+                        label={`Correlation ${rowName} and ${colName}`}
+                        value={matrix[i]?.[j] ?? 0}
+                        onChange={(text) => edit(i, j, text)}
                       />
                     ) : (
                       (matrix[i]?.[j] ?? 0)

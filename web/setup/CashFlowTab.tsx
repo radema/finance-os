@@ -119,7 +119,6 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
       }}
       hint={hint}
       error={errors[key]}
-      step={key.endsWith("Growth") ? "any" : "0.01"}
       required
     />
   );
@@ -244,7 +243,6 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
               clear("year");
             }}
             error={errors.year}
-            step="1"
             required
           />
           <TextField
@@ -260,7 +258,6 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
               clear("amount");
             }}
             error={errors.amount}
-            step="0.01"
             required
           />
           <button className="btn btn-primary" type="submit">

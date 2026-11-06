@@ -124,13 +124,7 @@ function ChangePlan({
           onChange={setFromMonth}
           required
         />
-        <NumberField
-          label="Monthly amount (EUR)"
-          value={monthly}
-          onChange={setMonthly}
-          step="0.01"
-          required
-        />
+        <NumberField label="Monthly amount (EUR)" value={monthly} onChange={setMonthly} required />
         <button className="btn btn-primary" type="submit">
           Change plan
         </button>

@@ -9,6 +9,7 @@ import { formatAmount, formatPercent } from "../money.ts";
 import {
   Alert,
   Card,
+  DecimalInput,
   NumberField,
   PriorityTag,
   RequiredLegend,
@@ -95,21 +96,13 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
 
   const set = (key: string) => (value: string) =>
     setValues((current) => ({ ...current, [key]: value }));
-  const field = (
-    key: string,
-    label: string,
-    unit?: string,
-    hint?: string,
-    step?: string,
-    required = true,
-  ) => (
+  const field = (key: string, label: string, unit?: string, hint?: string, required = true) => (
     <NumberField
       label={label}
       value={values[key] ?? ""}
       onChange={set(key)}
       unit={unit}
       hint={hint}
-      step={step}
       required={required}
     />
   );
@@ -141,15 +134,15 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
             onChange={set("goalId")}
             options={view.goals.map((goal) => ({ value: goal.id, label: goal.name }))}
           />
-          {field("firstYear", "First year of membership", undefined, undefined, "1")}
-          {field("ral", "RAL a year", "€", "Blank: no schedule.", "0.01", false)}
+          {field("firstYear", "First year of membership")}
+          {field("ral", "RAL a year", "€", "Blank: no schedule.", false)}
           {field("ralGrowth", "RAL growth a year", "%")}
           {field("tfrPct", "TFR share of RAL", "%")}
           {field("workerPct", "Worker share of RAL", "%")}
           {field("employerPct", "Employer share of RAL", "%")}
-          {field("voluntary", "Voluntary a year", "€", "Blank: up to the cap.", "0.01", false)}
+          {field("voluntary", "Voluntary a year", "€", "Blank: up to the cap.", false)}
           {field("marginalRate", "Marginal tax rate", "%")}
-          {field("extra", "Extra deduction a year", "€", undefined, "0.01")}
+          {field("extra", "Extra deduction a year", "€")}
         </div>
         <h3 className="form-section">Flows</h3>
         <p className="note">
@@ -177,14 +170,12 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
                     <td>{product.name}</td>
                     {FLOWS.map((flow) => (
                       <td className="num" key={flow}>
-                        <input
+                        <DecimalInput
                           className="flow-input"
-                          type="number"
-                          step="any"
                           placeholder="0"
                           aria-label={`${product.name}, ${flow} flow (%)`}
                           value={values[flowKey(flow, product.id)] ?? ""}
-                          onChange={(event) => set(flowKey(flow, product.id))(event.target.value)}
+                          onChange={set(flowKey(flow, product.id))}
                         />
                       </td>
                     ))}
