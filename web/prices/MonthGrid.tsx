@@ -2,13 +2,9 @@ import { useState } from "react";
 import { addMonths } from "../../engine/months.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { num } from "../forms.ts";
+import { formatPrice } from "../money.ts";
 import { Alert, Card, ProductTag, Resource } from "../setup/ui.tsx";
 import type { Grid, GridPrice } from "./types.ts";
-
-const priceFormat = new Intl.NumberFormat("it-IT", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 4,
-});
 
 /** One editable cell: saves the typed price when the field loses focus and the text changed. */
 function PriceInput({
@@ -97,7 +93,7 @@ export function MonthGrid({ onChanged }: { onChanged: () => void }) {
                                   onSave={(price) => void save(row.productId, month, price)}
                                 />
                               ) : stored ? (
-                                priceFormat.format(stored.price)
+                                formatPrice(stored.price)
                               ) : (
                                 "–"
                               )}
