@@ -3,6 +3,7 @@ import type { GoalListView } from "../../engine/goalViews.ts";
 import type { Goal, GoalInput } from "../../engine/schemas.ts";
 import { PRIORITIES } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { checkFields, type Rule } from "../formErrors.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, percentToFraction } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { currentMonth, formatEuro, formatPercent } from "../money.ts";
@@ -21,6 +22,7 @@ import {
   SelectField,
   TextField,
 } from "./ui.tsx";
+import { useFormErrors } from "./useFormErrors.ts";
 
 interface Form {
   name: string;
@@ -44,6 +46,28 @@ const emptyForm = (): Form => ({
   countsTowardFi: false,
   monthly: "",
   fromMonth: currentMonth(),
+});
+
+const LABELS = {
+  name: "Name",
+  target: "Target",
+  targetYear: "Target year",
+  contributionGrowth: "Yearly growth",
+  minProb: "Required probability",
+  monthly: "Monthly amount",
+  fromMonth: "Plan start",
+};
+type FormKey = keyof typeof LABELS;
+// The API names these in cents; the form holds euros.
+const API_KEYS: Record<string, FormKey> = { targetCents: "target", monthlyCents: "monthly" };
+
+const rulesOf = (editing: boolean): Partial<Record<FormKey, Rule>> => ({
+  name: "text",
+  target: "number",
+  targetYear: "number",
+  contributionGrowth: "number",
+  minProb: "optionalNumber",
+  ...(editing ? {} : { monthly: "optionalNumber" as const }),
 });
 
 const toForm = (g: Goal): Form => ({
@@ -179,8 +203,11 @@ export function GoalsTab() {
   const [editing, setEditing] = useState<string>();
   const [copying, setCopying] = useState(false);
   const [selected, setSelected] = useState<string>();
-  const [error, setError] = useState<string>();
-  const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm({ ...form, [key]: value });
+  const { errors, alert, reject, fail, clear } = useFormErrors<FormKey>(LABELS, API_KEYS);
+  const set = <K extends keyof Form>(key: K, value: Form[K]) => {
+    setForm({ ...form, [key]: value });
+    clear(key as FormKey);
+  };
   const { formRef, reveal } = useRevealForm();
 
   const reset = () => {
@@ -189,6 +216,9 @@ export function GoalsTab() {
     setCopying(false);
   };
   const save = async () => {
+    const rules = rulesOf(editing !== undefined);
+    const problems = checkFields(form, rules, LABELS);
+    if (Object.keys(problems).length > 0) return reject(problems);
     try {
       const body = toInput(form);
       if (editing) {
@@ -206,22 +236,22 @@ export function GoalsTab() {
         }
         setSelected(created.id);
       }
-      setError(undefined);
+      clear();
       reset();
       goals.reload();
     } catch (failure) {
-      setError(messageOf(failure));
+      fail(failure);
     }
   };
   const remove = async (id: string) => {
     try {
       await api("DELETE", "/api/goals", { query: { id } });
-      setError(undefined);
+      clear();
       if (editing === id) reset();
       if (selected === id) setSelected(undefined);
       goals.reload();
     } catch (failure) {
-      setError(messageOf(failure));
+      fail(failure);
     }
   };
 
@@ -238,12 +268,19 @@ export function GoalsTab() {
         <form
           ref={formRef}
           className="form-grid"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             void save();
           }}
         >
-          <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} required />
+          <TextField
+            label="Name"
+            value={form.name}
+            onChange={(v) => set("name", v)}
+            error={errors.name}
+            required
+          />
           <SelectField
             label="Priority"
             value={form.priority}
@@ -258,6 +295,7 @@ export function GoalsTab() {
             }
             value={form.target}
             onChange={(v) => set("target", v)}
+            error={errors.target}
             step="0.01"
             required
           />
@@ -265,6 +303,7 @@ export function GoalsTab() {
             label="Target year"
             value={form.targetYear}
             onChange={(v) => set("targetYear", v)}
+            error={errors.targetYear}
             hint="Due on 31 December of this year."
             required
           />
@@ -272,6 +311,7 @@ export function GoalsTab() {
             label="Yearly growth of the contribution (%)"
             value={form.contributionGrowth}
             onChange={(v) => set("contributionGrowth", v)}
+            error={errors.contributionGrowth}
             required
           />
           <NumberField
@@ -282,6 +322,7 @@ export function GoalsTab() {
             }
             value={form.minProb}
             onChange={(v) => set("minProb", v)}
+            error={errors.minProb}
             hint="Empty: use the default for the priority."
           />
           {editing ? null : (
@@ -290,6 +331,7 @@ export function GoalsTab() {
                 label="Monthly amount (EUR)"
                 value={form.monthly}
                 onChange={(v) => set("monthly", v)}
+                error={errors.monthly}
                 step="0.01"
                 hint="Optional. Change it later on the plan history."
               />
@@ -297,6 +339,7 @@ export function GoalsTab() {
                 label="Plan starts (YYYY-MM)"
                 value={form.fromMonth}
                 onChange={(v) => set("fromMonth", v)}
+                error={errors.fromMonth}
               />
             </>
           )}
@@ -316,7 +359,7 @@ export function GoalsTab() {
             ) : null}
           </div>
         </form>
-        <Alert message={error} />
+        <Alert message={alert} />
       </Card>
 
       <Card title="Goals">
@@ -365,7 +408,7 @@ export function GoalsTab() {
                             setEditing(g.id);
                             setCopying(false);
                             setForm(toForm(g));
-                            setError(undefined);
+                            clear();
                             reveal();
                           }}
                         >
@@ -378,7 +421,7 @@ export function GoalsTab() {
                             setEditing(undefined);
                             setCopying(true);
                             setForm({ ...toForm(copyOfGoal(g)), monthly: monthlyText(g) });
-                            setError(undefined);
+                            clear();
                             reveal();
                           }}
                         >

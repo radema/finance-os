@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { plainMessage } from "./formErrors.ts";
 
 /** A failed API call; `message` is fit to show the user. */
 export class ApiError extends Error {}
@@ -36,8 +37,9 @@ export async function api<T>(
   return payload as T;
 }
 
+/** The text to show for a failure, in plain words: no validator text and no code names. */
 export const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : "Something went wrong.";
+  error instanceof Error ? plainMessage(error.message) : "Something went wrong.";
 
 export interface Loaded<T> {
   data: T | undefined;

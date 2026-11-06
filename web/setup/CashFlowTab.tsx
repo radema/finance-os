@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { CashFlowView } from "../../engine/cashFlow.ts";
 import type { CashFlow, CashFlowEvent } from "../../engine/schemas.ts";
-import { api, messageOf, useLoad } from "../api.ts";
+import { api, useLoad } from "../api.ts";
+import { checkFields } from "../formErrors.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, num, percentToFraction } from "../forms.ts";
 import { formatEuro } from "../money.ts";
 import { copyOfEvent } from "./duplicate.ts";
@@ -15,6 +16,7 @@ import {
   Resource,
   TextField,
 } from "./ui.tsx";
+import { useFormErrors } from "./useFormErrors.ts";
 
 type Values = {
   income: string;
@@ -41,6 +43,18 @@ const toDocument = (v: Values, events: CashFlowEvent[]): CashFlow => ({
   events,
 });
 
+// The two forms of the screen share one document, so one failed save can name a field of either.
+const LABELS = {
+  income: "Net household income",
+  incomeGrowth: "Income growth",
+  essential: "Essential expenses",
+  optional: "Optional expenses",
+  expenseGrowth: "Expense growth",
+  year: "Year",
+  amount: "Amount",
+};
+type FormKey = keyof typeof LABELS;
+
 type EventForm = { year: string; label: string; amount: string };
 
 const isUnset = (c: CashFlow): boolean =>
@@ -57,7 +71,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
   const [event, setEvent] = useState<EventForm>(emptyEvent);
   const [editing, setEditing] = useState<number>();
   const [copying, setCopying] = useState(false);
-  const [error, setError] = useState<string>();
+  const { errors, alert, reject, fail, clear } = useFormErrors<FormKey>(LABELS);
   const [saved, setSaved] = useState(false);
   const { formRef, reveal } = useRevealForm("form");
 
@@ -65,10 +79,10 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
   const save = async (events: CashFlowEvent[]): Promise<boolean> => {
     try {
       set(await api<CashFlowView>("PUT", "/api/cash-flow", { body: toDocument(values, events) }));
-      setError(undefined);
+      clear();
       return true;
     } catch (failure) {
-      setError(messageOf(failure));
+      fail(failure);
       setSaved(false);
       return false;
     }
@@ -81,6 +95,8 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
     }
   };
   const submitEvent = () => {
+    const problems = checkFields(event, { year: "number", amount: "number" }, LABELS);
+    if (Object.keys(problems).length > 0) return reject(problems);
     const next: CashFlowEvent = {
       year: num(event.year),
       label: event.label,
@@ -99,8 +115,10 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
       onChange={(value) => {
         setValues({ ...values, [key]: value });
         setSaved(false);
+        clear(key);
       }}
       hint={hint}
+      error={errors[key]}
       step={key.endsWith("Growth") ? "any" : "0.01"}
       required
     />
@@ -171,7 +189,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
                           label: e.label,
                           amount: centsToEuros(e.amount),
                         });
-                        setError(undefined);
+                        clear();
                         reveal();
                       }}
                     >
@@ -189,7 +207,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
                           label: copy.label,
                           amount: centsToEuros(copy.amount),
                         });
-                        setError(undefined);
+                        clear();
                         reveal();
                       }}
                     >
@@ -212,6 +230,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
         <form
           ref={formRef}
           className="inline-form"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             submitEvent();
@@ -220,7 +239,11 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
           <NumberField
             label="Year"
             value={event.year}
-            onChange={(year) => setEvent({ ...event, year })}
+            onChange={(year) => {
+              setEvent({ ...event, year });
+              clear("year");
+            }}
+            error={errors.year}
             step="1"
             required
           />
@@ -232,7 +255,11 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
           <NumberField
             label="Amount (EUR)"
             value={event.amount}
-            onChange={(amount) => setEvent({ ...event, amount })}
+            onChange={(amount) => {
+              setEvent({ ...event, amount });
+              clear("amount");
+            }}
+            error={errors.amount}
             step="0.01"
             required
           />
@@ -253,7 +280,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
             </button>
           )}
         </form>
-        <Alert message={error} />
+        <Alert message={alert} />
       </Card>
 
       <Card

@@ -131,6 +131,17 @@
 .field-required {
   color: var(--hl);
 }
+/* The message is text grey; the mark (icon, border) is the highlight, which is never text. */
+.field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s1);
+}
+.field-error-mark {
+  flex: none;
+  height: var(--lh-callout);
+  color: var(--hl);
+}
 .form-legend {
   margin: 0;
   font-size: var(--t-callout);
@@ -250,6 +261,11 @@ select {
   font-size: var(--t-callout);
   line-height: var(--lh-callout);
   color: var(--ink2);
+}
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+.input-unit:has(input[aria-invalid="true"]) {
+  border-color: var(--hl);
 }
 .check {
   display: flex;
