@@ -197,6 +197,7 @@ export function NumberField({
   hint,
   required,
   step = "any",
+  unit,
 }: {
   label: ReactNode;
   value: string;
@@ -204,21 +205,36 @@ export function NumberField({
   hint?: string;
   required?: boolean;
   step?: string;
+  /** The unit (€, %, years), shown inside the field after the value. Keep it out of the label. */
+  unit?: string;
 }) {
+  const unitId = useId();
   return (
     <Field label={label} hint={hint} required={required}>
-      {(labelId, controlId) => (
-        <input
-          id={controlId}
-          type="number"
-          inputMode="decimal"
-          aria-labelledby={labelId}
-          aria-required={required}
-          step={step}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
+      {(labelId, controlId) => {
+        const input = (
+          <input
+            id={controlId}
+            type="number"
+            inputMode="decimal"
+            aria-labelledby={unit ? `${labelId} ${unitId}` : labelId}
+            aria-required={required}
+            step={step}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        );
+        return unit ? (
+          <span className="input-unit">
+            {input}
+            <span id={unitId} className="field-unit">
+              {unit}
+            </span>
+          </span>
+        ) : (
+          input
+        );
+      }}
     </Field>
   );
 }

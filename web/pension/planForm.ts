@@ -63,3 +63,13 @@ export function valuesToPlan(values: PlanValues, productIds: readonly string[]):
     flows,
   };
 }
+
+/**
+ * Whether the form differs from the saved text. A blank and a missing value are the same; no saved
+ * values (`null`, no plan stored yet) is always dirty.
+ */
+export function isPlanDirty(values: PlanValues, saved: PlanValues | null): boolean {
+  if (saved === null) return true;
+  const keys = new Set([...Object.keys(values), ...Object.keys(saved)]);
+  return [...keys].some((key) => (values[key] ?? "") !== (saved[key] ?? ""));
+}
