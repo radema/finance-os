@@ -14,6 +14,7 @@ import {
   ConfirmButton,
   NumberField,
   PriorityTag,
+  RequiredLegend,
   Resource,
   SelectField,
   TextField,
@@ -134,6 +135,7 @@ function PlanHistory({
           </tbody>
         </table>
       )}
+      <RequiredLegend />
       <form
         className="inline-form"
         onSubmit={(event) => {
@@ -150,12 +152,14 @@ function PlanHistory({
           label="New amount from month (YYYY-MM)"
           value={fromMonth}
           onChange={setFromMonth}
+          required
         />
         <NumberField
           label="New monthly amount (EUR)"
           value={monthly}
           onChange={setMonthly}
           step="0.01"
+          required
         />
         <button className="btn btn-primary" type="submit">
           Save plan version
@@ -220,6 +224,7 @@ export function GoalsTab() {
   return (
     <>
       <Card title={editing ? "Edit goal" : "Add goal"}>
+        <RequiredLegend />
         <form
           className="form-grid"
           onSubmit={(event) => {
@@ -227,7 +232,7 @@ export function GoalsTab() {
             void save();
           }}
         >
-          <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} />
+          <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} required />
           <SelectField
             label="Priority"
             value={form.priority}
@@ -243,17 +248,20 @@ export function GoalsTab() {
             value={form.target}
             onChange={(v) => set("target", v)}
             step="0.01"
+            required
           />
           <TextField
             label="Target year"
             value={form.targetYear}
             onChange={(v) => set("targetYear", v)}
             hint="Due on 31 December of this year."
+            required
           />
           <NumberField
             label="Yearly growth of the contribution (%)"
             value={form.contributionGrowth}
             onChange={(v) => set("contributionGrowth", v)}
+            required
           />
           <NumberField
             label={

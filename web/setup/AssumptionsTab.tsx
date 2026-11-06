@@ -11,6 +11,7 @@ import {
   Card,
   ConfirmButton,
   NumberField,
+  RequiredLegend,
   Resource,
   SelectField,
   TextField,
@@ -136,6 +137,7 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
       onChange={set(key)}
       hint={hint}
       step={step}
+      required
     />
   );
   return (
@@ -146,6 +148,7 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
       }}
     >
       <Card title="Taxes and economy">
+        <RequiredLegend />
         <div className="form-grid">
           {field("inflation", "Inflation (% a year)", "Not in the spec: the mock's 2%.")}
           {field("taxStd", "Tax on ETF gains and direct holdings (%)")}
@@ -193,6 +196,7 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
             label="Tracking starts (YYYY-MM)"
             value={values.trackingStart ?? ""}
             onChange={set("trackingStart")}
+            required
           />
         </div>
       </Card>
@@ -258,8 +262,9 @@ function CommissionForm({ commission }: { commission: Commission }) {
         title="Commission plan"
         note="Percent: the fee is the rate times the amount, between the minimum and the maximum. Flat: one fee for every trade."
       >
+        <RequiredLegend />
         <div className="form-grid">
-          <TextField label="Plan name" value={values.plan ?? ""} onChange={set("plan")} />
+          <TextField label="Plan name" value={values.plan ?? ""} onChange={set("plan")} required />
           <SelectField
             label="Fee model"
             value={values.feeModel ?? "percent"}
@@ -276,6 +281,7 @@ function CommissionForm({ commission }: { commission: Commission }) {
                 value={values.flatFee ?? ""}
                 onChange={set("flatFee")}
                 step="0.01"
+                required
               />
               <NumberField
                 label={
@@ -286,22 +292,30 @@ function CommissionForm({ commission }: { commission: Commission }) {
                 value={values.minTicket ?? ""}
                 onChange={set("minTicket")}
                 step="0.01"
+                required
               />
             </>
           ) : (
             <>
-              <NumberField label="Rate (%)" value={values.rate ?? ""} onChange={set("rate")} />
+              <NumberField
+                label="Rate (%)"
+                value={values.rate ?? ""}
+                onChange={set("rate")}
+                required
+              />
               <NumberField
                 label="Minimum fee (EUR)"
                 value={values.min ?? ""}
                 onChange={set("min")}
                 step="0.01"
+                required
               />
               <NumberField
                 label="Maximum fee (EUR)"
                 value={values.max ?? ""}
                 onChange={set("max")}
                 step="0.01"
+                required
               />
             </>
           )}

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { useId, useState } from "react";
 import type { Loaded } from "../api.ts";
 import { browserStorage, cardKey, readOpen, screenHash, writeOpen } from "./cardState.ts";
@@ -93,25 +93,48 @@ export function Resource<T>({
   return <p className="note">Loading...</p>;
 }
 
+/** The one-line legend of a form that has required fields. */
+export function RequiredLegend() {
+  return (
+    <p className="form-legend">
+      <span aria-hidden="true">*</span> required
+    </p>
+  );
+}
+
 export function Field({
   label,
   hint,
+  required,
+  wrap = "label",
   children,
 }: {
   label: ReactNode;
-  hint?: string;
+  /** A string, or a node. A hint with a control of its own needs `wrap="div"`. */
+  hint?: ReactNode;
+  /** Shows the required mark. Put the `aria-required` on the control too. */
+  required?: boolean;
+  /** The root element. Keep it the same for the life of a field: a change remounts the control. */
+  wrap?: "label" | "div";
   /** The control. A function gets the id of the label text, for `aria-labelledby`. */
   children: ReactNode | ((labelId: string) => ReactNode);
 }) {
   const labelId = useId();
   const control = typeof children === "function" ? children(labelId) : children;
   const hintText = hint ? <span className="field-hint">{hint}</span> : null;
-  // A term button in the label is a second labelable element, so a term label is a div, not a label.
-  if (typeof label !== "string") {
+  const mark = required ? (
+    <span className="field-required" aria-hidden="true">
+      {" "}
+      *
+    </span>
+  ) : null;
+  // A term button in the label, or a button in the hint, is a second labelable element: the field is a div.
+  if (typeof label !== "string" || wrap === "div") {
     return (
       <div className="field">
-        <span id={labelId} className="field-label">
-          {label}
+        <span className="field-label">
+          <span id={labelId}>{label}</span>
+          {mark}
         </span>
         {control}
         {hintText}
@@ -121,8 +144,9 @@ export function Field({
   return (
     // biome-ignore lint/a11y/noLabelWithoutControl: the control is `children`, nested in the label
     <label className="field">
-      <span id={labelId} className="field-label">
-        {label}
+      <span className="field-label">
+        <span id={labelId}>{label}</span>
+        {mark}
       </span>
       {control}
       {hintText}
@@ -135,18 +159,21 @@ export function TextField({
   value,
   onChange,
   hint,
+  required,
 }: {
   label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   hint?: string;
+  required?: boolean;
 }) {
   return (
-    <Field label={label} hint={hint}>
+    <Field label={label} hint={hint} required={required}>
       {(labelId) => (
         <input
           type="text"
           aria-labelledby={labelId}
+          aria-required={required}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -160,21 +187,24 @@ export function NumberField({
   value,
   onChange,
   hint,
+  required,
   step = "any",
 }: {
   label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   hint?: string;
+  required?: boolean;
   step?: string;
 }) {
   return (
-    <Field label={label} hint={hint}>
+    <Field label={label} hint={hint} required={required}>
       {(labelId) => (
         <input
           type="number"
           inputMode="decimal"
           aria-labelledby={labelId}
+          aria-required={required}
           step={step}
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -189,16 +219,23 @@ export function SelectField({
   value,
   onChange,
   options,
+  hint,
+  wrap,
+  selectRef,
 }: {
   label: ReactNode;
   value: string;
   onChange: (value: string) => void;
   options: readonly { value: string; label: string }[];
+  hint?: ReactNode;
+  wrap?: "label" | "div";
+  selectRef?: Ref<HTMLSelectElement>;
 }) {
   return (
-    <Field label={label}>
+    <Field label={label} hint={hint} wrap={wrap}>
       {(labelId) => (
         <select
+          ref={selectRef}
           aria-labelledby={labelId}
           value={value}
           onChange={(event) => onChange(event.target.value)}

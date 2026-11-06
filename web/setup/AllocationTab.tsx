@@ -3,7 +3,7 @@ import type { AllocationRow, Goal, Product } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { num } from "../forms.ts";
 import { formatPercent } from "../money.ts";
-import { Alert, Card, ConfirmButton, Field, PriorityTag, Resource } from "./ui.tsx";
+import { Alert, Card, ConfirmButton, Field, PriorityTag, RequiredLegend, Resource } from "./ui.tsx";
 
 interface GoalWeightsProps {
   goal: Goal;
@@ -128,9 +128,10 @@ function GoalWeights({ goal, products, rows, onChange }: GoalWeightsProps) {
               ))}
             </select>
           </Field>
-          <Field label="Weight">
+          <Field label="Weight" required>
             <input
               type="number"
+              aria-required="true"
               min="0"
               step="any"
               value={weight}
@@ -182,6 +183,7 @@ export function AllocationTab() {
                       Weights are rescaled to 100% for each goal. Use any numbers: 2, 1, 1 gives
                       50%, 25%, 25%.
                     </p>
+                    <RequiredLegend />
                     {goalList.map((goal) => (
                       <GoalWeights
                         key={goal.id}

@@ -4,7 +4,15 @@ import type { CashFlow, CashFlowEvent } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, num, percentToFraction } from "../forms.ts";
 import { formatEuro } from "../money.ts";
-import { Alert, Card, ConfirmButton, NumberField, Resource, TextField } from "./ui.tsx";
+import {
+  Alert,
+  Card,
+  ConfirmButton,
+  NumberField,
+  RequiredLegend,
+  Resource,
+  TextField,
+} from "./ui.tsx";
 
 type Values = {
   income: string;
@@ -89,6 +97,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
       }}
       hint={hint}
       step={key.endsWith("Growth") ? "any" : "0.01"}
+      required
     />
   );
   const listed = cashFlow.events
@@ -101,6 +110,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
         title="Income and expenses"
         note="Income and expenses grow every year. They also set the financial independence levels."
       >
+        <RequiredLegend />
         <form
           className="form-grid"
           onSubmit={(e) => {
@@ -173,6 +183,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
             </tbody>
           </table>
         )}
+        <RequiredLegend />
         <form
           className="inline-form"
           onSubmit={(e) => {
@@ -185,6 +196,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
             value={event.year}
             onChange={(year) => setEvent({ ...event, year })}
             step="1"
+            required
           />
           <TextField
             label="Description"
@@ -196,6 +208,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
             value={event.amount}
             onChange={(amount) => setEvent({ ...event, amount })}
             step="0.01"
+            required
           />
           <button className="btn btn-primary" type="submit">
             {editing === undefined ? "Add event" : "Save event"}

@@ -4,7 +4,15 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { fractionToPercent } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
-import { Alert, Card, CheckField, Field, NumberField, Resource } from "../setup/ui.tsx";
+import {
+  Alert,
+  Card,
+  CheckField,
+  Field,
+  NumberField,
+  RequiredLegend,
+  Resource,
+} from "../setup/ui.tsx";
 import { FanChart } from "./FiCharts.tsx";
 import {
   changedSettings,
@@ -182,16 +190,19 @@ function Settings({
   return (
     <Card title="Settings" note="Changes save as you type, and the levels update at once.">
       <Alert message={error} />
+      <RequiredLegend />
       <div className="form-grid">
         <NumberField
           label="Essential expenses a month (€)"
           value={draft.essential}
           onChange={set("essential")}
+          required
         />
         <NumberField
           label="Optional expenses a month (€)"
           value={draft.optional}
           onChange={set("optional")}
+          required
         />
       </div>
       <details className="level-rules">
@@ -201,11 +212,13 @@ function Settings({
             label="Level 2 multiplier (months of essential)"
             value={draft.l2Mult}
             onChange={set("l2Mult")}
+            required
           />
           <NumberField
             label="Level 3 multiplier (months of optional, added to Level 2)"
             value={draft.l3Mult}
             onChange={set("l3Mult")}
+            required
           />
           <Field label="Level 1 comes from">
             <select
@@ -228,6 +241,7 @@ function Settings({
             label="Months of essential expenses"
             value={draft.efMonths}
             onChange={set("efMonths")}
+            required
             hint={
               fire.efFromGoal === null ? undefined : "Not used while Level 1 comes from a goal."
             }
