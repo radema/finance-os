@@ -93,6 +93,21 @@ a.nav-head:hover,
 .nav :focus-visible {
   outline-offset: -2px;
 }
+/* In a short window the spacing tightens so every item, down to Glossary, shows without scrolling. */
+@media (max-height: 900px) {
+  .side {
+    padding-top: var(--s3);
+  }
+  .brand {
+    padding-bottom: var(--s2);
+  }
+  .nav-section {
+    padding: var(--s1) 0;
+  }
+  .nav-head {
+    padding-block: var(--s1);
+  }
+}
 .soon {
   font: 500 10px / 12px var(--font-mono);
   letter-spacing: 0.06em;

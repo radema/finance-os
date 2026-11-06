@@ -46,7 +46,7 @@ export function FirstRunChecklist({ done }: { done: ReactNode }) {
         return (
           <>
             <div className="tag">First run</div>
-            <h1 className="title">Set up your planner</h1>
+            <h1 className="title">Overview</h1>
             <Card title="Three steps">
               <ol className="steps">
                 {steps.map((step) => (

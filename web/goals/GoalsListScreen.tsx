@@ -27,16 +27,17 @@ export function GoalsListScreen() {
           const target = goals.reduce((sum, goal) => sum + goal.target, 0);
           return (
             <>
-              <h1 className="title">
-                {goals.length === 0
-                  ? "No goals yet"
-                  : `${goals.length} ${goals.length === 1 ? "goal holds" : "goals hold"} ${formatAmount(value)} against ${formatAmount(target)} of targets`}
-              </h1>
+              <h1 className="title">Goals</h1>
               {goals.length > 0 ? (
-                <p className="unit">
-                  Value at the end of {asOf.slice(0, 7)}. Targets in{" "}
-                  <TermPopover term="real">today’s euros</TermPopover>.
-                </p>
+                <>
+                  <p className="unit">
+                    Value at the end of {asOf.slice(0, 7)}. Targets in{" "}
+                    <TermPopover term="real">today’s euros</TermPopover>.
+                  </p>
+                  <h2 className="exhibit-title">
+                    {`${goals.length} ${goals.length === 1 ? "goal holds" : "goals hold"} ${formatAmount(value)} against ${formatAmount(target)} of targets`}
+                  </h2>
+                </>
               ) : null}
 
               {goals.length === 0 ? (

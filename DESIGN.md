@@ -129,7 +129,8 @@ is `--control-h` high. KPI cards wrap in equal columns chosen from the card coun
 - **Sidebar.** Seven sections: Overview; Goals (List, Detail, History); Independence; Analysis
   (Optimizer, Performance, Plan vs actual); Pension; Operations (Transactions, Import, Prices); Setup
   (Products, Allocation, Cash flow, Assumptions, Glossary). The current page has a 2 px `--ink` bar and
-  weight 600. A page without a screen shows a "soon" tag and a placeholder page.
+  weight 600. A page without a screen shows a "soon" tag and a placeholder page. Under 900 px of window
+  height the spacing tightens (spacing tokens only) so every item shows without scrolling the sidebar.
 - **Glossary term.** A dotted-underline button that opens a popover: plain sentence first, the Italian
   term above it. No `title=` hints.
 
@@ -137,6 +138,9 @@ is `--control-h` high. KPI cards wrap in equal columns chosen from the card coun
 
 - **Exhibit anatomy.** Tag (mono, uppercase), action title that holds a number, unit line, chart,
   callout (2 px `--hl` rule on the left), source line. The source line ends with a period.
+- **Page title.** The `h1` is the name of the screen, never a finding (on a goal's page, the goal's
+  name). A finding with a number is the action title (`h2`) of the first exhibit, or of the key
+  numbers when a screen opens with them. Headings go in order: `h1`, then `h2`, then `h3`.
 - **Colours come from tokens, never literals.** ECharts options read the custom properties.
 - **One fixed slot colour per goal**, in every chart and beside the name in lists and chips. Goals 1-5 take
   slots 2-6 in creation order. Slot 1 is the highlight and no goal uses it. Goal 6 and later share the
