@@ -52,7 +52,7 @@ function input(over: Partial<FiInput> = {}): FiInput {
     fire: FIRE,
     essential: 1_000,
     optional: 500,
-    expenseGrowth: 0.02,
+    expenseGrowth: 0,
     inflation: 0.02,
     ...over,
   };
@@ -90,8 +90,8 @@ describe("fiLevels", () => {
 });
 
 describe("projectFinancialIndependence targets", () => {
-  it("keeps L2 = 300,000 and L3 = 400,000 flat in every year when expenseGrowth = inflation (AC-59)", () => {
-    const { points } = projectFinancialIndependence(input(), 1, 10);
+  it("keeps L2 = 300,000 and L3 = 400,000 flat in every year when expenseGrowth = 0 (AC-59)", () => {
+    const { points } = projectFinancialIndependence(input({ expenseGrowth: 0 }), 1, 10);
     expect(points).toHaveLength(42);
     for (const point of points) {
       expect(point.targets[1]).toBeCloseTo(300_000, 6);
@@ -99,12 +99,18 @@ describe("projectFinancialIndependence targets", () => {
     }
   });
 
-  it("grows L2 to about 331,000 at t = 10 when expenseGrowth is 3% and inflation 2% (AC-59)", () => {
-    const { points } = projectFinancialIndependence(input({ expenseGrowth: 0.03 }), 1, 10);
-    const ten = points.find((point) => point.t === 10);
-    expect(ten?.targets[1]).toBeGreaterThan(330_500);
-    expect(ten?.targets[1]).toBeLessThan(331_500);
-    expect(points[0]?.targets[1]).toBe(300_000);
+  it("grows L2 to about 403,000 at t = 10 when expenseGrowth is 3%, whatever the inflation (AC-59)", () => {
+    for (const inflation of [0.02, 0.05]) {
+      const { points } = projectFinancialIndependence(
+        input({ expenseGrowth: 0.03, inflation }),
+        1,
+        10,
+      );
+      const ten = points.find((point) => point.t === 10);
+      expect(ten?.targets[1]).toBeGreaterThan(402_500);
+      expect(ten?.targets[1]).toBeLessThan(403_500);
+      expect(points[0]?.targets[1]).toBe(300_000);
+    }
   });
 
   it("puts today at t = 0 and counts real years from asOf, with the stub as the first step", () => {

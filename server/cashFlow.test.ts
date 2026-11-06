@@ -18,6 +18,9 @@ const document = {
   events: [{ year: 2027, label: "boiler", amount: -60_000 }],
 };
 
+// The default inflation of the settings document: the sample data does not change it.
+const SAMPLE_INFLATION = 0.02;
+
 // A plan with the goal and the first year only: no RAL, so no schedule.
 const partialPlan = { goalId: "g-retirement", firstYear: 2020 };
 
@@ -89,6 +92,7 @@ describe("Cash flow API (AC-50)", () => {
     // falls back to its monthly plan, as on Goals).
     const expected = projectCashFlow({
       asOf: "2026-10-31",
+      inflation: SAMPLE_INFLATION,
       cashFlow: document,
       goals: [
         { id: "g-holiday", targetYear: 2026, contributionGrowth: 0, monthly: 10_000 },

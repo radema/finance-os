@@ -22,6 +22,8 @@ export type CashFlowInput = {
   /** ISO date, YYYY-MM-DD. */
   asOf: string;
   cashFlow: CashFlow;
+  /** Yearly inflation: the table is in nominal euros, and both growth fields are above it. */
+  inflation: number;
   goals: readonly CashFlowGoal[];
   /** The pension goal counts only its voluntary part, from the schedule. */
   pension?: { goalId: string; schedule: readonly PensionYear[] };
@@ -55,14 +57,15 @@ export type CashFlowView = {
 /**
  * The cash flow for 10 years from Y0 = year(asOf).
  *
- * Income and expenses grow by (1 + g)^(year - Y0), as the mock does. Goal contributions follow
+ * Income and expenses grow above inflation, in nominal euros: by ((1 + inflation) x (1 + g))^(year - Y0),
+ * with g = incomeGrowth or expenseGrowth. Goal contributions follow
  * `projectGoal`: the stub is r x monthly, full year k grows by (1 + contributionGrowth)^(k - 1),
  * and a goal stops after its target year. In Y0 income, expenses and contributions are scaled by
  * f = r / 12; events and the refund are whole. The pension refund ends with the pension goal: the last
  * one is paid in its target year + 1.
  */
 export function projectCashFlow(input: CashFlowInput): CashFlowYear[] {
-  const { asOf, cashFlow, goals, pension } = input;
+  const { asOf, cashFlow, inflation, goals, pension } = input;
   const { y0, f } = timeGrid(asOf, Number(asOf.slice(0, 4)));
 
   const planned = new Map<number, number>();
@@ -90,14 +93,16 @@ export function projectCashFlow(input: CashFlowInput): CashFlowYear[] {
       .map((row) => [row.refundYear, row.refund]),
   );
 
+  const nominal = (growth: number) => (1 + inflation) * (1 + growth);
+
   return Array.from({ length: DEFAULT_YEARS }, (_, index) => {
     const year = y0 + index;
     const share = index === 0 ? f : 1;
-    const income = cashFlow.income * (1 + cashFlow.incomeGrowth) ** index * share;
+    const income = cashFlow.income * nominal(cashFlow.incomeGrowth) ** index * share;
     const expenses =
       MONTHS_PER_YEAR *
       (cashFlow.essential + cashFlow.optional) *
-      (1 + cashFlow.expenseGrowth) ** index *
+      nominal(cashFlow.expenseGrowth) ** index *
       share;
     const events = cashFlow.events
       .filter((event) => event.year === year)

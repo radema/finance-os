@@ -231,6 +231,7 @@ export type CashFlowEvent = z.infer<typeof cashFlowEventSchema>;
 /**
  * The stored CashFlow document. Money is in cents: `income` is a year, `essential` and `optional`
  * are a month. It also feeds the financial-independence levels (essential, optional, expenseGrowth).
+ * Both growth fields are growth above inflation: 0 keeps up with prices.
  */
 export const cashFlowSchema = z.object({
   income: cents.default(0),

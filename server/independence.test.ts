@@ -72,12 +72,12 @@ describe("Independence API (AC-62)", () => {
     expect(view.result?.wealthToday.pension).toBeGreaterThan(0);
   });
 
-  it("saves the expense split and returns the levels of AC-59, flat when expenses grow with inflation", async () => {
+  it("saves the expense split and returns the levels of AC-59, flat when expenseGrowth is 0", async () => {
     await loadSample();
     await call("PUT", "/api/cash-flow", {
       income: 0,
       incomeGrowth: 0,
-      expenseGrowth: 0.02,
+      expenseGrowth: 0,
       essential: 0,
       optional: 0,
       events: [],
