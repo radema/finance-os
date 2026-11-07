@@ -126,6 +126,8 @@ is `--control-h` high. KPI cards wrap in equal columns chosen from the card coun
 - **Sticky table header.** Every table header row is `position: sticky`, at the top of the scrolling
   page (below a top bar if there is one), with the surface colour behind it (`--raised` inside a card) and
   a hairline bottom border. Cards use `overflow: clip`, not `hidden`, so they are not a scroll container.
+  A table that must scroll sideways sits in `.table-scroll table-scroll-sticky`: a wrapper capped at 70vh,
+  so the header sticks inside it.
 - **Sidebar.** Seven sections: Overview; Goals (List, Detail, History); Independence; Analysis
   (Optimizer, Performance, Plan vs actual); Pension; Operations (Transactions, Import, Prices); Setup
   (Products, Allocation, Cash flow, Assumptions, Glossary). The current page has a 2 px `--ink` bar and
