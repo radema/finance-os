@@ -16,6 +16,8 @@ export function readTokens(slot: number) {
     muted: token("--muted"),
     ink2: token("--ink2"),
     font: token("--font-text"),
+    markDot: Number.parseFloat(token("--mark-dot")),
+    markKey: Number.parseFloat(token("--mark-key")),
   };
 }
 

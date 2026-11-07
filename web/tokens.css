@@ -8,6 +8,7 @@
    --tint1..6          soft tints of the slots (light 12%, dark 18%) for chips, tags, card headers. Text on them stays --ink.
    --tint7             the tint of the grey slot (an alias of --wash).
    --blue and tints    general information (KPI accents, priority, headers). The highlight family means attention.
+   --mark-dot/--mark-key  scatter mark sizes: a plain dot, and the key marks (suggested, current).
    --ctx               context series grey.   --ink/--ink2/--muted  text greys.   --grid/--base  hairlines. */
 :root {
   --surface: #f8fafb;
@@ -71,6 +72,9 @@
   --s4: 24px;
   --s5: 32px;
   --s6: 48px;
+
+  --mark-dot: 10px;
+  --mark-key: 16px;
 
   --setup-max: 1200px;
   --note-max: 70ch;
