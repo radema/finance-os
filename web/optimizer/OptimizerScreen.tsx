@@ -11,7 +11,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { pVsRequired, requiredText } from "../goals/outlook.ts";
-import { formatAmount, formatPercent } from "../money.ts";
+import { formatAmount, formatPercent, formatSignedAmount, formatSignedPoints } from "../money.ts";
 import { Alert, Card, CheckField, ProductTag, Resource, SelectField } from "../setup/ui.tsx";
 import { MixScatter } from "./MixScatter.tsx";
 import {
@@ -21,6 +21,8 @@ import {
   mixText,
   onlyMixSentence,
   outcomeRows,
+  shortMixText,
+  smallGainNote,
   weightRows,
 } from "./model.ts";
 
@@ -229,6 +231,7 @@ function WeightsAndOutcomes({
             <th>At the goal date</th>
             <th className="num">Current</th>
             <th className="num">Suggested</th>
+            <th className="num">Change</th>
           </tr>
         </thead>
         <tbody>
@@ -237,6 +240,7 @@ function WeightsAndOutcomes({
               <th scope="row">{row.label}</th>
               <td className="num">{formatAmount(row.current)}</td>
               <td className="num">{formatAmount(row.suggested)}</td>
+              <td className="num">{formatSignedAmount(row.change)}</td>
             </tr>
           ))}
           <tr>
@@ -245,6 +249,7 @@ function WeightsAndOutcomes({
             </th>
             <td className="num">{pVsRequired(current.p, view.requiredP)}</td>
             <td className="num">{pVsRequired(chosen.p, view.requiredP)}</td>
+            <td className="num">{formatSignedPoints(chosen.p - current.p)}</td>
           </tr>
           {chosen.monthlyNeeded === undefined ? null : (
             <tr>
@@ -253,6 +258,7 @@ function WeightsAndOutcomes({
               </th>
               <td className="num">–</td>
               <td className="num">{requiredText(chosen.monthlyNeeded, unit)}</td>
+              <td className="num">–</td>
             </tr>
           )}
         </tbody>
@@ -271,11 +277,13 @@ type Asking = { weights: { productId: string; weight: number }[]; flows: boolean
 /** "Use as contribution weights": a preview first, then the write after a click on Confirm. */
 function UseWeights({
   goal,
+  current,
   chosen,
   names,
   onApplied,
 }: {
   goal: GoalListRow;
+  current: MixView;
   chosen: MixView;
   names: ReadonlyMap<string, string>;
   onApplied: () => void;
@@ -283,6 +291,7 @@ function UseWeights({
   const [asking, setAsking] = useState<Asking>();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
+  const smallGain = smallGainNote(current, chosen);
   const body = (weights: Asking["weights"], confirm: boolean) => ({
     goalId: goal.id,
     weights,
@@ -336,9 +345,12 @@ function UseWeights({
           </div>
         </div>
       ) : (
-        <button className="btn btn-primary" type="button" onClick={ask}>
-          Use as contribution weights
-        </button>
+        <>
+          {smallGain ? <p className="note">{smallGain}</p> : null}
+          <button className="btn btn-primary" type="button" onClick={ask}>
+            Use as contribution weights
+          </button>
+        </>
       )}
       {saved ? (
         <p className="saved" role="status">
@@ -363,12 +375,14 @@ export function Result({
   isPension: boolean;
   onApplied: () => void;
 }) {
-  const { chosen } = view;
+  const { current, chosen } = view;
   return (
     <Card title="Suggested mix">
       <div className="result-head">
         <GoalChip id={goal.id} name={goal.name} slot={goal.slot} />
-        <span className="result-mix">{mixText(chosen.weights, names)}</span>
+        <span className="result-mix" title={mixText(chosen.weights, names)}>
+          {shortMixText(chosen.weights, names)}
+        </span>
       </div>
       {view.notFeasible ? (
         <p className="alert" role="alert">
@@ -387,7 +401,13 @@ export function Result({
           ? `Selling your holdings now costs ${formatAmount(view.switchTax)} in tax. The outcomes of the suggested mix are after this tax.`
           : "None. New money only: nothing is sold."}
       </p>
-      <UseWeights goal={goal} chosen={chosen} names={names} onApplied={onApplied} />
+      <UseWeights
+        goal={goal}
+        current={current}
+        chosen={chosen}
+        names={names}
+        onApplied={onApplied}
+      />
     </Card>
   );
 }
@@ -483,7 +503,9 @@ export function Exhibits({
                   className={index === 0 ? "top-chosen" : undefined}
                 >
                   <td>{index + 1}</td>
-                  <td>{mixText(mix.weights, names)}</td>
+                  <td className="mix-cell" title={mixText(mix.weights, names)}>
+                    {shortMixText(mix.weights, names)}
+                  </td>
                   <td className="num">{formatPercent(mix.p)}</td>
                   <td className="num">{formatAmount(mix.p10)}</td>
                   <td className="num">{formatAmount(mix.median)}</td>

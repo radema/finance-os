@@ -47,6 +47,9 @@
   line-height: var(--lh-body);
   font-weight: 600;
 }
+.mix-cell {
+  white-space: nowrap;
+}
 .block-title {
   margin: var(--s4) 0 var(--s2);
   font: 500 var(--t-sub) / var(--lh-sub) var(--font-display);

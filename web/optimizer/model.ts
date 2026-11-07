@@ -1,5 +1,5 @@
 import type { MixView } from "../../engine/optimizerView.ts";
-import { formatPercent } from "../money.ts";
+import { formatPercent, formatSignedAmount, formatSignedPoints } from "../money.ts";
 
 /** The most products a mix can hold. */
 export const MAX_PRODUCTS = 6;
@@ -25,12 +25,13 @@ export function defaultUniverse(
   return (own.length > 0 ? own : eligible).slice(0, MAX_PRODUCTS).map((product) => product.id);
 }
 
-/** Bad, typical and good case of the current and the suggested mix, in euros. */
-export const outcomeRows = (current: MixView, suggested: MixView) => [
-  { label: "Bad case", current: current.p10, suggested: suggested.p10 },
-  { label: "Typical case", current: current.median, suggested: suggested.median },
-  { label: "Good case", current: current.p90, suggested: suggested.p90 },
-];
+/** Bad, typical and good case of the current and the suggested mix, in euros, and the change (suggested minus current). */
+export const outcomeRows = (current: MixView, suggested: MixView) =>
+  [
+    { label: "Bad case", current: current.p10, suggested: suggested.p10 },
+    { label: "Typical case", current: current.median, suggested: suggested.median },
+    { label: "Good case", current: current.p90, suggested: suggested.p90 },
+  ].map((row) => ({ ...row, change: row.suggested - row.current }));
 
 /** Every product of either mix with its weight in each, the biggest weight first. */
 export function weightRows(current: MixView, suggested: MixView) {
@@ -51,6 +52,51 @@ export const mixText = (weights: MixView["weights"], names: ReadonlyMap<string, 
   weights
     .map((row) => `${names.get(row.productId) ?? row.productId} ${formatPercent(row.weight)}`)
     .join(", ");
+
+const SHORT_NAME_LENGTH = 16;
+const SHORT_MIX_SHOWN = 2;
+
+/** The words every product name starts with ("Sample"), when each name keeps at least one word after them. */
+function commonPrefix(names: ReadonlyMap<string, string>): number {
+  const words = [...names.values()].map((name) => name.split(" "));
+  const shortest = Math.min(...words.map((row) => row.length)) - 1;
+  let count = 0;
+  while (count < shortest && words.every((row) => row[count] === words[0][count])) count++;
+  return count;
+}
+
+/** A mix with short names for a table cell: "Direct Share 80%, Govt Bond 2029 10% +1". The full names go in `mixText`. */
+export function shortMixText(
+  weights: MixView["weights"],
+  names: ReadonlyMap<string, string>,
+): string {
+  const skip = names.size > 1 ? commonPrefix(names) : 0;
+  const short = (productId: string) => {
+    const name = (names.get(productId) ?? productId).split(" ").slice(skip).join(" ");
+    return name.length > SHORT_NAME_LENGTH ? `${name.slice(0, SHORT_NAME_LENGTH - 1)}…` : name;
+  };
+  const biggest = [...weights].sort((a, b) => b.weight - a.weight);
+  const text = biggest
+    .slice(0, SHORT_MIX_SHOWN)
+    .map((row) => `${short(row.productId)} ${formatPercent(row.weight)}`)
+    .join(", ");
+  return biggest.length > SHORT_MIX_SHOWN ? `${text} +${biggest.length - SHORT_MIX_SHOWN}` : text;
+}
+
+/** The gain is small when the typical case moves less than 2% and the chance of success less than 1 point: inside what another set of simulated markets moves. */
+const SMALL_GAIN_TYPICAL = 0.02;
+const SMALL_GAIN_CHANCE = 0.01;
+
+/** The note next to "Use as contribution weights" when the suggestion is not clearly better; `undefined` when the gain is clear. */
+export function smallGainNote(current: MixView, suggested: MixView): string | undefined {
+  const typical = suggested.median - current.median;
+  const chance = suggested.p - current.p;
+  const clear =
+    Math.abs(typical) > SMALL_GAIN_TYPICAL * Math.abs(current.median) ||
+    Math.abs(chance) >= SMALL_GAIN_CHANCE;
+  if (clear) return undefined;
+  return `The gain is small: the typical case changes by ${formatSignedAmount(typical)} and the chance of success by ${formatSignedPoints(chance)}. That is inside what another set of simulated markets can move, so the current mix is nearly as good.`;
+}
 
 const AXIS_STEP = 0.05;
 const AXIS_MARGIN = 0.02;

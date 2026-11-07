@@ -4,6 +4,8 @@ import {
   formatEuro,
   formatPercent,
   formatPrice,
+  formatSignedAmount,
+  formatSignedPoints,
   formatUnitPrice,
   formatWholeEuro,
 } from "./money.ts";
@@ -53,5 +55,20 @@ describe("price rule: 2 to 4 decimals, trailing zeros kept to 2", () => {
 
   it("matches the euro unit price without the symbol", () => {
     expect(formatUnitPrice(50.0983)).toBe(`50,0983${NBSP}€`);
+  });
+});
+
+describe("signed change formats", () => {
+  it("print a plus or a minus on every change except zero", () => {
+    expect(formatSignedAmount(39.3)).toBe(`+39,30${NBSP}€`);
+    expect(formatSignedAmount(-961.74)).toBe(`-961,74${NBSP}€`);
+    expect(formatSignedAmount(0.001)).toBe(`0,00${NBSP}€`);
+    expect(formatSignedAmount(-0)).toBe(`0,00${NBSP}€`);
+  });
+
+  it("print a change of a probability in percentage points", () => {
+    expect(formatSignedPoints(-0.0033)).toBe(`-0,33${NBSP}pts`);
+    expect(formatSignedPoints(0.05)).toBe(`+5${NBSP}pts`);
+    expect(formatSignedPoints(0)).toBe(`0${NBSP}pts`);
   });
 });
