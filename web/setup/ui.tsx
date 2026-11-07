@@ -374,22 +374,26 @@ export function CheckField({
 export function ConfirmButton({
   label,
   confirmLabel = "Confirm",
+  apart = false,
   onConfirm,
 }: {
   label: string;
   confirmLabel?: string;
+  /** In a row-actions group: sit apart from the other actions. */
+  apart?: boolean;
   onConfirm: () => void;
 }) {
   const [asking, setAsking] = useState(false);
+  const setApart = apart ? " set-apart" : "";
   if (!asking) {
     return (
-      <button className="btn btn-quiet" type="button" onClick={() => setAsking(true)}>
+      <button className={`btn btn-quiet${setApart}`} type="button" onClick={() => setAsking(true)}>
         {label}
       </button>
     );
   }
   return (
-    <span className="confirm">
+    <span className={`confirm${setApart}`}>
       <button
         className="btn"
         type="button"

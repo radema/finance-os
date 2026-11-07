@@ -1,6 +1,7 @@
 import type { TransactionType } from "../../engine/holdings.ts";
 import type { Transaction } from "../../engine/schemas.ts";
 import { centsToEuros, eurosToCents, num } from "../forms.ts";
+import { formatEuro } from "../money.ts";
 
 /** What the user sees in the transaction form: every value is text. */
 export interface TransactionFields {
@@ -40,3 +41,14 @@ export const transactionBody = (fields: TransactionFields, takesBothFlows: boole
   commissionCents: fields.fee.trim() === "" ? null : eurosToCents(fields.fee),
   flow: takesBothFlows && fields.flow !== "" ? fields.flow : undefined,
 });
+
+const CASH_SIGN: Partial<Record<TransactionType, "-" | "+">> = {
+  buy: "-",
+  pensionContribution: "-",
+  sell: "+",
+  coupon: "+",
+};
+
+/** The amount of a row as a cash movement: a buy or a pension contribution is cash out. */
+export const cashMovement = (type: TransactionType, amountCents: number): string =>
+  `${CASH_SIGN[type] ?? ""}${formatEuro(amountCents)}`;

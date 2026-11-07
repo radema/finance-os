@@ -8,7 +8,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { checkFields, type FieldErrors } from "../formErrors.ts";
 import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatEuro, formatPercent } from "../money.ts";
+import { formatEuro, formatPercent, formatPrice } from "../money.ts";
 import { copyOfTransaction } from "../setup/duplicate.ts";
 import { type RevealFormRef, useRevealForm } from "../setup/revealForm.ts";
 import {
@@ -24,7 +24,7 @@ import {
   TextField,
 } from "../setup/ui.tsx";
 import { useFormErrors } from "../setup/useFormErrors.ts";
-import { fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
+import { cashMovement, fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
 
 // `opening` is written by the Current portfolio form in S2, so the form does not offer it.
 const FORM_TYPES: readonly { value: TransactionType; label: string }[] = [
@@ -410,82 +410,85 @@ export function TransactionsScreen() {
             rows.length === 0 ? (
               <p className="note">No transactions to show.</p>
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Bucket</th>
-                    <th>Product</th>
-                    <th>Type</th>
-                    <th className="num">Qty</th>
-                    <th className="num">Price</th>
-                    <th className="num">Amount</th>
-                    <th className="num">Commission</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((t) => {
-                    const p = productOf(t.productId);
-                    return (
-                      <tr key={t.id}>
-                        <td>{t.date}</td>
-                        <td>{goalName(t.goalId)}</td>
-                        <td>
-                          {p?.name ?? "?"} {p ? <ProductTag regime={p.regime} /> : null}
-                        </td>
-                        <td>
-                          {TYPE_LABEL[t.type] ?? t.type}
-                          {t.flow ? ` (${t.flow})` : ""}
-                        </td>
-                        <td className="num">
-                          {t.type === "coupon" ? "–" : quantity.format(t.qty)}
-                        </td>
-                        <td className="num">
-                          {t.type === "coupon" ? "–" : quantity.format(t.price)}
-                        </td>
-                        <td className="num">{formatEuro(t.amountCents)}</td>
-                        <td className="num">
-                          {t.commissionCents === null ? "–" : formatEuro(t.commissionCents)}
-                        </td>
-                        <td className="row-actions">
-                          {t.type === "opening" ? null : (
-                            <button
-                              className="btn btn-quiet"
-                              type="button"
-                              onClick={() => {
-                                setCopying(undefined);
-                                setEditing(t);
-                                reveal();
-                              }}
-                            >
-                              Edit
-                            </button>
-                          )}
-                          {t.type === "opening" ? null : (
-                            <button
-                              className="btn btn-quiet"
-                              type="button"
-                              onClick={() => {
-                                setEditing(undefined);
-                                setCopying(t);
-                                reveal();
-                              }}
-                            >
-                              Duplicate
-                            </button>
-                          )}
-                          <ConfirmButton
-                            label="Delete"
-                            confirmLabel="Delete transaction"
-                            onConfirm={() => void remove(t.id)}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="table-scroll">
+                <table className="table table-transactions">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Bucket</th>
+                      <th>Product</th>
+                      <th>Type</th>
+                      <th className="num">Qty</th>
+                      <th className="num">Price</th>
+                      <th className="num">Amount</th>
+                      <th className="num">Commission</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((t) => {
+                      const p = productOf(t.productId);
+                      return (
+                        <tr key={t.id}>
+                          <td>{t.date}</td>
+                          <td>{goalName(t.goalId)}</td>
+                          <td>
+                            {p?.name ?? "?"} {p ? <ProductTag regime={p.regime} /> : null}
+                          </td>
+                          <td>
+                            {TYPE_LABEL[t.type] ?? t.type}
+                            {t.flow ? ` (${t.flow})` : ""}
+                          </td>
+                          <td className="num">
+                            {t.type === "coupon" ? "–" : quantity.format(t.qty)}
+                          </td>
+                          <td className="num">
+                            {t.type === "coupon" ? "–" : formatPrice(t.price)}
+                          </td>
+                          <td className="num">{cashMovement(t.type, t.amountCents)}</td>
+                          <td className="num">
+                            {t.commissionCents === null ? "–" : formatEuro(t.commissionCents)}
+                          </td>
+                          <td className="row-actions">
+                            {t.type === "opening" ? null : (
+                              <button
+                                className="btn btn-quiet"
+                                type="button"
+                                onClick={() => {
+                                  setCopying(undefined);
+                                  setEditing(t);
+                                  reveal();
+                                }}
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {t.type === "opening" ? null : (
+                              <button
+                                className="btn btn-quiet"
+                                type="button"
+                                onClick={() => {
+                                  setEditing(undefined);
+                                  setCopying(t);
+                                  reveal();
+                                }}
+                              >
+                                Duplicate
+                              </button>
+                            )}
+                            <ConfirmButton
+                              label="Delete"
+                              confirmLabel="Delete transaction"
+                              apart
+                              onConfirm={() => void remove(t.id)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )
           }
         </Resource>

@@ -395,9 +395,28 @@ form > .actions {
 .table-weights th:nth-child(4) {
   width: 240px;
 }
+/* Row actions: quiet buttons that look like controls, in one line. Delete sits apart. */
 .row-actions {
   text-align: right;
   white-space: nowrap;
+}
+.row-actions .btn-quiet {
+  border-color: var(--grid);
+}
+.row-actions > * + * {
+  margin-inline-start: var(--s1);
+}
+.row-actions > .set-apart {
+  margin-inline-start: var(--s3);
+}
+/* Transactions: one line per row. The date never breaks; the table scrolls inside its card. */
+.table-transactions td,
+.table-transactions th {
+  white-space: nowrap;
+}
+.table-transactions td:nth-child(3),
+.table-transactions th:nth-child(3) {
+  min-width: 16em;
 }
 .table-scroll {
   overflow-x: auto;
