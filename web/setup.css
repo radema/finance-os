@@ -521,6 +521,23 @@ input.inline-date {
 .table-cash-flow thead th:first-child {
   z-index: 2;
 }
+/* A year that falls short: a highlight dot plus the word, the word in the text grey. */
+.short {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  margin-right: var(--s3);
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  color: var(--ink2);
+}
+.short::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hl);
+}
 
 /* Need / Want / Wish: a marker plus a tint, so the shape carries the meaning too. */
 .prio,

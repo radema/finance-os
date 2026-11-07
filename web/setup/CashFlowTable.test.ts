@@ -22,6 +22,8 @@ const html = renderToStaticMarkup(
   }),
 );
 
+const rowsHtml = (html: string): string[] => html.match(/<tr>.*?<\/tr>/g)?.slice(1) ?? [];
+
 describe("Cash flow table (AC-87, AC-89)", () => {
   it("sits in the sticky scroll wrapper, so a narrow card scrolls instead of clipping", () => {
     expect(html).toMatch(/^<div class="table-scroll table-scroll-sticky"><table class="table /);
@@ -52,5 +54,23 @@ describe("Cash flow table (AC-87, AC-89)", () => {
       "Planned from savings",
       "Gap",
     ]);
+  });
+
+  it("marks each row with a negative Gap with a dot and the word Short, and no other row", () => {
+    const withSurplus = renderToStaticMarkup(
+      createElement(CashFlowTable, {
+        rows: [row(2026, "rest of year", -720_049), row(2027, "2027", 0), row(2028, "2028", 5_000)],
+      }),
+    );
+    const [first, zero, surplus] = rowsHtml(withSurplus);
+    expect(first).toMatch(/<span class="short">Short<\/span>/);
+    expect(zero).not.toContain("Short");
+    expect(surplus).not.toContain("Short");
+  });
+
+  it("emphasises Gap and not Capacity", () => {
+    const [first] = rowsHtml(html);
+    expect(first).toMatch(/<strong>[^<]*-7\.200/);
+    expect(first).not.toMatch(/<strong>[^<]*9\.623/);
   });
 });
