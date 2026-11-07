@@ -7,7 +7,7 @@ import {
   recordFields,
 } from "../../engine/recordImport.ts";
 import { api, messageOf } from "../api.ts";
-import { FilePicker, PASTED_TEXT, shownFileName } from "../setup/FilePicker.tsx";
+import { FilePicker, PASTED_TEXT, shownFileName } from "../FilePicker.tsx";
 import { Alert, Card, Field, SelectField } from "../setup/ui.tsx";
 import { TemplateButton } from "./TemplateButton.tsx";
 import { DATES, DECIMALS, DELIMITERS, toBase64 } from "./TransactionsImport.tsx";

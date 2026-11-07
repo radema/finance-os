@@ -3,19 +3,19 @@ import { ASSET_CLASSES } from "../../engine/assetClasses.ts";
 import type { Product, ProductInput } from "../../engine/schemas.ts";
 import { PRICE_SOURCES, REGIMES } from "../../engine/schemas.ts";
 import { api, useLoad } from "../api.ts";
+import { copyOfProduct } from "../duplicate.ts";
 import { checkFields, type Rule } from "../formErrors.ts";
 import { fractionToPercent, percentToFraction } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { hashParams } from "../hashQuery.ts";
 import { formatPercent } from "../money.ts";
-import { copyOfProduct } from "./duplicate.ts";
+import { RowActions, useRowEditor } from "../rowEditor.tsx";
+import { useFormErrors } from "../useFormErrors.ts";
 import { regimeFields, regimeHint, resetHiddenFields } from "./regime.ts";
-import { useRevealForm } from "./revealForm.ts";
 import {
   Alert,
   Card,
   CheckField,
-  ConfirmButton,
   NumberField,
   ProductTag,
   RequiredLegend,
@@ -23,7 +23,6 @@ import {
   SelectField,
   TextField,
 } from "./ui.tsx";
-import { useFormErrors } from "./useFormErrors.ts";
 
 const REGIME_LABEL: Record<string, string> = {
   etf: "ETF",
@@ -135,9 +134,12 @@ export function ProductsTab() {
       ticker: params.get("ticker") ?? "",
     };
   });
-  const [editing, setEditing] = useState<string>();
-  const [copying, setCopying] = useState(false);
   const { errors, alert, reject, fail, clear } = useFormErrors<keyof typeof LABELS>(LABELS);
+  const editor = useRowEditor<Product>({
+    load: (p, isCopy) => setForm(toForm(isCopy ? copyOfProduct(p) : p)),
+    clear,
+  });
+  const { editing, copying } = editor;
   const set = <K extends keyof Form>(key: K, value: Form[K]) => {
     setForm({ ...form, [key]: value });
     clear(key as keyof typeof LABELS);
@@ -146,19 +148,17 @@ export function ProductsTab() {
   const shown = regimeFields(form.regime);
   const suggested = regimeHint(form.assetClass, form.regime);
   const regimeSelect = useRef<HTMLSelectElement>(null);
-  const { formRef, reveal } = useRevealForm();
 
   const reset = () => {
     setForm(EMPTY);
-    setEditing(undefined);
-    setCopying(false);
+    editor.stop();
   };
   const save = async () => {
     const problems = checkFields(form, RULES, LABELS);
     if (Object.keys(problems).length > 0) return reject(problems);
     try {
       const body = toInput(form);
-      if (editing) await api("PUT", "/api/products", { body: { id: editing, ...body } });
+      if (editing) await api("PUT", "/api/products", { body: { id: editing.id, ...body } });
       else await api("POST", "/api/products", { body });
       clear();
       reset();
@@ -171,7 +171,7 @@ export function ProductsTab() {
     try {
       await api("DELETE", "/api/products", { query: { id } });
       clear();
-      if (editing === id) reset();
+      if (editing?.id === id) reset();
       products.reload();
     } catch (failure) {
       fail(failure);
@@ -183,7 +183,7 @@ export function ProductsTab() {
       <Card title={editing ? "Edit product" : "Add product"}>
         <RequiredLegend />
         <form
-          ref={formRef}
+          ref={editor.formRef}
           className="product-form"
           noValidate
           onSubmit={(event) => {
@@ -357,40 +357,12 @@ export function ProductsTab() {
                         <td className="num">{formatPercent(p.expReturn)}</td>
                         <td className="num">{formatPercent(p.volatility)}</td>
                         <td className="num">{formatPercent(p.ter)}</td>
-                        <td className="row-actions">
-                          <button
-                            className="btn btn-quiet"
-                            type="button"
-                            onClick={() => {
-                              setEditing(p.id);
-                              setCopying(false);
-                              setForm(toForm(p));
-                              clear();
-                              reveal();
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn btn-quiet"
-                            type="button"
-                            onClick={() => {
-                              setEditing(undefined);
-                              setCopying(true);
-                              setForm(toForm(copyOfProduct(p)));
-                              clear();
-                              reveal();
-                            }}
-                          >
-                            Duplicate
-                          </button>
-                          <ConfirmButton
-                            label="Delete"
-                            confirmLabel="Delete product"
-                            apart
-                            onConfirm={() => void remove(p.id)}
-                          />
-                        </td>
+                        <RowActions
+                          row={p}
+                          editor={editor}
+                          noun="product"
+                          onDelete={() => void remove(p.id)}
+                        />
                       </tr>
                     ))}
                   </tbody>
