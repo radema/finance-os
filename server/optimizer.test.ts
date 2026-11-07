@@ -78,6 +78,17 @@ describe("Optimizer run API (AC-84)", () => {
     expect(body.current.median).toBe(same?.median);
   });
 
+  it("under O5 gives the current mix its monthly amount needed, solved like the candidates'", async () => {
+    const { body } = await run(car({ criterion: "O5" }));
+    const same = body.mixes.find(
+      (mix) =>
+        Math.abs((weightOf(mix, "p-world-etf") ?? 0) - 0.6) < 1e-9 &&
+        Math.abs((weightOf(mix, "p-direct") ?? 0) - 0.2) < 1e-9,
+    );
+    expect(body.current.monthlyNeeded).toBeDefined();
+    expect(body.current.monthlyNeeded).toBe(same?.monthlyNeeded);
+  });
+
   it("in rebalance mode returns the tax of selling the holdings", async () => {
     const { status, body } = await run(car({ mode: "rebalance" }));
     expect(status).toBe(200);

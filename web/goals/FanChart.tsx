@@ -5,7 +5,7 @@ import { SVGRenderer } from "echarts/renderers";
 import { useCallback } from "react";
 import type { FanPoint } from "../../engine/goalViews.ts";
 import { formatAmount } from "../money.ts";
-import { PLOT_RIGHT, readTokens, useEchart } from "../useEchart.ts";
+import { PLOT_GRID, readTokens, useEchart } from "../useEchart.ts";
 import { usesSlotLine } from "./outlook.ts";
 import { fitAxis, SPREAD_END_LABELS } from "./valueAxis.ts";
 
@@ -44,7 +44,7 @@ export function buildOption(fan: readonly FanPoint[], target: number, slot: numb
   });
   return {
     animation: false,
-    grid: { left: 8, right: PLOT_RIGHT, top: 16, bottom: 8, containLabel: true },
+    grid: { ...PLOT_GRID },
     xAxis: {
       type: "category" as const,
       data: fan.map((point) => String(point.year)),

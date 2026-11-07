@@ -263,38 +263,75 @@ describe("shortMixText", () => {
 });
 
 describe("smallGainNote", () => {
-  const outcome = (p: number, p10: number, median: number): MixView => ({
+  const outcome = (
+    p: number,
+    p10: number,
+    median: number,
+    monthlyNeeded?: number | null,
+  ): MixView => ({
     ...mix([["etf", 1]], p),
     p10,
     median,
+    ...(monthlyNeeded !== undefined && { monthlyNeeded }),
   });
 
   it("fires on the New car case: lower bad case, typical case +39,30 €, chance 99,67% against 100%", () => {
     const current = outcome(1, 25_711.62, 30_000);
     const suggested = outcome(0.9967, 24_749.88, 30_039.3);
-    expect(smallGainNote(current, suggested)).toMatch(/small/i);
+    expect(smallGainNote(current, suggested, "O1")).toMatch(/small/i);
   });
 
   it("does not fire on a clear gain in the typical case", () => {
     expect(
-      smallGainNote(outcome(0.8, 20_000, 30_000), outcome(0.8, 21_000, 33_000)),
+      smallGainNote(outcome(0.8, 20_000, 30_000), outcome(0.8, 21_000, 33_000), "O2"),
     ).toBeUndefined();
   });
 
   it("does not fire on a clear gain in the chance of success", () => {
     expect(
-      smallGainNote(outcome(0.7, 20_000, 30_000), outcome(0.8, 20_000, 30_100)),
+      smallGainNote(outcome(0.7, 20_000, 30_000), outcome(0.8, 20_000, 30_100), "O4"),
     ).toBeUndefined();
   });
 
   it("does not fire on a clear loss either", () => {
     expect(
-      smallGainNote(outcome(0.8, 20_000, 30_000), outcome(0.8, 18_000, 27_000)),
+      smallGainNote(outcome(0.8, 20_000, 30_000), outcome(0.8, 18_000, 27_000), "O2"),
     ).toBeUndefined();
   });
 
   it("fires when the suggestion equals the current mix", () => {
     const same = outcome(0.8, 20_000, 30_000);
-    expect(smallGainNote(same, same)).toMatch(/small/i);
+    expect(smallGainNote(same, same, "O1")).toMatch(/small/i);
+  });
+
+  it("does not fire under O1 on a clear gain in the bad case, however small the other moves", () => {
+    expect(
+      smallGainNote(outcome(0.8, 20_000, 30_000), outcome(0.8, 21_000, 30_010), "O1"),
+    ).toBeUndefined();
+  });
+
+  it("fires under O1 on a bad case that moves less than 2%", () => {
+    expect(smallGainNote(outcome(0.8, 20_000, 30_000), outcome(0.8, 20_300, 30_010), "O1")).toMatch(
+      /small/i,
+    );
+  });
+
+  it("does not fire under O5 on a clear drop in the monthly amount needed", () => {
+    expect(
+      smallGainNote(outcome(0.8, 20_000, 30_000, 500), outcome(0.8, 20_000, 30_010, 450), "O5"),
+    ).toBeUndefined();
+  });
+
+  it("does not fire under O5 when the current mix cannot reach the chance and the suggestion can", () => {
+    expect(
+      smallGainNote(outcome(0.8, 20_000, 30_000, null), outcome(0.8, 20_000, 30_010, 450), "O5"),
+    ).toBeUndefined();
+  });
+
+  it("fires under O5 on a monthly amount that moves less than 2% or rises", () => {
+    const current = outcome(0.8, 20_000, 30_000, 500);
+    expect(smallGainNote(current, outcome(0.8, 20_000, 30_010, 495), "O5")).toMatch(/small/i);
+    expect(smallGainNote(current, outcome(0.8, 20_000, 30_010, 600), "O5")).toMatch(/small/i);
+    expect(smallGainNote(current, outcome(0.8, 20_000, 30_010, null), "O5")).toMatch(/small/i);
   });
 });

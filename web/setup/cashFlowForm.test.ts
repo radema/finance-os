@@ -53,11 +53,43 @@ describe("Cash flow with nothing saved (AC-89)", () => {
 
   it("keeps the zeros once an income, an expense or an event is saved", () => {
     expect(isUnset({ ...empty, optional: 1 })).toBe(false);
+    expect(isUnset({ ...empty, incomeGrowth: 0.02 })).toBe(false);
+    expect(isUnset({ ...empty, expenseGrowth: 0.01 })).toBe(false);
     expect(isUnset({ ...empty, events: [{ year: 2030, label: "x", amount: 1 }] })).toBe(false);
     expect(toValues({ ...empty, essential: 150_000 })).toMatchObject({
       income: "0",
       incomeGrowth: "0",
       optional: "0",
     });
+  });
+});
+
+describe("Cash flow saved as zeros (AC-89)", () => {
+  const zeros: CashFlow = {
+    income: 0,
+    incomeGrowth: 0,
+    essential: 0,
+    optional: 0,
+    expenseGrowth: 0,
+    events: [],
+  };
+  const typedZeros = {
+    income: "0",
+    incomeGrowth: "0",
+    essential: "0",
+    optional: "0",
+    expenseGrowth: "0",
+  };
+
+  it("reads Saved after Save cash flow stores five zeros and no events", () => {
+    expect(savedDocument(typedZeros, [])).toEqual(zeros);
+    expect(hasUnsavedValues(typedZeros, zeros)).toBe(false);
+    expect(hasUnsavedValues({ ...typedZeros, optional: "10" }, zeros)).toBe(true);
+  });
+
+  it("keeps a saved growth when income, essential and optional are 0", () => {
+    const withGrowth = { ...zeros, incomeGrowth: 0.02 };
+    expect(toValues(withGrowth)).toMatchObject({ incomeGrowth: "2", income: "0" });
+    expect(hasUnsavedValues(toValues(withGrowth), withGrowth)).toBe(false);
   });
 });

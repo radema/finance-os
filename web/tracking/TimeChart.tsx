@@ -3,7 +3,7 @@ import { GridComponent } from "echarts/components";
 import * as echarts from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
 import { useCallback } from "react";
-import { PLOT_RIGHT, readColour, useEchart } from "../useEchart.ts";
+import { PLOT_GRID, readColour, useEchart } from "../useEchart.ts";
 
 echarts.use([LineChart, BarChart, GridComponent, SVGRenderer]);
 
@@ -41,7 +41,7 @@ export function buildOption(
 
   return {
     animation: false,
-    grid: { left: 8, right: PLOT_RIGHT, top: 16, bottom: 8, containLabel: true },
+    grid: { ...PLOT_GRID },
     xAxis: {
       type: "category" as const,
       data: months,
