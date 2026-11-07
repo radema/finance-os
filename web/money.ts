@@ -25,6 +25,10 @@ const unitPrice = new Intl.NumberFormat("it-IT", {
   style: "currency",
   currency: "EUR",
 });
+const quantity = {
+  4: new Intl.NumberFormat("it-IT", { ...base, maximumFractionDigits: 4 }),
+  6: new Intl.NumberFormat("it-IT", { ...base, maximumFractionDigits: 6 }),
+};
 
 /** Integer cents as a euro amount for the view, in it-IT format. */
 export const formatEuro = (cents: number): string => euro.format(fromCents(cents));
@@ -47,6 +51,10 @@ export const formatPrice = (value: number): string => price.format(value);
 
 /** The price or the average cost of one unit, in euros: the price rule with the euro sign. */
 export const formatUnitPrice = (euros: number): string => unitPrice.format(euros);
+
+/** A quantity of units as a plain number, in it-IT format: up to 4 decimals, or 6 for the Current portfolio. */
+export const formatQuantity = (value: number, maxDecimals: 4 | 6 = 4): string =>
+  quantity[maxDecimals].format(value);
 
 /** A fraction as a percentage for the view: 0.065 is "6,5%". */
 export const formatPercent = (fraction: number): string => `${percent.format(fraction * 100)}%`;

@@ -4,7 +4,7 @@ import type { Product, Settings, Transaction } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { DateInput } from "../DateInput.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatEuro } from "../money.ts";
+import { formatEuro, formatQuantity } from "../money.ts";
 import { TRANSACTIONS_ROUTE } from "../nav.ts";
 import {
   Alert,
@@ -24,8 +24,6 @@ interface Weight {
   productId: string;
   weight: number;
 }
-
-const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 6 });
 
 const pmcLabel = (regime: string): string =>
   regime === "pension" ? "Average unit value (€)" : "PMC (€)";
@@ -71,8 +69,8 @@ function Saved({
               <tr key={t.id}>
                 <td>{productName(t.productId)}</td>
                 <td>{goalName(t.goalId)}</td>
-                <td className="num">{quantity.format(t.qty)}</td>
-                <td className="num">{quantity.format(t.price)}</td>
+                <td className="num">{formatQuantity(t.qty, 6)}</td>
+                <td className="num">{formatQuantity(t.price, 6)}</td>
                 <td className="num">{formatEuro(t.amountCents)}</td>
               </tr>
             ))}

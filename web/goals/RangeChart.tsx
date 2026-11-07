@@ -6,7 +6,7 @@ import { useCallback } from "react";
 import type { GoalAnalysis } from "../../engine/goalViews.ts";
 import type { OutcomeBins } from "../../engine/outcomeChart.ts";
 import { formatAmount } from "../money.ts";
-import { readTokens, useEchart } from "../useEchart.ts";
+import { LABELS_INSIDE, readTokens, useEchart } from "../useEchart.ts";
 
 echarts.use([LineChart, ScatterChart, GridComponent, MarkLineComponent, SVGRenderer]);
 
@@ -80,7 +80,7 @@ function buildOption(range: GoalAnalysis["range"], bins: OutcomeBins, slot: numb
   return {
     animation: false,
     // The top margin holds the target label, which sits above the axis.
-    grid: { left: 8, right: 16, top: 32, bottom: 8, containLabel: true },
+    grid: { left: 8, right: 16, top: 32, bottom: 8, ...LABELS_INSIDE },
     xAxis: {
       type: "value" as const,
       min: bins.min,

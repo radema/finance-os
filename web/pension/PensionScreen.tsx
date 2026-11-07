@@ -1,10 +1,11 @@
-import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import type { PensionThisYear, PensionView, PensionYearView } from "../../engine/pensionView.ts";
 import type { PensionFlow } from "../../engine/schemas.ts";
 import { GREY_SLOT } from "../../engine/slots.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
+import { Kpi } from "../goals/Kpi.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
 import {
   Alert,
@@ -24,22 +25,13 @@ import { ScheduleChart } from "./ScheduleChart.tsx";
 const FLOWS: readonly PensionFlow["flow"][] = ["Work", "Voluntary"];
 const MISSING = "–";
 
-function Kpi({ label, value, note }: { label: ReactNode; value: string; note?: string }) {
-  return (
-    <div className="kpi">
-      <div className="kpi-label">{label}</div>
-      <div className="kpi-value">{value}</div>
-      {note ? <p className="sub">{note}</p> : null}
-    </div>
-  );
-}
-
-function ThisYear({ year }: { year: PensionThisYear }) {
+/** This year's deduction room. Without a pension goal the KPIs have no goal dot. */
+export function ThisYear({ year, hasGoal }: { year: PensionThisYear; hasGoal: boolean }) {
   // `used` counts the voluntary so far; the non-deducted part is the schedule's figure for the year.
   const overLimit = year.used > year.cap + year.extra;
   return (
     <>
-      <div className="kpis">
+      <div className={hasGoal ? "kpis" : "kpis kpis-no-goal"}>
         <Kpi
           label={`Cap ${year.year}`}
           value={formatAmount(year.cap)}
@@ -292,7 +284,7 @@ function Pension({ view, onSaved }: { view: PensionView; onSaved: () => void }) 
           <h2 className="exhibit-title">
             {`You can still deduct ${formatAmount(view.thisYear.available)} in ${view.thisYear.year}`}
           </h2>
-          <ThisYear year={view.thisYear} />
+          <ThisYear year={view.thisYear} hasGoal={goal !== undefined} />
         </>
       ) : null}
       <PlanForm view={view} onSaved={onSaved} />

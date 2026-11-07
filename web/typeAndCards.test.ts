@@ -38,6 +38,15 @@ describe("kicker (issue 164, AC-89)", () => {
   });
 });
 
+describe("independence tile rows", () => {
+  const independence = css("./independence.css");
+
+  it("wrap the value under its label, on the right, instead of wrapping the label", () => {
+    expect(declarations(independence, ".level-rows > div")["flex-wrap"]).toBe("wrap");
+    expect(declarations(independence, ".level-rows dd").margin).toBe("0 0 0 auto");
+  });
+});
+
 describe("card accents (issue 164, AC-89)", () => {
   const goals = css("./goals.css");
   const setup = css("./setup.css");
@@ -53,8 +62,15 @@ describe("card accents (issue 164, AC-89)", () => {
     expect(dot.width).toBe("8px");
     expect(dot.height).toBe("8px");
     expect(dot.background).toBe("var(--slot)");
-    expect(declarations(goals, ".kpis-blue .kpi-label::before").display).toBe("none");
+    expect(declarations(goals, ".kpis-no-goal .kpi-label::before").display).toBe("none");
     expect(declarations(goals, ".level-tile .kpi-label::before").display).toBe("none");
+  });
+
+  it("sets KPI values in tabular figures, after the font shorthand that would reset them", () => {
+    const rule = /\.kpi-value \{([^}]*)\}/.exec(goals)?.[1] ?? "";
+    expect(rule.indexOf("font-variant-numeric: tabular-nums")).toBeGreaterThan(
+      rule.indexOf("font:"),
+    );
   });
 
   it("keeps the blue header strip on a section card and drops its bar", () => {

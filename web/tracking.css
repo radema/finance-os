@@ -26,9 +26,6 @@
   background: var(--swatch);
 }
 
-.kpis-blue {
-  --slot: var(--blue);
-}
 .scope-bar,
 .switch {
   display: flex;

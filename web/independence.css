@@ -15,13 +15,15 @@
   line-height: var(--lh-callout);
   color: var(--ink2);
 }
+/* A label keeps its line; a value that does not fit beside it drops under it, on the right. */
 .level-rows > div {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--s3);
+  gap: 0 var(--s3);
 }
 .level-rows dd {
-  margin: 0;
+  margin: 0 0 0 auto;
 }
 .level-rules {
   border-top: 1px solid var(--grid);

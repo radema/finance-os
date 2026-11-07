@@ -34,7 +34,7 @@ function Kpis({
   const xirr = xirrTile(summary.xirr, months);
   const twrNote = (value: number | null) => (value === null ? TWR_NOTE : undefined);
   return (
-    <div className="kpis kpis-blue">
+    <div className="kpis kpis-no-goal">
       <Kpi label="Value" value={formatAmount(summary.value)} />
       <Kpi
         label="Gain"

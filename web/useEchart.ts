@@ -38,6 +38,15 @@ export const PLOT_GRID = {
   outerBoundsContain: "axisLabel" as const,
 };
 
+/**
+ * For a chart that sets its own `grid` margins: the axis labels stay inside those margins. It is
+ * what `containLabel` did; `containLabel` itself needs the legacy ECharts module.
+ */
+export const LABELS_INSIDE = {
+  outerBoundsMode: "same" as const,
+  outerBoundsContain: "axisLabel" as const,
+};
+
 /** One custom property of the page as a colour, for example `--hl`. Read when the chart is drawn. */
 export const readColour = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();

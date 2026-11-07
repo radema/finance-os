@@ -96,7 +96,7 @@ Before the wipe the user creates and pushes the annotated tag `finance-os-legacy
 | `docs/seed/`, `docs/wiki/`, `docs/plans/`, `docs/archive/`, `docs/handoff/`, `docs/features-candidates/`, `docs/design/` | delete |
 | `PRODUCT.md`, `README.md` | delete; new `README.md` written from scratch |
 | `DESIGN.md`, `.impeccable/` | delete; new `DESIGN.md` built from `prototypes/11-ui/` (tokens, type, components, chart rules) |
-| Fonts in `src/financeos/web/static/fonts/` | delete; Geist + Geist Mono are bundled instead |
+| Fonts in `src/financeos/web/static/fonts/` | delete; Geist, Geist Mono and Source Serif 4 are bundled instead |
 | `demo/`, `real/` | delete; data lives in `GBI_DATA_DIR`; sample data is the synthetic fixture below |
 | `.gitignore` | rewrite for Node (`node_modules/`, `dist/`, coverage, tool caches); keep `.claude/worktrees/`, OS/editor files, `*:Zone.Identifier`; add `*.sqlite`, `*.db`, `*.xlsx`, `*.csv` outside the fixtures folder `fixtures/` |
 | `CLAUDE.md` | replace (below) |

@@ -27,6 +27,7 @@ import {
   REACH_YEARS,
   reachedWithin,
   reachTitle,
+  settingsDraft,
 } from "./model.ts";
 
 const SAVE_DELAY_MS = 300;
@@ -39,10 +40,7 @@ const NEVER = `Not within ${HORIZON_YEARS} years`;
 const yearOrNever = (year: number | null) => (year === null ? NEVER.toLowerCase() : String(year));
 
 const draftOf = (view: IndependenceView): Draft => ({
-  baristaMult: String(view.fire.baristaMult),
-  l2Mult: String(view.fire.l2Mult),
-  l3Mult: String(view.fire.l3Mult),
-  efMonths: String(view.fire.efMonths),
+  ...settingsDraft(view.fire),
   essential: String(view.expenses.essentialCents / 100),
   optional: String(view.expenses.optionalCents / 100),
 });
