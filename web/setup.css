@@ -251,6 +251,9 @@ textarea {
   font-size: var(--t-sub);
   line-height: var(--lh-sub);
 }
+input::placeholder {
+  color: var(--muted);
+}
 /* One height for the single-line controls, so a date, a select and a text box line up. */
 input[type="text"],
 input[type="date"],

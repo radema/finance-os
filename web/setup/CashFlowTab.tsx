@@ -6,7 +6,7 @@ import { checkFields } from "../formErrors.ts";
 import { centsToEuros, eurosToCents, num } from "../forms.ts";
 import { formatEuro } from "../money.ts";
 import { CashFlowTable } from "./CashFlowTable.tsx";
-import { hasUnsavedValues, savedDocument, toValues, type Values } from "./cashFlowForm.ts";
+import { hasUnsavedValues, isUnset, savedDocument, toValues, type Values } from "./cashFlowForm.ts";
 import { copyOfEvent } from "./duplicate.ts";
 import { useRevealForm } from "./revealForm.ts";
 import {
@@ -34,9 +34,6 @@ const LABELS = {
 type FormKey = keyof typeof LABELS;
 
 type EventForm = { year: string; label: string; amount: string };
-
-const isUnset = (c: CashFlow): boolean =>
-  c.income === 0 && c.essential === 0 && c.optional === 0 && c.events.length === 0;
 
 function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlowView) => void }) {
   const { cashFlow, rows } = view;
@@ -84,7 +81,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
     void saveEvents(events);
   };
 
-  const field = (key: keyof Values, label: string, hint?: string) => (
+  const field = (key: keyof Values, label: string, example: string, hint?: string) => (
     <NumberField
       label={label}
       value={values[key]}
@@ -93,6 +90,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
         clear(key);
       }}
       hint={hint}
+      placeholder={`e.g. ${example}`}
       error={errors[key]}
       required
     />
@@ -115,17 +113,19 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
             void save(savedDocument(values, cashFlow.events));
           }}
         >
-          {field("income", "Net household income (EUR a year)")}
+          {field("income", "Net household income (EUR a year)", "36000")}
           {field(
             "incomeGrowth",
             "Income growth above inflation (% a year)",
+            "0",
             "0 means income keeps up with prices.",
           )}
-          {field("essential", "Essential expenses (EUR a month)")}
-          {field("optional", "Optional expenses (EUR a month)")}
+          {field("essential", "Essential expenses (EUR a month)", "1500")}
+          {field("optional", "Optional expenses (EUR a month)", "500")}
           {field(
             "expenseGrowth",
             "Expense growth above inflation (% a year)",
+            "0",
             "0 means spending keeps up with prices.",
           )}
           <div className="actions">
@@ -271,7 +271,10 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
         note="Capacity is income minus expenses, plus events and last year's pension refund. Planned is what the goals take from savings; the pension goal counts only its voluntary part. Gap is capacity minus planned."
       >
         {isUnset(cashFlow) ? (
-          <p className="note">Enter your income and expenses above to see the table.</p>
+          <p className="note">
+            Save your income and expenses above to see 10 years of income, expenses, events, goal
+            contributions and the gap.
+          </p>
         ) : (
           <CashFlowTable rows={rows} />
         )}

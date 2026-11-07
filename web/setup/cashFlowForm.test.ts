@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CashFlow } from "../../engine/schemas.ts";
-import { hasUnsavedValues, savedDocument, toValues } from "./cashFlowForm.ts";
+import { hasUnsavedValues, isUnset, savedDocument, toValues } from "./cashFlowForm.ts";
 
 const stored: CashFlow = {
   income: 3_000_000,
@@ -26,5 +26,38 @@ describe("Cash flow save model (AC-89)", () => {
     expect(hasUnsavedValues({ ...toValues(stored), optional: "501" }, stored)).toBe(true);
     expect(hasUnsavedValues({ ...toValues(stored), income: "30000,0" }, stored)).toBe(false);
     expect(hasUnsavedValues({ ...toValues(stored), income: "" }, stored)).toBe(true);
+  });
+});
+
+describe("Cash flow with nothing saved (AC-89)", () => {
+  const empty: CashFlow = {
+    income: 0,
+    incomeGrowth: 0,
+    essential: 0,
+    optional: 0,
+    expenseGrowth: 0,
+    events: [],
+  };
+  const blank = { income: "", incomeGrowth: "", essential: "", optional: "", expenseGrowth: "" };
+
+  it("shows empty fields, not 0, when no cash flow is saved", () => {
+    expect(isUnset(empty)).toBe(true);
+    expect(toValues(empty)).toEqual(blank);
+  });
+
+  it("reads Saved on the empty fields and Unsaved changes once a 0 is typed", () => {
+    expect(hasUnsavedValues(blank, empty)).toBe(false);
+    expect(hasUnsavedValues({ ...blank, income: "0" }, empty)).toBe(true);
+    expect(hasUnsavedValues({ ...blank, income: "36000" }, empty)).toBe(true);
+  });
+
+  it("keeps the zeros once an income, an expense or an event is saved", () => {
+    expect(isUnset({ ...empty, optional: 1 })).toBe(false);
+    expect(isUnset({ ...empty, events: [{ year: 2030, label: "x", amount: 1 }] })).toBe(false);
+    expect(toValues({ ...empty, essential: 150_000 })).toMatchObject({
+      income: "0",
+      incomeGrowth: "0",
+      optional: "0",
+    });
   });
 });

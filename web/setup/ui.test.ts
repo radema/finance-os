@@ -105,3 +105,14 @@ describe("NumberField text (AC-89)", () => {
     expect(field("42000")).toContain('value="42000"');
   });
 });
+
+describe("NumberField placeholder (AC-89)", () => {
+  it("shows an example while empty and has none by default", () => {
+    const html = (placeholder?: string) =>
+      render(
+        createElement(NumberField, { label: "Income", value: "", onChange: () => {}, placeholder }),
+      );
+    expect(html("e.g. 36000")).toContain('placeholder="e.g. 36000"');
+    expect(html()).not.toContain("placeholder");
+  });
+});

@@ -472,7 +472,8 @@ to the next story if a story does not fit, keeping its id.
   pension and in S4 for Monte Carlo): 7 made-up products (ETF WL 0, ETF
   WL 50%, direct, govt with couponRate, deposit, two pension funds), 4 made-up goals (one with τ < 1,
   one with the zainetto, one holding a product at a loss, retirement), a ledger with opening + buy +
-  sell + buy, round pension inputs, pinned asOf. Its outputs are a reviewed regression snapshot. The
+  sell + buy, round pension inputs, a cash flow with expenses (income, essential and optional
+  expenses, a few events), pinned asOf. Its outputs are a reviewed regression snapshot. The
   same data is the app's "Load the sample data". No real names, ISINs or amounts; no xlsx.
 - **Property tests** (fast-check): net non-decreasing in the monthly contribution; the required
   contribution reaches the target; weights always sum to 1.

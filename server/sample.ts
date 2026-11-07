@@ -25,23 +25,23 @@ export async function isEmpty(db: Kysely<DB>): Promise<boolean> {
       .executeTakeFirstOrThrow();
     if (row.n > 0) return false;
   }
-  // The loader writes these two documents, so a saved one would be overwritten.
+  // The loader writes these documents, so a saved one would be overwritten.
   const documents = await db
     .selectFrom("document")
     .select("kind")
-    .where("kind", "in", ["settings", "pensionPlan"])
+    .where("kind", "in", ["settings", "pensionPlan", "cashFlow"])
     .execute();
   return documents.length === 0;
 }
 
 /**
- * Writes the synthetic fixture (products, prices, goals with plans, weights, ledger, settings and
- * the partial pension plan) in one transaction. It never touches existing data.
+ * Writes the synthetic fixture (products, prices, goals with plans, weights, ledger, settings,
+ * the partial pension plan and the cash flow) in one transaction. It never touches existing data.
  *
  * @param db Database handle.
  * @param sample The data to write. Defaults to the bundled sample; tests pass a larger fixture.
- * @throws HttpError 409 when the data folder already has a product, a goal, a transaction, or a saved settings or
- * pension plan document.
+ * @throws HttpError 409 when the data folder already has a product, a goal, a transaction, or a saved settings,
+ * pension plan or cash flow document.
  */
 export async function loadSampleData(db: Kysely<DB>, sample: SampleData = bundled): Promise<void> {
   await db.transaction().execute(async (trx) => {
@@ -109,6 +109,7 @@ export async function loadSampleData(db: Kysely<DB>, sample: SampleData = bundle
     }
     await saveDocument(trx, "settings", sample.settings);
     await saveDocument(trx, "pensionPlan", sample.pensionPlan);
+    await saveDocument(trx, "cashFlow", sample.cashFlow);
   });
 }
 

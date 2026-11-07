@@ -3,7 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { pensionPlanSchema } from "../engine/schemas.ts";
+import { sampleDataSchema } from "../engine/fixture.ts";
+import { cashFlowSchema, pensionPlanSchema } from "../engine/schemas.ts";
+import sampleJson from "../fixtures/sample.json" with { type: "json" };
 import { type DB, openDatabase } from "./db.ts";
 import { loadDocument, saveDocument } from "./documents.ts";
 import { HttpError } from "./router.ts";
@@ -80,6 +82,19 @@ describe("loadSampleData", () => {
     const plan = await loadDocument(db, "pensionPlan", pensionPlanSchema);
     expect(plan).toMatchObject({ goalId: "g-retirement", firstYear: 2020, ral: 4_000_000 });
     expect(plan.flows).toHaveLength(2);
+  });
+
+  it("saves the made-up cash flow, which the Cash flow tab reads (AC-89)", async () => {
+    await loadSampleData(db);
+    const cashFlow = await loadDocument(db, "cashFlow", cashFlowSchema);
+    expect(cashFlow).toEqual(sampleDataSchema.parse(sampleJson).cashFlow);
+    expect(cashFlow.essential).toBeGreaterThan(0);
+  });
+
+  it("refuses over a saved cash flow and writes nothing", async () => {
+    await saveDocument(db, "cashFlow", { income: 100 });
+    await expect(loadSampleData(db)).rejects.toMatchObject({ status: 409 });
+    expect(await count(db, "product")).toBe(0);
   });
 
   it("refuses a second load and changes nothing", async () => {

@@ -72,6 +72,13 @@ describe("Independence API (AC-62)", () => {
     expect(view.result?.wealthToday.pension).toBeGreaterThan(0);
   });
 
+  it("shows non-zero level targets on the sample data, from its made-up expenses (AC-89)", async () => {
+    await loadSample();
+    const view = await read();
+    expect(view.expenses.essentialCents).toBeGreaterThan(0);
+    expect(view.result?.levels.every((level) => level > 0)).toBe(true);
+  });
+
   it("saves the expense split and returns the levels of AC-59, flat when expenseGrowth is 0", async () => {
     await loadSample();
     await call("PUT", "/api/cash-flow", {

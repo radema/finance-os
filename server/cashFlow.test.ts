@@ -79,6 +79,15 @@ describe("Cash flow API (AC-50)", () => {
     expect(view.rows.every((row) => row.planned === 0)).toBe(true);
   });
 
+  it("shows the sample's made-up cash flow and a filled 10-year table (AC-89)", async () => {
+    await call("POST", "/api/sample-data");
+    const view = await read();
+    expect(view.cashFlow.income).toBeGreaterThan(0);
+    expect(view.cashFlow.events.length).toBeGreaterThan(0);
+    expect(view.rows).toHaveLength(10);
+    expect(view.rows.every((row) => row.income > 0 && row.expenses > 0)).toBe(true);
+  });
+
   it("saves the document and returns it with the engine's rows", async () => {
     await call("POST", "/api/sample-data");
     sql(`UPDATE document SET value = '${JSON.stringify(partialPlan)}' WHERE kind = 'pensionPlan'`);

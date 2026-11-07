@@ -1,10 +1,11 @@
 // The synthetic fixture (fixtures/sample.json): the engine's regression input and the app's sample
 // data. Ledger quantities, prices and commissions are in euros as floats; the loader converts them
 // to integer storage units. Goal targets, plan amounts and the zainetto amount are already in
-// integer cents (`targetCents`, `monthlyCents`, `amountCents`).
+// integer cents (`targetCents`, `monthlyCents`, `amountCents`), like the cash flow document.
 import { z } from "zod";
 import {
   allocationWeightSchema,
+  cashFlowSchema,
   goalInputSchema,
   monthSchema,
   PENSION_FLOWS,
@@ -50,5 +51,6 @@ export const sampleDataSchema = z.object({
   allocation: z.array(allocationWeightSchema),
   ledger: z.array(sampleTransactionSchema),
   pensionPlan: pensionPlanSchema,
+  cashFlow: cashFlowSchema,
 });
 export type SampleData = z.infer<typeof sampleDataSchema>;
