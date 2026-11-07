@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { isBuilt } from "../nav.ts";
+import { isBuilt, SETUP_TABS } from "../nav.ts";
 import { GlossaryScreen } from "./GlossaryScreen.tsx";
 import { TermPopover } from "./TermPopover.tsx";
 import { GLOSSARY } from "./terms.ts";
@@ -82,8 +82,43 @@ describe("Glossary & method screen (AC-85)", () => {
 
   it("makes the glossary card an h2 and each method note an h3 under the Method notes h2", () => {
     expect(html).toMatch(/<h2[^>]*>.*?Glossary<\/span><\/h2>/);
-    expect(html).toContain('<h2 class="block-title">Method notes</h2>');
     expect(html.match(/<h3 /g)).toHaveLength(METHOD_TOPICS.length);
+  });
+
+  it("shows the Setup tab bar with Glossary as the current tab, under the title Glossary", () => {
+    expect(html).toContain('<h1 class="title">Glossary</h1>');
+    expect(html).toMatch(/<nav class="tabs" aria-label="Setup">/);
+    for (const tab of SETUP_TABS) expect(html).toContain(`href="#/${tab.key}"`);
+    expect(html).toMatch(/aria-current="page"[^>]*>Glossary<\/a>/);
+    expect(html.indexOf('<h1 class="title">')).toBeLessThan(html.indexOf('class="tabs"'));
+  });
+
+  it("sorts the terms A to Z by English term, and gives each row an anchor", () => {
+    const keys = [...html.matchAll(/<tr id="(term-[^"]+)"/g)].map((m) => m[1]);
+    expect(keys).toHaveLength(Object.keys(GLOSSARY).length);
+    const english = keys.map((id) => GLOSSARY[id.replace("term-", "") as keyof typeof GLOSSARY].en);
+    const lower = english.map((en) => en.toLowerCase());
+    expect(lower).toEqual([...lower].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)));
+    expect(english.slice(0, 4)).toEqual([
+      "at-risk band",
+      "average cost",
+      "bad case",
+      "Barista FIRE",
+    ]);
+  });
+
+  it("heads the method notes with a section heading, and lists them in a contents line first", () => {
+    expect(html).toContain('<h2 class="method-title">Method notes</h2>');
+    expect(html).not.toContain('class="block-title"');
+    expect(html.indexOf('aria-label="Contents"')).toBeLessThan(html.indexOf("<table"));
+  });
+
+  it("links the contents line to all nine method notes, and each link lands on its card", () => {
+    const nav = html.match(/<nav class="method-contents"[^>]*>(.*?)<\/nav>/)?.[1] ?? "";
+    const links = [...nav.matchAll(/<a href="#\/setup\/glossary\?at=([^"]+)">([^<]+)<\/a>/g)];
+    expect(links.map((m) => m[2])).toEqual(METHOD_TOPICS);
+    for (const [, id] of links) expect(html).toContain(`id="${id}"`);
+    expect(new Set(links.map((m) => m[1])).size).toBe(METHOD_TOPICS.length);
   });
 
   it("covers each method topic, the four simplifications and the capital note", () => {

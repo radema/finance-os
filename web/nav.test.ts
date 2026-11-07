@@ -70,7 +70,7 @@ describe("AppShell", () => {
   it("marks the current page", () => {
     const html = render("setup/glossary");
     expect(html).toContain('aria-current="page"');
-    expect(html).toContain("Glossary and method");
+    expect(html).toContain(">Glossary</h1>");
   });
 
   it("tells the user when the route is unknown", () => {
@@ -158,13 +158,14 @@ describe("Goals screens", () => {
 });
 
 describe("SETUP_TABS", () => {
-  it("lists the five Setup tabs, and the sidebar items keep the spec list", () => {
+  it("lists the six Setup tabs, and the sidebar items keep the spec list", () => {
     expect(SETUP_TABS.map((tab) => tab.label)).toEqual([
       "Products",
       "Allocation",
       "Goal definitions",
       "Cash flow",
       "Assumptions",
+      "Glossary",
     ]);
     expect(isBuilt("setup/goals")).toBe(true);
     expect(isBuilt("setup/cash-flow")).toBe(true);
