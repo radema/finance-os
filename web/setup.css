@@ -154,7 +154,7 @@
   color: var(--ink2);
 }
 .field-required {
-  color: var(--hl);
+  color: var(--ink2);
 }
 /* The message is text grey; the mark (icon, border) is the highlight, which is never text. */
 .field-error {
@@ -174,7 +174,7 @@
   color: var(--ink2);
 }
 .form-legend > span {
-  color: var(--hl);
+  color: var(--ink2);
 }
 .link-button {
   padding: 0;
