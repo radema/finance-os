@@ -169,5 +169,8 @@ The Optimizer hint lines, alerts and steps panel use it too. Its control grid is
   weak against the surface, so the label is the relief channel. Text stays in the text greys.
 - **Marks.** Hairline gridlines on y only. No top, right or left axis line. Lines 2 pt (highlight 2.25 pt,
   context 1.5 pt); the end dot has a 2 px ring in the surface colour. Bars start at zero.
+- **Scatter marks.** Sizes are tokens (`--mark-dot` 10 px, `--mark-key` 16 px). Plain dots are `--muted`, at least 3:1 on the
+  surface in both themes. The suggested and the current mark carry a 2 px `--ink2` ring and a direct label. Dots that
+  would stack are set side by side; the tooltip keeps the true values. One mix: a sentence, no chart.
 - **Fans.** The series colour at 22% fill (30% in dark) with a 60% line; the median is solid.
 - **Sizes.** Axis text 12 px, labels 13 px. Draw charts after the fonts load. Every chart resizes with its box.

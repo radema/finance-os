@@ -4,8 +4,10 @@ import {
   defaultUniverse,
   eligibleProducts,
   mixText,
+  onlyMixSentence,
   outcomeRows,
   scatterAxisStart,
+  spreadMixes,
   weightRows,
 } from "./model.ts";
 
@@ -111,5 +113,63 @@ describe("scatterAxisStart", () => {
     [0.5, 0.45],
   ])("starts the axis for a lowest chance of %s at exactly %s", (lowest, start) => {
     expect(scatterAxisStart(lowest)).toBe(start);
+  });
+});
+
+describe("spreadMixes", () => {
+  const at = (p: number, median: number): MixView => ({ ...mix([["etf", 1]], p), median });
+
+  it("keeps the true chance and typical case: y is the median, the mix is the input object", () => {
+    const stack = [at(0.99, 3000), at(0.995, 3010), at(0.99, 3020), at(1, 3005), at(0.8, 1000)];
+    const points = spreadMixes(stack, 0.7, 1);
+    expect(points).toHaveLength(stack.length);
+    points.forEach((point, index) => {
+      expect(point.mix).toBe(stack[index]);
+      expect(point.y).toBe(stack[index].median);
+      expect(point.mix.p).toBe(stack[index].p);
+    });
+  });
+
+  it("moves a stack of dots side by side, nearest to their chance, and keeps the first one in place", () => {
+    const stack = [at(0.99, 3000), at(0.99, 3001), at(0.99, 3002), at(0.99, 3003)];
+    const xs = spreadMixes([...stack, at(0.8, 1000)], 0.7, 1).map((point) => point.x);
+    expect(new Set(xs.slice(0, 4)).size).toBe(4);
+    expect(xs[0]).toBe(0.99);
+    expect(Math.max(...xs.slice(0, 4).map((x) => Math.abs(x - 0.99)))).toBeLessThan(0.02);
+  });
+
+  it("keeps a tall stack one dot width apart", () => {
+    const stack = Array.from({ length: 12 }, (_, index) => at(0.99, 3000 + index));
+    const xs = spreadMixes([...stack, at(0.8, 1000)], 0.7, 1).map((point) => point.x);
+    const sorted = xs.slice(0, 12).sort((a, b) => a - b);
+    const gaps = sorted.slice(1).map((x, index) => x - sorted[index]);
+    expect(Math.min(...gaps)).toBeGreaterThan(0.004);
+  });
+
+  it("leaves a dot with no neighbour where it is", () => {
+    const points = spreadMixes([at(0.8, 1000), at(0.95, 5000)], 0.7, 1);
+    expect(points.map((point) => point.x)).toEqual([0.8, 0.95]);
+  });
+
+  it("keeps a stack at the right edge inside the axis", () => {
+    const stack = Array.from({ length: 9 }, (_, index) => at(1, 3000 + index));
+    const xs = spreadMixes([...stack, at(0.8, 1000)], 0.7, 1).map((point) => point.x);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(1);
+    expect(new Set(xs.slice(0, 9)).size).toBe(9);
+  });
+
+  it("returns nothing for no mixes and does not divide by zero for one", () => {
+    expect(spreadMixes([], 0.7, 1)).toEqual([]);
+    expect(spreadMixes([at(0.9, 100)], 0.7, 1)[0].x).toBe(0.9);
+  });
+});
+
+describe("onlyMixSentence", () => {
+  it("names the one mix and says there is nothing to compare", () => {
+    const names = new Map(products.map((p) => [p.id, p.name]));
+    const sentence = onlyMixSentence(mix([["etf", 1]], 0.9).weights, names);
+    expect(sentence).toBe(
+      "Only one mix fits your limits: World ETF 100%. There is nothing to compare, so there is no chart.",
+    );
   });
 });

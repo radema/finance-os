@@ -58,3 +58,47 @@ const AXIS_MARGIN = 0.02;
 /** Start of the scatter x-axis: below the lowest chance, in whole steps of 5 points, never below 0. Rounded to 2 decimals: float error (0.7000000000000001) makes ECharts throw. */
 export const scatterAxisStart = (lowest: number): number =>
   Math.round(Math.max(0, Math.floor((lowest - AXIS_MARGIN) / AXIS_STEP) * AXIS_STEP) * 100) / 100;
+
+/** The sentence that replaces the scatter when the run holds one mix only. */
+export const onlyMixSentence = (
+  weights: MixView["weights"],
+  names: ReadonlyMap<string, string>,
+): string =>
+  `Only one mix fits your limits: ${mixText(weights, names)}. There is nothing to compare, so there is no chart.`;
+
+/** A mix as the scatter draws it: `x` is only where the dot sits; the true chance and typical case stay in `mix` and `y`. */
+export type SpreadPoint = { mix: MixView; x: number; y: number };
+
+/** How many dots fit side by side in the y-range (so how close in the typical case two dots count as touching), and the width of one dot as a fraction of the x-axis. */
+const SPREAD_ROWS = 40;
+const SPREAD_LANE = 0.015;
+
+/**
+ * Sets dots that would overlap side by side. Dots are placed in order of typical case; each takes
+ * the free spot nearest to its own chance, in steps of one dot width, to the right first and then the
+ * left, inside `xMin`..`xMax`. A dot that touches no other keeps its own chance. Only the drawn `x`
+ * moves: `y` is the median and `mix` is the input object, so labels and tooltips keep the true values.
+ * The order of the input is kept.
+ */
+export function spreadMixes(mixes: readonly MixView[], xMin: number, xMax: number): SpreadPoint[] {
+  const lane = (xMax - xMin) * SPREAD_LANE;
+  const medians = mixes.map((mix) => mix.median);
+  const reach = (Math.max(...medians) - Math.min(...medians)) / SPREAD_ROWS;
+  const points: SpreadPoint[] = mixes.map((mix) => ({ mix, x: mix.p, y: mix.median }));
+  const placed: SpreadPoint[] = [];
+  const order = [...points].sort((a, b) => a.y - b.y || a.mix.p - b.mix.p);
+  for (const point of order) {
+    const near = placed.filter((other) => point.y - other.y <= reach);
+    const free = (x: number) =>
+      x >= xMin && x <= xMax && near.every((other) => Math.abs(other.x - x) >= lane * 0.99);
+    for (let step = 0; step <= 2 * order.length; step++) {
+      const x = point.mix.p + (step % 2 ? (step + 1) / 2 : -step / 2) * lane;
+      if (free(x)) {
+        point.x = x;
+        break;
+      }
+    }
+    placed.push(point);
+  }
+  return points;
+}

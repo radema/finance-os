@@ -57,3 +57,24 @@ describe("Optimizer heading order (AC-89)", () => {
     expect(levels(html)).toEqual([1, 2, 3, 3, 3, 2, 2]);
   });
 });
+
+describe("Optimizer scatter (AC-84, AC-89)", () => {
+  const exhibits = (mixes: MixView[]) =>
+    renderToStaticMarkup(
+      createElement(Exhibits, { view: { ...view, mixes }, goal, names, isPension: false }),
+    );
+
+  it("draws the chart when there are two or more mixes", () => {
+    const html = exhibits([mix(0.5), mix(0.9)]);
+    expect(html).toContain('class="chart"');
+    expect(html).not.toContain("Only one mix");
+  });
+
+  it("shows one sentence instead of the chart, legend and dot count when there is one mix", () => {
+    const html = exhibits([mix(0.9)]);
+    expect(html).not.toContain('class="chart"');
+    expect(html).not.toContain('class="legend"');
+    expect(html).not.toContain("Each dot is");
+    expect(html).toContain("Only one mix fits your limits: World ETF 100%.");
+  });
+});

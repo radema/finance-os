@@ -19,6 +19,7 @@ import {
   eligibleProducts,
   MAX_PRODUCTS,
   mixText,
+  onlyMixSentence,
   outcomeRows,
   weightRows,
 } from "./model.ts";
@@ -413,37 +414,43 @@ export function Exhibits({
           <TermPopover term="prob">chance of success</TermPopover> and a{" "}
           <TermPopover term="typical">typical case</TermPopover> of {formatAmount(chosen.median)}
         </h2>
-        <p className="unit">
-          Each dot is one of {view.mixes.length} {view.mixes.length === 1 ? "mix" : "mixes"}. Height
-          is the <TermPopover term="typical">typical case</TermPopover> in euros of the goal date.
-        </p>
-        <ul className="legend">
-          <li>
-            <span className="swatch-dot swatch-all" />
-            Mix
-          </li>
-          <li>
-            <span className="swatch-dot swatch-current" />
-            Current mix
-          </li>
-          <li>
-            <span
-              className="swatch-dot swatch-suggested"
-              style={{ "--slot": `var(--slot${goal.slot})` } as CSSProperties}
+        {view.mixes.length === 1 ? (
+          <p className="note">{onlyMixSentence(chosen.weights, names)}</p>
+        ) : (
+          <>
+            <p className="unit">
+              Each dot is one of {view.mixes.length} mixes. Height is the{" "}
+              <TermPopover term="typical">typical case</TermPopover> in euros of the goal date.
+            </p>
+            <ul className="legend">
+              <li>
+                <span className="swatch-dot swatch-all" />
+                Mix
+              </li>
+              <li>
+                <span className="swatch-dot swatch-current" />
+                Current mix
+              </li>
+              <li>
+                <span
+                  className="swatch-dot swatch-suggested"
+                  style={{ "--slot": `var(--slot${goal.slot})` } as CSSProperties}
+                />
+                Suggested mix
+              </li>
+              <li>
+                <span className="swatch-required" />
+                Required chance
+              </li>
+            </ul>
+            <MixScatter
+              view={view}
+              slot={goal.slot}
+              names={names}
+              label="All mixes: chance of success against the typical case"
             />
-            Suggested mix
-          </li>
-          <li>
-            <span className="swatch-required" />
-            Required chance
-          </li>
-        </ul>
-        <MixScatter
-          view={view}
-          slot={goal.slot}
-          names={names}
-          label="All mixes: chance of success against the typical case"
-        />
+          </>
+        )}
         <figcaption className="source">
           Source: Monte Carlo on your goal, assumptions and seed.
         </figcaption>
