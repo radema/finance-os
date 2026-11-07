@@ -94,6 +94,7 @@ export function GoalsTable({
         <tbody>
           {goals.map((goal) => {
             const share = goal.target > 0 ? goal.value / goal.target : undefined;
+            const gap = gapOf(goal.id);
             return (
               <tr key={goal.id}>
                 <td>
@@ -132,12 +133,12 @@ export function GoalsTable({
                   )}
                 </td>
                 <td className="num col-opt-2">
-                  {gapOf(goal.id) === undefined ? (
+                  {gap === undefined ? (
                     MISSING
                   ) : (
                     <>
-                      {formatEuro(gapOf(goal.id) ?? 0)}
-                      <span className="sub-line"> {gapText(gapOf(goal.id) ?? 0)}</span>
+                      {formatEuro(gap)}
+                      <span className="sub-line"> {gapText(gap)}</span>
                     </>
                   )}
                 </td>

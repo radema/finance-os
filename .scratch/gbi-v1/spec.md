@@ -424,7 +424,7 @@ Screens (content; acceptance in the Definition of done):
 Glossary terms (wording written by the user later; initial text from `prototypes/11-ui/content.js`):
 probability of success, required probability, simulated markets, bad/typical/good case, future vs
 today's euros, time-weighted and money-weighted return, drawdown, average cost (PMC), tax-loss
-carry-forward (zainetto), FIRE and Barista FIRE, opening position, Need/Want/Wish, ISIN, coupon, old
+carry-forward (zainetto), FIRE, Barista FIRE and Lean FIRE, opening position, Need/Want/Wish, ISIN, coupon, old
 price, minimum efficient ticket, stamp duty (bollo), exit tax, white-list share. Method notes cover:
 time grid and 31 December due date, taxes by regime, Monte Carlo, required contribution, FI levels,
 performance formulas, optimizer rules, the kept simplifications (S6, S7, cash stamp duty) and the
