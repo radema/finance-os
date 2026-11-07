@@ -177,11 +177,12 @@ The gap between blocks (KPI row, card, exhibit, control grid) is `--s4`, everywh
   the legend" rule.
 - **Direct labels where they help.** Label every coloured line at its end. Orange, ochre and teal are
   weak against the surface, so the label is the relief channel. Text stays in the text greys.
-- **Room for end labels.** Every time-axis chart (line, area, bar) of the Goal detail, Performance, Plan vs actual and
-  Goal history screens reserves `PLOT_RIGHT` (168 px, in `web/useEchart.ts`) right of the plot, labelled or not, so the
-  plots of one screen end at one x. The label fits inside this room; a chart box itself runs to the column edge.
-  The range-of-outcomes histogram keeps 16 px: its labels sit inside the plot. Adding a line to a chart adds
-  one label and needs no layout change.
+- **Room for end labels.** This applies to the charts of the Goal detail, Performance, Plan vs actual and Goal history
+  screens only. Every time-axis chart (line, area, bar) there uses `PLOT_GRID` (in `web/useEchart.ts`): 168 px right of
+  the plot, labelled or not, so the plots of one screen end at one x. The label fits inside this room; a chart box
+  itself runs to the column edge. The Independence and Pension charts keep their own right margin, and so does the
+  range-of-outcomes histogram (16 px: its labels sit inside the plot). Adding a line to a chart adds one label and
+  needs no layout change.
 - **Marks.** Hairline gridlines on y only. No top, right or left axis line. Lines 2 pt (highlight 2.25 pt,
   context 1.5 pt); the end dot has a 2 px ring in the surface colour. Bars start at zero.
 - **Scatter marks.** Sizes are tokens (`--mark-dot` 10 px, `--mark-key` 16 px). Plain dots are `--muted`, at least 3:1 on the

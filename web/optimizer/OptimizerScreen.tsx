@@ -279,19 +279,21 @@ function UseWeights({
   goal,
   current,
   chosen,
+  criterion,
   names,
   onApplied,
 }: {
   goal: GoalListRow;
   current: MixView;
   chosen: MixView;
+  criterion: OptimizerCriterion;
   names: ReadonlyMap<string, string>;
   onApplied: () => void;
 }) {
   const [asking, setAsking] = useState<Asking>();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
-  const smallGain = smallGainNote(current, chosen);
+  const smallGain = smallGainNote(current, chosen, criterion);
   const body = (weights: Asking["weights"], confirm: boolean) => ({
     goalId: goal.id,
     weights,
@@ -405,6 +407,7 @@ export function Result({
         goal={goal}
         current={current}
         chosen={chosen}
+        criterion={view.criterion}
         names={names}
         onApplied={onApplied}
       />

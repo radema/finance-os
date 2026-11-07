@@ -345,14 +345,26 @@ export function runOptimizer(input: OptimizerInput): OptimizerResult {
 
 /**
  * The bucket as it is, with its own weights and holdings, on the same shocks and paths as
- * `runOptimizer` uses for the criterion: the "current" the suggested mix is compared with.
+ * `runOptimizer` uses for the criterion: the "current" the suggested mix is compared with. Under
+ * "spend least" it also solves the monthly amount needed, as `runOptimizer` does per mix.
  */
 export function simulateCurrent(
   bucket: MonteCarloGoal,
   criterion: OptimizerCriterion,
+  requiredP: number,
   correlations: OptimizerInput["correlations"],
   seed: number,
 ): MixResult {
-  const { goals } = runMonteCarlo({ goals: [bucket], correlations }, seed, pathsFor(criterion));
-  return outcomeOf(bucket, goals[0] as GoalDistribution);
+  const paths = pathsFor(criterion);
+  const { goals } = runMonteCarlo({ goals: [bucket], correlations }, seed, paths);
+  const current = outcomeOf(bucket, goals[0] as GoalDistribution);
+  if (criterion === "O5") {
+    current.monthlyNeeded = requiredContribution(bucket, "probability", {
+      requiredP,
+      correlations,
+      seed,
+      paths,
+    });
+  }
+  return current;
 }

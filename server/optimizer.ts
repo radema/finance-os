@@ -75,6 +75,7 @@ export function registerOptimizerRoutes(router: Router, db: Kysely<DB>, today: (
       const current = simulateCurrent(
         { ...bucket, weights: currentWeights },
         input.criterion,
+        requiredP,
         correlations,
         seed,
       );

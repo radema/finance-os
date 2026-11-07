@@ -1,3 +1,4 @@
+import type { OptimizerCriterion } from "../../engine/optimizer.ts";
 import type { MixView } from "../../engine/optimizerView.ts";
 import { formatPercent, formatSignedAmount, formatSignedPoints } from "../money.ts";
 
@@ -83,17 +84,41 @@ export function shortMixText(
   return biggest.length > SHORT_MIX_SHOWN ? `${text} +${biggest.length - SHORT_MIX_SHOWN}` : text;
 }
 
-/** The gain is small when the typical case moves less than 2% and the chance of success less than 1 point: inside what another set of simulated markets moves. */
-const SMALL_GAIN_TYPICAL = 0.02;
+/** A move is small when it is under 2%: the typical case, the bad case and the monthly amount needed. The chance of success is small under 1 point. All of it is inside what another set of simulated markets moves. */
+const SMALL_GAIN_RELATIVE = 0.02;
 const SMALL_GAIN_CHANCE = 0.01;
 
+/** True when the suggested mix clearly beats the current one in the target of the rule: the bad case for O1, the monthly amount needed for O5. */
+function clearGainInTarget(
+  current: MixView,
+  suggested: MixView,
+  criterion: OptimizerCriterion,
+): boolean {
+  if (criterion === "O1") {
+    return suggested.p10 - current.p10 > SMALL_GAIN_RELATIVE * Math.abs(current.p10);
+  }
+  if (criterion === "O5") {
+    const before = current.monthlyNeeded ?? Number.POSITIVE_INFINITY;
+    const after = suggested.monthlyNeeded ?? Number.POSITIVE_INFINITY;
+    return before === Number.POSITIVE_INFINITY
+      ? after < before
+      : before - after > SMALL_GAIN_RELATIVE * before;
+  }
+  return false;
+}
+
 /** The note next to "Use as contribution weights" when the suggestion is not clearly better; `undefined` when the gain is clear. */
-export function smallGainNote(current: MixView, suggested: MixView): string | undefined {
+export function smallGainNote(
+  current: MixView,
+  suggested: MixView,
+  criterion: OptimizerCriterion,
+): string | undefined {
   const typical = suggested.median - current.median;
   const chance = suggested.p - current.p;
   const clear =
-    Math.abs(typical) > SMALL_GAIN_TYPICAL * Math.abs(current.median) ||
-    Math.abs(chance) >= SMALL_GAIN_CHANCE;
+    Math.abs(typical) > SMALL_GAIN_RELATIVE * Math.abs(current.median) ||
+    Math.abs(chance) >= SMALL_GAIN_CHANCE ||
+    clearGainInTarget(current, suggested, criterion);
   if (clear) return undefined;
   return `The gain is small: the typical case changes by ${formatSignedAmount(typical)} and the chance of success by ${formatSignedPoints(chance)}. That is inside what another set of simulated markets can move, so the current mix is nearly as good.`;
 }

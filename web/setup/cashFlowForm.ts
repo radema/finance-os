@@ -12,7 +12,12 @@ export type Values = {
 
 /** True when no cash flow is saved: the stored zeros are defaults, not values the user typed. */
 export const isUnset = (c: CashFlow): boolean =>
-  c.income === 0 && c.essential === 0 && c.optional === 0 && c.events.length === 0;
+  c.income === 0 &&
+  c.incomeGrowth === 0 &&
+  c.essential === 0 &&
+  c.optional === 0 &&
+  c.expenseGrowth === 0 &&
+  c.events.length === 0;
 
 /** The typed values of a stored document. With nothing saved the fields are empty, not "0". */
 export const toValues = (c: CashFlow): Values =>
@@ -38,16 +43,16 @@ export const savedDocument = (v: Values, events: CashFlowEvent[]): CashFlow => (
 
 /**
  * True when the typed values differ from the stored ones. A bad field counts as a change; an empty
- * one only when the stored value is a number, so the empty form of an unset cash flow reads Saved.
+ * one only when the stored value is a number. With nothing saved, the empty form reads Saved, and so
+ * do five typed zeros: Save cash flow would store the same document.
  */
 export function hasUnsavedValues(v: Values, stored: CashFlow): boolean {
   const typed = savedDocument(v, stored.events);
+  const fields = ["income", "incomeGrowth", "essential", "optional", "expenseGrowth"] as const;
+  if (isUnset(stored)) {
+    const numbers = fields.map((key) => typed[key]);
+    return !(numbers.every(Number.isNaN) || numbers.every((n) => n === 0));
+  }
   const shown = savedDocument(toValues(stored), stored.events);
-  return (
-    !Object.is(typed.income, shown.income) ||
-    !Object.is(typed.incomeGrowth, shown.incomeGrowth) ||
-    !Object.is(typed.essential, shown.essential) ||
-    !Object.is(typed.optional, shown.optional) ||
-    !Object.is(typed.expenseGrowth, shown.expenseGrowth)
-  );
+  return fields.some((key) => !Object.is(typed[key], shown[key]));
 }
