@@ -93,9 +93,14 @@
   text-align: left;
 }
 
+/* An exhibit takes the whole column, so a chart ends where the card above it ends. */
 .exhibit {
-  max-width: 960px;
-  margin: var(--s5) 0 0;
+  margin: var(--s4) 0 0;
+}
+/* A hairline marks the end of an exhibit that another exhibit follows. */
+.exhibit + .exhibit {
+  padding-top: var(--s4);
+  border-top: 1px solid var(--grid);
 }
 .exhibit-title {
   margin: 0;
@@ -227,7 +232,7 @@
   border-bottom: 0;
 }
 .exhibit + .card {
-  margin-top: var(--s5);
+  margin-top: var(--s4);
 }
 /* A finding above the card it summarises sits one token gap away. */
 .exhibit-title + .card {

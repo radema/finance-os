@@ -51,6 +51,9 @@
   gap: var(--s4);
   margin-top: var(--s3);
 }
+.grid-charts > * {
+  min-width: 0;
+}
 .grid-charts .chart {
   height: 240px;
 }
@@ -59,11 +62,6 @@
   align-items: center;
   gap: var(--s2);
   margin-bottom: var(--s2);
-}
-.exhibit + .exhibit,
-.exhibit + .card,
-.card + .exhibit {
-  margin-top: var(--s5);
 }
 
 .source-label {

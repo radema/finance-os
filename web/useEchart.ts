@@ -21,6 +21,12 @@ export function readTokens(slot: number) {
   };
 }
 
+/**
+ * Room right of the plot, the same for every chart of a screen, so the plots end at one x. It holds
+ * the longest end label ("Typical case 1.234.567 €") whether or not the chart has one.
+ */
+export const PLOT_RIGHT = 168;
+
 /** One custom property of the page as a colour, for example `--hl`. Read when the chart is drawn. */
 export const readColour = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
