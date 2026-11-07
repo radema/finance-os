@@ -87,7 +87,7 @@ export function RowCheck({
 }: RowCheckProps) {
   return (
     <div className="import-scroll">
-      <table className="table" data-testid="row-check">
+      <table className="table table-check" data-testid="row-check">
         <thead>
           <tr>
             <th className="num">Row</th>

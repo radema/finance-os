@@ -386,6 +386,7 @@ export function ProductsTab() {
                         <ConfirmButton
                           label="Delete"
                           confirmLabel="Delete product"
+                          apart
                           onConfirm={() => void remove(p.id)}
                         />
                       </td>

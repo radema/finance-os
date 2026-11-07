@@ -6,6 +6,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { checkFields, type Rule } from "../formErrors.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, percentToFraction } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
+import { GoalChip } from "../goals/GoalChip.tsx";
 import { currentMonth, formatEuro, formatPercent } from "../money.ts";
 import { copyOfGoal } from "./duplicate.ts";
 import { fromMonthInForce, monthlyInForce, valuationMonth } from "./goalPlan.ts";
@@ -255,6 +256,8 @@ export function GoalsTab() {
   };
 
   const month = valuation.data ? valuationMonth(valuation.data.asOf) : undefined;
+  // The slot comes from the goal list: it colours goals in creation order, not by name.
+  const slotOf = (id: string) => valuation.data?.goals.find((row) => row.id === id)?.slot;
   // A copy keeps the plan: its monthly amount in force becomes the first version of the new goal.
   const monthlyText = (g: Goal) => {
     const cents = month === undefined ? 0 : monthlyInForce(g.plan, month);
@@ -380,7 +383,13 @@ export function GoalsTab() {
                 <tbody>
                   {list.map((g) => (
                     <tr key={g.id}>
-                      <td>{g.name}</td>
+                      <td>
+                        {slotOf(g.id) === undefined ? (
+                          g.name
+                        ) : (
+                          <GoalChip id={g.id} name={g.name} slot={slotOf(g.id) as number} />
+                        )}
+                      </td>
                       <td>
                         <PriorityTag priority={g.priority} />
                       </td>
@@ -427,6 +436,7 @@ export function GoalsTab() {
                         <ConfirmButton
                           label="Delete"
                           confirmLabel="Delete goal"
+                          apart
                           onConfirm={() => void remove(g.id)}
                         />
                       </td>

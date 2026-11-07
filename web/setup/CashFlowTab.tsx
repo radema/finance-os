@@ -215,6 +215,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
                     <ConfirmButton
                       label="Delete"
                       confirmLabel="Delete event"
+                      apart
                       onConfirm={() =>
                         void saveEvents(cashFlow.events.filter((_, i) => i !== e.index))
                       }
