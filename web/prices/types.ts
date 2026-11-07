@@ -29,6 +29,8 @@ export interface PriceOverviewRow {
   name: string;
   regime: Regime;
   priceSource: PriceSource;
+  /** Empty when the product has none. Only a product with a ticker can use the Provider source. */
+  ticker: string;
   lastPrice: { price: number; priceDate: string } | null;
   age: PriceAge;
   brokerUnits: number | null;

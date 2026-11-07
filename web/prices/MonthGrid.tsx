@@ -2,13 +2,13 @@ import { useId, useState } from "react";
 import { addMonths } from "../../engine/months.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { checkFields } from "../formErrors.ts";
-import { num } from "../forms.ts";
 import { formatPrice } from "../money.ts";
 import { Alert, Card, DecimalInput, ProductTag, Resource } from "../setup/ui.tsx";
+import { priceText, priceToSave } from "./model.ts";
 import type { Grid, GridPrice } from "./types.ts";
 
 /** One editable cell: saves the typed price when the field loses focus and the text changed. */
-function PriceInput({
+export function PriceInput({
   label,
   stored,
   onSave,
@@ -17,7 +17,7 @@ function PriceInput({
   stored: GridPrice | undefined;
   onSave: (price: number) => void;
 }) {
-  const initial = stored ? String(stored.price) : "";
+  const initial = priceText(stored);
   const [text, setText] = useState(initial);
   const [problem, setProblem] = useState<string>();
   const errorId = useId();
@@ -35,8 +35,8 @@ function PriceInput({
         onBlur={() => {
           const found = checkFields({ price: text }, { price: "optionalNumber" }, {}).price;
           setProblem(found);
-          const price = num(text);
-          if (text !== initial && !found && Number.isFinite(price)) onSave(price);
+          const price = found ? undefined : priceToSave(text, initial);
+          if (price !== undefined) onSave(price);
         }}
       />
       {problem ? (
@@ -77,13 +77,13 @@ export function MonthGrid({ onChanged }: { onChanged: () => void }) {
           ) : (
             <>
               <div className="table-scroll">
-                <table className="table">
+                <table className="table price-grid">
                   <thead>
                     <tr>
                       <th>Product</th>
                       {months.map((month) => (
                         <th className="num" key={month}>
-                          {month}
+                          {month} <span className="sub">€</span>
                         </th>
                       ))}
                     </tr>

@@ -2,10 +2,10 @@ import { useState } from "react";
 import type { Goal } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { checkFields } from "../formErrors.ts";
-import { num } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatUnitPrice } from "../money.ts";
-import { Alert, Card, DecimalInput, Field, ProductTag, Resource } from "../setup/ui.tsx";
+import { Card, DecimalInput, ProductTag, Resource } from "../setup/ui.tsx";
+import { type BrokerEdits, brokerBody, brokerFields, changedBrokerRows } from "./model.ts";
 import type { PriceOverviewRow } from "./types.ts";
 
 const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
@@ -15,56 +15,132 @@ interface Holdings {
   accounts: { productId: string; units: number; pmc: number | null }[];
 }
 
-/** The broker's unit count of a product and the day it was read. Both set, or both empty. */
-function BrokerUnits({ row, onSaved }: { row: PriceOverviewRow; onSaved: () => void }) {
-  const [units, setUnits] = useState(row.brokerUnits === null ? "" : String(row.brokerUnits));
-  const [date, setDate] = useState(row.brokerUnitsDate ?? "");
-  const [error, setError] = useState<string>();
-  const [unitsError, setUnitsError] = useState<string>();
+interface PositionsTableProps {
+  products: PriceOverviewRow[];
+  holdings: Holdings;
+  goalName: (id: string) => string;
+  onSaved: () => void;
+}
+
+/**
+ * One row per product. The broker units and their day are typed in the rows; one Save writes every
+ * row that changed. A row that the server refuses keeps its edit and shows the reason.
+ */
+export function PositionsTable({ products, holdings, goalName, onSaved }: PositionsTableProps) {
+  const { accounts, buckets } = holdings;
+  const [edits, setEdits] = useState<BrokerEdits>({});
+  const [problems, setProblems] = useState<Record<string, string>>({});
+  const changed = changedBrokerRows(products, edits);
+  const edit = (productId: string, field: "units" | "date", text: string) => {
+    setEdits((current) => ({ ...current, [productId]: { ...current[productId], [field]: text } }));
+    setProblems(({ [productId]: _, ...rest }) => rest);
+  };
 
   const save = async () => {
-    const empty = units.trim() === "" && date === "";
-    const problems = checkFields({ units }, { units: "optionalNumber" }, {});
-    setUnitsError(problems.units);
-    if (problems.units) return;
-    try {
-      await api("PUT", "/api/prices/broker-units", {
-        body: {
-          productId: row.productId,
-          units: empty ? null : num(units),
-          date: empty ? null : date || null,
-        },
-      });
-      setError(undefined);
-      onSaved();
-    } catch (failure) {
-      setError(messageOf(failure));
+    const found: Record<string, string> = {};
+    const done: string[] = [];
+    for (const row of products.filter((r) => changed.includes(r.productId))) {
+      const fields = brokerFields(row, edits);
+      const unitsProblem = checkFields(
+        { units: fields.units },
+        { units: "optionalNumber" },
+        {},
+      ).units;
+      if (unitsProblem) {
+        found[row.productId] = unitsProblem;
+        continue;
+      }
+      try {
+        await api("PUT", "/api/prices/broker-units", { body: brokerBody(row.productId, fields) });
+        done.push(row.productId);
+      } catch (failure) {
+        found[row.productId] = messageOf(failure);
+      }
     }
+    setProblems(found);
+    setEdits((current) =>
+      Object.fromEntries(Object.entries(current).filter(([id]) => !done.includes(id))),
+    );
+    if (done.length > 0) onSaved();
   };
 
   return (
-    <div className="inline-form">
-      <Field label="Units at the broker" error={unitsError}>
-        {(_labelId, controlId, invalid) => (
-          <DecimalInput
-            id={controlId}
-            {...invalid}
-            value={units}
-            onChange={(text) => {
-              setUnits(text);
-              setUnitsError(undefined);
-            }}
-          />
-        )}
-      </Field>
-      <Field label="As of">
-        <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-      </Field>
-      <button className="btn" type="button" onClick={() => void save()}>
-        Save
-      </button>
-      <Alert message={error} />
-    </div>
+    <>
+      <div className="table-scroll">
+        <table className="table table-compact">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th className="num">Units</th>
+              <th className="num">
+                <TermPopover term="pmc">PMC</TermPopover>
+              </th>
+              <th>Buckets</th>
+              <th className="num">Units at the broker</th>
+              <th>As of</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((row) => {
+              const account = accounts.find((a) => a.productId === row.productId);
+              const parts = buckets.filter((b) => b.productId === row.productId && b.units !== 0);
+              const fields = brokerFields(row, edits);
+              const problem = problems[row.productId];
+              return (
+                <tr key={row.productId}>
+                  <td>
+                    {row.name} <ProductTag regime={row.regime} />
+                  </td>
+                  <td className="num">{account ? quantity.format(account.units) : "–"}</td>
+                  <td className="num">
+                    {account?.pmc == null ? "–" : formatUnitPrice(account.pmc)}
+                  </td>
+                  <td>
+                    {parts.length === 0
+                      ? "–"
+                      : parts
+                          .map((b) => `${goalName(b.goalId)}: ${quantity.format(b.units)}`)
+                          .join(", ")}
+                  </td>
+                  <td className="num">
+                    <DecimalInput
+                      className="inline-input"
+                      aria-label={`Units at the broker, ${row.name}`}
+                      {...(problem ? { "aria-invalid": true } : {})}
+                      value={fields.units}
+                      onChange={(text) => edit(row.productId, "units", text)}
+                    />
+                    {problem ? <span className="field-hint field-error">{problem}</span> : null}
+                  </td>
+                  <td>
+                    <input
+                      type="date"
+                      className="inline-date"
+                      aria-label={`As of, ${row.name}`}
+                      value={fields.date}
+                      onChange={(event) => edit(row.productId, "date", event.target.value)}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="actions">
+        <button
+          className="btn"
+          type="button"
+          disabled={changed.length === 0}
+          onClick={() => void save()}
+        >
+          Save
+        </button>
+        <span className="saved" role="status">
+          {changed.length > 0 ? "Unsaved changes" : "Saved"}
+        </span>
+      </div>
+    </>
   );
 }
 
@@ -86,55 +162,13 @@ export function Positions({
         <p className="note">No products yet. Add a product in Setup first.</p>
       ) : (
         <Resource loaded={holdings}>
-          {({ accounts, buckets }) => (
-            <div className="table-scroll">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th className="num">Units</th>
-                    <th className="num">
-                      <TermPopover term="pmc">PMC</TermPopover>
-                    </th>
-                    <th>Buckets</th>
-                    <th>Broker units</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((row) => {
-                    const account = accounts.find((a) => a.productId === row.productId);
-                    const parts = buckets.filter(
-                      (b) => b.productId === row.productId && b.units !== 0,
-                    );
-                    return (
-                      <tr key={row.productId}>
-                        <td>
-                          {row.name} <ProductTag regime={row.regime} />
-                        </td>
-                        <td className="num">{account ? quantity.format(account.units) : "–"}</td>
-                        <td className="num">
-                          {account?.pmc == null ? "–" : formatUnitPrice(account.pmc)}
-                        </td>
-                        <td>
-                          {parts.length === 0
-                            ? "–"
-                            : parts
-                                .map((b) => `${goalName(b.goalId)}: ${quantity.format(b.units)}`)
-                                .join(", ")}
-                        </td>
-                        <td>
-                          <BrokerUnits
-                            key={`${row.brokerUnits}-${row.brokerUnitsDate}`}
-                            row={row}
-                            onSaved={onSaved}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+          {(data) => (
+            <PositionsTable
+              products={products}
+              holdings={data}
+              goalName={goalName}
+              onSaved={onSaved}
+            />
           )}
         </Resource>
       )}
