@@ -41,6 +41,35 @@
   height: 100%;
 }
 
+/* The Goals table: one line per row, no column behind a scroll. The card's width, not the window's,
+   decides which columns stay. Goal, Status, P vs required, Value and Value vs target always stay;
+   col-opt-1 (Priority, Target) goes first, then col-opt-2 (Plan gap), then the meter bar. */
+.goals-table {
+  container-type: inline-size;
+}
+.goals-table th,
+.goals-table td {
+  white-space: nowrap;
+}
+@container (max-width: 1039px) {
+  .goals-table .col-opt-1 {
+    display: none;
+  }
+}
+@container (max-width: 819px) {
+  .goals-table .col-opt-2 {
+    display: none;
+  }
+  .goals-table .meter {
+    width: 64px;
+  }
+}
+@container (max-width: 659px) {
+  .goals-table .meter {
+    display: none;
+  }
+}
+
 .kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
