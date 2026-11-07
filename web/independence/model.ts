@@ -8,7 +8,12 @@ export const REACH_YEARS = 20;
 /** The projection runs this many years: "not within" it means never reached. */
 export const HORIZON_YEARS = 40;
 
-export const LEVEL_NAMES = ["Level 1 Safety", "Level 2", "Level 3"] as const;
+export const LEVEL_NAMES = [
+  "Financial security",
+  "Barista FIRE",
+  "Lean FIRE",
+  "Financial Freedom",
+] as const;
 /** The Level 1 wealth leaves the pension out. */
 const SAFETY = 0;
 
@@ -40,7 +45,7 @@ export const isLevelSet = (target: number): boolean => target > 0;
 export const noLevelSet = (levels: readonly number[]): boolean =>
   levels.every((target) => !isLevelSet(target));
 
-/** The three rungs of the ladder, with the wealth of each split by goal. Null without a result. */
+/** The rungs of the ladder, with the wealth of each split by goal. Null without a result. */
 export function ladderRows(view: IndependenceView): LadderRow[] | null {
   const { result } = view;
   if (!result) return null;
@@ -116,7 +121,7 @@ export function levelTiles(view: IndependenceView): LevelTile[] | null {
 export function reachTitle(tiles: readonly LevelTile[]): string {
   const set = tiles.filter((tile) => tile.set);
   const reached = set.flatMap((tile) =>
-    tile.typical === null ? [] : [`Level ${tile.level + 1} in ${tile.typical}`],
+    tile.typical === null ? [] : [`${tile.name} in ${tile.typical}`],
   );
   if (reached.length === 0)
     return `The typical case reaches no level within ${HORIZON_YEARS} years`;
@@ -139,6 +144,7 @@ export function levelLinesNote(expenseGrowth: number): string {
 
 /** What the number fields hold while the user types. */
 export interface Draft {
+  baristaMult: string;
   l2Mult: string;
   l3Mult: string;
   efMonths: string;
@@ -148,6 +154,7 @@ export interface Draft {
 }
 
 export interface ParsedDraft {
+  baristaMult: number;
   l2Mult: number;
   l3Mult: number;
   efMonths: number;
@@ -157,11 +164,17 @@ export interface ParsedDraft {
 
 /** The draft as numbers, or null while a field is empty, not a number or negative. */
 export function parseDraft(draft: Draft): ParsedDraft | null {
-  const values = [draft.l2Mult, draft.l3Mult, draft.efMonths, draft.essential, draft.optional].map(
-    num,
-  );
+  const values = [
+    draft.baristaMult,
+    draft.l2Mult,
+    draft.l3Mult,
+    draft.efMonths,
+    draft.essential,
+    draft.optional,
+  ].map(num);
   if (values.some((value) => !Number.isFinite(value) || value < 0)) return null;
   return {
+    baristaMult: num(draft.baristaMult),
     l2Mult: num(draft.l2Mult),
     l3Mult: num(draft.l3Mult),
     efMonths: num(draft.efMonths),
@@ -177,9 +190,9 @@ export function parseDraft(draft: Draft): ParsedDraft | null {
 export function changedSettings(
   parsed: ParsedDraft,
   fire: FireSettings,
-): Partial<Pick<FireSettings, "l2Mult" | "l3Mult" | "efMonths">> | null {
-  const changes: Partial<Pick<FireSettings, "l2Mult" | "l3Mult" | "efMonths">> = {};
-  for (const key of ["l2Mult", "l3Mult", "efMonths"] as const) {
+): Partial<Pick<FireSettings, "baristaMult" | "l2Mult" | "l3Mult" | "efMonths">> | null {
+  const changes: Partial<Pick<FireSettings, "baristaMult" | "l2Mult" | "l3Mult" | "efMonths">> = {};
+  for (const key of ["baristaMult", "l2Mult", "l3Mult", "efMonths"] as const) {
     if (parsed[key] !== fire[key]) changes[key] = parsed[key];
   }
   return Object.keys(changes).length === 0 ? null : changes;

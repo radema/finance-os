@@ -39,6 +39,7 @@ const NEVER = `Not within ${HORIZON_YEARS} years`;
 const yearOrNever = (year: number | null) => (year === null ? NEVER.toLowerCase() : String(year));
 
 const draftOf = (view: IndependenceView): Draft => ({
+  baristaMult: String(view.fire.baristaMult),
   l2Mult: String(view.fire.l2Mult),
   l3Mult: String(view.fire.l3Mult),
   efMonths: String(view.fire.efMonths),
@@ -87,7 +88,7 @@ function Tiles({ view, tiles }: { view: IndependenceView; tiles: LevelTile[] }) 
       </div>
       <p className="sub">
         Targets are in <TermPopover term="real">today’s euros</TermPopover>. The chance is read at
-        31 December {reachYear}. Level 1 does not count the pension.
+        31 December {reachYear}. Financial security does not count the pension.
       </p>
     </>
   );
@@ -120,7 +121,7 @@ function Chart({ view, tiles }: { view: IndependenceView; tiles: LevelTile[] }) 
           Level target
         </li>
       </ul>
-      <FanChart result={result} label="FI wealth by year, with the three level targets" />
+      <FanChart result={result} label="FI wealth by year, with the four level targets" />
       <figcaption className="source">
         Source: Monte Carlo on your goals, assumptions and seed.
       </figcaption>
@@ -200,21 +201,27 @@ function Settings({
         />
       </div>
       <details className="level-rules">
-        <summary>Level rules: multipliers, Level 1 source, pension</summary>
+        <summary>Level rules: multipliers, Financial security source, pension</summary>
         <div className="form-grid">
           <NumberField
-            label="Level 2 multiplier (months of essential)"
+            label="Barista FIRE multiplier (months of essential)"
+            value={draft.baristaMult}
+            onChange={set("baristaMult")}
+            required
+          />
+          <NumberField
+            label="Lean FIRE multiplier (months of essential)"
             value={draft.l2Mult}
             onChange={set("l2Mult")}
             required
           />
           <NumberField
-            label="Level 3 multiplier (months of optional, added to Level 2)"
+            label="Financial Freedom multiplier (months of optional, added to Lean FIRE)"
             value={draft.l3Mult}
             onChange={set("l3Mult")}
             required
           />
-          <Field label="Level 1 comes from">
+          <Field label="Financial security comes from">
             <select
               value={fire.efFromGoal ?? MONTHS}
               onChange={(event) =>
@@ -237,7 +244,9 @@ function Settings({
             onChange={set("efMonths")}
             required
             hint={
-              fire.efFromGoal === null ? undefined : "Not used while Level 1 comes from a goal."
+              fire.efFromGoal === null
+                ? undefined
+                : "Not used while Financial security comes from a goal."
             }
           />
         </div>
@@ -300,7 +309,7 @@ function WhatCounts({
   );
 }
 
-function Screen({
+export function Screen({
   view,
   onView,
 }: {
@@ -334,7 +343,7 @@ function Screen({
       <div className="tag">Independence</div>
       <h1 className="title">Independence</h1>
       <p className="unit">
-        Three <TermPopover term="fire">levels</TermPopover> of wealth, in today's euros. Values at
+        Four <TermPopover term="fire">levels</TermPopover> of wealth, in today's euros. Values at
         the end of {view.asOf.slice(0, 7)}.
       </p>
       {view.note ? <p className="alert">{view.note}</p> : null}
@@ -360,7 +369,7 @@ function Screen({
   );
 }
 
-/** Independence: the three FI levels, when you reach each one, and the settings behind them. */
+/** Independence: the four FI levels, when you reach each one, and the settings behind them. */
 export function IndependenceScreen() {
   const loaded = useLoad<IndependenceView>("/api/independence");
   return (

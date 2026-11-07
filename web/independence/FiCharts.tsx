@@ -14,8 +14,8 @@ echarts.use([LineChart, GridComponent, SVGRenderer]);
 const BAND_OPACITY = { light: 0.22, dark: 0.3 };
 /** Pixels kept clear between two end labels. */
 const LABEL_MARGIN = 2;
-/** Level lines of the % chart: slots 1, 2 and 5 are the slots a line may use (DESIGN.md). */
-const LEVEL_SLOTS = [5, 2, 1];
+/** Level lines of the % chart, one slot per level; 7 is the neutral grey (DESIGN.md). Each line is labelled. */
+const LEVEL_SLOTS = [5, 7, 2, 1];
 
 /** x-axis labels: point 0 is today; the others are 31 December of their year. */
 const labelsOf = (result: FiResult) =>

@@ -8,7 +8,7 @@ import { DATABASE_FILE } from "./db.ts";
 import { startServer } from "./index.ts";
 
 // Essential 1,000 and optional 500 euros a month, with the default multipliers and 12 months of
-// essential expenses: Level 1 = 12 x 1,000, Level 2 = 300 x 1,000, Level 3 = 300,000 + 200 x 500 (AC-59).
+// essential expenses: Level 1 = 12 x 1,000, Level 2 = 200 x 1,000, Level 3 = 300 x 1,000, Level 4 = 300,000 + 200 x 500 (AC-59).
 const EXPENSES = { essentialCents: 100_000, optionalCents: 50_000 };
 
 describe("Independence API (AC-62)", () => {
@@ -48,6 +48,7 @@ describe("Independence API (AC-62)", () => {
     expect(view.fire).toEqual({
       efFromGoal: null,
       efMonths: 12,
+      baristaMult: 200,
       l2Mult: 300,
       l3Mult: 200,
       includePension: true,
@@ -55,6 +56,20 @@ describe("Independence API (AC-62)", () => {
     expect(view.expenses).toMatchObject({ essentialCents: 0, optionalCents: 0 });
     expect(view.goals).toEqual([]);
     expect(view.result).toBeNull();
+  });
+
+  it("reads a settings row saved without baristaMult as 200 (AC-59)", async () => {
+    sql(
+      `INSERT INTO document VALUES ('fiSettings', '${JSON.stringify({ efFromGoal: null, efMonths: 12, l2Mult: 250, l3Mult: 100, includePension: true })}')`,
+    );
+    expect((await read()).fire).toEqual({
+      efFromGoal: null,
+      efMonths: 12,
+      baristaMult: 200,
+      l2Mult: 250,
+      l3Mult: 100,
+      includePension: true,
+    });
   });
 
   it("lists the goals with their ticks, and the 42-point projection, on the sample data", async () => {
@@ -91,12 +106,13 @@ describe("Independence API (AC-62)", () => {
     });
     const saved = await call("PUT", "/api/independence/expenses", EXPENSES);
     expect(saved.status).toBe(200);
-    expect(saved.body.result?.levels).toEqual([12_000, 300_000, 400_000]);
+    expect(saved.body.result?.levels).toEqual([12_000, 200_000, 300_000, 400_000]);
     const targets = saved.body.result?.points.map((point) => point.targets);
     for (const row of targets ?? []) {
       expect(row[0]).toBeCloseTo(12_000, 6);
-      expect(row[1]).toBeCloseTo(300_000, 6);
-      expect(row[2]).toBeCloseTo(400_000, 6);
+      expect(row[1]).toBeCloseTo(200_000, 6);
+      expect(row[2]).toBeCloseTo(300_000, 6);
+      expect(row[3]).toBeCloseTo(400_000, 6);
     }
     // Round trip: a new read gives the same split, and the Cash flow document holds it.
     expect((await read()).expenses).toMatchObject(EXPENSES);
@@ -132,8 +148,11 @@ describe("Independence API (AC-62)", () => {
       l2Mult: 250,
     });
     expect(changed.status).toBe(200);
-    expect(changed.body.result?.levels).toEqual([12_000, 250_000, 350_000]);
+    expect(changed.body.result?.levels).toEqual([12_000, 200_000, 250_000, 350_000]);
     expect((await read()).fire.l2Mult).toBe(250);
+
+    const barista = await call("PUT", "/api/independence/settings", { baristaMult: 150 });
+    expect(barista.body.result?.levels).toEqual([12_000, 150_000, 250_000, 350_000]);
 
     const months = await call("PUT", "/api/independence/settings", {
       ...defaults.fire,
@@ -147,6 +166,7 @@ describe("Independence API (AC-62)", () => {
     const home = await call("PUT", "/api/independence/settings", {
       efFromGoal: "g-home",
       efMonths: 12,
+      baristaMult: 200,
       l2Mult: 300,
       l3Mult: 200,
       includePension: true,
@@ -255,6 +275,7 @@ describe("Independence API (AC-62)", () => {
     const stored = {
       efFromGoal: "g-home",
       efMonths: 6,
+      baristaMult: 150,
       l2Mult: 250,
       l3Mult: 100,
       includePension: false,

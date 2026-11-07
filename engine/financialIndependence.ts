@@ -1,4 +1,4 @@
-// Financial independence: the three levels, the wealth that counts toward them, and its projection
+// Financial independence: the four levels, the wealth that counts toward them, and its projection
 // over 40 years. Pure; amounts are today's euros as floats and are never rounded here.
 import { ASSET_CLASSES } from "./assetClasses.ts";
 import {
@@ -56,13 +56,13 @@ export type FiInput = {
 /** The spread of FI wealth at one point. */
 export type FiBand = { p10: number; p50: number; p90: number; deterministic: number };
 
-/** One point of the projection. Level index 0, 1, 2 is Level 1 (Safety), 2, 3. */
+/** One point of the projection. Level index 0, 1, 2, 3 is Level 1 (Financial security), 2, 3, 4. */
 export type FiPoint = {
   /** Calendar year of the point: Y0 for today and for the end of Y0. */
   year: number;
   /** Real years from asOf. */
   t: number;
-  /** FI wealth with the pension bucket if it is included. Levels 2 and 3 read this. */
+  /** FI wealth with the pension bucket if it is included. Levels 2 to 4 read this. */
   total: FiBand;
   /** FI wealth without the pension bucket. Level 1 reads this. */
   nonPension: FiBand;
@@ -86,18 +86,20 @@ export type FiResult = {
 };
 
 /**
- * The three level targets in today's euros. Level 1 Safety is the target of the `efFromGoal` goal,
- * else `efMonths` × essential. Level 2 is `l2Mult` × essential. Level 3 is Level 2 + `l3Mult` × optional.
+ * The four level targets in today's euros. Level 1 Financial security is the target of the `efFromGoal`
+ * goal, else `efMonths` × essential. Level 2 Barista FIRE is `baristaMult` × essential. Level 3 Lean
+ * FIRE is `l2Mult` × essential. Level 4 Financial Freedom is Level 3 + `l3Mult` × optional.
  */
-export function fiLevels(input: FiInput): [number, number, number] {
+export function fiLevels(input: FiInput): [number, number, number, number] {
   const { fire } = input;
   const efGoal =
     fire.efFromGoal === null ? undefined : input.goals.find((g) => g.goal.id === fire.efFromGoal);
-  const level2 = fire.l2Mult * input.essential;
+  const lean = fire.l2Mult * input.essential;
   return [
     efGoal ? efGoal.goal.target : fire.efMonths * input.essential,
-    level2,
-    level2 + fire.l3Mult * input.optional,
+    fire.baristaMult * input.essential,
+    lean,
+    lean + fire.l3Mult * input.optional,
   ];
 }
 

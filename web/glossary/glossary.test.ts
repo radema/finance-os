@@ -24,6 +24,7 @@ const LISTED = [
   "zainetto",
   "fire",
   "barista",
+  "lean",
   "opening",
   "need",
   "isin",
@@ -56,6 +57,12 @@ describe("glossary data (AC-85)", () => {
       expect(term.en.trim(), key).not.toBe("");
       expect(term.explanation.trim(), key).not.toBe("");
     }
+  });
+
+  it("says four levels, with Barista FIRE at 200 and Lean FIRE at 300 months of essentials (AC-62)", () => {
+    expect(GLOSSARY.fire.explanation).toContain("four levels");
+    expect(GLOSSARY.barista.explanation).toContain("200 ×");
+    expect(GLOSSARY.lean.explanation).toContain("300 ×");
   });
 
   it("never shows a raw P10, P50 or P90", () => {

@@ -18,23 +18,24 @@ const point = (year: number, t: number, pReached: number[]): FiPoint => ({
   t,
   total: band,
   nonPension: band,
-  targets: [12_000, 300_000, 400_000],
+  targets: [12_000, 200_000, 300_000, 400_000],
   pReached,
-  progress: [1.5, 0.08, 0.06],
+  progress: [1.5, 0.12, 0.08, 0.06],
 });
 
 // Today 2026, 21 points are enough: the 20-year point is the one of year 2046.
 const points: FiPoint[] = [
-  point(2026, 0, [1, 0, 0]),
-  ...Array.from({ length: 21 }, (_, k) => point(2026 + k, k + 0.17, [1, k / 100, k / 200])),
+  point(2026, 0, [1, 0, 0, 0]),
+  ...Array.from({ length: 21 }, (_, k) => point(2026 + k, k + 0.17, [1, k / 50, k / 100, k / 200])),
 ];
 
 const result: FiResult = {
-  levels: [12_000, 300_000, 400_000],
+  levels: [12_000, 200_000, 300_000, 400_000],
   wealthToday: { total: 24_000, nonPension: 18_000, pension: 6_000 },
   points,
   reached: [
     { median: 2026, deterministic: 2026 },
+    { median: 2050, deterministic: 2040 },
     { median: null, deterministic: 2060 },
     { median: null, deterministic: null },
   ],
@@ -43,7 +44,14 @@ const result: FiResult = {
 
 const view: IndependenceView = {
   asOf: "2026-10-31",
-  fire: { efFromGoal: null, efMonths: 12, l2Mult: 300, l3Mult: 200, includePension: true },
+  fire: {
+    efFromGoal: null,
+    efMonths: 12,
+    baristaMult: 200,
+    l2Mult: 300,
+    l3Mult: 200,
+    includePension: true,
+  },
   expenses: { essentialCents: 100_000, optionalCents: 50_000, expenseGrowth: 0.02 },
   inflation: 0.02,
   goals: [
@@ -81,7 +89,7 @@ const view: IndependenceView = {
 
 describe("ladderRows (AC-62)", () => {
   it("splits each level by goal and leaves the pension out of Level 1", () => {
-    const [l1, l2, l3] = ladderRows(view) ?? [];
+    const [l1, l2, l3, l4] = ladderRows(view) ?? [];
     expect(l1?.segments.map((s) => [s.goalId, s.value])).toEqual([["g-home", 18_000]]);
     expect(l1?.wealth).toBe(18_000);
     expect(l1?.progress).toBeCloseTo(1.5, 12);
@@ -90,15 +98,16 @@ describe("ladderRows (AC-62)", () => {
       ["g-home", 18_000],
       ["g-ret", 6_000],
     ]);
-    // 24,000 of 300,000 is 8%; the pension is 6,000 of the 24,000.
-    expect(l2?.progress).toBeCloseTo(0.08, 12);
+    // 24,000 of 200,000 is 12%; the pension is 6,000 of the 24,000.
+    expect(l2?.progress).toBeCloseTo(0.12, 12);
     expect(l2?.pensionShare).toBeCloseTo(0.25, 12);
-    expect(l3?.progress).toBeCloseTo(0.06, 12);
+    expect(l3?.progress).toBeCloseTo(0.08, 12);
+    expect(l4?.progress).toBeCloseTo(0.06, 12);
   });
 
   it("has no progress when the target is 0", () => {
-    const empty = { ...view, result: { ...result, levels: [0, 0, 0] } };
-    expect(ladderRows(empty)?.map((row) => row.progress)).toEqual([null, null, null]);
+    const empty = { ...view, result: { ...result, levels: [0, 0, 0, 0] } };
+    expect(ladderRows(empty)?.map((row) => row.progress)).toEqual([null, null, null, null]);
   });
 
   it("is null without a result", () => {
@@ -108,17 +117,18 @@ describe("ladderRows (AC-62)", () => {
 
 describe("reachedWithin", () => {
   it("reads the point of the calendar year Y0 + 20", () => {
-    expect(reachedWithin(view, 1)).toEqual({ year: 2046, p: 0.2 });
-    expect(reachedWithin(view, 2)).toEqual({ year: 2046, p: 0.1 });
+    expect(reachedWithin(view, 1)).toEqual({ year: 2046, p: 0.4 });
+    expect(reachedWithin(view, 2)).toEqual({ year: 2046, p: 0.2 });
+    expect(reachedWithin(view, 3)).toEqual({ year: 2046, p: 0.1 });
   });
 });
 
 describe("levelTiles (AC-62)", () => {
-  it("reads the typical and deterministic year and the chance in 20 years of each level", () => {
+  it("gives four tiles named Financial security, Barista FIRE, Lean FIRE and Financial Freedom, each with its years and chance in 20 years", () => {
     expect(levelTiles(view)).toEqual([
       {
         level: 0,
-        name: "Level 1 Safety",
+        name: "Financial security",
         target: 12_000,
         set: true,
         typical: 2026,
@@ -127,7 +137,16 @@ describe("levelTiles (AC-62)", () => {
       },
       {
         level: 1,
-        name: "Level 2",
+        name: "Barista FIRE",
+        target: 200_000,
+        set: true,
+        typical: 2050,
+        deterministic: 2040,
+        chance: 0.4,
+      },
+      {
+        level: 2,
+        name: "Lean FIRE",
         target: 300_000,
         set: true,
         typical: null,
@@ -135,8 +154,8 @@ describe("levelTiles (AC-62)", () => {
         chance: 0.2,
       },
       {
-        level: 2,
-        name: "Level 3",
+        level: 3,
+        name: "Financial Freedom",
         target: 400_000,
         set: true,
         typical: null,
@@ -147,7 +166,7 @@ describe("levelTiles (AC-62)", () => {
   });
 
   it("marks a level with target 0 as not set and gives it no year or chance", () => {
-    const unset = { ...view, result: { ...result, levels: [0, 300_000, 400_000] } };
+    const unset = { ...view, result: { ...result, levels: [0, 200_000, 300_000, 400_000] } };
     expect(levelTiles(unset)?.[0]).toMatchObject({
       set: false,
       typical: null,
@@ -213,6 +232,7 @@ describe("levelLinesNote (AC-59)", () => {
 
 describe("parseDraft", () => {
   const draft = {
+    baristaMult: "150",
     l2Mult: "250",
     l3Mult: "200",
     efMonths: "12",
@@ -222,6 +242,7 @@ describe("parseDraft", () => {
 
   it("turns the text into numbers and cents", () => {
     expect(parseDraft(draft)).toEqual({
+      baristaMult: 150,
       l2Mult: 250,
       l3Mult: 200,
       efMonths: 12,
@@ -232,17 +253,29 @@ describe("parseDraft", () => {
 
   it("refuses empty, negative and non-numeric text", () => {
     expect(parseDraft({ ...draft, l2Mult: "" })).toBeNull();
+    expect(parseDraft({ ...draft, baristaMult: "" })).toBeNull();
     expect(parseDraft({ ...draft, efMonths: "-1" })).toBeNull();
     expect(parseDraft({ ...draft, essential: "abc" })).toBeNull();
   });
 });
 
 describe("changedSettings", () => {
-  const parsed = { l2Mult: 250, l3Mult: 200, efMonths: 12, essentialCents: 0, optionalCents: 0 };
+  const parsed = {
+    baristaMult: 200,
+    l2Mult: 250,
+    l3Mult: 200,
+    efMonths: 12,
+    essentialCents: 0,
+    optionalCents: 0,
+  };
   const fire = view.fire;
 
   it("holds only the multipliers that changed, never efFromGoal or includePension", () => {
     expect(changedSettings(parsed, fire)).toEqual({ l2Mult: 250 });
+    expect(changedSettings({ ...parsed, baristaMult: 150 }, fire)).toEqual({
+      baristaMult: 150,
+      l2Mult: 250,
+    });
   });
 
   it("is null when nothing changed", () => {
@@ -252,8 +285,8 @@ describe("changedSettings", () => {
 
 describe("noLevelSet", () => {
   it("is true only when every target is 0, so no expenses are set", () => {
-    expect(noLevelSet([0, 0, 0])).toBe(true);
-    expect(noLevelSet([0, 300_000, 0])).toBe(false);
+    expect(noLevelSet([0, 0, 0, 0])).toBe(true);
+    expect(noLevelSet([0, 300_000, 0, 0])).toBe(false);
     expect(noLevelSet(view.result?.levels ?? [])).toBe(false);
   });
 });

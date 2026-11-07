@@ -244,13 +244,16 @@ export const cashFlowSchema = z.object({
 export type CashFlow = z.infer<typeof cashFlowSchema>;
 
 /**
- * The financial-independence settings. Level 1 is the target of the `efFromGoal` goal, else
- * `efMonths` of essential expenses; Level 2 is `l2Mult` months of essential expenses; Level 3 adds
- * `l3Mult` months of optional expenses. The pension counts toward wealth unless `includePension` is off.
+ * The financial-independence settings. Level 1 (Financial security) is the target of the `efFromGoal`
+ * goal, else `efMonths` of essential expenses; Level 2 (Barista FIRE) is `baristaMult` months of
+ * essential expenses; Level 3 (Lean FIRE) is `l2Mult` months of essential expenses; Level 4 (Financial
+ * Freedom) adds `l3Mult` months of optional expenses to Level 3. The pension counts toward wealth
+ * unless `includePension` is off.
  */
 export const fireSettingsSchema = z.object({
   efFromGoal: z.string().min(1).nullable().default(null),
   efMonths: z.number().min(0).default(12),
+  baristaMult: z.number().min(0).default(200),
   l2Mult: z.number().min(0).default(300),
   l3Mult: z.number().min(0).default(200),
   includePension: z.boolean().default(true),

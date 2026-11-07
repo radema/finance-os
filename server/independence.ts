@@ -143,7 +143,7 @@ export function registerIndependenceRoutes(
         .select("id")
         .where("id", "=", fire.efFromGoal)
         .executeTakeFirst();
-      if (!goal) throw new HttpError(400, "the Level 1 goal does not exist");
+      if (!goal) throw new HttpError(400, "the Financial security goal does not exist");
     }
     await saveDocument(db, "fiSettings", fire);
     return view();
