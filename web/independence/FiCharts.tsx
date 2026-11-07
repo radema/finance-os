@@ -6,7 +6,7 @@ import { useCallback } from "react";
 import type { FiResult } from "../../engine/financialIndependence.ts";
 import { SPREAD_END_LABELS } from "../goals/valueAxis.ts";
 import { formatAmount } from "../money.ts";
-import { readTokens, useEchart } from "../useEchart.ts";
+import { PLOT_GRID, readTokens, useEchart } from "../useEchart.ts";
 import { LEVEL_NAMES } from "./model.ts";
 
 echarts.use([LineChart, GridComponent, SVGRenderer]);
@@ -30,7 +30,7 @@ function frame(result: FiResult, format: (value: number) => string) {
     colour,
     option: {
       animation: false,
-      grid: { left: 8, right: 96, top: 16, bottom: 8, containLabel: true },
+      grid: { ...PLOT_GRID },
       xAxis: {
         type: "category" as const,
         data: labelsOf(result),
@@ -69,7 +69,7 @@ const line = (name: string, data: (number | null)[], color: string, extra = {}) 
   ...extra,
 });
 
-function fanOption(result: FiResult) {
+export function fanOption(result: FiResult) {
   const { colour, option } = frame(result, euros);
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const band = result.points.map((point) => point.total);
@@ -133,7 +133,7 @@ export function FanChart({ result, label }: { result: FiResult; label: string })
   return <div className="chart chart-tall" ref={box} role="img" aria-label={label} />;
 }
 
-function progressOption(result: FiResult) {
+export function progressOption(result: FiResult) {
   const { colour, option } = frame(result, (value) => `${Math.round(value)}%`);
   const label = endLabel(colour);
   return {

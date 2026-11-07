@@ -1,9 +1,12 @@
 import { readFileSync } from "node:fs";
 import * as echarts from "echarts/core";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import type { FiPoint, FiResult } from "../engine/financialIndependence.ts";
 import type { FanPoint, SeriesPoint } from "../engine/goalViews.ts";
 import { buildOption as buildFan } from "./goals/FanChart.tsx";
 import { buildOption as buildValue } from "./goals/ValueChart.tsx";
+import { fanOption } from "./independence/FiCharts.tsx";
+import { LEVEL_NAMES } from "./independence/model.ts";
 import { buildOption as buildTime, type ChartSeries } from "./tracking/TimeChart.tsx";
 import { PLOT_GRID } from "./useEchart.ts";
 
@@ -93,5 +96,49 @@ describe("the plot right edge", () => {
     ];
     for (const end of ends) expect(Math.abs(end - ends[0])).toBeLessThan(1);
     expect(ends[0]).toBeCloseTo(1000 - PLOT_GRID.right, 0);
+  });
+});
+
+describe("the independence end labels", () => {
+  const band = { p10: 100, p50: 200, p90: 300, deterministic: 200 };
+  const levels = [18_000, 300_000, 450_000, 550_000];
+  const fiPoint = (year: number): FiPoint => ({
+    year,
+    t: 0,
+    total: band,
+    nonPension: band,
+    targets: levels,
+    pReached: [0, 0, 0, 0],
+    progress: [0, 0, 0, 0],
+  });
+  const result: FiResult = {
+    levels,
+    wealthToday: { total: 100, nonPension: 100, pension: 0 },
+    points: [fiPoint(2026), fiPoint(2027)],
+    reached: levels.map(() => ({ median: null, deterministic: null })),
+    correlationShrunk: false,
+  };
+
+  it("fit inside the chart box, the longest level name included", () => {
+    const chart = echarts.init(null as never, null as never, {
+      renderer: "svg",
+      ssr: true,
+      width: 1000,
+      height: 300,
+    });
+    chart.setOption(fanOption(result));
+    const right: Record<string, number> = {};
+    for (const el of chart.getZr().storage.getDisplayList(true)) {
+      const text = (el as { style?: { text?: string } }).style?.text;
+      if (!text) continue;
+      const box = el.getBoundingRect().clone();
+      const placed = el.getComputedTransform();
+      if (placed) box.applyTransform(placed);
+      right[text] = box.x + box.width;
+    }
+    chart.dispose();
+    for (const name of [...LEVEL_NAMES, "Typical case"]) {
+      expect(right[name], name).toBeLessThanOrEqual(1000);
+    }
   });
 });
