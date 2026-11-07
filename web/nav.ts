@@ -54,6 +54,7 @@ export const SETUP_TABS: readonly NavItem[] = [
   { key: "setup/goals", label: "Goal definitions" },
   { key: "setup/cash-flow", label: "Cash flow" },
   { key: "setup/assumptions", label: "Assumptions" },
+  { key: "setup/glossary", label: "Glossary" },
 ];
 
 /** Built screens outside Setup. A goal's page is `goals/detail/<id>`; it has no sidebar item. */
