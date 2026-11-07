@@ -9,6 +9,7 @@ import { checkFields, type FieldErrors } from "../formErrors.ts";
 import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro, formatPercent, formatPrice } from "../money.ts";
+import { DateInput } from "../setup/DateInput.tsx";
 import { copyOfTransaction } from "../setup/duplicate.ts";
 import { type RevealFormRef, useRevealForm } from "../setup/revealForm.ts";
 import {
@@ -186,15 +187,14 @@ function AddForm({
       >
         <Field label="Date" error={errors.date} required>
           {(labelId, controlId, invalid) => (
-            <input
+            <DateInput
               id={controlId}
-              type="date"
               aria-labelledby={labelId}
               required
               {...invalid}
               value={date}
-              onChange={(event) => {
-                setDate(event.target.value);
+              onChange={(value) => {
+                setDate(value);
                 clear("date");
               }}
             />

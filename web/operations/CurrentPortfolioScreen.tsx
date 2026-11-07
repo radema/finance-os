@@ -5,6 +5,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro } from "../money.ts";
 import { TRANSACTIONS_ROUTE } from "../nav.ts";
+import { DateInput } from "../setup/DateInput.tsx";
 import {
   Alert,
   Card,
@@ -179,12 +180,15 @@ function Form({
       >
         <RequiredLegend />
         <Field label="As-of date" required>
-          <input
-            type="date"
-            required
-            value={asOf}
-            onChange={(event) => setAsOf(event.target.value)}
-          />
+          {(labelId, controlId) => (
+            <DateInput
+              id={controlId}
+              aria-labelledby={labelId}
+              required
+              value={asOf}
+              onChange={setAsOf}
+            />
+          )}
         </Field>
       </Card>
       {products.map((product) => (

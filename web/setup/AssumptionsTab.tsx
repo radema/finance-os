@@ -510,6 +510,7 @@ export function AssumptionsTab() {
                       >
                         <ConfirmButton
                           label="Reset assumptions"
+                          outlined
                           confirmLabel="Reset to defaults"
                           onConfirm={() => void reset()}
                         />

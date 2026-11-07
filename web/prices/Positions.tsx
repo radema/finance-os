@@ -4,6 +4,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { checkFields } from "../formErrors.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatUnitPrice } from "../money.ts";
+import { DateInput } from "../setup/DateInput.tsx";
 import { Card, DecimalInput, ProductTag, Resource } from "../setup/ui.tsx";
 import { type BrokerEdits, brokerBody, brokerFields, changedBrokerRows } from "./model.ts";
 import type { PriceOverviewRow } from "./types.ts";
@@ -121,12 +122,11 @@ export function PositionsTable({ products, holdings, goalName, onSaved }: Positi
                     ) : null}
                   </td>
                   <td>
-                    <input
-                      type="date"
+                    <DateInput
                       className="inline-date"
                       aria-label={`As of, ${row.name}`}
                       value={fields.date}
-                      onChange={(event) => edit(row.productId, "date", event.target.value)}
+                      onChange={(value) => edit(row.productId, "date", value)}
                     />
                   </td>
                 </tr>

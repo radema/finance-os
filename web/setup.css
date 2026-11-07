@@ -322,12 +322,17 @@ form > .actions {
   line-height: var(--lh-callout);
   cursor: pointer;
 }
-.btn:hover:not(:disabled) {
+.btn:hover:not(:disabled):not(:has(input:disabled)) {
   background: var(--wash);
 }
-.btn:disabled {
-  color: var(--muted);
-  cursor: default;
+/* Unavailable by fill and cursor, not by faded text: the label keeps 4.5:1 on the fill in both themes,
+   primary buttons included (a faded label on the dark primary fill measured 3.4:1 light, 2.6:1 dark). */
+.btn:disabled,
+.btn:has(input:disabled) {
+  border-color: var(--base);
+  background: var(--wash);
+  color: var(--ink2);
+  cursor: not-allowed;
 }
 .btn-primary {
   border-color: var(--ink);
@@ -341,6 +346,49 @@ form > .actions {
   border-color: transparent;
   background: transparent;
   color: var(--ink2);
+}
+/* The file picker: a button, then the file name. The input is visually hidden but keeps focus,
+   so the button shows the focus ring. */
+.file-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.file-picker .btn {
+  position: relative;
+}
+.file-picker input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  clip-path: inset(50%);
+}
+.file-picker .btn:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.file-name,
+.date-iso {
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  color: var(--ink2);
+}
+.file-name {
+  overflow-wrap: anywhere;
+}
+/* A date input with its ISO date beside it. */
+.input-date {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+.date-iso {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .confirm {
   display: inline-flex;
