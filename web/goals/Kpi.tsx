@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /**
- * A KPI card: label, value and an optional note. The accent bar takes the page's `--slot`. With an
+ * A KPI card: label, value and an optional note. A goal's dot before the label takes the page's `--slot`. With an
  * `href` the whole card is a link to the screen that explains the number.
  */
 export function Kpi({

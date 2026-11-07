@@ -389,13 +389,13 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
   12%, dark 18%) for chips, tags, KPI accents and card header strips; text stays in the text greys;
   blue for general/information; the highlight family for attention. No red/green status.
 - Components: goal chips, Need/Want/Wish tags (shape + tint), status chips (icon + word), product
-  tags, price-freshness pills, KPI cards with an accent bar, section cards with no outline. Sticky
+  tags, price-freshness pills, KPI cards with a 1 px outline (a goal-colour dot before the label where the KPI belongs to a goal), section cards with a blue header strip and no outline. Sticky
   header on every table. A compact legend on every multi-series chart; direct labels where they help;
   exhibit anatomy (tag, action title with a number, unit line, chart, callout, source).
 - Page titles: the `h1` of every screen is the name of the screen (on a goal's page, the goal's name).
   A finding with a number is never the `h1`: it is the action title (`h2`) of the first exhibit, or
   of the key numbers where a screen opens with them.
-- Fonts: Geist + Geist Mono, bundled (OFL). Charts are drawn after fonts load and resize with their box.
+- Fonts: Source Serif 4 for titles and KPI values (`--font-display`), Geist for text, Geist Mono for the small mono labels, all bundled (OFL). The kicker above a title is Geist 13 px, sentence case. Charts are drawn after fonts load and resize with their box.
 - Jargon terms are popover buttons that open on click, tap, Enter or Space, never on focus (plain
   sentence first, Italian term above it); touch friendly, no `title=`
   hints (t16 finding 26). Raw "P10–P90" is never shown: bad / typical / good case.
@@ -499,7 +499,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-7: Architecture rules 1–3 are enforced. Check: the architecture test (or Biome rule) with a planted violation in a scratch file: `engine/` importing `node:*`/`server/`/`web/`; `web/` importing `server/`; SQL outside `server/`. Expected: green on the clean tree, red on each planted violation.
 - AC-8: CI runs the gate. Check: `.github/workflows/gate.yml` and the S0 PR checks. Expected: the workflow runs `pnpm gate` on PRs to `main`; the S0 PR shows it green.
 - AC-9: `gbi` starts the app locally. Check: install as documented in `README.md`, then `GBI_DATA_DIR=$(mktemp -d) gbi`, `curl -s 127.0.0.1:<port>/api/health`, `lsof -iTCP -sTCP:LISTEN -P | grep node`. Expected: health returns 200; the listener is bound to 127.0.0.1 only; the SQLite file exists in that folder with all migrations applied; the browser opens.
-- AC-10: Empty app shell. Check: `agent-browser` on the running app at 1440 px, light and dark. Expected: sidebar with the seven sections, "soon" placeholders, palette D tokens, Geist font; zero console errors; no network request to a host other than 127.0.0.1.
+- AC-10: Empty app shell. Check: `agent-browser` on the running app at 1440 px, light and dark. Expected: sidebar with the seven sections, "soon" placeholders, palette D tokens, Geist text font and Source Serif 4 titles; zero console errors; no network request to a host other than 127.0.0.1.
 - AC-11: `DESIGN.md` exists. Check: read it. Expected: palette D tokens (light/dark, slots, tints), type scale, components and chart rules from the UI decisions above.
 
 ### S1 — Goals and deterministic projection
