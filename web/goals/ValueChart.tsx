@@ -5,7 +5,7 @@ import { SVGRenderer } from "echarts/renderers";
 import { useCallback } from "react";
 import type { SeriesPoint } from "../../engine/goalViews.ts";
 import { formatAmount } from "../money.ts";
-import { readTokens, useEchart } from "../useEchart.ts";
+import { PLOT_RIGHT, readTokens, useEchart } from "../useEchart.ts";
 import { fitAxis, SPREAD_END_LABELS } from "./valueAxis.ts";
 
 echarts.use([LineChart, GridComponent, SVGRenderer]);
@@ -31,7 +31,7 @@ export function buildOption(points: readonly SeriesPoint[], slot: number) {
   );
   return {
     animation: false,
-    grid: { left: 8, right: 96, top: 16, bottom: 8, containLabel: true },
+    grid: { left: 8, right: PLOT_RIGHT, top: 16, bottom: 8, containLabel: true },
     xAxis: {
       type: "category" as const,
       data: points.map((point) => point.month),
