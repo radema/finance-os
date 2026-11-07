@@ -121,6 +121,11 @@ describe("Glossary & method screen (AC-85)", () => {
     expect(new Set(links.map((m) => m[1])).size).toBe(METHOD_TOPICS.length);
   });
 
+  it("names the optimizer rules without a criterion id", () => {
+    expect(html).toContain("Protect the bad case");
+    expect(html).not.toMatch(/\bO\d\b/);
+  });
+
   it("covers each method topic, the four simplifications and the capital note", () => {
     for (const topic of METHOD_TOPICS) expect(html).toContain(topic);
     expect(html).toContain("exit tax base is all contributions");

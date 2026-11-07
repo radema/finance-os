@@ -178,7 +178,7 @@ describe("chooseMix tie-breaks (AC-80)", () => {
     const names = new Set<string>();
     for (const criterion of ["O1", "O2", "O4", "O5"] as const) {
       const { ruleName, ruleText } = chooseMix(rows, criterion, 0.5);
-      expect(ruleName.startsWith(criterion)).toBe(true);
+      expect(ruleName).not.toMatch(/\bO\d\b/);
       expect(ruleText.length).toBeGreaterThan(0);
       expect(ruleText).not.toContain("\n");
       names.add(ruleName);
@@ -285,7 +285,7 @@ describe("runOptimizer against a brute-force loop (AC-80)", () => {
       expect(result.chosen.weights).toEqual(expected.chosen?.weights);
       expect(result.chosen.p).toBe(expected.chosen?.p);
       expect(result.notFeasible).toBe(false);
-      expect(result.ruleName.startsWith(criterion)).toBe(true);
+      expect(result.ruleName).not.toMatch(/\bO\d\b/);
       expect(result.ruleText.length).toBeGreaterThan(0);
     });
   }
