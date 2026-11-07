@@ -135,7 +135,7 @@
   height: 320px;
 }
 .callout {
-  max-width: 46em;
+  max-width: var(--note-max);
   margin-top: var(--s3);
   padding-left: var(--s3);
   border-left: 2px solid var(--hl);

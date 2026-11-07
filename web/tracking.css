@@ -88,6 +88,3 @@
 .source-label-saved::before {
   background: var(--ink2);
 }
-.wait {
-  font-weight: 600;
-}

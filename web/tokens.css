@@ -73,6 +73,7 @@
   --s6: 48px;
 
   --setup-max: 1200px;
+  --note-max: 70ch;
   --control-h: calc(var(--lh-sub) + 2 * var(--s1) + 2px);
 }
 

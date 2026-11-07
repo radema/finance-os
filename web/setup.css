@@ -90,6 +90,9 @@
   line-height: var(--lh-callout);
   color: var(--ink2);
 }
+.note {
+  max-width: var(--note-max);
+}
 .sub {
   color: var(--muted);
 }
