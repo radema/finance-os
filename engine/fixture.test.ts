@@ -164,7 +164,7 @@ function monteCarloSummary() {
   );
 }
 
-/** The three Independence level targets on the fixture's expenses, in euros. */
+/** The four Independence level targets on the fixture's expenses, in euros. */
 function independenceLevels() {
   return fiLevels({
     asOf: sample.asOf,

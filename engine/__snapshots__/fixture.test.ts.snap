@@ -115,6 +115,7 @@ exports[`synthetic fixture > matches the reviewed regression snapshot 1`] = `
   },
   "independenceLevels": [
     18000,
+    300000,
     450000,
     550000,
   ],

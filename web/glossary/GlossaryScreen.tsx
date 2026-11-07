@@ -68,11 +68,12 @@ const METHOD_NOTES: readonly MethodNote[] = [
     title: "Financial independence levels",
     body: (
       <p>
-        Level 1 is the target of the emergency fund goal, or a number of months of essential
-        spending. Level 2 is a multiple of monthly essential spending. Level 3 adds a multiple of
-        monthly optional spending. All levels are in today’s euros and move with spending growth
-        over inflation. Wealth counts the goals marked for independence, net of tax. The pension
-        counts only when you switch it on, and never in Level 1.
+        Financial security is the target of the emergency fund goal, or a number of months of
+        essential spending. Barista FIRE and Lean FIRE are multiples of monthly essential spending,
+        200 and 300 by default. Financial Freedom adds a multiple of monthly optional spending to
+        Lean FIRE. All levels are in today’s euros and move with spending growth over inflation.
+        Wealth counts the goals marked for independence, net of tax. The pension counts only when
+        you switch it on, and never for Financial security.
       </p>
     ),
   },
