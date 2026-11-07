@@ -3,9 +3,16 @@ import type { CashFlowView } from "../../engine/cashFlow.ts";
 import type { CashFlow, CashFlowEvent } from "../../engine/schemas.ts";
 import { api, useLoad } from "../api.ts";
 import { checkFields } from "../formErrors.ts";
-import { centsToEuros, eurosToCents, fractionToPercent, num, percentToFraction } from "../forms.ts";
+import { centsToEuros, eurosToCents, num } from "../forms.ts";
 import { formatEuro } from "../money.ts";
 import { CashFlowTable } from "./CashFlowTable.tsx";
+import {
+  eventsDocument,
+  hasUnsavedValues,
+  savedDocument,
+  toValues,
+  type Values,
+} from "./cashFlowForm.ts";
 import { copyOfEvent } from "./duplicate.ts";
 import { useRevealForm } from "./revealForm.ts";
 import {
@@ -19,38 +26,13 @@ import {
 } from "./ui.tsx";
 import { useFormErrors } from "./useFormErrors.ts";
 
-type Values = {
-  income: string;
-  incomeGrowth: string;
-  essential: string;
-  optional: string;
-  expenseGrowth: string;
-};
-
-const toValues = (c: CashFlow): Values => ({
-  income: centsToEuros(c.income),
-  incomeGrowth: fractionToPercent(c.incomeGrowth),
-  essential: centsToEuros(c.essential),
-  optional: centsToEuros(c.optional),
-  expenseGrowth: fractionToPercent(c.expenseGrowth),
-});
-
-const toDocument = (v: Values, events: CashFlowEvent[]): CashFlow => ({
-  income: eurosToCents(v.income),
-  incomeGrowth: percentToFraction(v.incomeGrowth),
-  essential: eurosToCents(v.essential),
-  optional: eurosToCents(v.optional),
-  expenseGrowth: percentToFraction(v.expenseGrowth),
-  events,
-});
-
 // The two forms of the screen share one document, so one failed save can name a field of either.
 const LABELS = {
   income: "Net household income",
-  incomeGrowth: "Income growth",
+  incomeGrowth: "Income growth above inflation",
   essential: "Essential expenses",
   optional: "Optional expenses",
-  expenseGrowth: "Expense growth",
+  expenseGrowth: "Expense growth above inflation",
   year: "Year",
   amount: "Amount",
 };
@@ -73,23 +55,21 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
   const [editing, setEditing] = useState<number>();
   const [copying, setCopying] = useState(false);
   const { errors, alert, reject, fail, clear } = useFormErrors<FormKey>(LABELS);
-  const [saved, setSaved] = useState(false);
   const { formRef, reveal } = useRevealForm("form");
 
-  // One document: the inputs as typed, and the events as given.
-  const save = async (events: CashFlowEvent[]): Promise<boolean> => {
+  const save = async (body: CashFlow): Promise<boolean> => {
     try {
-      set(await api<CashFlowView>("PUT", "/api/cash-flow", { body: toDocument(values, events) }));
+      set(await api<CashFlowView>("PUT", "/api/cash-flow", { body }));
       clear();
       return true;
     } catch (failure) {
       fail(failure);
-      setSaved(false);
       return false;
     }
   };
+  // An event change keeps the stored income and expenses: the typed values wait for "Save cash flow".
   const saveEvents = async (events: CashFlowEvent[]) => {
-    if (await save(events)) {
+    if (await save(eventsDocument(cashFlow, events))) {
       setEvent(emptyEvent());
       setEditing(undefined);
       setCopying(false);
@@ -115,7 +95,6 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
       value={values[key]}
       onChange={(value) => {
         setValues({ ...values, [key]: value });
-        setSaved(false);
         clear(key);
       }}
       hint={hint}
@@ -138,19 +117,29 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
           className="form-grid"
           onSubmit={(e) => {
             e.preventDefault();
-            void save(cashFlow.events).then((ok) => setSaved(ok));
+            void save(savedDocument(values, cashFlow.events));
           }}
         >
           {field("income", "Net household income (EUR a year)")}
-          {field("incomeGrowth", "Income growth (% a year)")}
+          {field(
+            "incomeGrowth",
+            "Income growth above inflation (% a year)",
+            "0 means income keeps up with prices.",
+          )}
           {field("essential", "Essential expenses (EUR a month)")}
           {field("optional", "Optional expenses (EUR a month)")}
-          {field("expenseGrowth", "Expense growth (% a year)")}
+          {field(
+            "expenseGrowth",
+            "Expense growth above inflation (% a year)",
+            "0 means spending keeps up with prices.",
+          )}
           <div className="actions">
             <button className="btn btn-primary" type="submit">
               Save cash flow
             </button>
-            {saved ? <span className="saved">Saved.</span> : null}
+            <span className="saved" role="status">
+              {hasUnsavedValues(values, cashFlow) ? "Unsaved changes" : "Saved"}
+            </span>
           </div>
         </form>
       </Card>

@@ -8,7 +8,10 @@ const whole = (cents: number): string => formatWholeEuro(fromCents(cents));
 const yearLabel = (row: CashFlowYear): string =>
   row.label === String(row.year) ? String(row.year) : `${row.year} (rest)`;
 
-/** The 10-year table: whole euros, Year sticky on the left while the table scrolls sideways. */
+/**
+ * The 10-year table: whole euros, Year sticky on the left while the table scrolls sideways.
+ * Gap is the emphasised column; a negative Gap also gets a dot and the word "Short".
+ */
 export function CashFlowTable({ rows }: { rows: readonly CashFlowYear[] }) {
   return (
     <div className="table-scroll table-scroll-sticky">
@@ -33,11 +36,12 @@ export function CashFlowTable({ rows }: { rows: readonly CashFlowYear[] }) {
               <td className="num">{whole(row.expenses)}</td>
               <td className="num">{whole(row.events)}</td>
               <td className="num">{whole(row.refund)}</td>
-              <td className="num">
-                <strong>{whole(row.capacity)}</strong>
-              </td>
+              <td className="num">{whole(row.capacity)}</td>
               <td className="num">{whole(row.planned)}</td>
-              <td className="num">{whole(row.gap)}</td>
+              <td className="num">
+                {row.gap < 0 ? <span className="short">Short</span> : null}
+                <strong>{whole(row.gap)}</strong>
+              </td>
             </tr>
           ))}
         </tbody>
