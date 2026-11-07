@@ -3,10 +3,11 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { formatUnitPrice } from "../money.ts";
 import { Alert, Card, ProductTag, Resource } from "../setup/ui.tsx";
 import { CsvImport } from "./CsvImport.tsx";
+import { MonthGrid } from "./MonthGrid.tsx";
 import { canRefetch, sourceOptions } from "./model.ts";
+import { OnlinePrices } from "./OnlinePrices.tsx";
 import { Positions } from "./Positions.tsx";
 import { PriceFreshnessPill } from "./PriceFreshnessPill.tsx";
-import { reloadableCards } from "./reloadableCards.tsx";
 import type { FetchResult, PriceOverviewRow, PriceSource } from "./types.ts";
 
 const SOURCE_LABEL: Record<PriceSource, string> = {
@@ -123,12 +124,9 @@ export function PricesScreen() {
         <Alert message={error} />
       </Card>
 
-      {reloadableCards({
-        reviewKey,
-        gridKey,
-        onReviewChanged: changed,
-        onGridChanged: overview.reload,
-      })}
+      {/* Both counters start at 0 and bump together: the name in each key keeps the cards apart. */}
+      <OnlinePrices key={`review-${reviewKey}`} onChanged={changed} />
+      <MonthGrid key={`grid-${gridKey}`} onChanged={overview.reload} />
       <CsvImport onImported={changed} />
       <Resource loaded={overview}>
         {(rows) => <Positions products={rows} onSaved={overview.reload} />}

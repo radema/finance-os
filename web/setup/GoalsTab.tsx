@@ -3,14 +3,15 @@ import type { GoalListView } from "../../engine/goalViews.ts";
 import type { Goal, GoalInput } from "../../engine/schemas.ts";
 import { PRIORITIES } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { copyOfGoal } from "../duplicate.ts";
 import { checkFields, type Rule } from "../formErrors.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, percentToFraction } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { currentMonth, formatEuro, formatPercent } from "../money.ts";
-import { copyOfGoal } from "./duplicate.ts";
+import { RowActions, useRowEditor } from "../rowEditor.tsx";
+import { useFormErrors } from "../useFormErrors.ts";
 import { fromMonthInForce, monthlyInForce, valuationMonth } from "./goalPlan.ts";
-import { useRevealForm } from "./revealForm.ts";
 import {
   Alert,
   Card,
@@ -23,7 +24,6 @@ import {
   SelectField,
   TextField,
 } from "./ui.tsx";
-import { useFormErrors } from "./useFormErrors.ts";
 
 interface Form {
   name: string;
@@ -202,20 +202,22 @@ export function GoalsTab() {
   const goals = useLoad<Goal[]>("/api/goals");
   const valuation = useLoad<GoalListView>("/api/goal-list");
   const [form, setForm] = useState<Form>(emptyForm);
-  const [editing, setEditing] = useState<string>();
-  const [copying, setCopying] = useState(false);
   const [selected, setSelected] = useState<string>();
   const { errors, alert, reject, fail, clear } = useFormErrors<FormKey>(LABELS, API_KEYS);
+  const editor = useRowEditor<Goal>({
+    load: (g, isCopy) =>
+      setForm(isCopy ? { ...toForm(copyOfGoal(g)), monthly: monthlyText(g) } : toForm(g)),
+    clear,
+  });
+  const { editing, copying } = editor;
   const set = <K extends keyof Form>(key: K, value: Form[K]) => {
     setForm({ ...form, [key]: value });
     clear(key as FormKey);
   };
-  const { formRef, reveal } = useRevealForm();
 
   const reset = () => {
     setForm(emptyForm());
-    setEditing(undefined);
-    setCopying(false);
+    editor.stop();
   };
   const save = async () => {
     const rules = rulesOf(editing !== undefined);
@@ -224,7 +226,7 @@ export function GoalsTab() {
     try {
       const body = toInput(form);
       if (editing) {
-        await api("PUT", "/api/goals", { body: { id: editing, ...body } });
+        await api("PUT", "/api/goals", { body: { id: editing.id, ...body } });
       } else {
         const created = await api<Goal>("POST", "/api/goals", { body });
         if (form.monthly.trim() !== "") {
@@ -249,7 +251,7 @@ export function GoalsTab() {
     try {
       await api("DELETE", "/api/goals", { query: { id } });
       clear();
-      if (editing === id) reset();
+      if (editing?.id === id) reset();
       if (selected === id) setSelected(undefined);
       goals.reload();
     } catch (failure) {
@@ -270,7 +272,7 @@ export function GoalsTab() {
       <Card title={editing ? "Edit goal" : "Add goal"}>
         <RequiredLegend />
         <form
-          ref={formRef}
+          ref={editor.formRef}
           className="form-grid"
           noValidate
           onSubmit={(event) => {
@@ -404,47 +406,21 @@ export function GoalsTab() {
                             {month === undefined ? "" : formatEuro(monthlyInForce(g.plan, month))}
                           </td>
                           <td className="num">{formatPercent(g.contributionGrowth)}</td>
-                          <td className="row-actions">
-                            <button
-                              className="btn btn-quiet"
-                              type="button"
-                              onClick={() => setSelected(g.id)}
-                            >
-                              Plan
-                            </button>
-                            <button
-                              className="btn btn-quiet"
-                              type="button"
-                              onClick={() => {
-                                setEditing(g.id);
-                                setCopying(false);
-                                setForm(toForm(g));
-                                clear();
-                                reveal();
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="btn btn-quiet"
-                              type="button"
-                              onClick={() => {
-                                setEditing(undefined);
-                                setCopying(true);
-                                setForm({ ...toForm(copyOfGoal(g)), monthly: monthlyText(g) });
-                                clear();
-                                reveal();
-                              }}
-                            >
-                              Duplicate
-                            </button>
-                            <ConfirmButton
-                              label="Delete"
-                              confirmLabel="Delete goal"
-                              apart
-                              onConfirm={() => void remove(g.id)}
-                            />
-                          </td>
+                          <RowActions
+                            row={g}
+                            editor={editor}
+                            noun="goal"
+                            onDelete={() => void remove(g.id)}
+                            before={
+                              <button
+                                className="btn btn-quiet"
+                                type="button"
+                                onClick={() => setSelected(g.id)}
+                              >
+                                Plan
+                              </button>
+                            }
+                          />
                         </tr>
                       );
                     })}

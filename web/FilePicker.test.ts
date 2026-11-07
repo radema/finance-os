@@ -14,7 +14,7 @@ const render = (fileName: string | undefined, disabled = false) =>
       onChange: () => {},
     }),
   );
-const css = readFileSync(new URL("../setup.css", import.meta.url), "utf8");
+const css = readFileSync(new URL("./setup.css", import.meta.url), "utf8");
 
 describe("file picker (AC-89)", () => {
   it("is an outlined button with the label text, wrapping a real file input", () => {

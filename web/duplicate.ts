@@ -1,4 +1,4 @@
-import type { CashFlowEvent, Goal, Product, Transaction } from "../../engine/schemas.ts";
+import type { CashFlowEvent, Goal, Product, Transaction } from "../engine/schemas.ts";
 
 // Duplicate fills the create form with a copy of a row. These are the copy rules of the option
 // chosen in #71; the user saves through the existing create path.

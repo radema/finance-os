@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CashFlowEvent, Goal, Product, Transaction } from "../../engine/schemas.ts";
+import type { CashFlowEvent, Goal, Product, Transaction } from "../engine/schemas.ts";
 import { copyOfEvent, copyOfGoal, copyOfProduct, copyOfTransaction } from "./duplicate.ts";
 
 const product: Product = {

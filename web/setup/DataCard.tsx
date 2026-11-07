@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api, messageOf } from "../api.ts";
 import { download } from "../download.ts";
-import { FilePicker } from "./FilePicker.tsx";
+import { FilePicker } from "../FilePicker.tsx";
 import { Alert, Card } from "./ui.tsx";
 
 const EXPORT_FILE = "gbi-export.json";
