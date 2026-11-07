@@ -1,7 +1,7 @@
-import type { ChangeEvent } from "react";
 import { useState } from "react";
 import { api, messageOf } from "../api.ts";
 import { download } from "../download.ts";
+import { FilePicker } from "./FilePicker.tsx";
 import { Alert, Card } from "./ui.tsx";
 
 const EXPORT_FILE = "gbi-export.json";
@@ -33,11 +33,8 @@ export function DataCard({ onImported }: { onImported: () => void }) {
     }
   };
 
-  const choose = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  const choose = async (file: File) => {
     setDone(undefined);
-    if (!file) return;
     try {
       setChosen({ name: file.name, document: JSON.parse(await file.text()) });
       setError(undefined);
@@ -77,16 +74,13 @@ export function DataCard({ onImported }: { onImported: () => void }) {
         >
           {busy === "exporting" ? "Exporting..." : "Export data"}
         </button>
-        <label className="btn btn-quiet">
-          Choose a file to import
-          <input
-            type="file"
-            accept=".json,application/json"
-            hidden
-            disabled={busy !== undefined}
-            onChange={(event) => void choose(event)}
-          />
-        </label>
+        <FilePicker
+          label="Choose a file to import"
+          accept=".json,application/json"
+          fileName={chosen?.name}
+          disabled={busy !== undefined}
+          onChange={(file) => void choose(file)}
+        />
       </div>
       {chosen ? (
         <div className="flag" role="alert">

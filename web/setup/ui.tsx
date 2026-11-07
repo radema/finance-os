@@ -375,19 +375,26 @@ export function ConfirmButton({
   label,
   confirmLabel = "Confirm",
   apart = false,
+  outlined = false,
   onConfirm,
 }: {
   label: string;
   confirmLabel?: string;
   /** In a row-actions group: sit apart from the other actions. */
   apart?: boolean;
+  /** A button of its own, not a row action: the normal outlined look. */
+  outlined?: boolean;
   onConfirm: () => void;
 }) {
   const [asking, setAsking] = useState(false);
   const setApart = apart ? " set-apart" : "";
   if (!asking) {
     return (
-      <button className={`btn btn-quiet${setApart}`} type="button" onClick={() => setAsking(true)}>
+      <button
+        className={`btn${outlined ? "" : " btn-quiet"}${setApart}`}
+        type="button"
+        onClick={() => setAsking(true)}
+      >
         {label}
       </button>
     );

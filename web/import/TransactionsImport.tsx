@@ -8,6 +8,7 @@ import type { RowDecision } from "../../engine/transactionImport.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { Loading } from "../Loading.tsx";
+import { FilePicker } from "../setup/FilePicker.tsx";
 import { Alert, Card, ConfirmButton, Field, SelectField, TextField } from "../setup/ui.tsx";
 import type { Bucket } from "../split/splitState.ts";
 import { missingFields } from "./importState.ts";
@@ -70,6 +71,7 @@ export function TransactionsImport({ onImported }: { onImported: () => void }) {
   const weights = useLoad<Weight[]>("/api/allocation");
 
   const [pasted, setPasted] = useState("");
+  const [pickedName, setPickedName] = useState<string>();
   const [file, setFile] = useState<FilePayload>();
   const [read, setRead] = useState<ReadResult>();
   const [mapping, setMapping] = useState<ImportMapping>();
@@ -264,16 +266,15 @@ export function TransactionsImport({ onImported }: { onImported: () => void }) {
           </button>
           <TemplateButton kind="transactions" />
         </div>
-        <Field label="Or upload a file">
-          <input
-            type="file"
-            accept=".csv,.txt,.xlsx,text/csv,text/plain"
-            onChange={(event) => {
-              const picked = event.target.files?.[0];
-              if (picked) void upload(picked);
-            }}
-          />
-        </Field>
+        <FilePicker
+          label="Or upload a file"
+          accept=".csv,.txt,.xlsx,text/csv,text/plain"
+          fileName={pickedName}
+          onChange={(picked) => {
+            setPickedName(picked.name);
+            void upload(picked);
+          }}
+        />
         {parsing ? <p className="note">Reading the file…</p> : null}
         {!parsing && !read && !error ? (
           <p className="note">No file yet. Paste text or upload a file to start.</p>
