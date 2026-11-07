@@ -7,7 +7,7 @@ import {
   recordFields,
 } from "../../engine/recordImport.ts";
 import { api, messageOf } from "../api.ts";
-import { FilePicker } from "../setup/FilePicker.tsx";
+import { FilePicker, PASTED_TEXT, shownFileName } from "../setup/FilePicker.tsx";
 import { Alert, Card, Field, SelectField } from "../setup/ui.tsx";
 import { TemplateButton } from "./TemplateButton.tsx";
 import { DATES, DECIMALS, DELIMITERS, toBase64 } from "./TransactionsImport.tsx";
@@ -31,7 +31,6 @@ interface Commit {
 /** Operations > Import > Products or Goals: read a file, map the columns, check the rows, import. */
 export function RecordImport({ kind, onImported }: { kind: RecordKind; onImported: () => void }) {
   const [pasted, setPasted] = useState("");
-  const [pickedName, setPickedName] = useState<string>();
   const [file, setFile] = useState<FilePayload>();
   const [read, setRead] = useState<ReadResult>();
   const [mapping, setMapping] = useState<Mapping>();
@@ -148,7 +147,7 @@ export function RecordImport({ kind, onImported }: { kind: RecordKind; onImporte
             className="btn"
             type="button"
             disabled={pasted.trim() === "" || parsing}
-            onClick={() => void readFile({ fileName: "pasted text", text: pasted })}
+            onClick={() => void readFile({ fileName: PASTED_TEXT, text: pasted })}
           >
             Read pasted text
           </button>
@@ -157,9 +156,8 @@ export function RecordImport({ kind, onImported }: { kind: RecordKind; onImporte
         <FilePicker
           label="Or upload a file"
           accept=".csv,.txt,.xlsx,text/csv,text/plain"
-          fileName={pickedName}
+          fileName={shownFileName(file?.fileName)}
           onChange={(picked) => {
-            setPickedName(picked.name);
             void upload(picked);
           }}
         />

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { FilePicker } from "./FilePicker.tsx";
+import { FilePicker, PASTED_TEXT, shownFileName } from "./FilePicker.tsx";
 
 const render = (fileName: string | undefined, disabled = false) =>
   renderToStaticMarkup(
@@ -48,5 +48,15 @@ describe("file picker (AC-89)", () => {
   });
   it("passes disabled to the input", () => {
     expect(render(undefined, true)).toMatch(/<input[^>]*disabled/);
+  });
+});
+
+describe("file picker name (AC-89)", () => {
+  it("names the uploaded file", () => {
+    expect(shownFileName("prices.csv")).toBe("prices.csv");
+  });
+  it("names no file before a read, and after the pasted text was read", () => {
+    expect(shownFileName(undefined)).toBeUndefined();
+    expect(shownFileName(PASTED_TEXT)).toBeUndefined();
   });
 });
