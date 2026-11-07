@@ -6,9 +6,9 @@ import { FINECO_PRESET, TRANSACTION_FIELDS } from "../../engine/importMapping.ts
 import type { Product } from "../../engine/schemas.ts";
 import type { RowDecision } from "../../engine/transactionImport.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { FilePicker, PASTED_TEXT, shownFileName } from "../FilePicker.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { Loading } from "../Loading.tsx";
-import { FilePicker, PASTED_TEXT, shownFileName } from "../setup/FilePicker.tsx";
 import { Alert, Card, ConfirmButton, Field, SelectField, TextField } from "../setup/ui.tsx";
 import type { Bucket } from "../split/splitState.ts";
 import { missingFields } from "./importState.ts";

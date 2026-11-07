@@ -2,24 +2,23 @@ import { useState } from "react";
 import type { CashFlowView } from "../../engine/cashFlow.ts";
 import type { CashFlow, CashFlowEvent } from "../../engine/schemas.ts";
 import { api, useLoad } from "../api.ts";
+import { copyOfEvent } from "../duplicate.ts";
 import { checkFields } from "../formErrors.ts";
 import { centsToEuros, eurosToCents, num } from "../forms.ts";
 import { formatEuro } from "../money.ts";
+import { RowActions, useRowEditor } from "../rowEditor.tsx";
+import { useFormErrors } from "../useFormErrors.ts";
 import { CashFlowTable } from "./CashFlowTable.tsx";
 import { hasUnsavedValues, isUnset, savedDocument, toValues, type Values } from "./cashFlowForm.ts";
-import { copyOfEvent } from "./duplicate.ts";
-import { useRevealForm } from "./revealForm.ts";
 import {
   Alert,
   Card,
-  ConfirmButton,
   NumberField,
   RequiredLegend,
   Resource,
   SaveStatus,
   TextField,
 } from "./ui.tsx";
-import { useFormErrors } from "./useFormErrors.ts";
 
 // The two forms of the screen share one document, so one failed save can name a field of either.
 const LABELS = {
@@ -34,6 +33,13 @@ const LABELS = {
 type FormKey = keyof typeof LABELS;
 
 type EventForm = { year: string; label: string; amount: string };
+type ListedEvent = CashFlowEvent & { index: number };
+
+const toEventForm = (e: CashFlowEvent): EventForm => ({
+  year: String(e.year),
+  label: e.label,
+  amount: centsToEuros(e.amount),
+});
 
 function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlowView) => void }) {
   const { cashFlow, rows } = view;
@@ -44,10 +50,13 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
   });
   const [values, setValues] = useState<Values>(() => toValues(cashFlow));
   const [event, setEvent] = useState<EventForm>(emptyEvent);
-  const [editing, setEditing] = useState<number>();
-  const [copying, setCopying] = useState(false);
   const { errors, alert, reject, fail, clear } = useFormErrors<FormKey>(LABELS);
-  const { formRef, reveal } = useRevealForm("form");
+  const editor = useRowEditor<ListedEvent>({
+    scope: "form",
+    load: (e, isCopy) => setEvent(toEventForm(isCopy ? copyOfEvent(e) : e)),
+    clear,
+  });
+  const { editing, copying } = editor;
 
   const save = async (body: CashFlow): Promise<boolean> => {
     try {
@@ -63,8 +72,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
   const saveEvents = async (events: CashFlowEvent[]) => {
     if (await save({ ...cashFlow, events })) {
       setEvent(emptyEvent());
-      setEditing(undefined);
-      setCopying(false);
+      editor.stop();
     }
   };
   const submitEvent = () => {
@@ -77,7 +85,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
     };
     const events = [...cashFlow.events];
     if (editing === undefined) events.push(next);
-    else events[editing] = next;
+    else events[editing.index] = next;
     void saveEvents(events);
   };
 
@@ -95,7 +103,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
       required
     />
   );
-  const listed = cashFlow.events
+  const listed: ListedEvent[] = cashFlow.events
     .map((e, index) => ({ ...e, index }))
     .sort((a, b) => a.year - b.year || a.index - b.index);
 
@@ -160,51 +168,14 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
                     <td>{e.year}</td>
                     <td>{e.label}</td>
                     <td className="num">{formatEuro(e.amount)}</td>
-                    <td className="row-actions">
-                      <button
-                        className="btn btn-quiet"
-                        type="button"
-                        onClick={() => {
-                          setEditing(e.index);
-                          setCopying(false);
-                          setEvent({
-                            year: String(e.year),
-                            label: e.label,
-                            amount: centsToEuros(e.amount),
-                          });
-                          clear();
-                          reveal();
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-quiet"
-                        type="button"
-                        onClick={() => {
-                          const copy = copyOfEvent(e);
-                          setEditing(undefined);
-                          setCopying(true);
-                          setEvent({
-                            year: String(copy.year),
-                            label: copy.label,
-                            amount: centsToEuros(copy.amount),
-                          });
-                          clear();
-                          reveal();
-                        }}
-                      >
-                        Duplicate
-                      </button>
-                      <ConfirmButton
-                        label="Delete"
-                        confirmLabel="Delete event"
-                        apart
-                        onConfirm={() =>
-                          void saveEvents(cashFlow.events.filter((_, i) => i !== e.index))
-                        }
-                      />
-                    </td>
+                    <RowActions
+                      row={e}
+                      editor={editor}
+                      noun="event"
+                      onDelete={() =>
+                        void saveEvents(cashFlow.events.filter((_, i) => i !== e.index))
+                      }
+                    />
                   </tr>
                 ))}
               </tbody>
@@ -213,7 +184,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
         )}
         <RequiredLegend />
         <form
-          ref={formRef}
+          ref={editor.formRef}
           className="inline-form"
           noValidate
           onSubmit={(e) => {
@@ -254,8 +225,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
               className="btn btn-quiet"
               type="button"
               onClick={() => {
-                setEditing(undefined);
-                setCopying(false);
+                editor.stop();
                 setEvent(emptyEvent());
               }}
             >

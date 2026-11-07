@@ -5,17 +5,17 @@ import { flowsTaken } from "../../engine/pension.ts";
 import type { Commission, Goal, PensionPlan, Product, Transaction } from "../../engine/schemas.ts";
 import { PENSION_FLOWS } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { DateInput } from "../DateInput.tsx";
+import { copyOfTransaction } from "../duplicate.ts";
 import { checkFields, type FieldErrors } from "../formErrors.ts";
 import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro, formatPercent, formatPrice, formatQuantity } from "../money.ts";
-import { DateInput } from "../setup/DateInput.tsx";
-import { copyOfTransaction } from "../setup/duplicate.ts";
-import { type RevealFormRef, useRevealForm } from "../setup/revealForm.ts";
+import type { RevealFormRef } from "../revealForm.ts";
+import { RowActions, useRowEditor } from "../rowEditor.tsx";
 import {
   Alert,
   Card,
-  ConfirmButton,
   Field,
   NumberField,
   ProductTag,
@@ -24,7 +24,7 @@ import {
   SelectField,
   TextField,
 } from "../setup/ui.tsx";
-import { useFormErrors } from "../setup/useFormErrors.ts";
+import { useFormErrors } from "../useFormErrors.ts";
 import { cashMovement, fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
 
 // `opening` is written by the Current portfolio form in S2, so the form does not offer it.
@@ -312,9 +312,8 @@ export function TransactionsScreen() {
   const [goalFilter, setGoalFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [error, setError] = useState<string>();
-  const [editing, setEditing] = useState<Transaction>();
-  const [copying, setCopying] = useState<Transaction>();
-  const { formRef, reveal } = useRevealForm();
+  const editor = useRowEditor<Transaction>({});
+  const { editing, copying } = editor;
 
   const query = new URLSearchParams();
   if (goalFilter) query.set("goalId", goalFilter);
@@ -325,8 +324,7 @@ export function TransactionsScreen() {
     try {
       await api("DELETE", "/api/transactions", { query: { id } });
       setError(undefined);
-      if (editing?.id === id) setEditing(undefined);
-      if (copying?.id === id) setCopying(undefined);
+      if (editing?.id === id || copying?.id === id) editor.stop();
       list.reload();
     } catch (failure) {
       setError(messageOf(failure));
@@ -363,16 +361,12 @@ export function TransactionsScreen() {
                           products={productList}
                           commission={plan}
                           pensionPlan={pensionPlan.data}
-                          formRef={formRef}
+                          formRef={editor.formRef}
                           onSaved={() => {
-                            setEditing(undefined);
-                            setCopying(undefined);
+                            editor.stop();
                             list.reload();
                           }}
-                          onCancel={() => {
-                            setEditing(undefined);
-                            setCopying(undefined);
-                          }}
+                          onCancel={editor.stop}
                         />
                       )}
                     </Resource>
@@ -447,40 +441,13 @@ export function TransactionsScreen() {
                           <td className="num">
                             {t.commissionCents === null ? "–" : formatEuro(t.commissionCents)}
                           </td>
-                          <td className="row-actions">
-                            {t.type === "opening" ? null : (
-                              <button
-                                className="btn btn-quiet"
-                                type="button"
-                                onClick={() => {
-                                  setCopying(undefined);
-                                  setEditing(t);
-                                  reveal();
-                                }}
-                              >
-                                Edit
-                              </button>
-                            )}
-                            {t.type === "opening" ? null : (
-                              <button
-                                className="btn btn-quiet"
-                                type="button"
-                                onClick={() => {
-                                  setEditing(undefined);
-                                  setCopying(t);
-                                  reveal();
-                                }}
-                              >
-                                Duplicate
-                              </button>
-                            )}
-                            <ConfirmButton
-                              label="Delete"
-                              confirmLabel="Delete transaction"
-                              apart
-                              onConfirm={() => void remove(t.id)}
-                            />
-                          </td>
+                          <RowActions
+                            row={t}
+                            editor={editor}
+                            noun="transaction"
+                            editable={t.type !== "opening"}
+                            onDelete={() => void remove(t.id)}
+                          />
                         </tr>
                       );
                     })}

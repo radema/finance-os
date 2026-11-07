@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { type FieldErrors, mapServerError } from "../formErrors.ts";
+import { type FieldErrors, mapServerError } from "./formErrors.ts";
 
 /** Puts the focus on the first field the page marks invalid. */
 function focusFirstInvalid(): void {

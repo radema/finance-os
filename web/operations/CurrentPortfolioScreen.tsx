@@ -2,10 +2,10 @@ import { useState } from "react";
 import type { GoalListView } from "../../engine/goalViews.ts";
 import type { Product, Settings, Transaction } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { DateInput } from "../DateInput.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatEuro, formatQuantity } from "../money.ts";
 import { TRANSACTIONS_ROUTE } from "../nav.ts";
-import { DateInput } from "../setup/DateInput.tsx";
 import {
   Alert,
   Card,

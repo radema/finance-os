@@ -5,7 +5,7 @@ import { EmptyState } from "../EmptyState.tsx";
 import { fractionToPercent } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
-import { openCard } from "../setup/revealForm.ts";
+import { openCard } from "../revealForm.ts";
 import {
   Alert,
   Card,

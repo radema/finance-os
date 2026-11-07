@@ -1,10 +1,10 @@
 import { useId, useState } from "react";
 import type { Goal } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { DateInput } from "../DateInput.tsx";
 import { checkFields } from "../formErrors.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatQuantity, formatUnitPrice } from "../money.ts";
-import { DateInput } from "../setup/DateInput.tsx";
 import { Card, DecimalInput, ProductTag, Resource, SaveStatus } from "../setup/ui.tsx";
 import { type BrokerEdits, brokerBody, brokerFields, changedBrokerRows } from "./model.ts";
 import type { PriceOverviewRow } from "./types.ts";

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api, messageOf } from "../api.ts";
+import { FilePicker, PASTED_TEXT, shownFileName } from "../FilePicker.tsx";
 import { TemplateButton } from "../import/TemplateButton.tsx";
-import { FilePicker, PASTED_TEXT, shownFileName } from "../setup/FilePicker.tsx";
 import { Alert, Card, Field, SelectField } from "../setup/ui.tsx";
 import type { ImportResult } from "./types.ts";
 
