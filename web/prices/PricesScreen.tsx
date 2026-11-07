@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { canUseProvider, PRICE_SOURCES } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { formatUnitPrice } from "../money.ts";
 import { Alert, Card, ProductTag, Resource } from "../setup/ui.tsx";
 import { CsvImport } from "./CsvImport.tsx";
+import { canRefetch, sourceOptions } from "./model.ts";
 import { Positions } from "./Positions.tsx";
 import { PriceFreshnessPill } from "./PriceFreshnessPill.tsx";
 import { reloadableCards } from "./reloadableCards.tsx";
@@ -84,9 +84,7 @@ export function PricesScreen() {
                             value={row.priceSource}
                             onChange={(event) => void setSource(row.productId, event.target.value)}
                           >
-                            {PRICE_SOURCES.filter(
-                              (source) => source !== "provider" || canUseProvider(row.regime),
-                            ).map((source) => (
+                            {sourceOptions(row).map((source) => (
                               <option key={source} value={source}>
                                 {SOURCE_LABEL[source]}
                               </option>
@@ -101,16 +99,18 @@ export function PricesScreen() {
                           <PriceFreshnessPill age={row.age} />
                         </td>
                         <td>
-                          {row.priceSource === "provider" ? (
+                          {canRefetch(row) ? (
                             <button
-                              className="btn btn-quiet"
+                              className="btn"
                               type="button"
                               aria-label={`Re-fetch ${row.name}`}
                               onClick={() => void refetch(row.productId)}
                             >
                               Re-fetch
                             </button>
-                          ) : null}
+                          ) : (
+                            "–"
+                          )}
                         </td>
                       </tr>
                     ))}

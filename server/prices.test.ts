@@ -384,10 +384,15 @@ describe("Prices API", () => {
     interface Overview {
       productId: string;
       priceSource: string;
+      ticker: string;
       lastPrice: { price: number; priceDate: string } | null;
     }
     const overview = async () => (await call<Overview[]>("GET", "/api/prices/overview")).body;
-    expect((await overview())[0]).toMatchObject({ priceSource: "manual", lastPrice: null });
+    expect((await overview())[0]).toMatchObject({
+      priceSource: "manual",
+      ticker: "VWCE.MI",
+      lastPrice: null,
+    });
     await call("PUT", "/api/prices", { productId, month: "2026-03", price: 101.5 });
     const set = await call("PUT", "/api/prices/source", { productId, priceSource: "csv" });
     expect(set.status).toBe(200);

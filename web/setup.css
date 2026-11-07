@@ -412,6 +412,20 @@ input.inline-input {
   max-width: 6em;
   text-align: right;
 }
+input.inline-date {
+  max-width: 10em;
+}
+/* One line per row: a control plus a hairline of padding makes about 40px. */
+.table-compact td {
+  padding-block: var(--s1);
+}
+/* The month grid: the month columns share the width equally, the product column is a fixed share. */
+.price-grid {
+  table-layout: fixed;
+}
+.price-grid th:first-child {
+  width: 22%;
+}
 
 /* Need / Want / Wish: a marker plus a tint, so the shape carries the meaning too. */
 .prio,

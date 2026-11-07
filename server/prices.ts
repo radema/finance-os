@@ -205,6 +205,7 @@ export async function loadPriceOverview(db: Kysely<DB>, today: string) {
       name: product.name,
       regime: product.regime,
       priceSource: product.priceSource,
+      ticker: product.ticker,
       lastPrice: last ? { price: fromScaled(last.priceScaled), priceDate: last.priceDate } : null,
       age: priceAge(product, own, today, thresholds.dailyPriceAgeDays),
       brokerUnits:
