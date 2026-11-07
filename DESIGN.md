@@ -103,6 +103,9 @@ is `--control-h` high. KPI cards wrap in equal columns chosen from the card coun
 The Setup screens (all tabs and the Glossary) sit in `.setup-column`, capped at `--setup-max` (1200 px,
 in `tokens.css`), so rows stay easy to scan at 1920 px and forms keep to about five columns. Charts and
 the other screens keep the full width.
+Notes and callouts (`.note`, `.callout`: callouts under charts, the Next contribution note, the Pension
+capital note, the Optimizer callouts) share one width, `--note-max` (70ch, in `tokens.css`), so a line
+holds about 70 characters at any window width.
 
 ## Components
 

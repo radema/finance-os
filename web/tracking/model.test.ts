@@ -5,6 +5,7 @@ import {
   historyMonths,
   historyOf,
   metricOf,
+  nextTicketText,
   scopeKey,
   scopeOfKey,
   scopeQuery,
@@ -137,5 +138,19 @@ describe("texts", () => {
       2,
     );
     expect(historyMonths({ months: [] })).toBe(0);
+  });
+});
+
+describe("Next contribution ticket text (AC-71, AC-89)", () => {
+  it("says the amount is below the minimum efficient ticket, calmly", () => {
+    expect(nextTicketText({ wait: true, amount: 139126, minTicket: 155263 })).toBe(
+      "1.391,26\u00a0\u20ac is below the minimum efficient ticket (1.552,63\u00a0\u20ac). Add it to next month's contribution.",
+    );
+  });
+
+  it("names the ticket when the amount reaches it", () => {
+    expect(nextTicketText({ wait: false, amount: 200000, minTicket: 155263 })).toBe(
+      "No need to wait. The minimum efficient ticket is 1.552,63\u00a0\u20ac.",
+    );
   });
 });

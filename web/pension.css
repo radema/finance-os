@@ -15,6 +15,3 @@ input.flow-input {
 input.flow-input::placeholder {
   color: var(--muted);
 }
-.capital-note {
-  max-width: 46em;
-}

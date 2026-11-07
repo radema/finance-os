@@ -7,7 +7,7 @@ import { formatEuro, formatPercent } from "../money.ts";
 import { Card, Resource } from "../setup/ui.tsx";
 import { CumulativeChart } from "./CumulativeChart.tsx";
 import { Exhibit } from "./Exhibit.tsx";
-import { gapText } from "./model.ts";
+import { gapText, nextTicketText } from "./model.ts";
 import { TimeChart } from "./TimeChart.tsx";
 
 const centsAxis = (cents: number) => formatEuro(cents).replace(/,00/, "");
@@ -30,11 +30,7 @@ function NextCard({ next }: { next: NextContributionView | null }) {
         <GoalChip id={next.goalId} name={next.goalName} slot={next.slot} />, the goal furthest
         behind its plan.
       </p>
-      <p className={next.wait ? "wait" : "note"}>
-        {next.wait
-          ? `Wait. ${formatEuro(next.amount)} is below the minimum efficient ticket of ${formatEuro(next.minTicket)}, so the commission takes a larger share than your plan's rate. Add it to next month's contribution.`
-          : `No need to wait. The minimum efficient ticket is ${formatEuro(next.minTicket)}.`}
-      </p>
+      <p className="note">{nextTicketText(next)}</p>
       <div className="table-scroll">
         <table className="table">
           <thead>

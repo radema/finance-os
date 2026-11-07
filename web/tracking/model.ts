@@ -5,7 +5,7 @@ import type { PerformanceScope } from "../../engine/performance.ts";
 import type { SnapshotGoal, SnapshotView } from "../../engine/snapshot.ts";
 import type { PerformanceView } from "../../engine/trackingViews.ts";
 import { usesSlotLine } from "../goals/outlook.ts";
-import { formatPercent } from "../money.ts";
+import { formatEuro, formatPercent } from "../money.ts";
 
 /** What Goal history draws. Funded ratio is not in the spec: it is value / target at the month. */
 export type HistoryMetric = "prob" | "funded" | "median";
@@ -111,6 +111,16 @@ export const scopeQuery = (scope: PerformanceScope): string =>
 /** Whether a goal is ahead of or behind its plan, from the cumulative gap in cents. */
 export const gapText = (gapCents: number): string =>
   gapCents < 0 ? "behind" : gapCents > 0 ? "ahead" : "on plan";
+
+/** The note under the Next contribution amount: one calm line, whether to add it to next month. */
+export const nextTicketText = (next: {
+  wait: boolean;
+  amount: number;
+  minTicket: number;
+}): string =>
+  next.wait
+    ? `${formatEuro(next.amount)} is below the minimum efficient ticket (${formatEuro(next.minTicket)}). Add it to next month's contribution.`
+    : `No need to wait. The minimum efficient ticket is ${formatEuro(next.minTicket)}.`;
 
 /** Why an XIRR is missing, or undefined when there is one. */
 export const xirrNote = (xirr: number | null): string | undefined =>
