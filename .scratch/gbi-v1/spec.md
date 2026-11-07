@@ -271,6 +271,8 @@ and say so.
 | O5 Spend least | min monthly needed | higher median | – |
 | O4 Maximise the chance | max P, no feasibility filter | higher median | – |
 
+The UI shows the rule names only ("Protect the bad case"); O1–O5 are internal ids in code, stored values and this spec (#155).
+
 For O4 the "not feasible" flag is set when the best P is below the required probability. For O5,
 feasibility is P ≥ required at the goal's current monthly amount; there is no maximum monthly amount
 (ceiling). With no feasible mix O5 returns the highest-P mix with the "not feasible" flag, like the
@@ -409,7 +411,7 @@ Screens (content; acceptance in the Definition of done):
 | Goal detail | A back link to the Goals list and a goal switch at the top (no sidebar item; `#/goals/detail` with no goal opens the Goals list). Value, P vs required, XIRR, fan, P history, range chart, "what it would take" (needed det./prob., horizon), holdings (units, price + age, PMC, gain, tax if sold), value vs money put in, cumulative plan vs actual, change the monthly plan from month X, 50% capital note on the pension goal |
 | Goal history | Metric switch (P, funded ratio, median/target); a line per goal over snapshots; snapshot table; Save snapshot; delete saved snapshots |
 | Independence | One tile per level (1 Financial security, 2 Barista FIRE, 3 Lean FIRE, 4 Financial Freedom): the year the typical case reaches it, the deterministic year, P(reached in 20 y) and the target; one chart: projected wealth (typical case, bad to good band) against each level's target line over time; "what counts" per goal; editable expense split; multipliers, efMonths, Level 1 source and the include-pension switch under "Level rules". No % reached, no progress ladder, no deterministic line in the chart (#128) |
-| Optimizer | Bucket, mode, criterion (4 named options), max per product, product universe; "How the optimizer chooses" panel; suggested vs current weights; outcomes compared; switch tax; scatter of all mixes (x = P, y = median; one mix: a sentence instead); top 10; rule text; "Use as contribution weights"; known-limit note |
+| Optimizer | Bucket, mode, criterion (4 named options), max per product, product universe; "How the optimizer chooses" panel; suggested vs current weights; outcomes compared (with a signed Change column); short mix labels (full names in a tooltip); a small-gain note next to "Use as contribution weights"; switch tax; scatter of all mixes (x = P, y = median; one mix: a sentence instead); top 10; rule text; "Use as contribution weights"; known-limit note |
 | Performance | Scope selector; value, gain, TWR since start/YTD/12m, XIRR, max drawdown; charts: value vs money put in, growth of €100, drawdown, monthly returns; table for all scopes |
 | Plan vs actual | Planned vs put in since trackingStart; monthly actual series; next contribution card with product split, commission and cost %; cumulative planned vs actual per goal |
 | Pension | This year: cap, used, still available (never below 0; when used > cap + extra, a line "€X of this year's payments are not tax-deductible"), refund, exit tax; inputs; flows table; 10-year schedule and chart; capital/annuity note |
