@@ -16,7 +16,7 @@ the real ledger, without sending personal data anywhere.
 
 A standalone, local-first web app (`gbi` command on the user's MacBook, server on `127.0.0.1`,
 browser UI) that replaces the workbook. It keeps every feature of Excel v2 and adds performance
-tracking, goal-analysis snapshots, a richer dashboard, three financial-independence levels, a
+tracking, goal-analysis snapshots, a richer dashboard, four financial-independence levels, a
 per-bucket mix optimizer and rule-based alerts. The app suggests; it never acts on the account.
 
 User: one person, regime amministrato, one Fineco account, Italian pension funds, EUR only, tax
@@ -37,7 +37,7 @@ Finance OS lives only in git history (t06).
 10. As the investor, I want the monthly contribution needed to reach each goal, so that I can act.
 11. As the investor, I want the pension fund modelled (TFR, contributions, deduction, refund, exit tax), so that retirement is planned with the real tax rules.
 12. As the investor, I want my household cash flow for 10 years against the plan, so that I see whether the plan is affordable.
-13. As the investor, I want three financial-independence levels with progress and the year each is reached, so that I see the long-term picture.
+13. As the investor, I want four financial-independence levels with progress and the year each is reached, so that I see the long-term picture.
 14. As the investor, I want TWR, XIRR and drawdown per scope, so that I know how my money performed.
 15. As the investor, I want a monthly snapshot of every goal's analysis, so that I see whether goals get safer or riskier over time.
 16. As the investor, I want plan vs actual as cumulative totals, with my plan changes versioned, so that flexible months are not flagged as failures.
@@ -125,7 +125,7 @@ performance are always derived.
 |---|---|---|
 | Settings | inflation, taxStd 26%, taxGovt 12.5%, bollo 0.2%, pensionTax 20%, required probabilities (Need 90 / Want 75 / Wish 50), MC paths (1,000), seed, trackingStart (YYYY-MM), zainetto {amount, expiry, goalId}, pension deduction cap (€5,300, one value for all years, t12), rule thresholds (R1 N months = 3 (t10), R3 36 months, R7 1.25×, status band 15 points, daily price age 7 days (t16)) | One document |
 | Commission | plan (text, default "Fineco Trading"), feeModel (`percent` \| `flat`), rate 0.19%, min €2.95, max €19, flatFee, minTicket | t03: fees depend on the plan. `percent`: fee = clamp(rate × amount, min, max), min efficient ticket = min / rate. `flat`: fee = flatFee, min efficient ticket = `minTicket` set by the user |
-| FireSettings | efFromGoal (goalId) or efMonths (12), l2Mult 300, l3Mult 200, includePension **true** (t07) | |
+| FireSettings | efFromGoal (goalId) or efMonths (12), baristaMult 200, l2Mult 300, l3Mult 200, includePension **true** (t07; baristaMult #9 follow-up, a missing value reads as 200) | |
 | AssetClass | 6 fixed: Equity, Govt bonds, Corp bonds, Multi-asset, Cash, Gold/Commodities | 6×6 correlation matrix |
 | Product | id, name, ISIN, assetClass, regime (`etf`, `direct`, `govt`, `cash`, `pension`), whiteListShare, expReturn μ, volatility σ, TER/ISC, maturity (YYYY-MM), couponRate (govt only, default 0, t12 S1), zeroCommission (per-product flag the user maintains, t03), priceSource (`provider`, `csv`, `manual`), ticker, brokerUnits? + brokerUnitsDate? (for R9) | μ, σ are user assumptions |
 | PricePoint | productId, month (YYYY-MM), price per unit, priceDate (date of the close), source (`provider`, `csv`, `manual`), fetchedAt, importBatchId? | One per product and month; the current month holds the latest close until the month ends. Bonds: price per 100. Pension: unit value |
@@ -231,9 +231,9 @@ t = year − Y0, so both growth fields are growth above inflation (#156). Planne
 its voluntary part. In the stub year income, expenses and contributions are × f; events and the
 refund are whole (t16). The first bar is labelled "rest of year".
 
-**Financial independence (t07, today's €).** Level 1 Safety = target of the `efFromGoal` goal, else
-efMonths × essential. Level 2 = l2Mult × essential monthly. Level 3 = Level 2 + l3Mult × optional
-monthly. Targets over time: target(t) = target(0) × (1 + expenseGrowth)^t, expenseGrowth being growth above inflation (0 = flat), t in
+**Financial independence (t07, today's €).** Level 1 Financial security = target of the `efFromGoal` goal, else
+efMonths × essential. Level 2 Barista FIRE = baristaMult × essential monthly. Level 3 Lean FIRE = l2Mult × essential monthly. Level 4 Financial Freedom = Level 3 + l3Mult × optional
+monthly. The setting names l2Mult and l3Mult stay as stored; they now drive Levels 3 and 4. Targets over time: target(t) = target(0) × (1 + expenseGrowth)^t, expenseGrowth being growth above inflation (0 = flat), t in
 real years from asOf. FI wealth = Σ **net** value (liquidation rule; pension: value − exit-tax rate of
 that year × basis) of buckets with countsTowardFI, pension only if includePension, deflated by
 (1 + inflation)^t — today and projected (fixes mock bug M2). Level 1 uses FI wealth **without** the
@@ -408,7 +408,7 @@ Screens (content; acceptance in the Definition of done):
 | Goals list | One row per goal; its goal chip opens the goal's page: name + priority, status, P vs required, value vs target, plan gap (t11 replaces the 9-column table) |
 | Goal detail | A back link to the Goals list and a goal switch at the top (no sidebar item; `#/goals/detail` with no goal opens the Goals list). Value, P vs required, XIRR, fan, P history, range chart, "what it would take" (needed det./prob., horizon), holdings (units, price + age, PMC, gain, tax if sold), value vs money put in, cumulative plan vs actual, change the monthly plan from month X, 50% capital note on the pension goal |
 | Goal history | Metric switch (P, funded ratio, median/target); a line per goal over snapshots; snapshot table; Save snapshot; delete saved snapshots |
-| Independence | One tile per level (1 Safety, 2, 3): the year the typical case reaches it, the deterministic year, P(reached in 20 y) and the target; one chart: projected wealth (typical case, bad to good band) against each level's target line over time; "what counts" per goal; editable expense split; multipliers, efMonths, Level 1 source and the include-pension switch under "Level rules". No % reached, no progress ladder, no deterministic line in the chart (#128) |
+| Independence | One tile per level (1 Financial security, 2 Barista FIRE, 3 Lean FIRE, 4 Financial Freedom): the year the typical case reaches it, the deterministic year, P(reached in 20 y) and the target; one chart: projected wealth (typical case, bad to good band) against each level's target line over time; "what counts" per goal; editable expense split; multipliers, efMonths, Level 1 source and the include-pension switch under "Level rules". No % reached, no progress ladder, no deterministic line in the chart (#128) |
 | Optimizer | Bucket, mode, criterion (4 named options), max per product, product universe; "How the optimizer chooses" panel; suggested vs current weights; outcomes compared; switch tax; scatter of all mixes (x = P, y = median; one mix: a sentence instead); top 10; rule text; "Use as contribution weights"; known-limit note |
 | Performance | Scope selector; value, gain, TWR since start/YTD/12m, XIRR, max drawdown; charts: value vs money put in, growth of €100, drawdown, monthly returns; table for all scopes |
 | Plan vs actual | Planned vs put in since trackingStart; monthly actual series; next contribution card with product split, commission and cost %; cumulative planned vs actual per goal |
@@ -638,7 +638,7 @@ Published by ticket 15 as one issue "GBI v2 backlog".
 
 | Question | Answer |
 |---|---|
-| FI multipliers on monthly expenses; Level 1 from EF goal or months | Monthly, 300× and 200×; Level 1 = EF goal target or efMonths × essential (t07) |
+| FI multipliers on monthly expenses; Level 1 from EF goal or months | Monthly, 300× and 200×; Level 1 = EF goal target or efMonths × essential (t07); Barista FIRE 200× essential added as Level 2 (user, 2026-11-07) |
 | FI: do pension funds count, from which age | Count by default, no age logic; excluded from Level 1 (t07) |
 | Stack | TypeScript end to end, local Node server + React, SQLite (t05) |
 | Finance OS module or standalone | Standalone restart in the same repo (map, t06) |
