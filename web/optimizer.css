@@ -87,8 +87,19 @@
   height: 0;
   border-top: 2px dashed var(--ink2);
 }
+/* Two columns, then four from 1280 px: "Max per product" always shares a row. */
 .optimizer-controls {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 1280px) {
+  .optimizer-controls {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.optimizer .sub,
+.optimizer .alert,
+.steps {
+  max-width: var(--note-max);
 }
 .optimizer {
   margin-top: var(--s4);
