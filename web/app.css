@@ -150,10 +150,8 @@ a.nav-head:hover,
 }
 .tag {
   margin-bottom: var(--s2);
-  font: 500 var(--t-axis) / var(--lh-axis) var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+  font: 500 var(--t-label) / var(--lh-label) var(--font-text);
+  color: var(--ink2);
 }
 .title {
   max-width: 34em;

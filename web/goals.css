@@ -99,7 +99,7 @@
 }
 .kpi {
   padding: var(--s3);
-  border-top: 3px solid var(--slot);
+  border: 1px solid var(--grid);
   border-radius: 8px;
   background: var(--raised);
 }
@@ -108,6 +108,22 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink2);
+}
+/* A KPI that belongs to a goal starts with a dot in the goal's colour (the screen sets --slot). */
+.kpi-label::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--s2);
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--slot);
+}
+/* KPIs that belong to no goal have no dot. */
+.kpis-blue .kpi-label::before,
+.level-tile .kpi-label::before {
+  display: none;
 }
 .kpi-value {
   margin: var(--s1) 0;

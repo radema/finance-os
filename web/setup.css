@@ -31,7 +31,6 @@
 .card {
   margin-bottom: var(--s4);
   border-radius: 8px;
-  border-top: 3px solid var(--blue);
   background: var(--raised);
   overflow: clip;
 }

@@ -24,7 +24,7 @@ Light is the default. Dark follows `prefers-color-scheme` (a manual switch is ti
 | `--wash` | `#eef1f4` | `#1b2025` | quiet fill: hover, neutral chips |
 | `--ink` | `#171b1f` | `#e6ecf2` | text, buttons, focus ring |
 | `--ink2` | `#494e52` | `#b3b8be` | subtitles, labels |
-| `--muted` | `#6a6f74` | `#8e9398` | axis labels, source line, tag line |
+| `--muted` | `#6a6f74` | `#8e9398` | axis labels, source line |
 | `--ctx` | `#a0a5ab` | `#494e52` | context series grey |
 | `--base` | `#bfc5ca` | `#393e42` | baseline, ticks, control borders |
 | `--grid` | `#e0e5eb` | `#23272b` | hairline gridlines and row rules |
@@ -65,7 +65,7 @@ Colour lives in dots, bars, fills and 1 px borders (the slot colour at 35-42%).
 
 - **Highlight family (`--hl`, `--hl2`, `--tint1`, `--tint1-strong`)** means attention: the exception, an old
   price, a worsened status. Marks only: bars, lines, dots, icons, rules. Never text, never a button.
-- **Blue** means general information: KPI accents, priority tags, card headers.
+- **Blue** means general information: priority tags, card headers.
 - **No red and no green** for status. Status is an icon plus a word, so colour is never the only channel.
 - Buttons and focus rings use `--ink`.
 - **Decided by the user on #71 (2026-11-05), as written:**
@@ -76,9 +76,11 @@ Colour lives in dots, bars, fills and 1 px borders (the slot colour at 35-42%).
 
 ## Type
 
-Geist for text and display (display weight 500, letter-spacing -0.02em). Geist Mono for the tag line.
-Both are bundled from `web/fonts/` (latin subset, variable weight 100-900, SIL OFL 1.1, licence next to
-each file). No CDN: the app loads fonts from its own files. Numbers use tabular figures.
+Source Serif 4 for titles and KPI values only (`--font-display`: page title, exhibit title, KPI value,
+card and section headings; weight 500, letter-spacing -0.02em). Geist for text (`--font-text`). Geist
+Mono for the small mono labels (KPI label, card header label, "soon" tag). All three are bundled from
+`web/fonts/` (latin subset, variable weight, SIL OFL 1.1, licence next to each file). No CDN: the app
+loads fonts from its own files. Numbers in tables and charts use Geist tabular figures.
 
 The OE type scale, one step up:
 
@@ -89,7 +91,10 @@ The OE type scale, one step up:
 | `--t-sub` | 15 / 22 px | tables, subtitle, unit line |
 | `--t-callout` | 14 / 20 px | callout, sidebar items |
 | `--t-label` | 13 / 18 px | labels, chips, legend |
-| `--t-axis` | 12 / 16 px | chart axes, small labels, source line, tag line |
+| `--t-axis` | 12 / 16 px | chart axes, small labels, source line |
+
+The kicker (the `.tag` line above a page or exhibit title) is Geist 13 px (`--t-label`), weight 500,
+`--ink2`, sentence case: no uppercase, no letter-spacing, no mono.
 
 ## Spacing
 
@@ -134,9 +139,10 @@ The gap between blocks (KPI row, card, exhibit, control grid) is `--s4`, everywh
   BTP `--tint-sand`, Pension `--tint-pink`.
 - **Price-freshness pill.** Pill, 13 px. Fresh: grey ring (`--ctx`) on `--wash`. Old: filled `--hl` dot,
   weight 600, `--tint1`, border highlight at 35%. An old price is flagged and still counted.
-- **KPI card.** `--raised`, 8 px radius, 3 px accent bar on top, tinted icon. The accent is the goal's
-  colour on a goal page and `--blue` elsewhere.
-- **Section card.** Same surface and accent bar, no outline. A header strip in `--tint-blue-faint` holds
+- **KPI card.** `--raised`, 8 px radius, 1 px `--grid` outline, no accent bar. Where a KPI belongs to a goal
+  (the Goal detail and Pension screens), an 8 px dot in the goal's slot colour comes before the label.
+  KPIs that belong to no goal (Overview, Performance, Independence levels) have no dot.
+- **Section card.** Same surface, no outline and no accent bar. A header strip in `--tint-blue-faint` holds
   an icon and a mono label (12 px, uppercase, `--ink2`) or a 17 px display heading.
 - **Sticky table header.** Every table header row is `position: sticky`, at the top of the scrolling
   page (below a top bar if there is one), with the surface colour behind it (`--raised` inside a card) and
@@ -159,7 +165,7 @@ The gap between blocks (KPI row, card, exhibit, control grid) is `--s4`, everywh
 
 ## Charts
 
-- **Exhibit anatomy.** Tag (mono, uppercase), action title that holds a number, unit line, chart,
+- **Exhibit anatomy.** Tag (the kicker: Geist 13 px, sentence case), action title that holds a number, unit line, chart,
   callout (2 px `--hl` rule on the left), source line. The source line ends with a period.
 - **Page title.** The `h1` is the name of the screen, never a finding (on a goal's page, the goal's
   name). A finding with a number is the action title (`h2`) of the first exhibit, or of the key
