@@ -23,6 +23,36 @@ a {
 a:hover {
   text-decoration-color: var(--ink);
 }
+/* Pointer targets are at least 24 px (--s4; WCAG 2.5.8). A checkbox row is one label: the box and the text.
+   A link that stands on its own gets a 24 px box without moving its neighbours. Links inside a sentence stay inline. */
+.check {
+  min-height: var(--s4);
+}
+.card-head a,
+.pbar-text,
+.alert-rule a,
+.goal-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--s4);
+}
+/* The header keeps its height: the 24 px link takes the place of the 8 px padding it replaces. */
+.card-head:has(> a) {
+  padding-block: var(--s1);
+}
+/* A card title link reads as a link: the underline is dark enough to see on the header tint. */
+.card-head a {
+  text-decoration-line: underline;
+  text-decoration-color: var(--ink2);
+}
+.card-head a:hover {
+  text-decoration-color: var(--ink);
+}
+/* The rows around these links are 18 to 21 px: the extra 2 to 3 px each side is taken back with a hairline margin. */
+.pbar-text,
+.alert-rule a {
+  margin-block: -2px;
+}
 :focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
