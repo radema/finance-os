@@ -92,27 +92,29 @@ function GoalWeights({ goal, products, rows, onChange }: GoalWeightsProps) {
       {rows.length === 0 ? (
         <p className="note">No weights yet. Add a product below.</p>
       ) : (
-        <table className="table table-weights">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th className="num">Weight</th>
-              <th className="num">Share</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <WeightRow
-                key={`${row.productId}:${row.weight}`}
-                row={row}
-                product={products.find((p) => p.id === row.productId)}
-                save={save}
-                remove={remove}
-              />
-            ))}
-          </tbody>
-        </table>
+        <div className="table-scroll table-scroll-sticky">
+          <table className="table table-weights">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th className="num">Weight</th>
+                <th className="num">Share</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <WeightRow
+                  key={`${row.productId}:${row.weight}`}
+                  row={row}
+                  product={products.find((p) => p.id === row.productId)}
+                  save={save}
+                  remove={remove}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {free.length > 0 ? (
         <form

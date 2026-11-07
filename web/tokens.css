@@ -72,6 +72,7 @@
   --s5: 32px;
   --s6: 48px;
 
+  --setup-max: 1200px;
   --control-h: calc(var(--lh-sub) + 2 * var(--s1) + 2px);
 }
 

@@ -99,7 +99,7 @@ function MethodNotes() {
 /** Setup > Glossary: the Italian terms with plain explanations, then the method notes. */
 export function GlossaryScreen() {
   return (
-    <>
+    <div className="setup-column">
       <div className="tag">Setup</div>
       <h1 className="title">Glossary and method</h1>
       <p className="unit">
@@ -130,6 +130,6 @@ export function GlossaryScreen() {
       </Card>
       <h2 className="block-title">Method notes</h2>
       <MethodNotes />
-    </>
+    </div>
   );
 }

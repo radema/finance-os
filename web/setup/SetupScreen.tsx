@@ -18,7 +18,7 @@ const SCREENS: Record<string, ComponentType> = {
 export function SetupScreen({ route }: { route: string }) {
   const Screen = SCREENS[route];
   return (
-    <>
+    <div className="setup-column">
       <div className="tag">Setup</div>
       <h1 className="title">Describe your plan</h1>
       <nav className="tabs" aria-label="Setup">
@@ -34,6 +34,6 @@ export function SetupScreen({ route }: { route: string }) {
         ))}
       </nav>
       {Screen ? <Screen /> : null}
-    </>
+    </div>
   );
 }

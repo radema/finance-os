@@ -100,6 +100,9 @@ A page header (title, or title and unit line) sits `--s4` above the first block 
 equal columns; every field spans a label row, a control row and a hint row, and every single-line control
 is `--control-h` high. KPI cards wrap in equal columns chosen from the card count. Layout is fluid and desktop-first, usable from about 1024 to
 1920 px: sidebar 232 px (248 px from 1280 px), content padding `clamp(24px, 3vw, 56px)`. Mobile is v2.
+The Setup screens (all tabs and the Glossary) sit in `.setup-column`, capped at `--setup-max` (1200 px,
+in `tokens.css`), so rows stay easy to scan at 1920 px and forms keep to about five columns. Charts and
+the other screens keep the full width.
 
 ## Components
 
@@ -127,7 +130,8 @@ is `--control-h` high. KPI cards wrap in equal columns chosen from the card coun
   page (below a top bar if there is one), with the surface colour behind it (`--raised` inside a card) and
   a hairline bottom border. Cards use `overflow: clip`, not `hidden`, so they are not a scroll container.
   A table that must scroll sideways sits in `.table-scroll table-scroll-sticky`: a wrapper capped at 70vh,
-  so the header sticks inside it.
+  so the header sticks inside it. The Cash flow table also keeps its Year column sticky on the left (`.table-cash-flow`),
+  one line per cell, in whole euros.
 - **Sidebar.** Seven sections: Overview; Goals (List, Detail, History); Independence; Analysis
   (Optimizer, Performance, Plan vs actual); Pension; Operations (Transactions, Import, Prices); Setup
   (Products, Allocation, Cash flow, Assumptions, Glossary). The current page has a 2 px `--ink` bar and
