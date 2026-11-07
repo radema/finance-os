@@ -41,15 +41,65 @@
   height: 100%;
 }
 
+/* The Goals table: one line per row, no column behind a scroll. The card's width, not the window's,
+   decides which columns stay. Goal, Status, P vs required, Value and Value vs target always stay;
+   col-opt-1 (Priority, Target) goes first, then col-opt-2 (Plan gap), then the meter bar. */
+.goals-table {
+  container-type: inline-size;
+}
+.goals-table th,
+.goals-table td {
+  white-space: nowrap;
+}
+@container (max-width: 1039px) {
+  .goals-table .col-opt-1 {
+    display: none;
+  }
+}
+@container (max-width: 819px) {
+  .goals-table .col-opt-2 {
+    display: none;
+  }
+  .goals-table .meter {
+    width: 64px;
+  }
+}
+@container (max-width: 659px) {
+  .goals-table .meter {
+    display: none;
+  }
+}
+
 .kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--s3);
   margin: var(--s4) 0;
 }
+/* The column count follows the card count, so every row has equal columns and no card is left alone. */
+.kpis:has(> :nth-child(4):last-child) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.kpis:has(> :nth-child(5):last-child),
+.kpis:has(> :nth-child(6):last-child) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.kpis:has(> :nth-child(7):last-child) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (min-width: 1280px) {
+  .kpis:has(> :nth-child(4):last-child) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1600px) {
+  .kpis:has(> :nth-child(5):last-child) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
 .kpi {
   padding: var(--s3);
-  border-top: 3px solid var(--slot);
+  border: 1px solid var(--grid);
   border-radius: 8px;
   background: var(--raised);
 }
@@ -59,9 +109,26 @@
   text-transform: uppercase;
   color: var(--ink2);
 }
+/* A KPI that belongs to a goal starts with a dot in the goal's colour (the screen sets --slot). */
+.kpi-label::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--s2);
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--slot);
+}
+/* KPIs that belong to no goal have no dot. */
+.kpis-no-goal .kpi-label::before,
+.level-tile .kpi-label::before {
+  display: none;
+}
 .kpi-value {
   margin: var(--s1) 0;
   font: var(--w-display) var(--t-title) / var(--lh-title) var(--font-display);
+  font-variant-numeric: tabular-nums;
   letter-spacing: var(--ls-display);
 }
 .table tfoot th,
@@ -72,9 +139,14 @@
   text-align: left;
 }
 
+/* An exhibit takes the whole column, so a chart ends where the card above it ends. */
 .exhibit {
-  max-width: 960px;
-  margin: var(--s5) 0 0;
+  margin: var(--s4) 0 0;
+}
+/* A hairline marks the end of an exhibit that another exhibit follows. */
+.exhibit + .exhibit {
+  padding-top: var(--s4);
+  border-top: 1px solid var(--grid);
 }
 .exhibit-title {
   margin: 0;
@@ -114,7 +186,7 @@
   height: 320px;
 }
 .callout {
-  max-width: 46em;
+  max-width: var(--note-max);
   margin-top: var(--s3);
   padding-left: var(--s3);
   border-left: 2px solid var(--hl);
@@ -129,7 +201,8 @@
   color: var(--muted);
 }
 
-.status {
+.status,
+.severity {
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
@@ -141,24 +214,30 @@
   line-height: var(--lh-label);
   white-space: nowrap;
 }
-.status svg {
+.status svg,
+.severity svg {
   width: 14px;
   height: 14px;
   flex: none;
   color: var(--muted);
 }
 .status-at_risk,
-.status-off_track {
+.status-off_track,
+.severity-Medium,
+.severity-High {
   border-color: color-mix(in srgb, var(--hl) 35%, transparent);
   background: var(--tint1);
   font-weight: 600;
 }
-.status-off_track {
+.status-off_track,
+.severity-High {
   border-color: var(--hl);
   background: var(--tint1-strong);
 }
 .status-at_risk svg,
-.status-off_track svg {
+.status-off_track svg,
+.severity-Medium svg,
+.severity-High svg {
   color: var(--hl);
 }
 
@@ -199,7 +278,11 @@
   border-bottom: 0;
 }
 .exhibit + .card {
-  margin-top: var(--s5);
+  margin-top: var(--s4);
+}
+/* A finding above the card it summarises sits one token gap away. */
+.exhibit-title + .card {
+  margin-top: var(--s3);
 }
 .take-value {
   font-weight: 600;
@@ -214,5 +297,34 @@
   color: var(--muted);
 }
 .chart-range {
-  height: 180px;
+  height: 280px;
+}
+.range-flat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  margin: var(--s3) 0 0;
+  color: var(--ink2);
+}
+.range-flat-value {
+  font: var(--w-display) 26px / 32px var(--font-display);
+  letter-spacing: var(--ls-display);
+  color: var(--ink);
+}
+
+/* Top of a goal's page: the way back, and the switch to another goal. */
+.goal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2) var(--s3);
+  margin-bottom: var(--s3);
+  font-size: var(--t-sub);
+  line-height: var(--lh-sub);
+}
+.goal-nav select {
+  width: auto;
+  min-width: 14em;
 }

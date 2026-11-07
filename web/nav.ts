@@ -19,7 +19,6 @@ export const NAV: readonly NavSection[] = [
   section("overview", "Overview"),
   section("goals", "Goals", [
     ["list", "List"],
-    ["detail", "Detail"],
     ["history", "History"],
   ]),
   section("independence", "Independence"),
@@ -46,18 +45,19 @@ export const NAV: readonly NavSection[] = [
 export const DEFAULT_ROUTE = "overview";
 
 /**
- * The Setup tabs. Goals is a tab only: the sidebar's Goals section is for the Goals screens, so the
- * Setup items of the sidebar keep the spec's list.
+ * The Setup tabs. Goal definitions is a tab only: the sidebar's Goals section is for the Goals
+ * screens, so the Setup items of the sidebar keep the spec's list.
  */
 export const SETUP_TABS: readonly NavItem[] = [
   { key: "setup/products", label: "Products" },
   { key: "setup/allocation", label: "Allocation" },
-  { key: "setup/goals", label: "Goals" },
+  { key: "setup/goals", label: "Goal definitions" },
   { key: "setup/cash-flow", label: "Cash flow" },
   { key: "setup/assumptions", label: "Assumptions" },
+  { key: "setup/glossary", label: "Glossary" },
 ];
 
-/** Built screens outside Setup. The detail route takes a goal id: `goals/detail/<id>`. */
+/** Built screens outside Setup. A goal's page is `goals/detail/<id>`; it has no sidebar item. */
 export const TRANSACTIONS_ROUTE = "operations/transactions";
 export const CURRENT_PORTFOLIO_ROUTE = "operations/import";
 export const PRICES_ROUTE = "operations/prices";
@@ -79,6 +79,22 @@ export function goalIdOf(route: string): string | undefined {
     : undefined;
 }
 
+/** Old routes and the route they land on: `goals/detail` had a sidebar item and no goal to show. */
+const REDIRECTS: Readonly<Record<string, string>> = {
+  goals: GOALS_LIST_ROUTE,
+  [GOALS_DETAIL_ROUTE]: GOALS_LIST_ROUTE,
+};
+
+/** The route to show for a hash route: an old route is replaced by its new place. */
+export function resolveRoute(route: string): string {
+  const trimmed = route.replace(/\/+$/, "");
+  return REDIRECTS[trimmed] ?? route;
+}
+
+/** The sidebar item that stands for a route: a goal's page sits under the Goals list. */
+export const navKeyOf = (route: string): string =>
+  goalIdOf(route) === undefined ? route : GOALS_LIST_ROUTE;
+
 /** The hash link to a goal's detail page. */
 export const goalDetailHref = (goalId: string): string =>
   `#/${GOALS_DETAIL_ROUTE}/${encodeURIComponent(goalId)}`;
@@ -90,7 +106,6 @@ export const isBuilt = (key: string): boolean =>
   key === CURRENT_PORTFOLIO_ROUTE ||
   key === PRICES_ROUTE ||
   key === GOALS_LIST_ROUTE ||
-  key === GOALS_DETAIL_ROUTE ||
   key === GOALS_HISTORY_ROUTE ||
   key === OPTIMIZER_ROUTE ||
   key === PERFORMANCE_ROUTE ||

@@ -23,6 +23,36 @@ a {
 a:hover {
   text-decoration-color: var(--ink);
 }
+/* Pointer targets are at least 24 px (--s4; WCAG 2.5.8). A checkbox row is one label: the box and the text.
+   A link that stands on its own gets a 24 px box without moving its neighbours. Links inside a sentence stay inline. */
+.check {
+  min-height: var(--s4);
+}
+.card-head a,
+.pbar-text,
+.alert-rule a,
+.goal-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--s4);
+}
+/* The header keeps its height: the 24 px link takes the place of the 8 px padding it replaces. */
+.card-head:has(> a) {
+  padding-block: var(--s1);
+}
+/* A card title link reads as a link: the underline is dark enough to see on the header tint. */
+.card-head a {
+  text-decoration-line: underline;
+  text-decoration-color: var(--ink2);
+}
+.card-head a:hover {
+  text-decoration-color: var(--ink);
+}
+/* The rows around these links are 18 to 21 px: the extra 2 to 3 px each side is taken back with a hairline margin. */
+.pbar-text,
+.alert-rule a {
+  margin-block: -2px;
+}
 :focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
@@ -93,6 +123,21 @@ a.nav-head:hover,
 .nav :focus-visible {
   outline-offset: -2px;
 }
+/* In a short window the spacing tightens so every item, down to Glossary, shows without scrolling. */
+@media (max-height: 900px) {
+  .side {
+    padding-top: var(--s3);
+  }
+  .brand {
+    padding-bottom: var(--s2);
+  }
+  .nav-section {
+    padding: var(--s1) 0;
+  }
+  .nav-head {
+    padding-block: var(--s1);
+  }
+}
 .soon {
   font: 500 10px / 12px var(--font-mono);
   letter-spacing: 0.06em;
@@ -105,16 +150,19 @@ a.nav-head:hover,
 }
 .tag {
   margin-bottom: var(--s2);
-  font: 500 var(--t-axis) / var(--lh-axis) var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+  font: 500 var(--t-label) / var(--lh-label) var(--font-text);
+  color: var(--ink2);
 }
 .title {
   max-width: 34em;
   font: var(--w-display) var(--t-title) / var(--lh-title) var(--font-display);
   letter-spacing: var(--ls-display);
   text-wrap: balance;
+}
+/* The first block under a page header (the title, or the title and its unit line) is one token gap away. */
+h1.title + :not(.unit),
+h1.title + .unit + * {
+  margin-top: var(--s4);
 }
 .unit {
   max-width: 46em;

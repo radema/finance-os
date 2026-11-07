@@ -3,7 +3,7 @@
 import type { GoalListRow } from "../../engine/goalViews.ts";
 import type { IndependenceView } from "../../engine/independenceView.ts";
 import type { Alert, RuleId } from "../../engine/rules.ts";
-import { ladderRows } from "../independence/model.ts";
+import { isLevelSet, ladderRows } from "../independence/model.ts";
 import { formatAmount } from "../money.ts";
 import {
   GOALS_DETAIL_ROUTE,
@@ -86,12 +86,14 @@ export function actionTitle(
   return netWorth === null ? "No numbers to show yet" : `Net worth is ${worth}`;
 }
 
-/** An amount with its sign, for a change: "+100,00 €" or "-1240,88 €". */
+/** An amount with its sign, for a change: "+100,00 €" or "-1.240,88 €". */
 export const signedAmount = (euros: number | null): string =>
   euros === null ? MISSING : `${euros > 0 ? "+" : ""}${formatAmount(euros)}`;
 
 export interface LevelRow {
   name: string;
+  /** False when the target is 0: expenses are not set, so there is no share and no year. */
+  set: boolean;
   /** Today's wealth ÷ target. Null when the target is 0. */
   progress: number | null;
   /** The calendar year the median and the deterministic line reach the level. Null when never. */
@@ -104,10 +106,14 @@ export function levelRows(view: IndependenceView): LevelRow[] {
   const rows = ladderRows(view);
   const reached = view.result?.reached;
   if (!rows || !reached) return [];
-  return rows.map((row, level) => ({
-    name: row.name,
-    progress: row.progress,
-    median: reached[level]?.median ?? null,
-    deterministic: reached[level]?.deterministic ?? null,
-  }));
+  return rows.map((row, level) => {
+    const set = isLevelSet(row.target);
+    return {
+      name: row.name,
+      set,
+      progress: row.progress,
+      median: set ? (reached[level]?.median ?? null) : null,
+      deterministic: set ? (reached[level]?.deterministic ?? null) : null,
+    };
+  });
 }

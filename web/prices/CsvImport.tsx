@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { api, messageOf } from "../api.ts";
+import { FilePicker, PASTED_TEXT, shownFileName } from "../FilePicker.tsx";
+import { TemplateButton } from "../import/TemplateButton.tsx";
 import { Alert, Card, Field, SelectField } from "../setup/ui.tsx";
 import type { ImportResult } from "./types.ts";
 
@@ -29,7 +31,7 @@ const LAYOUTS = [
 /** Pasted or uploaded CSV prices: long or wide, with the parser settings. */
 export function CsvImport({ onImported }: { onImported: () => void }) {
   const [text, setText] = useState("");
-  const [fileName, setFileName] = useState("pasted text");
+  const [fileName, setFileName] = useState<string>(PASTED_TEXT);
   const [delimiter, setDelimiter] = useState("auto");
   const [decimal, setDecimal] = useState("auto");
   const [dateFormat, setDateFormat] = useState("auto");
@@ -62,22 +64,19 @@ export function CsvImport({ onImported }: { onImported: () => void }) {
           value={text}
           onChange={(event) => {
             setText(event.target.value);
-            setFileName("pasted text");
+            setFileName(PASTED_TEXT);
           }}
         />
       </Field>
-      <Field label="Or upload a file">
-        <input
-          type="file"
-          accept=".csv,.txt,text/csv,text/plain"
-          onChange={async (event) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
-            setText(await file.text());
-            setFileName(file.name);
-          }}
-        />
-      </Field>
+      <FilePicker
+        label="Or upload a file"
+        accept=".csv,.txt,text/csv,text/plain"
+        fileName={shownFileName(fileName)}
+        onChange={async (file) => {
+          setText(await file.text());
+          setFileName(file.name);
+        }}
+      />
       <div className="form-grid">
         <SelectField
           label="Delimiter"
@@ -108,6 +107,7 @@ export function CsvImport({ onImported }: { onImported: () => void }) {
         >
           Import prices
         </button>
+        <TemplateButton kind="prices" />
       </div>
       <Alert message={error} />
       {result ? (

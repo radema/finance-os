@@ -7,7 +7,7 @@ import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { currentMonth, formatEuro, formatPercent } from "../money.ts";
 import { CapitalNote } from "../pension/CapitalNote.tsx";
-import { Alert, Card, NumberField, Resource, TextField } from "../setup/ui.tsx";
+import { Alert, Card, NumberField, RequiredLegend, Resource, TextField } from "../setup/ui.tsx";
 import { CumulativeChart } from "../tracking/CumulativeChart.tsx";
 import { Exhibit } from "../tracking/Exhibit.tsx";
 import { gapText, historyOf, lineColour, markColour } from "../tracking/model.ts";
@@ -116,14 +116,15 @@ function ChangePlan({
           The plan in {month} is <strong>{formatEuro(planned)}</strong> a month.
         </p>
       )}
+      <RequiredLegend />
       <form className="inline-form" onSubmit={submit}>
-        <TextField label="From month (YYYY-MM)" value={fromMonth} onChange={setFromMonth} />
-        <NumberField
-          label="Monthly amount (EUR)"
-          value={monthly}
-          onChange={setMonthly}
-          step="0.01"
+        <TextField
+          label="From month (YYYY-MM)"
+          value={fromMonth}
+          onChange={setFromMonth}
+          required
         />
+        <NumberField label="Monthly amount (EUR)" value={monthly} onChange={setMonthly} required />
         <button className="btn btn-primary" type="submit">
           Change plan
         </button>

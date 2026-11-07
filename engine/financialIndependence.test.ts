@@ -52,17 +52,18 @@ function input(over: Partial<FiInput> = {}): FiInput {
     fire: FIRE,
     essential: 1_000,
     optional: 500,
-    expenseGrowth: 0.02,
+    expenseGrowth: 0,
     inflation: 0.02,
     ...over,
   };
 }
 
 describe("fireSettingsSchema", () => {
-  it("defaults to includePension true, 12 months, 300 and 200", () => {
+  it("defaults to includePension true, 12 months, 200, 300 and 200", () => {
     expect(fireSettingsSchema.parse({})).toEqual({
       efFromGoal: null,
       efMonths: 12,
+      baristaMult: 200,
       l2Mult: 300,
       l3Mult: 200,
       includePension: true,
@@ -71,8 +72,10 @@ describe("fireSettingsSchema", () => {
 });
 
 describe("fiLevels", () => {
-  it("gives Level 1 = efMonths x essential, Level 2 = 300 x essential, Level 3 = Level 2 + 200 x optional (AC-59)", () => {
-    expect(fiLevels(input())).toEqual([12_000, 300_000, 400_000]);
+  it("gives Financial security = efMonths x essential, Barista FIRE = 200 x essential, Lean FIRE = 300 x essential, Financial Freedom = Lean FIRE + 200 x optional (AC-59)", () => {
+    expect(fiLevels(input({ essential: 1_000, optional: 500 }))).toEqual([
+      12_000, 200_000, 300_000, 400_000,
+    ]);
   });
 
   it("takes Level 1 from the target of the efFromGoal goal", () => {
@@ -90,21 +93,28 @@ describe("fiLevels", () => {
 });
 
 describe("projectFinancialIndependence targets", () => {
-  it("keeps L2 = 300,000 and L3 = 400,000 flat in every year when expenseGrowth = inflation (AC-59)", () => {
-    const { points } = projectFinancialIndependence(input(), 1, 10);
+  it("keeps L2 = 200,000, L3 = 300,000 and L4 = 400,000 flat in every year when expenseGrowth = 0 (AC-59)", () => {
+    const { points } = projectFinancialIndependence(input({ expenseGrowth: 0 }), 1, 10);
     expect(points).toHaveLength(42);
     for (const point of points) {
-      expect(point.targets[1]).toBeCloseTo(300_000, 6);
-      expect(point.targets[2]).toBeCloseTo(400_000, 6);
+      expect(point.targets[1]).toBeCloseTo(200_000, 6);
+      expect(point.targets[2]).toBeCloseTo(300_000, 6);
+      expect(point.targets[3]).toBeCloseTo(400_000, 6);
     }
   });
 
-  it("grows L2 to about 331,000 at t = 10 when expenseGrowth is 3% and inflation 2% (AC-59)", () => {
-    const { points } = projectFinancialIndependence(input({ expenseGrowth: 0.03 }), 1, 10);
-    const ten = points.find((point) => point.t === 10);
-    expect(ten?.targets[1]).toBeGreaterThan(330_500);
-    expect(ten?.targets[1]).toBeLessThan(331_500);
-    expect(points[0]?.targets[1]).toBe(300_000);
+  it("grows L3 (Lean FIRE) to about 403,000 at t = 10 when expenseGrowth is 3%, whatever the inflation (AC-59)", () => {
+    for (const inflation of [0.02, 0.05]) {
+      const { points } = projectFinancialIndependence(
+        input({ expenseGrowth: 0.03, inflation }),
+        1,
+        10,
+      );
+      const ten = points.find((point) => point.t === 10);
+      expect(ten?.targets[2]).toBeGreaterThan(402_500);
+      expect(ten?.targets[2]).toBeLessThan(403_500);
+      expect(points[0]?.targets[2]).toBe(300_000);
+    }
   });
 
   it("puts today at t = 0 and counts real years from asOf, with the stub as the first step", () => {
@@ -234,7 +244,7 @@ describe("projectFinancialIndependence pension", () => {
   });
 
   it("measures Level 1 progress on the wealth without the pension bucket (AC-60)", () => {
-    // Level 1 = 12 x 1,000 = 12,000. Without pension: 10,000 / 12,000. With it, 18,800 / 12,000 is for Level 2 only.
+    // Level 1 = 12 x 1,000 = 12,000. Without pension: 10,000 / 12,000. With it, 18,800 / 300,000 is for Lean FIRE (level index 2).
     const result = projectFinancialIndependence(
       input({ goals: [plain, pensionGoal], pensionGoalId: "pen" }),
       1,
@@ -242,7 +252,7 @@ describe("projectFinancialIndependence pension", () => {
     );
     const today = result.points[0];
     expect(today?.progress[0]).toBeCloseTo(10_000 / 12_000, 12);
-    expect(today?.progress[1]).toBeCloseTo(18_800 / 300_000, 12);
+    expect(today?.progress[2]).toBeCloseTo(18_800 / 300_000, 12);
     expect(today?.nonPension.p50).toBe(10_000);
     expect(today?.total.p50).toBe(18_800);
   });
@@ -267,7 +277,7 @@ describe("projectFinancialIndependence reaching a level", () => {
     expect(points[1]?.progress[0]).toBeLessThan(1);
     expect(points[2]?.progress[0]).toBeGreaterThan(1);
     expect(reached[0]).toEqual({ median: 2027, deterministic: 2027 });
-    // 300,000 is far above 10,000 + 4 x 12,000.
+    // 200,000 is far above 10,000 + 4 x 12,000.
     expect(reached[1]).toEqual({ median: null, deterministic: null });
   });
 

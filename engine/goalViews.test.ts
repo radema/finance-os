@@ -210,6 +210,16 @@ describe("analysisOf", () => {
     expect(fan.at(-1)?.typical).toBeCloseTo(net, 6);
   });
 
+  it("bins the simulated outcomes across an axis that holds the range and the target", () => {
+    const { distribution, range, paths } = analysis(world());
+    expect(distribution.min).toBeLessThanOrEqual(Math.min(range.bad, range.target));
+    expect(distribution.max).toBeGreaterThanOrEqual(Math.max(range.good, range.target));
+    const counted = distribution.counts.reduce((sum, n) => sum + n, 0);
+    expect(counted).toBeGreaterThan(paths * 0.8);
+    expect(counted).toBeLessThanOrEqual(paths);
+    expect(analysis(world()).distribution).toEqual(distribution);
+  });
+
   it("gives one fan point per year from the valuation year to the goal year", () => {
     const { fan } = analysis(world());
     expect(fan.map((point) => point.year)).toEqual([

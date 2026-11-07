@@ -18,6 +18,9 @@ export interface PriceCsvOptions extends CsvSettings {
 
 const PRICE_HEADER = /^(price|prezzo|close|chiusura|valore|value|nav)$/i;
 
+/** The columns of the long layout, in order. The third one must match `PRICE_HEADER`. */
+export const PRICE_LONG_COLUMNS = ["date", "product", "price"] as const;
+
 /**
  * Reads a price CSV. The first row is the header; the first column is the date.
  *

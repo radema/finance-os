@@ -53,7 +53,7 @@ button.tab {
 .status-chip[data-status="needs fix"] .status-icon {
   border-color: var(--hl);
 }
-.table .row-actions {
+.table-check .row-actions {
   white-space: normal;
 }
 .split-row-detail > td {

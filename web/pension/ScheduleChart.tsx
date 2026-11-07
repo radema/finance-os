@@ -5,14 +5,14 @@ import { SVGRenderer } from "echarts/renderers";
 import { useCallback } from "react";
 import type { PensionYearView } from "../../engine/pensionView.ts";
 import { formatAmount } from "../money.ts";
-import { readTokens, useEchart } from "../useEchart.ts";
+import { LABELS_INSIDE, readTokens, useEchart } from "../useEchart.ts";
 
 echarts.use([BarChart, GridComponent, SVGRenderer]);
 
 const VOLUNTARY_OPACITY = 0.45;
 
-function buildOption(rows: readonly PensionYearView[]) {
-  const colour = readTokens(1);
+export function buildOption(rows: readonly PensionYearView[], slot: number) {
+  const colour = readTokens(slot);
   const text = { color: colour.muted, fontFamily: colour.font, fontSize: 12 };
   const bar = (name: string, data: number[], opacity: number) => ({
     name,
@@ -24,7 +24,7 @@ function buildOption(rows: readonly PensionYearView[]) {
   });
   return {
     animation: false,
-    grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
+    grid: { left: 8, right: 8, top: 16, bottom: 8, ...LABELS_INSIDE },
     xAxis: {
       type: "category" as const,
       data: rows.map((row) => String(row.year)),
@@ -54,15 +54,17 @@ function buildOption(rows: readonly PensionYearView[]) {
   };
 }
 
-/** The yearly contributions, Work and Voluntary stacked, in the pension goal's colour (slot 1). */
+/** The yearly contributions, Work and Voluntary stacked, in the pension goal's colour. */
 export function ScheduleChart({
   rows,
+  slot,
   label,
 }: {
   rows: readonly PensionYearView[];
+  slot: number;
   label: string;
 }) {
-  const build = useCallback(() => buildOption(rows), [rows]);
+  const build = useCallback(() => buildOption(rows, slot), [rows, slot]);
   const box = useEchart(build);
 
   return <div className="chart" ref={box} role="img" aria-label={label} />;

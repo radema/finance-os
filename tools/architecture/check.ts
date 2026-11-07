@@ -11,6 +11,7 @@ export type Violation = {
     | "engine-no-web"
     | "web-no-server"
     | "web-no-colour-literal"
+    | "web-no-spacing-literal"
     | "sql-only-in-server";
   detail: string;
 };
@@ -33,11 +34,35 @@ const COLOUR_LITERAL =
   /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(/g;
 const TOKEN_FILE = "web/tokens.css";
 
+// A margin, padding or gap declaration. Spacing comes from --s1..--s6 (DESIGN.md, Spacing).
+const SPACING_DECLARATION =
+  /(?<![\w-])((?:margin|padding)(?:-[a-z]+)*|(?:grid-)?(?:row-|column-)?gap)\s*:\s*([^;{}]+)/g;
+const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
+// Allowed values: 0, auto, a spacing token, a 1-2 px hairline (also negative), and the content padding.
+const SPACING_VALUE = /^(?:0|auto|var\(--s[1-6]\)|-?[12]px|clamp\(24px, 3vw, 56px\))$/;
+
 const isNodeModule = (specifier: string): boolean =>
   specifier.startsWith("node:") || builtinModules.includes(specifier.split("/")[0] ?? specifier);
 
 const isSqlModule = (specifier: string): boolean =>
   specifier === "kysely" || specifier.startsWith("kysely/") || specifier === "node:sqlite";
+
+/** Splits a CSS value on spaces that are not inside parentheses. */
+function valueParts(value: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let part = "";
+  for (const char of value) {
+    if (char === "(") depth++;
+    if (char === ")") depth--;
+    if (/\s/.test(char) && depth === 0) {
+      if (part) parts.push(part);
+      part = "";
+    } else part += char;
+  }
+  if (part) parts.push(part);
+  return parts;
+}
 
 function listSourceFiles(dir: string): string[] {
   const files: string[] = [];
@@ -57,7 +82,7 @@ function targetFolder(rootDir: string, file: string, specifier: string): string 
 }
 
 /**
- * Checks the structural rules 1-3 of CLAUDE.md and the no-colour-literal rule of DESIGN.md on every source file under `rootDir`.
+ * Checks the structural rules 1-3 of CLAUDE.md and the no-colour-literal and no-spacing-literal rules of DESIGN.md on every source file under `rootDir`.
  *
  * @param rootDir Folder that holds `engine/`, `server/` and `web/`.
  * @returns The violations found; an empty array means the tree is clean.
@@ -88,6 +113,15 @@ export function checkArchitecture(rootDir: string): Violation[] {
 
     if (folder === "web" && rel !== TOKEN_FILE) {
       for (const match of text.matchAll(COLOUR_LITERAL)) add("web-no-colour-literal", match[0]);
+    }
+
+    if (folder === "web" && rel !== TOKEN_FILE && rel.endsWith(".css")) {
+      for (const match of text.replace(CSS_COMMENT, "").matchAll(SPACING_DECLARATION)) {
+        const value = (match[2] ?? "").replace(/\s*!important\s*$/, "").trim();
+        if (!valueParts(value).every((part) => SPACING_VALUE.test(part))) {
+          add("web-no-spacing-literal", `${match[1]}: ${value.replace(/\s+/g, " ")}`);
+        }
+      }
     }
 
     if (folder !== "server") {

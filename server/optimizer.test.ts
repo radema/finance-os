@@ -53,7 +53,7 @@ describe("Optimizer run API (AC-84)", () => {
     expect(body.mixes).toHaveLength(66);
     expect(body.mode).toBe("new");
     expect(body.switchTax).toBe(0);
-    expect(body.ruleName).toBe("O1 Protect the bad case");
+    expect(body.ruleName).toBe("Protect the bad case");
     expect(body.ruleText).toContain("Highest bad case");
     expect(body.requiredP).toBeGreaterThan(0);
     expect(body.requiredP).toBeLessThanOrEqual(1);
@@ -76,6 +76,17 @@ describe("Optimizer run API (AC-84)", () => {
     expect(same).toBeDefined();
     expect(body.current.p).toBe(same?.p);
     expect(body.current.median).toBe(same?.median);
+  });
+
+  it("under O5 gives the current mix its monthly amount needed, solved like the candidates'", async () => {
+    const { body } = await run(car({ criterion: "O5" }));
+    const same = body.mixes.find(
+      (mix) =>
+        Math.abs((weightOf(mix, "p-world-etf") ?? 0) - 0.6) < 1e-9 &&
+        Math.abs((weightOf(mix, "p-direct") ?? 0) - 0.2) < 1e-9,
+    );
+    expect(body.current.monthlyNeeded).toBeDefined();
+    expect(body.current.monthlyNeeded).toBe(same?.monthlyNeeded);
   });
 
   it("in rebalance mode returns the tax of selling the holdings", async () => {

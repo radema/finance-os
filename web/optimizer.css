@@ -47,6 +47,9 @@
   line-height: var(--lh-body);
   font-weight: 600;
 }
+.mix-cell {
+  white-space: nowrap;
+}
 .block-title {
   margin: var(--s4) 0 var(--s2);
   font: 500 var(--t-sub) / var(--lh-sub) var(--font-display);
@@ -70,7 +73,7 @@
   border-radius: 50%;
 }
 .swatch-all {
-  background: var(--ctx);
+  background: var(--muted);
 }
 .swatch-current {
   border: 2px solid var(--ink2);
@@ -79,6 +82,7 @@
   border-radius: 0;
 }
 .swatch-suggested {
+  border: 2px solid var(--ink2);
   background: var(--slot);
 }
 .swatch-required {
@@ -87,8 +91,19 @@
   height: 0;
   border-top: 2px dashed var(--ink2);
 }
+/* Two columns, then four from 1600 px: below that a column is too narrow for the longest criterion name. */
 .optimizer-controls {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 1600px) {
+  .optimizer-controls {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.optimizer .sub,
+.optimizer .alert,
+.steps {
+  max-width: var(--note-max);
 }
 .optimizer {
   margin-top: var(--s4);

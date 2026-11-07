@@ -9,6 +9,7 @@ import { holdingsAt } from "./holdings.ts";
 import type { GoalDistribution, MonteCarloGoal, MonteCarloProduct } from "./monteCarlo.ts";
 import { runMonteCarlo } from "./monteCarlo.ts";
 import { monthEnd } from "./months.ts";
+import { binOutcomes, fitAxis, type OutcomeBins } from "./outcomeChart.ts";
 import { planInForce } from "./plan.ts";
 import type { Position } from "./projection.ts";
 import { projectGoal, targetAtGoalDate } from "./projection.ts";
@@ -24,7 +25,7 @@ export interface GoalSummary {
   id: string;
   name: string;
   priority: Goal["priority"];
-  /** Colour slot, 1..6. */
+  /** Colour slot, 2..7 (7 = grey). */
   slot: number;
   /** Today's euros. */
   target: number;
@@ -91,6 +92,11 @@ export interface GoalAnalysis extends Outlook {
   fan: FanPoint[];
   /** Net value at the goal date. */
   range: { bad: number; typical: number; good: number; target: number };
+  /**
+   * The net values at the goal date of the simulated paths, counted in equal bins across an axis
+   * that holds the range and the target. A path beyond the axis is not counted.
+   */
+  distribution: OutcomeBins;
   required: RequiredContributions;
 }
 
@@ -190,6 +196,8 @@ export interface GoalWorld {
   prices: ReadonlyMap<string, readonly { month: string; price: number }[]>;
 }
 
+/** Bins of the outcome distribution: fine enough to show the skew on a card two columns wide. */
+const BINS = 40;
 const NO_PRICE_NOTE = "A held product has no price, so the projection is not shown.";
 const NO_FIRST_YEAR_NOTE =
   "The pension plan has no first year of membership, so the exit tax and the net are not shown.";
@@ -326,7 +334,7 @@ export function summaryOf(world: GoalWorld, goal: GoalWorldGoal): GoalSummary {
     id: goal.id,
     name: goal.name,
     priority: goal.priority,
-    slot: goalSlot(goal, world.goals, world.pension?.goalId),
+    slot: goalSlot(goal, world.goals),
     target: goal.target,
     value,
     missingPrices,
@@ -556,6 +564,7 @@ export function analysisOf(world: GoalWorld, goal: GoalWorldGoal): GoalAnalysis 
   }));
   const target = targetAtGoalDate(goal.target, inflation, grid.tau);
   const last = fan.at(-1) as FanPoint;
+  const range = { bad: last.bad, typical: last.typical, good: last.good, target };
   return {
     ...outlook,
     paths,
@@ -563,7 +572,12 @@ export function analysisOf(world: GoalWorld, goal: GoalWorldGoal): GoalAnalysis 
     horizonYears: grid.tau,
     targetAtGoalDate: target,
     fan,
-    range: { bad: last.bad, typical: last.typical, good: last.good, target },
+    range,
+    distribution: binOutcomes(
+      distribution.outcomes,
+      fitAxis(range.bad, range.good, [target]),
+      BINS,
+    ),
     required: {
       unit: input.pension ? "schedule" : "monthly",
       deterministic: requiredContribution(input, "deterministic"),

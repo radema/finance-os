@@ -7,6 +7,7 @@ import { formatAmount, formatPercent } from "../money.ts";
 import { Card, Resource, SelectField } from "../setup/ui.tsx";
 import { Exhibit } from "./Exhibit.tsx";
 import {
+  historyMonths,
   lineColour,
   MISSING,
   markColour,
@@ -14,7 +15,7 @@ import {
   scopeKey,
   scopeOfKey,
   scopeQuery,
-  xirrNote,
+  xirrTile,
 } from "./model.ts";
 import { TimeChart } from "./TimeChart.tsx";
 
@@ -22,11 +23,18 @@ const euroAxis = (value: number) => formatAmount(value).replace(/,00/, "");
 const indexAxis = (value: number) => String(Math.round(value));
 const TWR_NOTE = "Needs a month that follows a month with a value.";
 
-function Kpis({ summary }: { summary: NonNullable<PerformanceView["summary"]> }) {
+function Kpis({
+  summary,
+  months,
+}: {
+  summary: NonNullable<PerformanceView["summary"]>;
+  months: number;
+}) {
   const { twr } = summary;
+  const xirr = xirrTile(summary.xirr, months);
   const twrNote = (value: number | null) => (value === null ? TWR_NOTE : undefined);
   return (
-    <div className="kpis kpis-blue">
+    <div className="kpis kpis-no-goal">
       <Kpi label="Value" value={formatAmount(summary.value)} />
       <Kpi
         label="Gain"
@@ -66,8 +74,8 @@ function Kpis({ summary }: { summary: NonNullable<PerformanceView["summary"]> })
             <TermPopover term="xirr">XIRR</TermPopover> a year
           </>
         }
-        value={percentText(summary.xirr)}
-        note={xirrNote(summary.xirr)}
+        value={xirr.value}
+        note={xirr.note}
       />
       <Kpi
         label={
@@ -272,13 +280,7 @@ export function PerformanceScreen() {
           const { summary } = current;
           return (
             <>
-              <h1 className="title">
-                {summary
-                  ? summary.twr.sinceStart === null
-                    ? `${current.label} is worth ${formatAmount(summary.value)}`
-                    : `${current.label} returned ${formatPercent(summary.twr.sinceStart)} since the start, on ${formatAmount(summary.value)}`
-                  : "Performance"}
-              </h1>
+              <h1 className="title">Performance</h1>
               <p className="unit">
                 Returns, value and drawdown of one scope. Values at the end of{" "}
                 {current.asOf.slice(0, 7)}.
@@ -288,7 +290,12 @@ export function PerformanceScreen() {
               </div>
               {summary ? (
                 <>
-                  <Kpis summary={summary} />
+                  <h2 className="exhibit-title">
+                    {summary.twr.sinceStart === null
+                      ? `${current.label} is worth ${formatAmount(summary.value)}`
+                      : `${current.label} returned ${formatPercent(summary.twr.sinceStart)} since the start, on ${formatAmount(summary.value)}`}
+                  </h2>
+                  <Kpis summary={summary} months={historyMonths(current)} />
                   <Charts view={current} summary={summary} />
                 </>
               ) : (

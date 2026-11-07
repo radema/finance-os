@@ -1,6 +1,7 @@
-import type { ChangeEvent } from "react";
 import { useState } from "react";
 import { api, messageOf } from "../api.ts";
+import { download } from "../download.ts";
+import { FilePicker } from "../FilePicker.tsx";
 import { Alert, Card } from "./ui.tsx";
 
 const EXPORT_FILE = "gbi-export.json";
@@ -8,15 +9,6 @@ const EXPORT_FILE = "gbi-export.json";
 interface Chosen {
   name: string;
   document: unknown;
-}
-
-function download(name: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 /** Export and import of all data as one JSON file. */
@@ -31,7 +23,7 @@ export function DataCard({ onImported }: { onImported: () => void }) {
     setDone(undefined);
     try {
       const data = await api<unknown>("GET", "/api/data/export");
-      download(EXPORT_FILE, JSON.stringify(data, null, 2));
+      download(EXPORT_FILE, JSON.stringify(data, null, 2), "application/json");
       setError(undefined);
       setDone(`Exported to ${EXPORT_FILE}.`);
     } catch (failure) {
@@ -41,11 +33,8 @@ export function DataCard({ onImported }: { onImported: () => void }) {
     }
   };
 
-  const choose = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  const choose = async (file: File) => {
     setDone(undefined);
-    if (!file) return;
     try {
       setChosen({ name: file.name, document: JSON.parse(await file.text()) });
       setError(undefined);
@@ -85,16 +74,13 @@ export function DataCard({ onImported }: { onImported: () => void }) {
         >
           {busy === "exporting" ? "Exporting..." : "Export data"}
         </button>
-        <label className="btn btn-quiet">
-          Choose a file to import
-          <input
-            type="file"
-            accept=".json,application/json"
-            hidden
-            disabled={busy !== undefined}
-            onChange={(event) => void choose(event)}
-          />
-        </label>
+        <FilePicker
+          label="Choose a file to import"
+          accept=".json,application/json"
+          fileName={chosen?.name}
+          disabled={busy !== undefined}
+          onChange={(file) => void choose(file)}
+        />
       </div>
       {chosen ? (
         <div className="flag" role="alert">

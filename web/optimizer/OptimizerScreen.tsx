@@ -11,7 +11,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { pVsRequired, requiredText } from "../goals/outlook.ts";
-import { formatAmount, formatPercent } from "../money.ts";
+import { formatAmount, formatPercent, formatSignedAmount, formatSignedPoints } from "../money.ts";
 import { Alert, Card, CheckField, ProductTag, Resource, SelectField } from "../setup/ui.tsx";
 import { MixScatter } from "./MixScatter.tsx";
 import {
@@ -19,7 +19,10 @@ import {
   eligibleProducts,
   MAX_PRODUCTS,
   mixText,
+  onlyMixSentence,
   outcomeRows,
+  shortMixText,
+  smallGainNote,
   weightRows,
 } from "./model.ts";
 
@@ -228,6 +231,7 @@ function WeightsAndOutcomes({
             <th>At the goal date</th>
             <th className="num">Current</th>
             <th className="num">Suggested</th>
+            <th className="num">Change</th>
           </tr>
         </thead>
         <tbody>
@@ -236,6 +240,7 @@ function WeightsAndOutcomes({
               <th scope="row">{row.label}</th>
               <td className="num">{formatAmount(row.current)}</td>
               <td className="num">{formatAmount(row.suggested)}</td>
+              <td className="num">{formatSignedAmount(row.change)}</td>
             </tr>
           ))}
           <tr>
@@ -244,6 +249,7 @@ function WeightsAndOutcomes({
             </th>
             <td className="num">{pVsRequired(current.p, view.requiredP)}</td>
             <td className="num">{pVsRequired(chosen.p, view.requiredP)}</td>
+            <td className="num">{formatSignedPoints(chosen.p - current.p)}</td>
           </tr>
           {chosen.monthlyNeeded === undefined ? null : (
             <tr>
@@ -252,6 +258,7 @@ function WeightsAndOutcomes({
               </th>
               <td className="num">–</td>
               <td className="num">{requiredText(chosen.monthlyNeeded, unit)}</td>
+              <td className="num">–</td>
             </tr>
           )}
         </tbody>
@@ -270,18 +277,23 @@ type Asking = { weights: { productId: string; weight: number }[]; flows: boolean
 /** "Use as contribution weights": a preview first, then the write after a click on Confirm. */
 function UseWeights({
   goal,
+  current,
   chosen,
+  criterion,
   names,
   onApplied,
 }: {
   goal: GoalListRow;
+  current: MixView;
   chosen: MixView;
+  criterion: OptimizerCriterion;
   names: ReadonlyMap<string, string>;
   onApplied: () => void;
 }) {
   const [asking, setAsking] = useState<Asking>();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
+  const smallGain = smallGainNote(current, chosen, criterion);
   const body = (weights: Asking["weights"], confirm: boolean) => ({
     goalId: goal.id,
     weights,
@@ -335,9 +347,12 @@ function UseWeights({
           </div>
         </div>
       ) : (
-        <button className="btn btn-primary" type="button" onClick={ask}>
-          Use as contribution weights
-        </button>
+        <>
+          {smallGain ? <p className="note">{smallGain}</p> : null}
+          <button className="btn btn-primary" type="button" onClick={ask}>
+            Use as contribution weights
+          </button>
+        </>
       )}
       {saved ? (
         <p className="saved" role="status">
@@ -348,7 +363,8 @@ function UseWeights({
   );
 }
 
-function Result({
+/** Exported for the heading-order test. */
+export function Result({
   view,
   goal,
   names,
@@ -361,12 +377,14 @@ function Result({
   isPension: boolean;
   onApplied: () => void;
 }) {
-  const { chosen } = view;
+  const { current, chosen } = view;
   return (
     <Card title="Suggested mix">
       <div className="result-head">
         <GoalChip id={goal.id} name={goal.name} slot={goal.slot} />
-        <span className="result-mix">{mixText(chosen.weights, names)}</span>
+        <span className="result-mix" title={mixText(chosen.weights, names)}>
+          {shortMixText(chosen.weights, names)}
+        </span>
       </div>
       {view.notFeasible ? (
         <p className="alert" role="alert">
@@ -385,12 +403,20 @@ function Result({
           ? `Selling your holdings now costs ${formatAmount(view.switchTax)} in tax. The outcomes of the suggested mix are after this tax.`
           : "None. New money only: nothing is sold."}
       </p>
-      <UseWeights goal={goal} chosen={chosen} names={names} onApplied={onApplied} />
+      <UseWeights
+        goal={goal}
+        current={current}
+        chosen={chosen}
+        criterion={view.criterion}
+        names={names}
+        onApplied={onApplied}
+      />
     </Card>
   );
 }
 
-function Exhibits({
+/** Exported for the heading-order test. */
+export function Exhibits({
   view,
   goal,
   names,
@@ -411,37 +437,43 @@ function Exhibits({
           <TermPopover term="prob">chance of success</TermPopover> and a{" "}
           <TermPopover term="typical">typical case</TermPopover> of {formatAmount(chosen.median)}
         </h2>
-        <p className="unit">
-          Each dot is one of {view.mixes.length} {view.mixes.length === 1 ? "mix" : "mixes"}. Height
-          is the <TermPopover term="typical">typical case</TermPopover> in euros of the goal date.
-        </p>
-        <ul className="legend">
-          <li>
-            <span className="swatch-dot swatch-all" />
-            Mix
-          </li>
-          <li>
-            <span className="swatch-dot swatch-current" />
-            Current mix
-          </li>
-          <li>
-            <span
-              className="swatch-dot swatch-suggested"
-              style={{ "--slot": `var(--slot${goal.slot})` } as CSSProperties}
+        {view.mixes.length === 1 ? (
+          <p className="note">{onlyMixSentence(chosen.weights, names)}</p>
+        ) : (
+          <>
+            <p className="unit">
+              Each dot is one of {view.mixes.length} mixes. Height is the{" "}
+              <TermPopover term="typical">typical case</TermPopover> in euros of the goal date.
+            </p>
+            <ul className="legend">
+              <li>
+                <span className="swatch-dot swatch-all" />
+                Mix
+              </li>
+              <li>
+                <span className="swatch-dot swatch-current" />
+                Current mix
+              </li>
+              <li>
+                <span
+                  className="swatch-dot swatch-suggested"
+                  style={{ "--slot": `var(--slot${goal.slot})` } as CSSProperties}
+                />
+                Suggested mix
+              </li>
+              <li>
+                <span className="swatch-required" />
+                Required chance
+              </li>
+            </ul>
+            <MixScatter
+              view={view}
+              slot={goal.slot}
+              names={names}
+              label="All mixes: chance of success against the typical case"
             />
-            Suggested mix
-          </li>
-          <li>
-            <span className="swatch-required" />
-            Required chance
-          </li>
-        </ul>
-        <MixScatter
-          view={view}
-          slot={goal.slot}
-          names={names}
-          label="All mixes: chance of success against the typical case"
-        />
+          </>
+        )}
         <figcaption className="source">
           Source: Monte Carlo on your goal, assumptions and seed.
         </figcaption>
@@ -474,7 +506,9 @@ function Exhibits({
                   className={index === 0 ? "top-chosen" : undefined}
                 >
                   <td>{index + 1}</td>
-                  <td>{mixText(mix.weights, names)}</td>
+                  <td className="mix-cell" title={mixText(mix.weights, names)}>
+                    {shortMixText(mix.weights, names)}
+                  </td>
                   <td className="num">{formatPercent(mix.p)}</td>
                   <td className="num">{formatAmount(mix.p10)}</td>
                   <td className="num">{formatAmount(mix.median)}</td>

@@ -3,8 +3,9 @@
 
 import type { PerformanceScope } from "../../engine/performance.ts";
 import type { SnapshotGoal, SnapshotView } from "../../engine/snapshot.ts";
+import type { PerformanceView } from "../../engine/trackingViews.ts";
 import { usesSlotLine } from "../goals/outlook.ts";
-import { formatPercent } from "../money.ts";
+import { formatEuro, formatPercent } from "../money.ts";
 
 /** What Goal history draws. Funded ratio is not in the spec: it is value / target at the month. */
 export type HistoryMetric = "prob" | "funded" | "median";
@@ -111,6 +112,16 @@ export const scopeQuery = (scope: PerformanceScope): string =>
 export const gapText = (gapCents: number): string =>
   gapCents < 0 ? "behind" : gapCents > 0 ? "ahead" : "on plan";
 
+/** The note under the Next contribution amount: one calm line, whether to add it to next month. */
+export const nextTicketText = (next: {
+  wait: boolean;
+  amount: number;
+  minTicket: number;
+}): string =>
+  next.wait
+    ? `${formatEuro(next.amount)} is below the minimum efficient ticket (${formatEuro(next.minTicket)}). Add it to next month's contribution.`
+    : `No need to wait. The minimum efficient ticket is ${formatEuro(next.minTicket)}.`;
+
 /** Why an XIRR is missing, or undefined when there is one. */
 export const xirrNote = (xirr: number | null): string | undefined =>
   xirr === null
@@ -122,6 +133,22 @@ export const MISSING = "–";
 /** A fraction as a percentage, or the dash when there is none. */
 export const percentText = (fraction: number | null): string =>
   fraction === null ? MISSING : formatPercent(fraction);
+
+/** Below this many months of history an annual rate is an extrapolation, so it is not shown. */
+const MIN_XIRR_MONTHS = 12;
+
+/** Months from the first cash flow to the valuation month: the series has one point per month. */
+export const historyMonths = (view: Pick<PerformanceView, "months">): number =>
+  Math.max(view.months.length - 1, 0);
+
+/** The XIRR tile: the rate and its note, or the dash and "Not enough history yet" when too short. */
+export const xirrTile = (
+  xirr: number | null,
+  months: number,
+): { value: string; note: string | undefined } =>
+  months < MIN_XIRR_MONTHS
+    ? { value: MISSING, note: "Not enough history yet" }
+    : { value: percentText(xirr), note: xirrNote(xirr) };
 
 /** The colour of a chart's main mark, as a custom property: the goal's slot, or the highlight. */
 export const markColour = (slot: number | null): string =>

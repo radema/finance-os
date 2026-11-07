@@ -5,21 +5,27 @@ import { flowsTaken } from "../../engine/pension.ts";
 import type { Commission, Goal, PensionPlan, Product, Transaction } from "../../engine/schemas.ts";
 import { PENSION_FLOWS } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { DateInput } from "../DateInput.tsx";
+import { copyOfTransaction } from "../duplicate.ts";
+import { checkFields, type FieldErrors } from "../formErrors.ts";
 import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatEuro, formatPercent } from "../money.ts";
+import { formatEuro, formatPercent, formatPrice, formatQuantity } from "../money.ts";
+import type { RevealFormRef } from "../revealForm.ts";
+import { RowActions, useRowEditor } from "../rowEditor.tsx";
 import {
   Alert,
   Card,
-  ConfirmButton,
   Field,
   NumberField,
   ProductTag,
+  RequiredLegend,
   Resource,
   SelectField,
   TextField,
 } from "../setup/ui.tsx";
-import { fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
+import { useFormErrors } from "../useFormErrors.ts";
+import { cashMovement, fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
 
 // `opening` is written by the Current portfolio form in S2, so the form does not offer it.
 const FORM_TYPES: readonly { value: TransactionType; label: string }[] = [
@@ -33,26 +39,41 @@ const TYPE_LABEL: Record<string, string> = {
   ...Object.fromEntries(FORM_TYPES.map((t) => [t.value, t.label])),
 };
 
-const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
+const LABELS = {
+  date: "Date",
+  goalId: "Bucket",
+  productId: "Product",
+  flow: "Flow",
+  amount: "Amount",
+  price: "Price",
+  fee: "Commission",
+};
+type FormKey = keyof typeof LABELS;
+// The API names these in cents; the form holds euros.
+const API_KEYS: Record<string, FormKey> = { amountCents: "amount", commissionCents: "fee" };
 
 interface LastPrice {
   price: number;
   priceDate: string;
 }
 
-/** The form of Add, and of Edit when `editing` is a row: then it starts from that row. */
+/** The form of Add. It starts from a row for Edit (`editing`) or Duplicate (`copying`). */
 function AddForm({
   editing,
+  copying,
   today,
   goals,
   products,
   commission,
   pensionPlan,
+  formRef,
   onSaved,
   onCancel,
 }: {
   /** The row being edited, or none to add. Give the form a new `key` to switch rows. */
   editing?: Transaction;
+  /** The row being duplicated: the form adds a new transaction that starts from it. */
+  copying?: Transaction;
   /** The server's app clock: the default date of a new transaction. */
   today: string;
   goals: Goal[];
@@ -60,12 +81,15 @@ function AddForm({
   commission: Commission;
   /** The saved plan: it says which flows a pension fund takes. */
   pensionPlan: PensionPlan | null | undefined;
+  /** On the form element: Edit and Duplicate reveal it. */
+  formRef: RevealFormRef;
   onSaved: () => void;
-  /** Edit only: leave the row as it is. */
+  /** Edit and Duplicate: leave the form without saving. */
   onCancel: () => void;
 }) {
-  const start = editing
-    ? fieldsFromTransaction(editing)
+  const from = editing ?? copying;
+  const start = from
+    ? fieldsFromTransaction(copying ? copyOfTransaction(copying, today) : from)
     : {
         date: today,
         goalId: goals[0]?.id ?? "",
@@ -85,12 +109,12 @@ function AddForm({
   const [fee, setFee] = useState(start.fee);
   const [flow, setFlow] = useState(start.flow);
   const [priceNote, setPriceNote] = useState<string>();
-  const [error, setError] = useState<string>();
+  const { errors, alert, reject, fail, clear } = useFormErrors<FormKey>(LABELS, API_KEYS);
 
-  // The price starts from the product's last price; the user can still change it. An edited row
-  // keeps its own price until the product changes.
+  // The price starts from the product's last price; the user can still change it. An edited or
+  // duplicated row keeps its own price until the product changes.
   useEffect(() => {
-    if (editing && productId === editing.productId) return;
+    if (from && productId === from.productId) return;
     let live = true;
     api<LastPrice | null>("GET", "/api/last-price", { query: { productId } }).then(
       (last) => {
@@ -103,7 +127,7 @@ function AddForm({
     return () => {
       live = false;
     };
-  }, [productId, editing]);
+  }, [productId, from]);
 
   const product = products.find((p) => p.id === productId);
   const amountCents = eurosToCents(amount);
@@ -117,6 +141,18 @@ function AddForm({
   const costly = product && hasAmount && isCostly(commission, product, type, amountCents);
 
   const save = async () => {
+    const problems: FieldErrors<FormKey> = checkFields(
+      { date, amount, price, fee },
+      {
+        date: "text",
+        amount: "number",
+        ...(type === "coupon" ? {} : { price: "number" as const }),
+        fee: "optionalNumber",
+      },
+      LABELS,
+    );
+    if (takesBothFlows && flow === "") problems.flow = "Choose a flow";
+    if (Object.keys(problems).length > 0) return reject(problems);
     try {
       const body = transactionBody(
         { date, goalId, productId, type, amount, price, fee, flow },
@@ -126,37 +162,54 @@ function AddForm({
       await api(editing ? "PUT" : "POST", "/api/transactions", {
         body: editing ? { ...body, id: editing.id, note: editing.note } : body,
       });
-      setError(undefined);
+      clear();
       setAmount("");
       setFee("");
       onSaved();
     } catch (failure) {
-      setError(messageOf(failure));
+      fail(failure);
     }
   };
 
   return (
     <Card title={editing ? "Edit transaction" : "Add transaction"}>
+      <RequiredLegend />
       <form
+        ref={formRef}
         className="form-grid"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           void save();
         }}
       >
-        <Field label="Date">
-          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+        <Field label="Date" error={errors.date} required>
+          {(labelId, controlId, invalid) => (
+            <DateInput
+              id={controlId}
+              aria-labelledby={labelId}
+              required
+              {...invalid}
+              value={date}
+              onChange={(value) => {
+                setDate(value);
+                clear("date");
+              }}
+            />
+          )}
         </Field>
         <SelectField
           label="Bucket"
           value={goalId}
           onChange={setGoalId}
+          error={errors.goalId}
           options={goals.map((g) => ({ value: g.id, label: g.name }))}
         />
         <SelectField
           label="Product"
           value={productId}
           onChange={setProductId}
+          error={errors.productId}
           options={products.map((p) => ({ value: p.id, label: p.name }))}
         />
         <SelectField
@@ -169,7 +222,11 @@ function AddForm({
           <SelectField
             label="Flow"
             value={flow}
-            onChange={setFlow}
+            onChange={(value) => {
+              setFlow(value);
+              clear("flow");
+            }}
+            error={errors.flow}
             options={[
               { value: "", label: "Choose…" },
               ...PENSION_FLOWS.map((kind) => ({
@@ -182,7 +239,12 @@ function AddForm({
         <NumberField
           label={type === "coupon" ? "Net cash received (€)" : "Amount (€)"}
           value={amount}
-          onChange={setAmount}
+          onChange={(value) => {
+            setAmount(value);
+            clear("amount");
+          }}
+          error={errors.amount}
+          required
           hint={
             product?.regime === "govt"
               ? "Government bonds: qty = amount / (price / 100)."
@@ -190,19 +252,33 @@ function AddForm({
           }
         />
         {type === "coupon" ? null : (
-          <NumberField label="Price" value={price} onChange={setPrice} hint={priceNote} />
+          <NumberField
+            label="Price"
+            value={price}
+            onChange={(value) => {
+              setPrice(value);
+              clear("price");
+            }}
+            hint={priceNote}
+            error={errors.price}
+            required
+          />
         )}
         <NumberField
           label="Commission paid (€, optional)"
           value={fee}
-          onChange={setFee}
+          onChange={(value) => {
+            setFee(value);
+            clear("fee");
+          }}
+          error={errors.fee}
           hint="Leave empty to record none."
         />
         <div className="actions">
           <button className="btn btn-primary" type="submit">
             {editing ? "Save changes" : "Add transaction"}
           </button>
-          {editing ? (
+          {from ? (
             <button className="btn btn-quiet" type="button" onClick={onCancel}>
               Cancel
             </button>
@@ -221,7 +297,7 @@ function AddForm({
           {formatPercent(estimate / amountCents)} of this amount.
         </p>
       ) : null}
-      <Alert message={error} />
+      <Alert message={alert} />
     </Card>
   );
 }
@@ -236,7 +312,8 @@ export function TransactionsScreen() {
   const [goalFilter, setGoalFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [error, setError] = useState<string>();
-  const [editing, setEditing] = useState<Transaction>();
+  const editor = useRowEditor<Transaction>({});
+  const { editing, copying } = editor;
 
   const query = new URLSearchParams();
   if (goalFilter) query.set("goalId", goalFilter);
@@ -247,7 +324,7 @@ export function TransactionsScreen() {
     try {
       await api("DELETE", "/api/transactions", { query: { id } });
       setError(undefined);
-      if (editing?.id === id) setEditing(undefined);
+      if (editing?.id === id || copying?.id === id) editor.stop();
       list.reload();
     } catch (failure) {
       setError(messageOf(failure));
@@ -276,18 +353,20 @@ export function TransactionsScreen() {
                     <Resource loaded={clock}>
                       {({ today }) => (
                         <AddForm
-                          key={editing?.id ?? "add"}
+                          key={editing ? editing.id : copying ? `copy-${copying.id}` : "add"}
                           editing={editing}
+                          copying={copying}
                           today={today}
                           goals={goalList}
                           products={productList}
                           commission={plan}
                           pensionPlan={pensionPlan.data}
+                          formRef={editor.formRef}
                           onSaved={() => {
-                            setEditing(undefined);
+                            editor.stop();
                             list.reload();
                           }}
-                          onCancel={() => setEditing(undefined)}
+                          onCancel={editor.stop}
                         />
                       )}
                     </Resource>
@@ -323,68 +402,58 @@ export function TransactionsScreen() {
             rows.length === 0 ? (
               <p className="note">No transactions to show.</p>
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Bucket</th>
-                    <th>Product</th>
-                    <th>Type</th>
-                    <th className="num">Qty</th>
-                    <th className="num">Price</th>
-                    <th className="num">Amount</th>
-                    <th className="num">Commission</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((t) => {
-                    const p = productOf(t.productId);
-                    return (
-                      <tr key={t.id}>
-                        <td>{t.date}</td>
-                        <td>{goalName(t.goalId)}</td>
-                        <td>
-                          {p?.name ?? "?"} {p ? <ProductTag regime={p.regime} /> : null}
-                        </td>
-                        <td>
-                          {TYPE_LABEL[t.type] ?? t.type}
-                          {t.flow ? ` (${t.flow})` : ""}
-                        </td>
-                        <td className="num">
-                          {t.type === "coupon" ? "–" : quantity.format(t.qty)}
-                        </td>
-                        <td className="num">
-                          {t.type === "coupon" ? "–" : quantity.format(t.price)}
-                        </td>
-                        <td className="num">{formatEuro(t.amountCents)}</td>
-                        <td className="num">
-                          {t.commissionCents === null ? "–" : formatEuro(t.commissionCents)}
-                        </td>
-                        <td className="row-actions">
-                          {t.type === "opening" ? null : (
-                            <button
-                              className="btn btn-quiet"
-                              type="button"
-                              onClick={() => {
-                                setEditing(t);
-                                window.scrollTo({ top: 0 });
-                              }}
-                            >
-                              Edit
-                            </button>
-                          )}
-                          <ConfirmButton
-                            label="Delete"
-                            confirmLabel="Delete transaction"
-                            onConfirm={() => void remove(t.id)}
+              <div className="table-scroll table-scroll-sticky">
+                <table className="table table-transactions">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Bucket</th>
+                      <th>Product</th>
+                      <th>Type</th>
+                      <th className="num">Qty</th>
+                      <th className="num">Price</th>
+                      <th className="num">Amount</th>
+                      <th className="num">Commission</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((t) => {
+                      const p = productOf(t.productId);
+                      return (
+                        <tr key={t.id}>
+                          <td>{t.date}</td>
+                          <td>{goalName(t.goalId)}</td>
+                          <td>
+                            {p?.name ?? "?"} {p ? <ProductTag regime={p.regime} /> : null}
+                          </td>
+                          <td>
+                            {TYPE_LABEL[t.type] ?? t.type}
+                            {t.flow ? ` (${t.flow})` : ""}
+                          </td>
+                          <td className="num">
+                            {t.type === "coupon" ? "–" : formatQuantity(t.qty)}
+                          </td>
+                          <td className="num">
+                            {t.type === "coupon" ? "–" : formatPrice(t.price)}
+                          </td>
+                          <td className="num">{cashMovement(t.type, t.amountCents)}</td>
+                          <td className="num">
+                            {t.commissionCents === null ? "–" : formatEuro(t.commissionCents)}
+                          </td>
+                          <RowActions
+                            row={t}
+                            editor={editor}
+                            noun="transaction"
+                            editable={t.type !== "opening"}
+                            onDelete={() => void remove(t.id)}
                           />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )
           }
         </Resource>

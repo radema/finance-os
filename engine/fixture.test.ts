@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import sampleJson from "../fixtures/sample.json" with { type: "json" };
-import { projectFinancialIndependence } from "./financialIndependence.ts";
+import { fiLevels, projectFinancialIndependence } from "./financialIndependence.ts";
 import { type SampleData, sampleDataSchema } from "./fixture.ts";
 import { holdingsAt, type LedgerRow, unitPrice } from "./holdings.ts";
 import { type MonteCarloGoal, type MonteCarloProduct, runMonteCarlo } from "./monteCarlo.ts";
@@ -164,6 +164,20 @@ function monteCarloSummary() {
   );
 }
 
+/** The four Independence level targets on the fixture's expenses, in euros. */
+function independenceLevels() {
+  return fiLevels({
+    asOf: sample.asOf,
+    goals: [],
+    correlations: DEFAULT_CORRELATIONS,
+    fire: fireSettingsSchema.parse({}),
+    essential: sample.cashFlow.essential / 100,
+    optional: sample.cashFlow.optional / 100,
+    expenseGrowth: sample.cashFlow.expenseGrowth,
+    inflation: sample.settings.inflation,
+  });
+}
+
 const summary = (result: GoalProjection) => ({
   tau: round(result.tau, 6),
   targetAtGoalDate: round(result.targetAtGoalDate),
@@ -185,6 +199,18 @@ describe("synthetic fixture", () => {
     expect(new Set(sample.products.map((p) => p.regime))).toEqual(
       new Set(["etf", "direct", "govt", "cash", "pension"]),
     );
+  });
+
+  it("holds a made-up cash flow with income, expenses and a few events (AC-89)", () => {
+    const { cashFlow } = sample;
+    expect(cashFlow.income).toBeGreaterThan(0);
+    expect(cashFlow.essential).toBeGreaterThan(0);
+    expect(cashFlow.optional).toBeGreaterThan(0);
+    // Expense growth is growth above inflation: 0, or a small positive value.
+    expect(cashFlow.expenseGrowth).toBeGreaterThanOrEqual(0);
+    expect(cashFlow.expenseGrowth).toBeLessThanOrEqual(0.02);
+    expect(cashFlow.events.length).toBeGreaterThanOrEqual(2);
+    expect(cashFlow.events.length).toBeLessThanOrEqual(4);
   });
 
   it("holds a full pension plan with round inputs and one flow per fund", () => {
@@ -214,6 +240,7 @@ describe("synthetic fixture", () => {
         sample.goals.map((goal) => [goal.id, summary(project(sample, goal.id))]),
       ),
       monteCarlo: monteCarloSummary(),
+      independenceLevels: independenceLevels(),
     }).toMatchSnapshot();
   });
 

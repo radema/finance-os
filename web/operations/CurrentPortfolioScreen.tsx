@@ -2,10 +2,19 @@ import { useState } from "react";
 import type { GoalListView } from "../../engine/goalViews.ts";
 import type { Product, Settings, Transaction } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { DateInput } from "../DateInput.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatEuro } from "../money.ts";
+import { formatEuro, formatPrice, formatQuantity } from "../money.ts";
 import { TRANSACTIONS_ROUTE } from "../nav.ts";
-import { Alert, Card, Field, NumberField, ProductTag, Resource } from "../setup/ui.tsx";
+import {
+  Alert,
+  Card,
+  Field,
+  NumberField,
+  ProductTag,
+  RequiredLegend,
+  Resource,
+} from "../setup/ui.tsx";
 import { SplitControl } from "../split/SplitControl.tsx";
 import type { Bucket } from "../split/splitState.ts";
 import { buildOpeningInput, defaultAsOf, type OpeningRow } from "./openingForm.ts";
@@ -15,8 +24,6 @@ interface Weight {
   productId: string;
   weight: number;
 }
-
-const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 6 });
 
 const pmcLabel = (regime: string): string =>
   regime === "pension" ? "Average unit value (€)" : "PMC (€)";
@@ -62,8 +69,8 @@ function Saved({
               <tr key={t.id}>
                 <td>{productName(t.productId)}</td>
                 <td>{goalName(t.goalId)}</td>
-                <td className="num">{quantity.format(t.qty)}</td>
-                <td className="num">{quantity.format(t.price)}</td>
+                <td className="num">{formatQuantity(t.qty, 6)}</td>
+                <td className="num">{formatPrice(t.price)}</td>
                 <td className="num">{formatEuro(t.amountCents)}</td>
               </tr>
             ))}
@@ -169,8 +176,17 @@ function Form({
         title="As of"
         note={`The default is the first day of the tracking start month (${trackingStart}).`}
       >
-        <Field label="As-of date">
-          <input type="date" value={asOf} onChange={(event) => setAsOf(event.target.value)} />
+        <RequiredLegend />
+        <Field label="As-of date" required>
+          {(labelId, controlId) => (
+            <DateInput
+              id={controlId}
+              aria-labelledby={labelId}
+              required
+              value={asOf}
+              onChange={setAsOf}
+            />
+          )}
         </Field>
       </Card>
       {products.map((product) => (

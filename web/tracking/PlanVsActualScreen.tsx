@@ -7,7 +7,7 @@ import { formatEuro, formatPercent } from "../money.ts";
 import { Card, Resource } from "../setup/ui.tsx";
 import { CumulativeChart } from "./CumulativeChart.tsx";
 import { Exhibit } from "./Exhibit.tsx";
-import { gapText } from "./model.ts";
+import { gapText, nextTicketText } from "./model.ts";
 import { TimeChart } from "./TimeChart.tsx";
 
 const centsAxis = (cents: number) => formatEuro(cents).replace(/,00/, "");
@@ -30,11 +30,7 @@ function NextCard({ next }: { next: NextContributionView | null }) {
         <GoalChip id={next.goalId} name={next.goalName} slot={next.slot} />, the goal furthest
         behind its plan.
       </p>
-      <p className={next.wait ? "wait" : "note"}>
-        {next.wait
-          ? `Wait. ${formatEuro(next.amount)} is below the minimum efficient ticket of ${formatEuro(next.minTicket)}, so the commission takes a larger share than your plan's rate. Add it to next month's contribution.`
-          : `No need to wait. The minimum efficient ticket is ${formatEuro(next.minTicket)}.`}
-      </p>
+      <p className="note">{nextTicketText(next)}</p>
       <div className="table-scroll">
         <table className="table">
           <thead>
@@ -97,13 +93,13 @@ function Totals({ view }: { view: PlanVsActualView }) {
     <>
       <Exhibit
         tag="Planned vs put in"
-        title={`Since ${view.trackingStart} you planned ${formatEuro(last.cumPlanned)} and put in ${formatEuro(last.cumActual)}`}
+        title={`You are ${gapLine(last.gap)}, ${formatEuro(last.cumActual)} put in against ${formatEuro(last.cumPlanned)} planned`}
         unit="Euros, cumulative, all goals."
         legend={[
           { label: "Planned", kind: "dash", colour: "--ctx" },
           { label: "Put in", kind: "line", colour: "--hl" },
         ]}
-        callout={`All goals together are ${gapLine(last.gap)}. A month with no contribution is not a failure: only the running total counts.`}
+        callout="A month with no contribution is not a failure: only the running total counts."
         source={source}
       >
         <CumulativeChart
@@ -187,11 +183,7 @@ function PlanVsActual({ view }: { view: PlanVsActualView }) {
   const last = view.total.at(-1);
   return (
     <>
-      <h1 className="title">
-        {last
-          ? `You are ${gapLine(last.gap)}, ${formatEuro(last.cumActual)} put in against ${formatEuro(last.cumPlanned)} planned`
-          : "Plan vs actual"}
-      </h1>
+      <h1 className="title">Plan vs actual</h1>
       <p className="unit">
         Planned against put in since the tracking start, {view.trackingStart}. Values at the end of{" "}
         {view.asOf.slice(0, 7)}.

@@ -1,17 +1,14 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { addMonths } from "../../engine/months.ts";
 import { api, messageOf, useLoad } from "../api.ts";
-import { num } from "../forms.ts";
-import { Alert, Card, ProductTag, Resource } from "../setup/ui.tsx";
+import { checkFields } from "../formErrors.ts";
+import { formatPrice } from "../money.ts";
+import { Alert, Card, DecimalInput, ProductTag, Resource } from "../setup/ui.tsx";
+import { priceText, priceToSave } from "./model.ts";
 import type { Grid, GridPrice } from "./types.ts";
 
-const priceFormat = new Intl.NumberFormat("it-IT", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 4,
-});
-
 /** One editable cell: saves the typed price when the field loses focus and the text changed. */
-function PriceInput({
+export function PriceInput({
   label,
   stored,
   onSave,
@@ -20,22 +17,34 @@ function PriceInput({
   stored: GridPrice | undefined;
   onSave: (price: number) => void;
 }) {
-  const initial = stored ? String(stored.price) : "";
+  const initial = priceText(stored);
   const [text, setText] = useState(initial);
+  const [problem, setProblem] = useState<string>();
+  const errorId = useId();
   return (
-    <input
-      type="number"
-      inputMode="decimal"
-      step="any"
-      className="inline-input"
-      aria-label={label}
-      value={text}
-      onChange={(event) => setText(event.target.value)}
-      onBlur={() => {
-        const price = num(text);
-        if (text !== initial && Number.isFinite(price)) onSave(price);
-      }}
-    />
+    <>
+      <DecimalInput
+        className="inline-input"
+        aria-label={label}
+        {...(problem ? { "aria-invalid": true, "aria-describedby": errorId } : {})}
+        value={text}
+        onChange={(next) => {
+          setText(next);
+          setProblem(undefined);
+        }}
+        onBlur={() => {
+          const found = checkFields({ price: text }, { price: "optionalNumber" }, {}).price;
+          setProblem(found);
+          const price = found ? undefined : priceToSave(text, initial);
+          if (price !== undefined) onSave(price);
+        }}
+      />
+      {problem ? (
+        <span className="field-hint field-error" id={errorId}>
+          {problem}
+        </span>
+      ) : null}
+    </>
   );
 }
 
@@ -68,13 +77,13 @@ export function MonthGrid({ onChanged }: { onChanged: () => void }) {
           ) : (
             <>
               <div className="table-scroll">
-                <table className="table">
+                <table className="table price-grid">
                   <thead>
                     <tr>
                       <th>Product</th>
                       {months.map((month) => (
                         <th className="num" key={month}>
-                          {month}
+                          {month} <span className="sub">€</span>
                         </th>
                       ))}
                     </tr>
@@ -97,7 +106,7 @@ export function MonthGrid({ onChanged }: { onChanged: () => void }) {
                                   onSave={(price) => void save(row.productId, month, price)}
                                 />
                               ) : stored ? (
-                                priceFormat.format(stored.price)
+                                formatPrice(stored.price)
                               ) : (
                                 "–"
                               )}

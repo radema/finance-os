@@ -3,7 +3,7 @@ import { z } from "zod";
 import { listWithRangesOf, seriesOf } from "../engine/goalViews.ts";
 import { monthEnd } from "../engine/months.ts";
 import type { OverviewView } from "../engine/overviewView.ts";
-import { keyNumbersOf, netWorthByGoal, weakestGoal } from "../engine/overviewView.ts";
+import { keyNumbersOf, netWorthByGoal } from "../engine/overviewView.ts";
 import { goalSlot } from "../engine/slots.ts";
 import { loadCashFlowView } from "./cashFlow.ts";
 import type { DB } from "./db.ts";
@@ -23,11 +23,8 @@ async function loadOverview(db: Kysely<DB>, today: string): Promise<OverviewView
     kind: "all",
   });
 
-  const pensionGoalId = world.pension?.goalId;
-  const slotOf = (goal: { id: string }) => goalSlot(goal, world.goals, pensionGoalId);
+  const slotOf = (goal: { id: string }) => goalSlot(goal, world.goals);
   const series = new Map(world.goals.map((goal) => [goal.id, seriesOf(world, goal.id)]));
-  const weakest = weakestGoal(rows);
-  const range = weakest && ranges.get(weakest.id);
 
   return {
     asOf: monthEnd(world.month),
@@ -38,10 +35,10 @@ async function loadOverview(db: Kysely<DB>, today: string): Promise<OverviewView
       series,
       world.month,
     ),
-    range:
-      weakest && range
-        ? { goalId: weakest.id, name: weakest.name, slot: weakest.slot, range }
-        : null,
+    ranges: rows.flatMap(({ id, name, slot }) => {
+      const range = ranges.get(id);
+      return range ? [{ goalId: id, name, slot, range }] : [];
+    }),
     cashFlow: (await loadCashFlowView(db, today)).rows,
     fi,
     snapshots: await loadSnapshots(db),

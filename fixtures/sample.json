@@ -793,5 +793,17 @@
       { "productId": "p-pension-balanced", "flow": "Work", "pct": 1 },
       { "productId": "p-pension-equity", "flow": "Voluntary", "pct": 1 }
     ]
+  },
+  "cashFlow": {
+    "income": 4800000,
+    "incomeGrowth": 0.01,
+    "essential": 150000,
+    "optional": 50000,
+    "expenseGrowth": 0,
+    "events": [
+      { "year": 2027, "label": "Boiler replacement", "amount": -600000 },
+      { "year": 2028, "label": "Work bonus", "amount": 300000 },
+      { "year": 2030, "label": "Home repairs", "amount": -1000000 }
+    ]
   }
 }

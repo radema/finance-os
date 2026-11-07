@@ -10,7 +10,9 @@ import {
   Alert,
   Card,
   ConfirmButton,
+  DecimalInput,
   NumberField,
+  RequiredLegend,
   Resource,
   SelectField,
   TextField,
@@ -126,17 +128,11 @@ function useDocumentForm<T>(
   };
 }
 
-function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }) {
+export function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }) {
   const form = useDocumentForm("/api/settings", settings, settingsToValues, valuesToSettings);
   const { values, set } = form;
-  const field = (key: string, label: ReactNode, hint?: string, step?: string) => (
-    <NumberField
-      label={label}
-      value={values[key] ?? ""}
-      onChange={set(key)}
-      hint={hint}
-      step={step}
-    />
+  const field = (key: string, label: ReactNode, hint?: string) => (
+    <NumberField label={label} value={values[key] ?? ""} onChange={set(key)} hint={hint} required />
   );
   return (
     <form
@@ -146,8 +142,13 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
       }}
     >
       <Card title="Taxes and economy">
+        <RequiredLegend />
         <div className="form-grid">
-          {field("inflation", "Inflation (% a year)", "Not in the spec: the mock's 2%.")}
+          {field(
+            "inflation",
+            "Inflation (% a year)",
+            "Used to turn today's euros into future euros.",
+          )}
           {field("taxStd", "Tax on ETF gains and direct holdings (%)")}
           {field("taxGovt", "Tax on government bonds (%)")}
           {field(
@@ -157,7 +158,7 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
             </>,
           )}
           {field("pensionTax", "Tax on pension returns (%)")}
-          {field("pensionCap", "Pension deduction cap (EUR)", undefined, "0.01")}
+          {field("pensionCap", "Pension deduction cap (EUR)")}
         </div>
       </Card>
       <Card title="Probabilities and simulation">
@@ -185,18 +186,18 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
             <>
               <TermPopover term="simulated">Monte Carlo</TermPopover> paths
             </>,
-            undefined,
-            "1",
           )}
-          {field("seed", "Random seed", "Not in the spec: the mock's 42.", "1")}
+          {field("seed", "Random seed", "The same seed gives the same simulated results.")}
           <TextField
             label="Tracking starts (YYYY-MM)"
             value={values.trackingStart ?? ""}
             onChange={set("trackingStart")}
+            required
           />
         </div>
       </Card>
       <Card
+        memoryKey="Tax-loss credit"
         title={
           <>
             Tax-loss credit (<TermPopover term="zainetto">zainetto</TermPopover>)
@@ -204,8 +205,8 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
         }
       >
         <div className="form-grid">
-          {field("zainettoAmount", "Amount (EUR)", undefined, "0.01")}
-          {field("zainettoExpiry", "Expires in year", undefined, "1")}
+          {field("zainettoAmount", "Amount (EUR)")}
+          {field("zainettoExpiry", "Expires in year")}
           <SelectField
             label="Assigned to goal"
             value={values.zainettoGoal ?? ""}
@@ -219,11 +220,34 @@ function SettingsForm({ settings, goals }: { settings: Settings; goals: Goal[] }
       </Card>
       <Card title="Rule thresholds">
         <div className="form-grid">
-          {field("r1Months", "R1: months", undefined, "1")}
-          {field("r3Months", "R3: months", undefined, "1")}
-          {field("r7Multiple", "R7: multiple")}
-          {field("statusBand", "Status band (points)")}
-          {field("priceAge", "Daily price age (days)", undefined, "1")}
+          {field(
+            "r1Months",
+            "Behind plan: alert after (months)",
+            "Alert when your saving is behind plan by this many months of contributions.",
+          )}
+          {field(
+            "r3Months",
+            "Maturity ahead: warn within (months)",
+            "Warn when a product you hold matures within this many months.",
+          )}
+          {field(
+            "r7Multiple",
+            "Costly trades: alert above (times your fee rate)",
+            "Alert when a trade of the last 12 months costs more than this many times your fee rate.",
+          )}
+          {field(
+            "statusBand",
+            <>
+              <TermPopover term="atrisk">At-risk band</TermPopover> (points below the required
+              probability)
+            </>,
+            "A goal this close below its required probability is At risk. Further below is Off track.",
+          )}
+          {field(
+            "priceAge",
+            "Price counts as old after (days)",
+            "An online price older than this is marked old.",
+          )}
         </div>
       </Card>
       <div className="actions">
@@ -257,8 +281,9 @@ function CommissionForm({ commission }: { commission: Commission }) {
         title="Commission plan"
         note="Percent: the fee is the rate times the amount, between the minimum and the maximum. Flat: one fee for every trade."
       >
+        <RequiredLegend />
         <div className="form-grid">
-          <TextField label="Plan name" value={values.plan ?? ""} onChange={set("plan")} />
+          <TextField label="Plan name" value={values.plan ?? ""} onChange={set("plan")} required />
           <SelectField
             label="Fee model"
             value={values.feeModel ?? "percent"}
@@ -274,7 +299,7 @@ function CommissionForm({ commission }: { commission: Commission }) {
                 label="Flat fee (EUR)"
                 value={values.flatFee ?? ""}
                 onChange={set("flatFee")}
-                step="0.01"
+                required
               />
               <NumberField
                 label={
@@ -284,23 +309,28 @@ function CommissionForm({ commission }: { commission: Commission }) {
                 }
                 value={values.minTicket ?? ""}
                 onChange={set("minTicket")}
-                step="0.01"
+                required
               />
             </>
           ) : (
             <>
-              <NumberField label="Rate (%)" value={values.rate ?? ""} onChange={set("rate")} />
+              <NumberField
+                label="Rate (%)"
+                value={values.rate ?? ""}
+                onChange={set("rate")}
+                required
+              />
               <NumberField
                 label="Minimum fee (EUR)"
                 value={values.min ?? ""}
                 onChange={set("min")}
-                step="0.01"
+                required
               />
               <NumberField
                 label="Maximum fee (EUR)"
                 value={values.max ?? ""}
                 onChange={set("max")}
-                step="0.01"
+                required
               />
             </>
           )}
@@ -314,6 +344,34 @@ function CommissionForm({ commission }: { commission: Commission }) {
         <Alert message={form.error} />
       </Card>
     </form>
+  );
+}
+
+/** A matrix cell. It keeps the typed text, so a comma that is not yet followed by a digit stays in the box. */
+function CorrelationInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (text: string) => void;
+}) {
+  const [text, setText] = useState(String(value));
+  // A value that changed outside the box (a save, a reload) replaces the text; the typed text that reads as the value stays.
+  useEffect(() => {
+    setText((current) => (Object.is(num(current), value) ? current : String(value)));
+  }, [value]);
+  return (
+    <DecimalInput
+      className="inline-input"
+      aria-label={label}
+      value={text}
+      onChange={(next) => {
+        setText(next);
+        onChange(next);
+      }}
+    />
   );
 }
 
@@ -374,15 +432,10 @@ function CorrelationsForm({ view }: { view: CorrelationsView }) {
                 {ASSET_CLASSES.map((colName, j) => (
                   <td key={colName} className="num">
                     {j < i ? (
-                      <input
-                        className="inline-input"
-                        type="number"
-                        min="-1"
-                        max="1"
-                        step="0.05"
-                        aria-label={`Correlation ${rowName} and ${colName}`}
-                        value={Number.isNaN(matrix[i]?.[j]) ? "" : (matrix[i]?.[j] ?? "")}
-                        onChange={(event) => edit(i, j, event.target.value)}
+                      <CorrelationInput
+                        label={`Correlation ${rowName} and ${colName}`}
+                        value={matrix[i]?.[j] ?? 0}
+                        onChange={(text) => edit(i, j, text)}
                       />
                     ) : (
                       (matrix[i]?.[j] ?? 0)
@@ -457,6 +510,7 @@ export function AssumptionsTab() {
                       >
                         <ConfirmButton
                           label="Reset assumptions"
+                          outlined
                           confirmLabel="Reset to defaults"
                           onConfirm={() => void reset()}
                         />

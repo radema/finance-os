@@ -1,12 +1,14 @@
 import type { CSSProperties } from "react";
 import type { GoalAnalysis, GoalDetailView } from "../../engine/goalViews.ts";
+import { isZeroWidth } from "../../engine/outcomeChart.ts";
+import type { Goal } from "../../engine/schemas.ts";
 import type { PerformanceView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatAmount, formatPercent, formatUnitPrice } from "../money.ts";
-import { GOALS_LIST_ROUTE } from "../nav.ts";
+import { formatAmount, formatPercent, formatQuantity, formatUnitPrice } from "../money.ts";
+import { GOALS_LIST_ROUTE, goalDetailHref } from "../nav.ts";
 import { Card, PriorityTag, ProductTag, Resource } from "../setup/ui.tsx";
-import { percentText, scopeQuery, xirrNote } from "../tracking/model.ts";
+import { historyMonths, scopeQuery, xirrTile } from "../tracking/model.ts";
 import { FanChart } from "./FanChart.tsx";
 import { GoalTracking } from "./GoalTracking.tsx";
 import { Kpi } from "./Kpi.tsx";
@@ -15,7 +17,6 @@ import { RangeChart } from "./RangeChart.tsx";
 import { StatusChip } from "./StatusChip.tsx";
 import { ValueChart } from "./ValueChart.tsx";
 
-const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
 const NOT_FOUND = "goal not found";
 const MISSING = "–";
 
@@ -141,26 +142,41 @@ function FanExhibit({ goal, analysis }: { goal: GoalDetailView; analysis: GoalAn
 }
 
 function RangeExhibit({ goal, analysis }: { goal: GoalDetailView; analysis: GoalAnalysis }) {
-  const { range } = analysis;
+  const { range, distribution } = analysis;
   const gap = range.typical - range.target;
   const title = `In the typical case ${goal.name} ends ${formatAmount(Math.abs(gap))} ${gap >= 0 ? "above" : "below"} its target`;
+  const flat = isZeroWidth(range);
   return (
     <figure className="exhibit" style={slotStyle(goal.slot)}>
       <div className="tag">Range of outcomes</div>
       <h2 className="exhibit-title">{title}</h2>
       <p className="unit">Net value at the goal date, 31 December {goal.targetYear}, in euros.</p>
-      <ul className="legend">{bandLegend}</ul>
-      <RangeChart
-        range={range}
-        slot={goal.slot}
-        label={`Range of outcomes for ${goal.name} at the goal date: bad ${formatAmount(range.bad)}, typical ${formatAmount(range.typical)}, good ${formatAmount(range.good)}, target ${formatAmount(range.target)}`}
-      />
-      <p className="callout">
-        The bad case is {formatAmount(range.bad)} and the good case is {formatAmount(range.good)}.
-        The target at the goal date is {formatAmount(range.target)}.
-      </p>
+      {flat ? (
+        <p className="range-flat">
+          <strong className="range-flat-value">{formatAmount(range.typical)}</strong>
+          <span>
+            The bad, typical and good case are the same, so there is no range to draw. The target at
+            the goal date is {formatAmount(range.target)}.
+          </span>
+        </p>
+      ) : (
+        <>
+          <ul className="legend">{bandLegend}</ul>
+          <RangeChart
+            range={range}
+            distribution={distribution}
+            slot={goal.slot}
+            label={`Range of outcomes for ${goal.name} at the goal date: bad ${formatAmount(range.bad)}, typical ${formatAmount(range.typical)}, good ${formatAmount(range.good)}, target ${formatAmount(range.target)}`}
+          />
+          <p className="callout">
+            The bad case is {formatAmount(range.bad)} and the good case is{" "}
+            {formatAmount(range.good)}. The target at the goal date is {formatAmount(range.target)}.
+          </p>
+        </>
+      )}
       <figcaption className="source">
         Source: {analysis.paths} simulated markets, seed {analysis.seed}; after tax and fund costs.
+        The chart counts the simulated outcomes in bins.
       </figcaption>
     </figure>
   );
@@ -220,7 +236,7 @@ function Analysis({ goal }: { goal: GoalDetailView }) {
   const { analysis } = goal;
   if (!analysis) {
     return (
-      <Card title={<TermPopover term="simulated">Monte Carlo</TermPopover>}>
+      <Card memoryKey="Monte Carlo" title={<TermPopover term="simulated">Monte Carlo</TermPopover>}>
         <p className="note">{goal.projectionNote ?? "The simulation cannot run for this goal."}</p>
       </Card>
     );
@@ -234,21 +250,51 @@ function Analysis({ goal }: { goal: GoalDetailView }) {
   );
 }
 
+const XIRR_HELP = "Your own yearly return, counting when you put money in.";
+
 /** The goal's XIRR from the performance of its bucket; the dash and a reason when there is none. */
 function XirrKpi({ goalId }: { goalId: string }) {
   const loaded = useLoad<PerformanceView>(
     `/api/performance?${scopeQuery({ kind: "bucket", goalId })}`,
   );
   const { data } = loaded;
-  const note = data
-    ? (data.note ?? xirrNote(data.summary?.xirr ?? null))
-    : (loaded.error ?? "Loading.");
+  const tile = xirrTile(data?.summary?.xirr ?? null, data ? historyMonths(data) : 0);
+  const note = data ? (data.note ?? tile.note ?? XIRR_HELP) : loaded.error;
   return (
     <Kpi
-      label={<TermPopover term="xirr">XIRR a year</TermPopover>}
-      value={percentText(data?.summary?.xirr ?? null)}
+      label={
+        <>
+          Return a year (<TermPopover term="xirr">XIRR</TermPopover>)
+        </>
+      }
+      value={tile.value}
       note={note}
     />
+  );
+}
+
+/** Back to the Goals list, and a switch to another goal without a trip through the list. */
+function GoalNav({ goalId }: { goalId: string }) {
+  const { data: goals } = useLoad<Goal[]>("/api/goals");
+  return (
+    <div className="goal-nav">
+      <a href={`#/${GOALS_LIST_ROUTE}`}>Back to the Goals list</a>
+      {goals && goals.length > 1 ? (
+        <select
+          aria-label="Switch goal"
+          value={goalId}
+          onChange={(event) => {
+            window.location.hash = goalDetailHref(event.target.value);
+          }}
+        >
+          {goals.map((goal) => (
+            <option key={goal.id} value={goal.id}>
+              {goal.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </div>
   );
 }
 
@@ -257,6 +303,7 @@ function Detail({ goal }: { goal: GoalDetailView }) {
   const goalDate = `31 December ${goal.targetYear}`;
   return (
     <div style={{ "--slot": `var(--slot${goal.slot})` } as CSSProperties}>
+      <GoalNav goalId={goal.id} />
       <div className="tag">Goal</div>
       <h1 className="title">{goal.name}</h1>
       <p className="unit">
@@ -331,7 +378,7 @@ function Detail({ goal }: { goal: GoalDetailView }) {
                     <td>
                       {row.name} <ProductTag regime={row.regime} />
                     </td>
-                    <td className="num">{quantity.format(row.units)}</td>
+                    <td className="num">{formatQuantity(row.units)}</td>
                     <td className="num">
                       {row.price === null ? "No price" : formatUnitPrice(row.price)}
                     </td>
@@ -383,18 +430,7 @@ function Loader({ goalId }: { goalId: string }) {
   return <Resource loaded={loaded}>{(goal) => <Detail goal={goal} />}</Resource>;
 }
 
-/** Goals > Detail: value, P vs required, fan, range, what it would take, holdings, value vs money put in. */
-export function GoalDetailScreen({ goalId }: { goalId: string | undefined }) {
-  if (goalId === undefined) {
-    return (
-      <>
-        <div className="tag">Goal</div>
-        <h1 className="title">Pick a goal</h1>
-        <p className="unit">
-          Open a goal from the <a href={`#/${GOALS_LIST_ROUTE}`}>Goals list</a>.
-        </p>
-      </>
-    );
-  }
-  return <Loader goalId={goalId} />;
+/** A goal's page, opened from the Goals list: value, P vs required, fan, range, what it would take, holdings, value vs money put in. */
+export function GoalDetailScreen({ goalId }: { goalId: string }) {
+  return <Loader key={goalId} goalId={goalId} />;
 }

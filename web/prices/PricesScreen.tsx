@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { canUseProvider, PRICE_SOURCES } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { formatUnitPrice } from "../money.ts";
 import { Alert, Card, ProductTag, Resource } from "../setup/ui.tsx";
 import { CsvImport } from "./CsvImport.tsx";
 import { MonthGrid } from "./MonthGrid.tsx";
+import { canRefetch, sourceOptions } from "./model.ts";
 import { OnlinePrices } from "./OnlinePrices.tsx";
 import { Positions } from "./Positions.tsx";
 import { PriceFreshnessPill } from "./PriceFreshnessPill.tsx";
@@ -85,9 +85,7 @@ export function PricesScreen() {
                             value={row.priceSource}
                             onChange={(event) => void setSource(row.productId, event.target.value)}
                           >
-                            {PRICE_SOURCES.filter(
-                              (source) => source !== "provider" || canUseProvider(row.regime),
-                            ).map((source) => (
+                            {sourceOptions(row).map((source) => (
                               <option key={source} value={source}>
                                 {SOURCE_LABEL[source]}
                               </option>
@@ -101,8 +99,8 @@ export function PricesScreen() {
                         <td>
                           <PriceFreshnessPill age={row.age} />
                         </td>
-                        <td>
-                          {row.priceSource === "provider" ? (
+                        <td className="row-actions">
+                          {canRefetch(row) ? (
                             <button
                               className="btn btn-quiet"
                               type="button"
@@ -111,7 +109,9 @@ export function PricesScreen() {
                             >
                               Re-fetch
                             </button>
-                          ) : null}
+                          ) : (
+                            "–"
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -124,8 +124,9 @@ export function PricesScreen() {
         <Alert message={error} />
       </Card>
 
-      <OnlinePrices key={reviewKey} onChanged={changed} />
-      <MonthGrid key={gridKey} onChanged={overview.reload} />
+      {/* Both counters start at 0 and bump together: the name in each key keeps the cards apart. */}
+      <OnlinePrices key={`review-${reviewKey}`} onChanged={changed} />
+      <MonthGrid key={`grid-${gridKey}`} onChanged={overview.reload} />
       <CsvImport onImported={changed} />
       <Resource loaded={overview}>
         {(rows) => <Positions products={rows} onSaved={overview.reload} />}

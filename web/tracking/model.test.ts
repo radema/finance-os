@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { SnapshotGoal, SnapshotView } from "../../engine/snapshot.ts";
 import {
   gapText,
+  historyMonths,
   historyOf,
   metricOf,
+  nextTicketText,
   scopeKey,
   scopeOfKey,
   scopeQuery,
   xirrNote,
+  xirrTile,
 } from "./model.ts";
 
 const goal = (goalId: string, over: Partial<SnapshotGoal> = {}): SnapshotGoal => ({
@@ -105,5 +108,49 @@ describe("texts", () => {
   it("explains an XIRR that is not there", () => {
     expect(xirrNote(null)).toMatch(/no annual rate/i);
     expect(xirrNote(0.05)).toBeUndefined();
+  });
+
+  it("hides the XIRR of a history shorter than 12 months", () => {
+    expect(xirrTile(-0.3329, 3)).toEqual({ value: "–", note: "Not enough history yet" });
+    expect(xirrTile(-0.3329, 11).value).toBe("–");
+  });
+
+  it("shows the XIRR from 12 months of history", () => {
+    expect(xirrTile(0.065, 12)).toEqual({ value: "6,5%", note: undefined });
+    expect(xirrTile(null, 12).note).toMatch(/no annual rate/i);
+  });
+
+  it("prints a zero XIRR without a sign", () => {
+    expect(xirrTile(-0.00001, 12).value).toBe("0%");
+    expect(xirrTile(-0, 24).value).toBe("0%");
+  });
+
+  it("counts the months from the first cash flow to the valuation month", () => {
+    const point = (month: string) => ({
+      month,
+      value: 0,
+      moneyIn: 0,
+      index: 100,
+      drawdown: 0,
+      twrMonthly: null,
+    });
+    expect(historyMonths({ months: [point("2026-01"), point("2026-02"), point("2026-03")] })).toBe(
+      2,
+    );
+    expect(historyMonths({ months: [] })).toBe(0);
+  });
+});
+
+describe("Next contribution ticket text (AC-71, AC-89)", () => {
+  it("says the amount is below the minimum efficient ticket, calmly", () => {
+    expect(nextTicketText({ wait: true, amount: 139126, minTicket: 155263 })).toBe(
+      "1.391,26\u00a0\u20ac is below the minimum efficient ticket (1.552,63\u00a0\u20ac). Add it to next month's contribution.",
+    );
+  });
+
+  it("names the ticket when the amount reaches it", () => {
+    expect(nextTicketText({ wait: false, amount: 200000, minTicket: 155263 })).toBe(
+      "No need to wait. The minimum efficient ticket is 1.552,63\u00a0\u20ac.",
+    );
   });
 });

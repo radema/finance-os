@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PensionPlan } from "../../engine/schemas.ts";
-import { planToValues, valuesToPlan } from "./planForm.ts";
+import { flowKey, isPlanDirty, planToValues, valuesToPlan } from "./planForm.ts";
 
 const plan: PensionPlan = {
   goalId: "g",
@@ -42,5 +42,35 @@ describe("pension plan form", () => {
 
   it("makes a bad number NaN so the server names the field", () => {
     expect(valuesToPlan({ ...planToValues(plan, "g"), firstYear: "" }, []).firstYear).toBeNaN();
+  });
+
+  describe("dirty state", () => {
+    const saved = planToValues(plan, "g");
+
+    it("is clean while nothing changed", () => {
+      expect(isPlanDirty({ ...saved }, saved)).toBe(false);
+    });
+
+    it("is dirty after an input changes", () => {
+      expect(isPlanDirty({ ...saved, ral: "41000" }, saved)).toBe(true);
+    });
+
+    it("is dirty after a flow share changes or is added", () => {
+      expect(isPlanDirty({ ...saved, [flowKey("Work", "a")]: "50" }, saved)).toBe(true);
+      expect(isPlanDirty({ ...saved, [flowKey("Work", "b")]: "10" }, saved)).toBe(true);
+    });
+
+    it("treats a blank flow share and a missing one alike", () => {
+      expect(isPlanDirty({ ...saved, [flowKey("Work", "b")]: "" }, saved)).toBe(false);
+    });
+
+    it("is clean again once the saved values are the edited ones", () => {
+      const edited = { ...saved, ral: "41000" };
+      expect(isPlanDirty(edited, edited)).toBe(false);
+    });
+
+    it("is dirty when no plan is stored yet", () => {
+      expect(isPlanDirty(planToValues(null, "g"), null)).toBe(true);
+    });
   });
 });

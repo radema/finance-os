@@ -1,13 +1,15 @@
 import { type CSSProperties, type ReactNode, useMemo } from "react";
 import type { GoalListRow } from "../../engine/goalViews.ts";
-import type { OverviewView } from "../../engine/overviewView.ts";
+import { type OverviewView, rangeRows } from "../../engine/overviewView.ts";
 import type { Alert } from "../../engine/rules.ts";
+import { EmptyState } from "../EmptyState.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
 import { pVsRequired } from "../goals/outlook.ts";
-import { RangeChart } from "../goals/RangeChart.tsx";
+import { SeverityChip } from "../goals/SeverityChip.tsx";
 import { StatusChip } from "../goals/StatusChip.tsx";
 import { ProgressChart } from "../independence/FiCharts.tsx";
+import { noLevelSet } from "../independence/model.ts";
 import { formatAmount, formatPercent } from "../money.ts";
 import { goalDetailHref } from "../nav.ts";
 import { PriceFreshnessPill } from "../prices/PriceFreshnessPill.tsx";
@@ -21,11 +23,19 @@ import {
   percentText,
 } from "../tracking/model.ts";
 import { TimeChart } from "../tracking/TimeChart.tsx";
-import { alertRoute, hrefOf, type LevelRow } from "./model.ts";
+import { alertRoute, hrefOf, type LevelRow, OVERVIEW_ROUTES } from "./model.ts";
 
 const euroAxis = (value: number) => formatAmount(value).replace(/,00/, "");
 const CENTS = 100;
+const PERCENT = 100;
+const AXIS_PRECISION = 12;
+const TREND_NOTE =
+  "A goal's probability falls steeply as its date nears: with less time left, there is less time to recover from a bad market.";
 const NOT_REACHED = "Not within 40 years";
+const SET_EXPENSES = {
+  message: "Set your expenses to see the levels and when you reach them.",
+  action: { label: "Set your expenses", href: hrefOf(OVERVIEW_ROUTES.fiLevels) },
+} as const;
 
 /** A grid cell: a title that links to the screen that explains it, an optional unit line and the content. */
 export function Cell({
@@ -44,7 +54,7 @@ export function Cell({
 }) {
   return (
     <section className="card cell" data-cell={id}>
-      <header className="card-head">{href ? <a href={href}>{title}</a> : title}</header>
+      <h2 className="card-head">{href ? <a href={href}>{title}</a> : title}</h2>
       <div className="card-body">
         {unit ? <p className="unit">{unit}</p> : null}
         {children}
@@ -121,7 +131,7 @@ export function NetWorthCell({ view }: { view: OverviewView["netWorth"] }) {
   );
 }
 
-/** The visible alerts, each with its rule, a link to the screen of the rule and a dismiss action. */
+/** The visible alerts, each with its name and severity, a link to the screen of the rule and a dismiss action. */
 export function AttentionCell({
   alerts,
   error,
@@ -139,10 +149,8 @@ export function AttentionCell({
         {alerts.map((alert) => (
           <li key={`${alert.ruleId}|${alert.scope.kind}|${alert.key}`}>
             <div className="alert-rule">
-              <a href={hrefOf(alertRoute(alert))}>
-                {alert.ruleId} {alert.name}
-              </a>
-              <span className="sub-line"> {alert.severity}</span>
+              <a href={hrefOf(alertRoute(alert))}>{alert.name}</a>
+              <SeverityChip severity={alert.severity} />
             </div>
             <p className="sub">{alert.condition}</p>
             <button className="btn" type="button" onClick={() => onDismiss(alert)}>
@@ -166,7 +174,14 @@ export function TrendCell({
   const history = useMemo(() => historyOf(snapshots, "prob"), [snapshots]);
   const known = useMemo(() => knownGoals(history, goals), [history, goals]);
   const series = useMemo(() => historySeries(history, known), [history, known]);
-  if (history.months.length === 0) return <p className="note">There are no snapshots yet.</p>;
+  if (history.months.length === 0) {
+    return (
+      <EmptyState
+        message="No snapshots yet."
+        action={{ label: "Save a snapshot", href: hrefOf(OVERVIEW_ROUTES.trend) }}
+      />
+    );
+  }
   return (
     <>
       <Legend
@@ -182,23 +197,78 @@ export function TrendCell({
         format={formatPercent}
         label="Probability of success of each goal over the monthly snapshots"
       />
+      <p className="note">{TREND_NOTE}</p>
     </>
   );
 }
 
-/** The range of outcomes of one goal at its date, against its target. */
-export function RangeCell({ range }: { range: NonNullable<OverviewView["range"]> }) {
+/** Each goal's range at its date as a dumbbell of its own target: bad to good case, the typical case a dot. */
+export function RangeCell({ ranges }: { ranges: OverviewView["ranges"] }) {
+  const view = rangeRows(ranges);
+  if (!view) return <p className="note">No goal has an analysis yet.</p>;
+  const { axis, rows } = view;
+  const share = (value: number) => formatPercent(Math.round(value * PERCENT) / PERCENT);
+  const left = (value: number) => `${((value - axis.min) / (axis.max - axis.min)) * PERCENT}%`;
+  const ticks = Array.from(
+    { length: Math.round((axis.max - axis.min) / axis.step) + 1 },
+    (_, index) => Number((axis.min + index * axis.step).toPrecision(AXIS_PRECISION)),
+  );
   return (
     <>
-      <p className="sub">
-        <GoalChip id={range.goalId} name={range.name} slot={range.slot} /> has the smallest margin
-        over its <TermPopover term="required">required probability</TermPopover>.
-      </p>
-      <RangeChart
-        range={range.range}
-        slot={range.slot}
-        label={`Range of outcomes of ${range.name} against its target`}
+      <Legend
+        items={[
+          { label: "Bad case to good case", kind: "area", colour: "--ink2" },
+          { label: "Typical case", kind: "dot", colour: "--ink2" },
+          { label: "Target = 100%", kind: "dash", colour: "--ink2" },
+        ]}
       />
+      <ul className="rbars">
+        {rows.map((row) => (
+          <li key={row.goalId} style={{ "--slot": `var(--slot${row.slot})` } as CSSProperties}>
+            <GoalChip id={row.goalId} name={row.name} slot={row.slot} />
+            <span
+              className="rbar"
+              role="img"
+              aria-label={`${row.name}: bad case ${share(row.bad)}, typical ${share(row.typical)}, good ${share(row.good)} of the target`}
+            >
+              {ticks.map((tick) => (
+                <span key={tick} className="rbar-grid" style={{ left: left(tick) }} />
+              ))}
+              <span className="rbar-target" style={{ left: left(1) }} />
+              {row.flat ? null : (
+                <span
+                  className="rbar-band"
+                  style={{
+                    left: left(row.bad),
+                    width: `${((row.good - row.bad) / (axis.max - axis.min)) * PERCENT}%`,
+                  }}
+                />
+              )}
+              <span
+                className={row.flat ? "rbar-dot rbar-dot-flat" : "rbar-dot"}
+                style={{ left: left(row.typical) }}
+              />
+            </span>
+            <span className="rbar-text">
+              <strong>
+                {row.flat ? share(row.typical) : `${share(row.bad)} to ${share(row.good)}`}
+              </strong>
+              <span className="sub-line">
+                {row.flat ? "all three cases equal" : `typical ${share(row.typical)}`}
+              </span>
+            </span>
+          </li>
+        ))}
+        <li className="rbars-axis" aria-hidden="true">
+          <span className="rbar">
+            {ticks.map((tick, index) => (
+              <span key={tick} className="rbars-tick" style={{ left: left(tick) }}>
+                {index % 2 === 0 ? share(tick) : null}
+              </span>
+            ))}
+          </span>
+        </li>
+      </ul>
     </>
   );
 }
@@ -276,7 +346,8 @@ export function GoalsCell({ goals }: { goals: readonly GoalListRow[] }) {
 
 /** Median wealth as a share of each level's target, year by year. */
 export function FiProgressCell({ fi }: { fi: OverviewView["fi"] }) {
-  if (!fi.result) return <p className="note">{fi.note ?? "There is no projection yet."}</p>;
+  if (!fi.result) return <EmptyState message={fi.note ?? "There is no projection yet."} />;
+  if (noLevelSet(fi.result.levels)) return <EmptyState {...SET_EXPENSES} />;
   return (
     <ProgressChart
       result={fi.result}
@@ -305,7 +376,8 @@ export function PricesCell({ prices }: { prices: OverviewView["prices"] }) {
 
 /** Per FI level: today's share of the target, and the year it is reached. */
 export function LevelsCell({ levels, note }: { levels: readonly LevelRow[]; note: string | null }) {
-  if (levels.length === 0) return <p className="note">{note ?? "There is no projection yet."}</p>;
+  if (levels.length === 0) return <EmptyState message={note ?? "There is no projection yet."} />;
+  if (levels.every((level) => !level.set)) return <EmptyState {...SET_EXPENSES} />;
   const year = (value: number | null) => (value === null ? NOT_REACHED : String(value));
   return (
     <div className="table-scroll">
@@ -321,14 +393,23 @@ export function LevelsCell({ levels, note }: { levels: readonly LevelRow[]; note
           </tr>
         </thead>
         <tbody>
-          {levels.map((level) => (
-            <tr key={level.name}>
-              <td>{level.name}</td>
-              <td className="num">{percentText(level.progress)}</td>
-              <td className="num">{year(level.median)}</td>
-              <td className="num">{year(level.deterministic)}</td>
-            </tr>
-          ))}
+          {levels.map((level) =>
+            level.set ? (
+              <tr key={level.name}>
+                <td>{level.name}</td>
+                <td className="num">{percentText(level.progress)}</td>
+                <td className="num">{year(level.median)}</td>
+                <td className="num">{year(level.deterministic)}</td>
+              </tr>
+            ) : (
+              <tr key={level.name}>
+                <td>{level.name}</td>
+                <td className="num" colSpan={3}>
+                  Set your expenses
+                </td>
+              </tr>
+            ),
+          )}
         </tbody>
       </table>
     </div>

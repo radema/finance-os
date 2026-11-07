@@ -3,14 +3,12 @@ import { GridComponent } from "echarts/components";
 import * as echarts from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
 import { useCallback } from "react";
-import { readColour, useEchart } from "../useEchart.ts";
+import { PLOT_GRID, readColour, useEchart } from "../useEchart.ts";
 
 echarts.use([LineChart, BarChart, GridComponent, SVGRenderer]);
 
 const AREA_OPACITY = { light: 0.3, dark: 0.4 };
 const MARKER_SIZE = 8;
-/** Room right of the plot for the end labels. */
-const LABEL_ROOM = 128;
 
 export interface ChartSeries {
   name: string;
@@ -29,7 +27,7 @@ export interface ChartSeries {
   endLabel?: boolean;
 }
 
-function buildOption(
+export function buildOption(
   months: readonly string[],
   series: readonly ChartSeries[],
   format: (value: number) => string,
@@ -39,12 +37,11 @@ function buildOption(
   const font = readColour("--font-text");
   const text = { color: readColour("--muted"), fontFamily: font, fontSize: 12 };
   const surface = readColour("--surface");
-  const labelled = series.some((s) => s.endLabel);
   const hasBars = series.some((s) => s.kind === "bar");
 
   return {
     animation: false,
-    grid: { left: 8, right: labelled ? LABEL_ROOM : 16, top: 16, bottom: 8, containLabel: true },
+    grid: { ...PLOT_GRID },
     xAxis: {
       type: "category" as const,
       data: months,

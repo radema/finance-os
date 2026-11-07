@@ -28,6 +28,12 @@ export const GLOSSARY = {
     explanation:
       "The same plan run 1,000 times with random but realistic market moves. The same seed gives the same result every time.",
   },
+  atrisk: {
+    en: "at-risk band",
+    it: "Fascia a rischio",
+    explanation:
+      "How far below its required probability a goal can fall and still count as At risk. By default, within 15 points it is At risk; further below it is Off track.",
+  },
   badcase: {
     en: "bad case",
     it: "Scenario sfavorevole",
@@ -88,13 +94,19 @@ export const GLOSSARY = {
     en: "financial independence (FIRE)",
     it: "Indipendenza finanziaria (FIRE)",
     explanation:
-      "Having enough invested money that work no longer has to pay for your life. Here it has three levels, from a safety cushion to full independence.",
+      "Having enough invested money that work no longer has to pay for your life. Here it has four levels, from a safety cushion to full independence.",
   },
   barista: {
     en: "Barista FIRE",
     it: "Barista FIRE",
     explanation:
-      "Enough capital to cover essential expenses (300 × your monthly essentials), so work only has to pay for the extras.",
+      "Enough capital to cover part of your essential expenses (200 × your monthly essentials), so work only has to pay for the rest.",
+  },
+  lean: {
+    en: "Lean FIRE",
+    it: "Lean FIRE",
+    explanation:
+      "Enough capital to cover all essential expenses (300 × your monthly essentials), so work only has to pay for the extras.",
   },
   opening: {
     en: "opening position",

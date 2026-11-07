@@ -5,6 +5,7 @@ import { monthEnd } from "../engine/months.ts";
 import { type PensionYear, pensionSchedule, scheduleYears } from "../engine/pension.ts";
 import type { PensionThisYear, PensionView, PensionYearView } from "../engine/pensionView.ts";
 import { PENSION_FLOWS, pensionPlanSchema } from "../engine/schemas.ts";
+import { goalSlot } from "../engine/slots.ts";
 import { pensionExitRate } from "../engine/tax.ts";
 import { fromCents } from "../engine/units.ts";
 import type { DB } from "./db.ts";
@@ -74,7 +75,12 @@ export function registerPensionRoutes(router: Router, db: Kysely<DB>, today: () 
     const base = {
       asOf,
       plan: plan ?? null,
-      goals: world.goals.map(({ id, name, priority }) => ({ id, name, priority })),
+      goals: world.goals.map(({ id, name, priority }) => ({
+        id,
+        name,
+        priority,
+        slot: goalSlot({ id }, world.goals),
+      })),
       pensionProducts: [...world.products.values()]
         .filter((product) => product.regime === "pension")
         .map((product) => ({ id: product.id, name: product.name })),

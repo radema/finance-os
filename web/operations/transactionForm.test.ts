@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Transaction } from "../../engine/schemas.ts";
-import { fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
+import { cashMovement, fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
+
+const NBSP = "\u00a0";
 
 const buy: Transaction = {
   id: "t1",
@@ -61,5 +63,19 @@ describe("transaction form", () => {
   it("sends price 0 for a coupon", () => {
     const coupon: Transaction = { ...buy, type: "coupon", price: 0, qty: 0 };
     expect(transactionBody(fieldsFromTransaction(coupon), false).price).toBe(0);
+  });
+});
+
+describe("cash movement of a transaction row", () => {
+  const amount = 118_000;
+
+  it.each([
+    ["buy", `-1.180,00${NBSP}€`],
+    ["pensionContribution", `-1.180,00${NBSP}€`],
+    ["sell", `+1.180,00${NBSP}€`],
+    ["coupon", `+1.180,00${NBSP}€`],
+    ["opening", `1.180,00${NBSP}€`],
+  ] as const)("shows a %s with its cash sign", (type, shown) => {
+    expect(cashMovement(type, amount)).toBe(shown);
   });
 });

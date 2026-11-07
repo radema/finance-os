@@ -62,7 +62,7 @@ export async function loadIndependence(db: Kysely<DB>, today: string): Promise<I
     goals: built.map(({ row }) => ({
       id: row.id,
       name: row.name,
-      slot: goalSlot(row, world.goals, pensionGoalId),
+      slot: goalSlot(row, world.goals),
       target: row.target,
       countsTowardFi: ticked.has(row.id),
       isPension: row.id === pensionGoalId,
@@ -143,7 +143,7 @@ export function registerIndependenceRoutes(
         .select("id")
         .where("id", "=", fire.efFromGoal)
         .executeTakeFirst();
-      if (!goal) throw new HttpError(400, "the Level 1 goal does not exist");
+      if (!goal) throw new HttpError(400, "the Financial security goal does not exist");
     }
     await saveDocument(db, "fiSettings", fire);
     return view();

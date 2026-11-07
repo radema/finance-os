@@ -23,14 +23,19 @@
   border-bottom-color: var(--ink);
 }
 
+/* The Setup screens stop at one width, so rows stay easy to scan and forms keep their columns. */
+.setup-column {
+  max-width: var(--setup-max);
+}
+
 .card {
   margin-bottom: var(--s4);
   border-radius: 8px;
-  border-top: 3px solid var(--blue);
   background: var(--raised);
   overflow: clip;
 }
 .card-head {
+  margin: 0;
   padding: var(--s2) var(--s3);
   background: var(--tint-blue-faint);
   font: 500 var(--t-axis) / var(--lh-axis) var(--font-mono);
@@ -38,8 +43,41 @@
   text-transform: uppercase;
   color: var(--ink2);
 }
+.card-head-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.card-toggle {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.card-toggle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.card-head-row .term {
+  z-index: 1;
+}
+.card-toggle[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card-toggle svg {
+    transition: transform 120ms ease-out;
+  }
+}
 .card-body {
   padding: var(--s3);
+}
+.card .card-body[hidden] {
+  display: none;
 }
 .card-body > * + * {
   margin-top: var(--s3);
@@ -51,8 +89,14 @@
   line-height: var(--lh-callout);
   color: var(--ink2);
 }
+.note {
+  max-width: var(--note-max);
+}
 .sub {
   color: var(--muted);
+}
+.note + .card {
+  margin-top: var(--s3);
 }
 .sub-line {
   margin: 0;
@@ -78,20 +122,26 @@
 .alert p {
   margin: 0 0 var(--s2);
 }
+/* Loading and error share one box with a reserved height, so the page does not jump on load. */
+.state-box {
+  min-height: calc(var(--s6) * 3);
+}
+/* A card or chart with nothing to show: a sentence and at most one action, at the height of its content. */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s3);
+}
+.empty-state .note {
+  margin: 0;
+}
+.empty-state-action {
+  display: inline-block;
+  text-decoration: none;
+}
 
 /* Forms */
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--s3);
-  align-items: start;
-}
-.inline-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s3);
-  align-items: end;
-}
 .field {
   display: flex;
   flex-direction: column;
@@ -103,8 +153,89 @@
   font-weight: 500;
   color: var(--ink2);
 }
+.field-required {
+  color: var(--ink2);
+}
+/* The message is text grey; the mark (icon, border) is the highlight, which is never text. */
+.field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s1);
+}
+.field-error-mark {
+  flex: none;
+  height: var(--lh-callout);
+  color: var(--hl);
+}
+.form-legend {
+  margin: 0;
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  color: var(--ink2);
+}
+.form-legend > span {
+  color: var(--ink2);
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--base);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link-button:hover {
+  text-decoration-color: var(--ink);
+}
+/* A form is a grid of equal columns. Each field spans three rows (label, control, hint) of the grid,
+   so the controls of one row share one top edge whatever the labels and hints do. */
+.form-grid,
+.inline-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  column-gap: var(--s3);
+  align-items: start;
+  /* Edit scrolls the form into view: keep a gap above it. */
+  scroll-margin-top: var(--s3);
+}
+.form-grid > .field,
+.inline-form > .field {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  margin-bottom: var(--s3);
+}
+.form-grid > .field > .field-label,
+.inline-form > .field > .field-label {
+  align-self: end;
+  margin-bottom: var(--s1);
+}
+.form-grid > .field > .field-hint,
+.inline-form > .field > .field-hint {
+  margin-top: var(--s1);
+}
+/* A form that keeps the hint row of every field, so the rows of controls stay level. */
+.form-grid-hints > .field:not(:has(> .field-hint))::after {
+  content: "";
+  min-height: var(--lh-callout);
+  margin-top: var(--s1);
+}
+.form-section {
+  margin: 0;
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  font-weight: 500;
+  color: var(--ink2);
+}
+/* The group headings of a form that lays its groups out one after another. */
+form > .form-section {
+  margin-top: var(--s3);
+  margin-bottom: var(--s2);
+}
 input[type="text"],
-input[type="number"],
 input[type="date"],
 select,
 textarea {
@@ -119,11 +250,60 @@ textarea {
   font-size: var(--t-sub);
   line-height: var(--lh-sub);
 }
+input::placeholder {
+  color: var(--muted);
+}
+/* One height for the single-line controls, so a date, a select and a text box line up. */
+input[type="text"],
+input[type="date"],
+select {
+  height: var(--control-h);
+}
+/* A number with its unit inside the box: the box takes the border, the input and the unit sit in it. */
+.input-unit {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: var(--control-h);
+  border: 1px solid var(--base);
+  border-radius: 4px;
+  background: var(--raised);
+}
+.input-unit:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.input-unit input[type="text"] {
+  flex: 1;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+.input-unit input[type="text"]:focus-visible {
+  outline: none;
+}
+.field-unit {
+  padding-right: var(--s2);
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  color: var(--ink2);
+}
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+.input-unit:has(input[aria-invalid="true"]) {
+  border-color: var(--hl);
+}
 .check {
   display: flex;
   align-items: center;
   gap: var(--s2);
   font-size: var(--t-sub);
+}
+/* A checkbox in a product form grid takes the three rows of a field and sits level with the controls. */
+.product-form .form-grid > .check {
+  grid-row: span 3;
+  align-self: center;
+  margin-bottom: var(--s3);
 }
 .actions {
   display: flex;
@@ -152,12 +332,17 @@ form > .actions {
   line-height: var(--lh-callout);
   cursor: pointer;
 }
-.btn:hover:not(:disabled) {
+.btn:hover:not(:disabled):not(:has(input:disabled)) {
   background: var(--wash);
 }
-.btn:disabled {
-  color: var(--muted);
-  cursor: default;
+/* Unavailable by fill and cursor, not by faded text: the label keeps 4.5:1 on the fill in both themes,
+   primary buttons included (a faded label on the dark primary fill measured 3.4:1 light, 2.6:1 dark). */
+.btn:disabled,
+.btn:has(input:disabled) {
+  border-color: var(--base);
+  background: var(--wash);
+  color: var(--ink2);
+  cursor: not-allowed;
 }
 .btn-primary {
   border-color: var(--ink);
@@ -172,9 +357,61 @@ form > .actions {
   background: transparent;
   color: var(--ink2);
 }
+/* The file picker: a button, then the file name. The input is visually hidden but keeps focus,
+   so the button shows the focus ring. */
+.file-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.file-picker .btn {
+  position: relative;
+}
+.file-picker input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  clip-path: inset(50%);
+}
+.file-picker .btn:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.file-name,
+.date-iso {
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+  color: var(--ink2);
+}
+.file-name {
+  overflow-wrap: anywhere;
+}
+/* A date input with its ISO date beside it. */
+.input-date {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+.date-iso {
+  flex: none;
+  white-space: nowrap;
+}
 .confirm {
   display: inline-flex;
   gap: var(--s1);
+}
+/* A button or a message in an inline form: the button sits level with the controls. */
+.inline-form > .btn,
+.inline-form > .confirm {
+  grid-row: span 2;
+  align-self: end;
+  justify-self: start;
+}
+.inline-form > .alert {
+  grid-column: 1 / -1;
 }
 
 /* Tables: a sticky header on a raised surface, hairline rules. */
@@ -204,21 +441,104 @@ form > .actions {
 .table .num {
   text-align: right;
 }
+/* The weight tables of all goals share one column layout, so the columns line up from card to card. */
+.table-weights {
+  table-layout: fixed;
+}
+.table-weights th:nth-child(2),
+.table-weights th:nth-child(3) {
+  width: 120px;
+}
+.table-weights th:nth-child(4) {
+  width: 240px;
+}
+/* Row actions: quiet buttons that look like controls, in one line. Delete sits apart. */
 .row-actions {
   text-align: right;
   white-space: nowrap;
 }
+.row-actions .btn-quiet {
+  border-color: var(--grid);
+}
+.row-actions > * + * {
+  margin-inline-start: var(--s1);
+}
+.row-actions > .set-apart {
+  margin-inline-start: var(--s3);
+}
+/* Transactions: one line per row. The date never breaks; the table scrolls inside its card. */
+.table-transactions td,
+.table-transactions th {
+  white-space: nowrap;
+}
+.table-transactions td:nth-child(3),
+.table-transactions th:nth-child(3) {
+  min-width: 16em;
+}
 .table-scroll {
   overflow-x: auto;
+}
+/* A scroll wrapper with a height bound, so the sticky header sticks inside it. */
+.table-scroll-sticky {
+  max-height: 70vh;
+  overflow-y: auto;
 }
 .matrix th[scope="row"] {
   font-weight: 600;
   color: var(--ink2);
   white-space: nowrap;
 }
-.inline-input {
-  width: 6em;
+/* A short number: as wide as its cell, up to 6em. The input rule above sets the width. */
+input.inline-input {
+  max-width: 6em;
   text-align: right;
+}
+input.inline-date {
+  max-width: 10em;
+}
+/* One line per row: a control plus a hairline of padding makes about 40px. */
+.table-compact td {
+  padding-block: var(--s1);
+}
+/* The month grid: the month columns share the width equally, the product column is a fixed share. */
+.price-grid {
+  table-layout: fixed;
+}
+.price-grid th:first-child {
+  width: 22%;
+}
+/* Cash flow: one line per cell. Year stays on the left while the table scrolls sideways; the corner
+   cell sits above both the sticky header and the sticky column. */
+.table-cash-flow thead th,
+.table-cash-flow tbody td {
+  white-space: nowrap;
+}
+.table-cash-flow thead th:first-child,
+.table-cash-flow tbody td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--raised);
+  box-shadow: 1px 0 0 var(--grid);
+}
+.table-cash-flow thead th:first-child {
+  z-index: 2;
+}
+/* A year that falls short: a highlight dot plus the word, the word in the text grey. */
+.short {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  margin-right: var(--s3);
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  color: var(--ink2);
+}
+.short::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hl);
 }
 
 /* Need / Want / Wish: a marker plus a tint, so the shape carries the meaning too. */

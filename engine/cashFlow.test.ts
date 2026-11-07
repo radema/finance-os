@@ -55,6 +55,7 @@ const goals = [
 describe("projectCashFlow (AC-48), asOf 2026-10-31", () => {
   const rows = projectCashFlow({
     asOf,
+    inflation: 0,
     cashFlow,
     goals,
     pension: { goalId: "g-pension", schedule },
@@ -92,7 +93,7 @@ describe("projectCashFlow (AC-48), asOf 2026-10-31", () => {
     expect(rows.slice(3).map((row) => row.refund)).toEqual(new Array(7).fill(0));
   });
 
-  it("grows income and expenses by (1 + g)^(year - Y0), as the mock does", () => {
+  it("grows income and expenses by (1 + g)^(year - Y0) when inflation is 0", () => {
     // 2027: income 36,000 x 1.1 = 39,600; expenses 18,000 x 1.05 = 18,900.
     // Capacity = 39,600 - 18,900 - 600 + 175. Planned: g-etf 12 x 100 + pension 1,200.
     expect(rows[1]?.income).toBeCloseTo(eur(39_600), 6);
@@ -116,6 +117,7 @@ describe("projectCashFlow (AC-48), asOf 2026-10-31", () => {
   it("counts only the voluntary part of the pension goal, not its plan amount", () => {
     const pensionOnly = projectCashFlow({
       asOf,
+      inflation: 0,
       cashFlow,
       goals: [goals[1] as (typeof goals)[number]],
       pension: { goalId: "g-pension", schedule },
@@ -137,6 +139,7 @@ describe("projectCashFlow with voluntary to cap (AC-97)", () => {
     );
     const rows = projectCashFlow({
       asOf,
+      inflation: 0,
       cashFlow,
       goals: [goals[1] as (typeof goals)[number]],
       pension: { goalId: "g-pension", schedule: toCap },
@@ -150,6 +153,7 @@ describe("projectCashFlow edge cases", () => {
   it("gives no pension planned amount and no refund when the plan has no schedule", () => {
     const rows = projectCashFlow({
       asOf,
+      inflation: 0,
       cashFlow,
       goals: [goals[1] as (typeof goals)[number]],
       pension: { goalId: "g-pension", schedule: [] },
@@ -158,16 +162,58 @@ describe("projectCashFlow edge cases", () => {
   });
 
   it("makes the first row empty of income and contributions when asOf is in December", () => {
-    const [first] = projectCashFlow({ asOf: "2026-12-31", cashFlow, goals });
+    const [first] = projectCashFlow({ asOf: "2026-12-31", inflation: 0, cashFlow, goals });
     expect(first).toMatchObject({ income: 0, expenses: 0, planned: 0, events: eur(900) });
   });
 
   it("skips a goal that was due before Y0", () => {
     const [first] = projectCashFlow({
       asOf,
+      inflation: 0,
       cashFlow,
       goals: [{ id: "old", targetYear: 2025, contributionGrowth: 0, monthly: eur(100) }],
     });
     expect(first?.planned).toBe(0);
+  });
+});
+
+describe("projectCashFlow growth above inflation (AC-59)", () => {
+  // Income 36,000 a year, expenses 12 x 1,500 = 18,000 a year, so 2028 is two years on from Y0.
+  const rowsFor = (inflation: number, incomeGrowth: number, expenseGrowth: number) =>
+    projectCashFlow({
+      asOf,
+      inflation,
+      cashFlow: cashFlowSchema.parse({
+        income: eur(36_000),
+        incomeGrowth,
+        essential: eur(1_000),
+        optional: eur(500),
+        expenseGrowth,
+      }),
+      goals: [],
+    });
+
+  it("grows expenses and income by the inflation alone when the growth is 0", () => {
+    // 2% inflation, growth 0: 2028 is 1.02^2 above the 2026 full-year amount.
+    const rows = rowsFor(0.02, 0, 0);
+    expect(rows[2]?.expenses).toBeCloseTo(eur(18_000) * 1.0404, 4);
+    expect(rows[2]?.income).toBeCloseTo(eur(36_000) * 1.0404, 4);
+    // Year over year: 2027 -> 2028 is +2%.
+    expect((rows[2]?.expenses as number) / (rows[1]?.expenses as number)).toBeCloseTo(1.02, 10);
+    expect((rows[2]?.income as number) / (rows[1]?.income as number)).toBeCloseTo(1.02, 10);
+  });
+
+  it("grows expenses and income by about 3.02% a year at 2% inflation and 1% growth", () => {
+    // 1.02 x 1.01 = 1.0302.
+    const rows = rowsFor(0.02, 0.01, 0.01);
+    expect((rows[2]?.expenses as number) / (rows[1]?.expenses as number)).toBeCloseTo(1.0302, 10);
+    expect((rows[2]?.income as number) / (rows[1]?.income as number)).toBeCloseTo(1.0302, 10);
+    expect(rows[2]?.expenses).toBeCloseTo(eur(18_000) * 1.0302 ** 2, 4);
+  });
+
+  it("treats the two growth fields independently", () => {
+    const rows = rowsFor(0.02, 0.01, 0);
+    expect((rows[2]?.income as number) / (rows[1]?.income as number)).toBeCloseTo(1.0302, 10);
+    expect((rows[2]?.expenses as number) / (rows[1]?.expenses as number)).toBeCloseTo(1.02, 10);
   });
 });

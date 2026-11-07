@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, messageOf, useLoad } from "../api.ts";
+import { formatPrice } from "../money.ts";
 import { Alert, Card, Resource } from "../setup/ui.tsx";
 import type { FetchResult, ReviewItem, ReviewState } from "./types.ts";
 
@@ -8,9 +9,30 @@ const REASON_LABEL: Record<ReviewItem["reason"], string> = {
   "move-above-25": "Moved more than 25%",
 };
 
-// The price is in the provider's currency, shown in its own column, so it is a plain number.
-const formatNumber = (value: number): string =>
-  value.toLocaleString("it-IT", { maximumFractionDigits: 4 });
+type FetchErrors = ReviewState["errors"];
+
+/** The one message after a fetch: the summary and the products that failed, together. */
+export function FetchOutcome({
+  summary,
+  errors,
+}: {
+  summary: string | undefined;
+  errors: FetchErrors;
+}) {
+  if (errors.length === 0) return summary ? <p className="note">{summary}</p> : null;
+  return (
+    <div className="alert" role="alert">
+      <p>{summary ? `${summary} Fetch failed for:` : "Fetch failed for:"}</p>
+      <ul>
+        {errors.map(({ productId, productName, message }) => (
+          <li key={productId}>
+            {productName}: {message}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /** Fetch latest prices, the fetch problems and the review list of held-back prices. */
 export function OnlinePrices({ onChanged }: { onChanged: () => void }) {
@@ -35,9 +57,7 @@ export function OnlinePrices({ onChanged }: { onChanged: () => void }) {
   const fetchAll = () =>
     run(async () => {
       const done = await api<FetchResult>("POST", "/api/prices/fetch", { body: {} });
-      setSummary(
-        `Stored ${done.stored.length}, held for review ${done.reviewed.length}, problems ${done.problems.length}.`,
-      );
+      setSummary(`Stored ${done.stored.length}, held for review ${done.reviewed.length}.`);
     });
   const decide = (item: ReviewItem, decision: "accept" | "discard") =>
     run(async () => {
@@ -52,23 +72,11 @@ export function OnlinePrices({ onChanged }: { onChanged: () => void }) {
       <button className="btn btn-primary" type="button" disabled={busy} onClick={fetchAll}>
         {busy ? "Fetching..." : "Fetch latest prices"}
       </button>
-      {summary ? <p className="note">{summary}</p> : null}
       <Alert message={error} />
       <Resource loaded={review}>
         {({ items, errors }) => (
           <>
-            {errors.length > 0 ? (
-              <div className="alert" role="alert">
-                <p>Fetch failed for:</p>
-                <ul>
-                  {errors.map(({ productId, productName, message }) => (
-                    <li key={productId}>
-                      {productName}: {message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+            <FetchOutcome summary={summary} errors={errors} />
             {items.length === 0 ? (
               <p className="note">No price is waiting for review.</p>
             ) : (
@@ -91,7 +99,7 @@ export function OnlinePrices({ onChanged }: { onChanged: () => void }) {
                         <td>{item.productName}</td>
                         <td>{item.ticker}</td>
                         <td>{item.date}</td>
-                        <td className="num">{formatNumber(item.price)}</td>
+                        <td className="num">{formatPrice(item.price)}</td>
                         <td>{item.currency}</td>
                         <td>{REASON_LABEL[item.reason]}</td>
                         <td>

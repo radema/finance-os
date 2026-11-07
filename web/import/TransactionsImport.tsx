@@ -6,11 +6,14 @@ import { FINECO_PRESET, TRANSACTION_FIELDS } from "../../engine/importMapping.ts
 import type { Product } from "../../engine/schemas.ts";
 import type { RowDecision } from "../../engine/transactionImport.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { FilePicker, PASTED_TEXT, shownFileName } from "../FilePicker.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
+import { Loading } from "../Loading.tsx";
 import { Alert, Card, ConfirmButton, Field, SelectField, TextField } from "../setup/ui.tsx";
 import type { Bucket } from "../split/splitState.ts";
 import { missingFields } from "./importState.ts";
 import { RowCheck } from "./RowCheck.tsx";
+import { TemplateButton } from "./TemplateButton.tsx";
 import type { CommitResult, FilePayload, PreviewResult, ReadResult } from "./types.ts";
 
 const FIELD_LABEL: Record<TransactionField, ReactNode> = {
@@ -256,21 +259,20 @@ export function TransactionsImport({ onImported }: { onImported: () => void }) {
             className="btn"
             type="button"
             disabled={pasted.trim() === "" || parsing}
-            onClick={() => void readFile({ fileName: "pasted text", text: pasted })}
+            onClick={() => void readFile({ fileName: PASTED_TEXT, text: pasted })}
           >
             Read pasted text
           </button>
+          <TemplateButton kind="transactions" />
         </div>
-        <Field label="Or upload a file">
-          <input
-            type="file"
-            accept=".csv,.txt,.xlsx,text/csv,text/plain"
-            onChange={(event) => {
-              const picked = event.target.files?.[0];
-              if (picked) void upload(picked);
-            }}
-          />
-        </Field>
+        <FilePicker
+          label="Or upload a file"
+          accept=".csv,.txt,.xlsx,text/csv,text/plain"
+          fileName={shownFileName(file?.fileName)}
+          onChange={(picked) => {
+            void upload(picked);
+          }}
+        />
         {parsing ? <p className="note">Reading the file…</p> : null}
         {!parsing && !read && !error ? (
           <p className="note">No file yet. Paste text or upload a file to start.</p>
@@ -451,5 +453,5 @@ function WhenLoaded({
   children: React.ReactNode;
 }) {
   if (ready) return <>{children}</>;
-  return error ? <Alert message={error} /> : <p className="note">Loading…</p>;
+  return error ? <Alert message={error} /> : <Loading />;
 }

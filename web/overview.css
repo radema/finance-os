@@ -14,7 +14,6 @@
   inset: 0;
 }
 .kpi-link .term {
-  position: relative;
   z-index: 1;
 }
 .kpi-link:hover,
@@ -28,18 +27,28 @@
 
 .overview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s4);
   margin-top: var(--s4);
+}
+@media (min-width: 1280px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .overview-grid .cell {
   min-width: 0;
 }
+/* An empty cell is as tall as its content, not as its neighbour. */
+.overview-grid .cell:has(.empty-state) {
+  align-self: start;
+}
 .overview-grid .chart {
   height: 240px;
 }
-.overview-grid .chart-range {
-  height: 160px;
+/* The range cell holds one row per goal: it takes the width of both columns. */
+.overview-grid .cell[data-cell="range"] {
+  grid-column: 1 / -1;
 }
 .overview-grid .legend {
   margin-bottom: var(--s2);
@@ -88,12 +97,98 @@
   font-size: var(--t-label);
   line-height: var(--lh-label);
 }
+/* One row per goal on a shared axis: chip, track, text. The rows share the columns of the list. */
+.rbars {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  column-gap: var(--s3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rbars li {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--grid);
+}
+.rbars .rbars-axis {
+  padding: 0;
+  border-bottom: 0;
+}
+.rbar {
+  position: relative;
+  display: block;
+  grid-column: 2;
+  height: var(--s5);
+}
+.rbars-axis .rbar {
+  grid-column: 2;
+  height: var(--lh-axis);
+}
+.rbar-grid,
+.rbar-target {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--grid);
+}
+.rbar-target {
+  border-left: 1px dashed var(--ink2);
+}
+.rbar-band {
+  position: absolute;
+  top: 50%;
+  height: var(--s2);
+  transform: translateY(-50%);
+  border-inline: 2px solid var(--slot);
+  background: color-mix(in srgb, var(--slot) 40%, transparent);
+}
+.rbar-dot {
+  position: absolute;
+  top: 50%;
+  width: var(--s3);
+  height: var(--s3);
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--raised);
+  border-radius: 50%;
+  background: var(--slot);
+}
+.rbar-dot-flat {
+  outline: 2px solid var(--slot);
+}
+.rbars-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: var(--t-axis);
+  line-height: var(--lh-axis);
+  color: var(--muted);
+}
+.rbar-text {
+  grid-column: 3;
+  display: grid;
+  min-width: 8em;
+}
+.rbars li > .chip {
+  grid-column: 1;
+  justify-self: start;
+}
 .alerts li {
   padding-bottom: var(--s3);
   border-bottom: 1px solid var(--grid);
 }
 .alert-rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1) var(--s2);
   font-weight: 600;
+}
+.alert-rule .severity-Info {
+  font-weight: 400;
 }
 .prices li {
   display: flex;

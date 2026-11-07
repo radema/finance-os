@@ -16,7 +16,7 @@ the real ledger, without sending personal data anywhere.
 
 A standalone, local-first web app (`gbi` command on the user's MacBook, server on `127.0.0.1`,
 browser UI) that replaces the workbook. It keeps every feature of Excel v2 and adds performance
-tracking, goal-analysis snapshots, a richer dashboard, three financial-independence levels, a
+tracking, goal-analysis snapshots, a richer dashboard, four financial-independence levels, a
 per-bucket mix optimizer and rule-based alerts. The app suggests; it never acts on the account.
 
 User: one person, regime amministrato, one Fineco account, Italian pension funds, EUR only, tax
@@ -37,7 +37,7 @@ Finance OS lives only in git history (t06).
 10. As the investor, I want the monthly contribution needed to reach each goal, so that I can act.
 11. As the investor, I want the pension fund modelled (TFR, contributions, deduction, refund, exit tax), so that retirement is planned with the real tax rules.
 12. As the investor, I want my household cash flow for 10 years against the plan, so that I see whether the plan is affordable.
-13. As the investor, I want three financial-independence levels with progress and the year each is reached, so that I see the long-term picture.
+13. As the investor, I want four financial-independence levels with progress and the year each is reached, so that I see the long-term picture.
 14. As the investor, I want TWR, XIRR and drawdown per scope, so that I know how my money performed.
 15. As the investor, I want a monthly snapshot of every goal's analysis, so that I see whether goals get safer or riskier over time.
 16. As the investor, I want plan vs actual as cumulative totals, with my plan changes versioned, so that flexible months are not flagged as failures.
@@ -96,7 +96,7 @@ Before the wipe the user creates and pushes the annotated tag `finance-os-legacy
 | `docs/seed/`, `docs/wiki/`, `docs/plans/`, `docs/archive/`, `docs/handoff/`, `docs/features-candidates/`, `docs/design/` | delete |
 | `PRODUCT.md`, `README.md` | delete; new `README.md` written from scratch |
 | `DESIGN.md`, `.impeccable/` | delete; new `DESIGN.md` built from `prototypes/11-ui/` (tokens, type, components, chart rules) |
-| Fonts in `src/financeos/web/static/fonts/` | delete; Geist + Geist Mono are bundled instead |
+| Fonts in `src/financeos/web/static/fonts/` | delete; Geist, Geist Mono and Source Serif 4 are bundled instead |
 | `demo/`, `real/` | delete; data lives in `GBI_DATA_DIR`; sample data is the synthetic fixture below |
 | `.gitignore` | rewrite for Node (`node_modules/`, `dist/`, coverage, tool caches); keep `.claude/worktrees/`, OS/editor files, `*:Zone.Identifier`; add `*.sqlite`, `*.db`, `*.xlsx`, `*.csv` outside the fixtures folder `fixtures/` |
 | `CLAUDE.md` | replace (below) |
@@ -125,7 +125,7 @@ performance are always derived.
 |---|---|---|
 | Settings | inflation, taxStd 26%, taxGovt 12.5%, bollo 0.2%, pensionTax 20%, required probabilities (Need 90 / Want 75 / Wish 50), MC paths (1,000), seed, trackingStart (YYYY-MM), zainetto {amount, expiry, goalId}, pension deduction cap (€5,300, one value for all years, t12), rule thresholds (R1 N months = 3 (t10), R3 36 months, R7 1.25×, status band 15 points, daily price age 7 days (t16)) | One document |
 | Commission | plan (text, default "Fineco Trading"), feeModel (`percent` \| `flat`), rate 0.19%, min €2.95, max €19, flatFee, minTicket | t03: fees depend on the plan. `percent`: fee = clamp(rate × amount, min, max), min efficient ticket = min / rate. `flat`: fee = flatFee, min efficient ticket = `minTicket` set by the user |
-| FireSettings | efFromGoal (goalId) or efMonths (12), l2Mult 300, l3Mult 200, includePension **true** (t07) | |
+| FireSettings | efFromGoal (goalId) or efMonths (12), baristaMult 200, l2Mult 300, l3Mult 200, includePension **true** (t07; baristaMult #9 follow-up, a missing value reads as 200) | |
 | AssetClass | 6 fixed: Equity, Govt bonds, Corp bonds, Multi-asset, Cash, Gold/Commodities | 6×6 correlation matrix |
 | Product | id, name, ISIN, assetClass, regime (`etf`, `direct`, `govt`, `cash`, `pension`), whiteListShare, expReturn μ, volatility σ, TER/ISC, maturity (YYYY-MM), couponRate (govt only, default 0, t12 S1), zeroCommission (per-product flag the user maintains, t03), priceSource (`provider`, `csv`, `manual`), ticker, brokerUnits? + brokerUnitsDate? (for R9) | μ, σ are user assumptions |
 | PricePoint | productId, month (YYYY-MM), price per unit, priceDate (date of the close), source (`provider`, `csv`, `manual`), fetchedAt, importBatchId? | One per product and month; the current month holds the latest close until the month ends. Bonds: price per 100. Pension: unit value |
@@ -137,7 +137,7 @@ performance are always derived.
 | ImportBatch | id, kind (`transactions`, `prices`, `products`, `goals`), source name, file name, createdAt, rows read / imported / skipped, undoneAt?, prior state of overwritten prices | Unit of undo |
 | ImportMapping | name, kind, column map, delimiter, decimal and date format | Preset "Fineco movimenti (XLSX)" (t08) + saved user mappings |
 | PensionPlan | ral, ralGrowth, tfrPct, workerPct, employerPct, voluntary (blank = to cap), marginalRate, firstYear, extra (€2,650), goalId, flows[{productId, flow Work/Voluntary, pct}] | |
-| CashFlow | income, incomeGrowth, essential €/month, optional €/month, expenseGrowth, events[{year, label, amount}] | Also feeds FI levels |
+| CashFlow | income, incomeGrowth, essential €/month, optional €/month, expenseGrowth, events[{year, label, amount}] | Also feeds FI levels. `incomeGrowth` and `expenseGrowth` are growth above inflation: 0% keeps up with prices (#156) |
 | Snapshot | month, source (`saved`, `recomputed`), assumptionsHash, per goal {prob, reqP, detNet, target, median, p10, p90, value, status} | Frozen at save time |
 | Dismissal | ruleId, scope (goal or product or none), key, dismissedAt | t10. Alerts themselves are generated, never stored |
 
@@ -198,7 +198,7 @@ net ≥ target at goal date.
 **Monte Carlo (t12 E4/E5).** P paths (1,000; 300 for snapshots and optimizer). One correlated
 6-class normal vector per path and step (Cholesky; if not positive definite, shrink off-diagonals by
 10% until it is, and flag it). One shock array shared by all buckets. Outputs per goal: P(success),
-P10/P50/P90 of net value per step, average shortfall.
+P10/P50/P90 of net value per step, average shortfall, and the net values at the goal date, counted in 40 bins (#117).
 
 **Required contribution (t12 E3).** Bisection on the monthly amount (pension: a multiplier of the
 schedule), common random numbers, until deterministic net ≥ target, or MC P ≥ required. `null` (not
@@ -225,13 +225,15 @@ at most 50% can be taken as capital, the rest as an annuity, and that a phased p
 return taxed 20% flat (S7), cash stamp duty 0.2% (deposit account).
 
 **Cash flow (year t).** Capacity = income − 12 × (essential + optional) (each growing) + events +
-pension refund of t − 1. Planned from savings = Σ goal contributions; the pension goal counts only
+pension refund of t − 1. The table is in nominal euros: income grows by
+((1 + inflation) × (1 + incomeGrowth))^t and expenses by ((1 + inflation) × (1 + expenseGrowth))^t,
+t = year − Y0, so both growth fields are growth above inflation (#156). Planned from savings = Σ goal contributions; the pension goal counts only
 its voluntary part. In the stub year income, expenses and contributions are × f; events and the
 refund are whole (t16). The first bar is labelled "rest of year".
 
-**Financial independence (t07, today's €).** Level 1 Safety = target of the `efFromGoal` goal, else
-efMonths × essential. Level 2 = l2Mult × essential monthly. Level 3 = Level 2 + l3Mult × optional
-monthly. Targets over time: target(t) = target(0) × ((1 + expenseGrowth)/(1 + inflation))^t, t in
+**Financial independence (t07, today's €).** Level 1 Financial security = target of the `efFromGoal` goal, else
+efMonths × essential. Level 2 Barista FIRE = baristaMult × essential monthly. Level 3 Lean FIRE = l2Mult × essential monthly. Level 4 Financial Freedom = Level 3 + l3Mult × optional
+monthly. The setting names l2Mult and l3Mult stay as stored; they now drive Levels 3 and 4. Targets over time: target(t) = target(0) × (1 + expenseGrowth)^t, expenseGrowth being growth above inflation (0 = flat), t in
 real years from asOf. FI wealth = Σ **net** value (liquidation rule; pension: value − exit-tax rate of
 that year × basis) of buckets with countsTowardFI, pension only if includePension, deflated by
 (1 + inflation)^t — today and projected (fixes mock bug M2). Level 1 uses FI wealth **without** the
@@ -268,6 +270,8 @@ and say so.
 | O2 Grow the typical outcome | max median | higher P | Want, Wish |
 | O5 Spend least | min monthly needed | higher median | – |
 | O4 Maximise the chance | max P, no feasibility filter | higher median | – |
+
+The UI shows the rule names only ("Protect the bad case"); O1–O5 are internal ids in code, stored values and this spec (#155).
 
 For O4 the "not feasible" flag is set when the best P is below the required probability. For O5,
 feasibility is P ≥ required at the goal's current monthly amount; there is no maximum monthly amount
@@ -375,7 +379,7 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
   as a UI reference. No prototype code is carried into the build.
 - English UI, Italian glossary; EUR and numbers in it-IT format. Light and dark themes. Desktop-first
   fluid layout, usable from ~1024 to 1920 px (mobile from 360 px is v2).
-- Sidebar: Overview; Goals (List, Detail, History); Independence; Analysis (Optimizer, Performance,
+- Sidebar: Overview; Goals (List, History; a goal's page opens from a goal chip, with no sidebar item of its own); Independence; Analysis (Optimizer, Performance,
   Plan vs actual); Pension; Operations (Transactions, Import, Prices); Setup (Products, Allocation,
   Cash flow, Assumptions, Glossary). Unbuilt items show a "soon" placeholder.
 - Colour: palette D (`reference/palette-substack-d.md`) with the OE Data Viz exhibit rules
@@ -385,12 +389,16 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
   12%, dark 18%) for chips, tags, KPI accents and card header strips; text stays in the text greys;
   blue for general/information; the highlight family for attention. No red/green status.
 - Components: goal chips, Need/Want/Wish tags (shape + tint), status chips (icon + word), product
-  tags, price-freshness pills, KPI cards with an accent bar, section cards with no outline. Sticky
+  tags, price-freshness pills, KPI cards with a 1 px outline (a goal-colour dot before the label where the KPI belongs to a goal), section cards with a blue header strip and no outline. Sticky
   header on every table. A compact legend on every multi-series chart; direct labels where they help;
   exhibit anatomy (tag, action title with a number, unit line, chart, callout, source).
-- Fonts: Geist + Geist Mono, bundled (OFL). Charts are drawn after fonts load and resize with their box.
-- Jargon terms are popover buttons (plain sentence first, Italian term above it); touch friendly, no
-  `title=` hints (t16 finding 26). Raw "P10–P90" is never shown: bad / typical / good case.
+- Page titles: the `h1` of every screen is the name of the screen (on a goal's page, the goal's name).
+  A finding with a number is never the `h1`: it is the action title (`h2`) of the first exhibit, or
+  of the key numbers where a screen opens with them.
+- Fonts: Source Serif 4 for titles and KPI values (`--font-display`), Geist for text, Geist Mono for the small mono labels, all bundled (OFL). The kicker above a title is Geist 13 px, sentence case. Charts are drawn after fonts load and resize with their box.
+- Jargon terms are popover buttons that open on click, tap, Enter or Space, never on focus (plain
+  sentence first, Italian term above it); touch friendly, no `title=`
+  hints (t16 finding 26). Raw "P10–P90" is never shown: bad / typical / good case.
 - First run: the empty Overview is a checklist (products, goals, current portfolio) plus "Load the
   sample data".
 
@@ -398,25 +406,25 @@ Screens (content; acceptance in the Definition of done):
 
 | Screen | Content |
 |---|---|
-| Overview | Action title from the data; key numbers (net worth, market change this month, YTD TWR, FI wealth, goals on track); grid: P(success) per goal vs required, net worth by goal over time with money put in, needs attention (alerts), P(success) trend from snapshots, range of outcomes vs target, 10-year savings capacity vs plan, goals, % of FI target per year, price freshness; per FI level today's % reached and year reached (median, det.) (t07). Every number links to the screen that explains it |
-| Goals list | One row per goal: name + priority, status, P vs required, value vs target, plan gap (t11 replaces the 9-column table) |
-| Goal detail | Value, P vs required, XIRR, fan, P history, range chart, "what it would take" (needed det./prob., horizon), holdings (units, price + age, PMC, gain, tax if sold), value vs money put in, cumulative plan vs actual, change the monthly plan from month X, 50% capital note on the pension goal |
+| Overview | Key numbers, under an action title from the data (the `h2` of the key numbers; the `h1` is "Overview") (net worth, market change this month, YTD TWR, FI wealth, goals on track); grid: P(success) per goal vs required, net worth by goal over time with money put in, needs attention (alerts), P(success) trend from snapshots, range of outcomes as % of target per goal (bad / typical / good) (#117), 10-year savings capacity vs plan, goals, % of FI target per year, price freshness; per FI level today's % reached and year reached (median, det.) (t07). Every number links to the screen that explains it |
+| Goals list | One row per goal; its goal chip opens the goal's page: name + priority, status, P vs required, value vs target, plan gap (t11 replaces the 9-column table) |
+| Goal detail | A back link to the Goals list and a goal switch at the top (no sidebar item; `#/goals/detail` with no goal opens the Goals list). Value, P vs required, XIRR, fan, P history, range chart (the distribution of simulated outcomes at the goal date, with the median and bad / good case labelled; #117), "what it would take" (needed det./prob., horizon), holdings (units, price + age, PMC, gain, tax if sold), value vs money put in, cumulative plan vs actual, change the monthly plan from month X, 50% capital note on the pension goal |
 | Goal history | Metric switch (P, funded ratio, median/target); a line per goal over snapshots; snapshot table; Save snapshot; delete saved snapshots |
-| Independence | Three levels with % reached, bars split by goal (pension share visible); table with target, progress, year reached (det./median), P(reached in 20 y); "what counts" per goal; editable multipliers, efMonths and expense split; include-pension switch; % of target per year; projection fan in today's € with level lines following target(t) |
-| Optimizer | Bucket, mode, criterion (4 named options), max per product, product universe; "How the optimizer chooses" panel; suggested vs current weights; outcomes compared; switch tax; scatter of all mixes (x = P, y = median); top 10; rule text; "Use as contribution weights"; known-limit note |
+| Independence | One tile per level (1 Financial security, 2 Barista FIRE, 3 Lean FIRE, 4 Financial Freedom): the year the typical case reaches it, the deterministic year, P(reached in 20 y) and the target; one chart: projected wealth (typical case, bad to good band) against each level's target line over time; "what counts" per goal; editable expense split; multipliers, efMonths, Level 1 source and the include-pension switch under "Level rules". No % reached, no progress ladder, no deterministic line in the chart (#128) |
+| Optimizer | Bucket, mode, criterion (4 named options), max per product, product universe; "How the optimizer chooses" panel; suggested vs current weights; outcomes compared (with a signed Change column); short mix labels (full names in a tooltip); a small-gain note next to "Use as contribution weights"; switch tax; scatter of all mixes (x = P, y = median; one mix: a sentence instead); top 10; rule text; "Use as contribution weights"; known-limit note |
 | Performance | Scope selector; value, gain, TWR since start/YTD/12m, XIRR, max drawdown; charts: value vs money put in, growth of €100, drawdown, monthly returns; table for all scopes |
 | Plan vs actual | Planned vs put in since trackingStart; monthly actual series; next contribution card with product split, commission and cost %; cumulative planned vs actual per goal |
 | Pension | This year: cap, used, still available (never below 0; when used > cap + extra, a line "€X of this year's payments are not tax-deductible"), refund, exit tax; inputs; flows table; 10-year schedule and chart; capital/annuity note |
-| Transactions | Add form (date, bucket, product, type, amount, price prefilled from the product's last price, commission optional) with commission estimate and cost warning; list with filters by bucket and year; edit (the add form prefilled); delete |
+| Transactions | Add form (date, bucket, product, type, amount, price prefilled from the product's last price, commission optional) with commission estimate and cost warning; list with filters by bucket and year; the list's amount shows the cash movement (Buy and pension contribution `-`, Sell and Coupon `+`, Opening no sign; the stored amount and the cash amount sign above do not change); edit (the add form prefilled); delete |
 | Import | Tabs: transactions, prices, products, goals; paste or upload CSV/XLSX; mapping with saved mappings; row check with status and the bucket/split control; import ready rows; past imports with undo; Current portfolio form |
 | Prices | Source per product with last price, date, age pill; Fetch latest prices; review list; month-end grid (6 months, current month editable; add next month); positions by product with account PMC, buckets and broker units entry |
-| Setup | Products, Allocation (pension weights read-only), Goals (with plan history), Cash flow (+ 10-year table), Assumptions (tax, probabilities, MC, trackingStart, commission, thresholds, correlations, reset) |
+| Setup | Products, Allocation (pension weights read-only), Goal definitions (add and edit goals, with plan history; the analysis lives under Goals), Cash flow (+ 10-year table), Assumptions (tax, probabilities, MC, trackingStart, commission, thresholds, correlations, reset), Glossary (the Glossary & method page, also reached from the sidebar) |
 | Glossary & method | Italian term, English term, plain explanation; method notes |
 
 Glossary terms (wording written by the user later; initial text from `prototypes/11-ui/content.js`):
 probability of success, required probability, simulated markets, bad/typical/good case, future vs
 today's euros, time-weighted and money-weighted return, drawdown, average cost (PMC), tax-loss
-carry-forward (zainetto), FIRE and Barista FIRE, opening position, Need/Want/Wish, ISIN, coupon, old
+carry-forward (zainetto), FIRE, Barista FIRE and Lean FIRE, opening position, Need/Want/Wish, ISIN, coupon, old
 price, minimum efficient ticket, stamp duty (bollo), exit tax, white-list share. Method notes cover:
 time grid and 31 December due date, taxes by regime, Monte Carlo, required contribution, FI levels,
 performance formulas, optimizer rules, the kept simplifications (S6, S7, cash stamp duty) and the
@@ -460,11 +468,14 @@ to the next story if a story does not fit, keeping its id.
   first-year refund timing), plan vs actual on ledgers with buys only (no sells, coupons or plan
   versions). Listed expected differences outside that domain: M2, E9, S1, S2, S5, growth exponents of
   the first full year, and plan versions.
+  The mock's cash flow growth is nominal: the harness maps mock growth = (1 + inflation)(1 + g) − 1
+  for incomeGrowth and expenseGrowth, so the rows still compare (#156).
 - **Synthetic fixture** (one JSON in `fixtures/`; extended and its snapshot re-reviewed in S3 for
   pension and in S4 for Monte Carlo): 7 made-up products (ETF WL 0, ETF
   WL 50%, direct, govt with couponRate, deposit, two pension funds), 4 made-up goals (one with τ < 1,
   one with the zainetto, one holding a product at a loss, retirement), a ledger with opening + buy +
-  sell + buy, round pension inputs, pinned asOf. Its outputs are a reviewed regression snapshot. The
+  sell + buy, round pension inputs, a cash flow with expenses (income, essential and optional
+  expenses, a few events), pinned asOf. Its outputs are a reviewed regression snapshot. The
   same data is the app's "Load the sample data". No real names, ISINs or amounts; no xlsx.
 - **Property tests** (fast-check): net non-decreasing in the monthly contribution; the required
   contribution reaches the target; weights always sum to 1.
@@ -488,7 +499,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-7: Architecture rules 1–3 are enforced. Check: the architecture test (or Biome rule) with a planted violation in a scratch file: `engine/` importing `node:*`/`server/`/`web/`; `web/` importing `server/`; SQL outside `server/`. Expected: green on the clean tree, red on each planted violation.
 - AC-8: CI runs the gate. Check: `.github/workflows/gate.yml` and the S0 PR checks. Expected: the workflow runs `pnpm gate` on PRs to `main`; the S0 PR shows it green.
 - AC-9: `gbi` starts the app locally. Check: install as documented in `README.md`, then `GBI_DATA_DIR=$(mktemp -d) gbi`, `curl -s 127.0.0.1:<port>/api/health`, `lsof -iTCP -sTCP:LISTEN -P | grep node`. Expected: health returns 200; the listener is bound to 127.0.0.1 only; the SQLite file exists in that folder with all migrations applied; the browser opens.
-- AC-10: Empty app shell. Check: `agent-browser` on the running app at 1440 px, light and dark. Expected: sidebar with the seven sections, "soon" placeholders, palette D tokens, Geist font; zero console errors; no network request to a host other than 127.0.0.1.
+- AC-10: Empty app shell. Check: `agent-browser` on the running app at 1440 px, light and dark. Expected: sidebar with the seven sections, "soon" placeholders, palette D tokens, Geist text font and Source Serif 4 titles; zero console errors; no network request to a host other than 127.0.0.1.
 - AC-11: `DESIGN.md` exists. Check: read it. Expected: palette D tokens (light/dark, slots, tints), type scale, components and chart rules from the UI decisions above.
 
 ### S1 — Goals and deterministic projection
@@ -506,8 +517,8 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-22: Transactions via API. Check: API tests. Expected: qty = amount / price (BTP: amount / (price/100)); sells stored as negative qty; editing or deleting a transaction re-derives holdings in the next read.
 - AC-23: Setup (Products, Allocation, Goals with plan history, Assumptions incl. Commission plan and fee model). Check: API tests + `agent-browser`. Expected: create/edit/delete work; weights are rescaled to 100% per goal; the correlation matrix stays symmetric; a non-positive-definite matrix is shrunk and flagged.
 - AC-24: Transactions screen. Check: `agent-browser`. Expected: add form with price prefilled from the product's last price, commission estimate and a cost warning below the min efficient ticket; list filters by bucket and year; edit; delete.
-- AC-25: Goals list and detail (deterministic). Check: `agent-browser` on the sample data. Expected: list rows show name + priority and value vs target (status, P and plan gap arrive in S4 and S5); detail shows value, deterministic net, target at goal date, holdings (units, price, PMC, gain, tax if sold), value vs money put in.
-- AC-26: Sample data. Check: "Load the sample data" on an empty data folder. Expected: the synthetic fixture is loaded and the Goals list shows its 4 goals.
+- AC-25: Goals list and detail (deterministic). Check: `agent-browser` on the sample data. Expected: the sidebar has Goals > List and History, no Detail; a goal chip opens the goal's page, which has a back link and a goal switch; list rows show name + priority and value vs target (status, P and plan gap arrive in S4 and S5); detail shows value, deterministic net, target at goal date, holdings (units, price, PMC, gain, tax if sold), value vs money put in.
+- AC-26: Sample data. Check: "Load the sample data" on an empty data folder. Expected: the synthetic fixture is loaded and the Goals list shows its 4 goals, and Setup > Goal definitions lists the same 4.
 - AC-27: S1 UI gate. Check: screenshots of S1 screens at 1440 px, light. Expected: the user approves or skips; adding one transaction takes under 20 seconds.
 
 ### S2 — Import, prices and data safety
@@ -553,10 +564,10 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-56: Cholesky fallback. Check: engine test with a non-positive-definite matrix. Expected: off-diagonals shrunk in 10% steps until it factorises; a flag is returned.
 - AC-57: Required contribution. Check: engine + property tests. Expected: the returned amount reaches the target (det.) or the required P (MC); `null` after 12 doublings; no contribution step left (r = 0 and targetYear = Y0, or τ = 0) → 0 if met, else `null`; a goal due this year with r > 0 is solved normally.
 - AC-58: Status. Check: engine test. Expected: P ≥ required → On track; within 15 points → At risk; else Off track; minProb overrides the priority default.
-- AC-59: FI levels. Check: engine tests (t07). Expected: essential 1,000, optional 500, expenseGrowth = inflation → L2 = 300,000, L3 = 400,000 flat in all years; expenseGrowth 3% vs inflation 2% → L2(10) ≈ 331,000.
+- AC-59: FI levels. Check: engine tests (t07). Expected: essential 1,000, optional 500, expenseGrowth = 0 → Barista FIRE (L2) = 200,000, Lean FIRE (L3) = 300,000, Financial Freedom (L4) = 400,000 flat in all years; expenseGrowth 3% → L3(10) = 300,000 × 1.03^10 ≈ 403,000, whatever the inflation.
 - AC-60: FI wealth. Check: engine tests. Expected: net of liquidation tax today and projected; includePension defaults to true; Level 1 progress excludes the pension bucket; unticking a goal's countsTowardFI removes it.
 - AC-61: Goals with MC. Check: `agent-browser` on the sample data. Expected: list shows status and P vs required; detail shows fan, P vs required, range chart and "what it would take" (det./prob., "not reachable" when `null`); no raw "P10–P90" label.
-- AC-62: Independence screen. Check: `agent-browser`. Expected: ladder with pension share, table (target, progress, year reached det./median, P(reached in 20 y)), "what counts" ticks, include-pension switch, % of target per year, fan with level lines; changing a multiplier updates levels without a page reload.
+- AC-62: Independence screen. Check: `agent-browser`. Expected: one tile per level (typical year, deterministic year, P(reached in 20 y), target), one chart of wealth against the level lines, "what counts" ticks, include-pension switch; no progress ladder; changing a multiplier updates levels without a page reload.
 - AC-63: Engine speed. Check: timing test, 6 goals × 1,000 paths × 40 years. Expected: full analysis under 1 s.
 - AC-64: S4 UI gate. Check: screenshots of Goals and Independence. Expected: the user approves or skips.
 
@@ -585,7 +596,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-82: Apply weights. Check: API test. Expected: AllocationWeights change only after the confirm call; for the pension goal only the flows change.
 - AC-83: Optimizer speed. Check: timing test, largest candidate set the rules allow (286 mixes) × 300 paths; "spend least" with 3 products. Expected: under 3 s and under 10 s.
 - AC-84: Optimizer screen. Check: `agent-browser`. Expected: contents as in the screens table; the rule that chose the mix is shown; the known-limit note is next to the result.
-- AC-85: Glossary & method. Check: `agent-browser`. Expected: every listed term has Italian term, English term and explanation; every jargon term in the UI opens its popover by click, tap or focus; method notes cover the listed topics.
+- AC-85: Glossary & method. Check: `agent-browser`. Expected: every listed term has Italian term, English term and explanation; every jargon term in the UI opens its popover by click, tap, Enter or Space; method notes cover the listed topics.
 - AC-86: Dark mode. Check: `agent-browser` on every built screen in dark. Expected: no hard-coded colours, readable charts, zero console errors.
 - AC-87: Width. Check: `agent-browser` at 1024, 1440 and 1920 px on every screen. Expected: no horizontal overflow; every chart fills its box.
 - AC-88: S6 UI gate. Check: screenshots of Optimizer, Glossary, and dark mode. Expected: the user approves or skips.
@@ -630,7 +641,7 @@ Published by ticket 15 as one issue "GBI v2 backlog".
 
 | Question | Answer |
 |---|---|
-| FI multipliers on monthly expenses; Level 1 from EF goal or months | Monthly, 300× and 200×; Level 1 = EF goal target or efMonths × essential (t07) |
+| FI multipliers on monthly expenses; Level 1 from EF goal or months | Monthly, 300× and 200×; Level 1 = EF goal target or efMonths × essential (t07); Barista FIRE 200× essential added as Level 2 (user, 2026-11-07) |
 | FI: do pension funds count, from which age | Count by default, no age logic; excluded from Level 1 (t07) |
 | Stack | TypeScript end to end, local Node server + React, SQLite (t05) |
 | Finance OS module or standalone | Standalone restart in the same repo (map, t06) |

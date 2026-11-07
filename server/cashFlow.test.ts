@@ -18,6 +18,9 @@ const document = {
   events: [{ year: 2027, label: "boiler", amount: -60_000 }],
 };
 
+// The default inflation of the settings document: the sample data does not change it.
+const SAMPLE_INFLATION = 0.02;
+
 // A plan with the goal and the first year only: no RAL, so no schedule.
 const partialPlan = { goalId: "g-retirement", firstYear: 2020 };
 
@@ -76,6 +79,15 @@ describe("Cash flow API (AC-50)", () => {
     expect(view.rows.every((row) => row.planned === 0)).toBe(true);
   });
 
+  it("shows the sample's made-up cash flow and a filled 10-year table (AC-89)", async () => {
+    await call("POST", "/api/sample-data");
+    const view = await read();
+    expect(view.cashFlow.income).toBeGreaterThan(0);
+    expect(view.cashFlow.events.length).toBeGreaterThan(0);
+    expect(view.rows).toHaveLength(10);
+    expect(view.rows.every((row) => row.income > 0 && row.expenses > 0)).toBe(true);
+  });
+
   it("saves the document and returns it with the engine's rows", async () => {
     await call("POST", "/api/sample-data");
     sql(`UPDATE document SET value = '${JSON.stringify(partialPlan)}' WHERE kind = 'pensionPlan'`);
@@ -89,6 +101,7 @@ describe("Cash flow API (AC-50)", () => {
     // falls back to its monthly plan, as on Goals).
     const expected = projectCashFlow({
       asOf: "2026-10-31",
+      inflation: SAMPLE_INFLATION,
       cashFlow: document,
       goals: [
         { id: "g-holiday", targetYear: 2026, contributionGrowth: 0, monthly: 10_000 },

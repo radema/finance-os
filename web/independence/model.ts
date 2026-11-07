@@ -1,11 +1,19 @@
 import type { IndependenceView } from "../../engine/independenceView.ts";
 import type { FireSettings } from "../../engine/schemas.ts";
-import { eurosToCents, num } from "../forms.ts";
+import { eurosToCents, fractionToPercent, num } from "../forms.ts";
 
 /** "P(reached in 20 y)" reads the point at 31 December of Y0 + this many years. */
 export const REACH_YEARS = 20;
 
-export const LEVEL_NAMES = ["Level 1 Safety", "Level 2", "Level 3"] as const;
+/** The projection runs this many years: "not within" it means never reached. */
+export const HORIZON_YEARS = 40;
+
+export const LEVEL_NAMES = [
+  "Financial security",
+  "Barista FIRE",
+  "Lean FIRE",
+  "Financial Freedom",
+] as const;
 /** The Level 1 wealth leaves the pension out. */
 const SAFETY = 0;
 
@@ -30,7 +38,14 @@ export interface LadderRow {
   pensionShare: number | null;
 }
 
-/** The three rungs of the ladder, with the wealth of each split by goal. Null without a result. */
+/** A level with target 0 has no expenses behind it: it is "not set", so it has no year and no share. */
+export const isLevelSet = (target: number): boolean => target > 0;
+
+/** True when every level target is 0: no expenses are set, so there is nothing to show. */
+export const noLevelSet = (levels: readonly number[]): boolean =>
+  levels.every((target) => !isLevelSet(target));
+
+/** The rungs of the ladder, with the wealth of each split by goal. Null without a result. */
 export function ladderRows(view: IndependenceView): LadderRow[] | null {
   const { result } = view;
   if (!result) return null;
@@ -51,7 +66,7 @@ export function ladderRows(view: IndependenceView): LadderRow[] | null {
       name: LEVEL_NAMES[level] ?? `Level ${level + 1}`,
       target,
       wealth,
-      progress: target > 0 ? wealth / target : null,
+      progress: isLevelSet(target) ? wealth / target : null,
       segments,
       pensionShare: wealth > 0 ? pension / wealth : null,
     };
@@ -68,34 +83,96 @@ export function reachedWithin(
   return point ? { year, p: point.pReached[level] as number } : null;
 }
 
-/** What the number fields hold while the user types. */
-export interface Draft {
-  l2Mult: string;
-  l3Mult: string;
-  efMonths: string;
-  /** Euros a month. */
-  essential: string;
-  optional: string;
+/** One KPI tile: when a level is reached. */
+export interface LevelTile {
+  level: number;
+  name: string;
+  /** Target today, today's euros. */
+  target: number;
+  /** False when the target is 0: there is nothing to reach until expenses are set. */
+  set: boolean;
+  /** Calendar year the typical case reaches the level. Null when never within the projection. */
+  typical: number | null;
+  /** Calendar year the deterministic line reaches the level. Null when never. */
+  deterministic: number | null;
+  /** The chance of being there by 31 December of Y0 + `REACH_YEARS`. */
+  chance: number | null;
 }
 
-export interface ParsedDraft {
-  l2Mult: number;
-  l3Mult: number;
-  efMonths: number;
+/** One tile per level. Null without a result. */
+export function levelTiles(view: IndependenceView): LevelTile[] | null {
+  const { result } = view;
+  if (!result) return null;
+  return result.levels.map((target, level) => {
+    const set = isLevelSet(target);
+    return {
+      level,
+      name: LEVEL_NAMES[level] ?? `Level ${level + 1}`,
+      target,
+      set,
+      typical: set ? (result.reached[level]?.median ?? null) : null,
+      deterministic: set ? (result.reached[level]?.deterministic ?? null) : null,
+      chance: set ? (reachedWithin(view, level)?.p ?? null) : null,
+    };
+  });
+}
+
+/** The chart title: which levels the typical case reaches, and when. */
+export function reachTitle(tiles: readonly LevelTile[]): string {
+  const set = tiles.filter((tile) => tile.set);
+  const reached = set.flatMap((tile) =>
+    tile.typical === null ? [] : [`${tile.name} in ${tile.typical}`],
+  );
+  if (reached.length === 0)
+    return `The typical case reaches no level within ${HORIZON_YEARS} years`;
+  const list =
+    reached.length === 1 ? reached[0] : `${reached.slice(0, -1).join(", ")} and ${reached.at(-1)}`;
+  const missing =
+    reached.length < set.length ? `; not every level within ${HORIZON_YEARS} years` : "";
+  return `The typical case reaches ${list}${missing}`;
+}
+
+/** Why the level lines are flat, rise or fall: expense growth is growth above inflation. */
+export function levelLinesNote(expenseGrowth: number): string {
+  if (expenseGrowth === 0) {
+    return "The level lines are flat because your expenses keep up with prices.";
+  }
+  const percent = `${fractionToPercent(Math.abs(expenseGrowth))}%`;
+  const [move, side] = expenseGrowth > 0 ? ["rise", "above"] : ["fall", "below"];
+  return `The level lines ${move} ${percent} a year because your expenses grow ${percent} a year ${side} inflation.`;
+}
+
+/** The FI settings that are multipliers of the monthly expenses. */
+const MULTIPLIER_KEYS = ["baristaMult", "l2Mult", "l3Mult"] as const;
+/** The numeric FI settings the screen edits. */
+export const SETTING_KEYS = [...MULTIPLIER_KEYS, "efMonths"] as const;
+type SettingKey = (typeof SETTING_KEYS)[number];
+
+/** What the number fields hold while the user types. `essential` and `optional` are euros a month. */
+export type Draft = Record<SettingKey, string> & { essential: string; optional: string };
+
+export type ParsedDraft = Record<SettingKey, number> & {
   essentialCents: number;
   optionalCents: number;
-}
+};
+
+/** The draft's setting fields, from the stored settings. */
+export const settingsDraft = (fire: FireSettings): Record<SettingKey, string> =>
+  Object.fromEntries(SETTING_KEYS.map((key) => [key, String(fire[key])])) as Record<
+    SettingKey,
+    string
+  >;
 
 /** The draft as numbers, or null while a field is empty, not a number or negative. */
 export function parseDraft(draft: Draft): ParsedDraft | null {
-  const values = [draft.l2Mult, draft.l3Mult, draft.efMonths, draft.essential, draft.optional].map(
-    num,
-  );
+  const settings = SETTING_KEYS.map((key) => num(draft[key]));
+  const values = [...settings, num(draft.essential), num(draft.optional)];
   if (values.some((value) => !Number.isFinite(value) || value < 0)) return null;
   return {
-    l2Mult: num(draft.l2Mult),
-    l3Mult: num(draft.l3Mult),
-    efMonths: num(draft.efMonths),
+    ...(Object.fromEntries(SETTING_KEYS.map((key, i) => [key, settings[i]])) as Record<
+      SettingKey,
+      number
+    >),
     essentialCents: eurosToCents(draft.essential),
     optionalCents: eurosToCents(draft.optional),
   };
@@ -108,9 +185,9 @@ export function parseDraft(draft: Draft): ParsedDraft | null {
 export function changedSettings(
   parsed: ParsedDraft,
   fire: FireSettings,
-): Partial<Pick<FireSettings, "l2Mult" | "l3Mult" | "efMonths">> | null {
-  const changes: Partial<Pick<FireSettings, "l2Mult" | "l3Mult" | "efMonths">> = {};
-  for (const key of ["l2Mult", "l3Mult", "efMonths"] as const) {
+): Partial<Pick<FireSettings, SettingKey>> | null {
+  const changes: Partial<Pick<FireSettings, SettingKey>> = {};
+  for (const key of SETTING_KEYS) {
     if (parsed[key] !== fire[key]) changes[key] = parsed[key];
   }
   return Object.keys(changes).length === 0 ? null : changes;

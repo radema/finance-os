@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { GoalListView } from "../../engine/goalViews.ts";
 import type { SnapshotView } from "../../engine/snapshot.ts";
 import { api, messageOf, useLoad } from "../api.ts";
+import { EmptyState } from "../EmptyState.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatPercent } from "../money.ts";
 import { Alert, Card, ConfirmButton, Resource } from "../setup/ui.tsx";
@@ -52,6 +53,8 @@ function History({
     }
   };
 
+  const saveSnapshot = () => api("POST", "/api/snapshots");
+
   return (
     <>
       <div className="switch" role="toolbar" aria-label="Metric">
@@ -70,10 +73,10 @@ function History({
 
       {history.months.length === 0 ? (
         <Card title="Snapshots">
-          <p className="note">
-            There are no snapshots yet. The app saves one when a month closes, or you can save one
-            now.
-          </p>
+          <EmptyState
+            message="No snapshots yet. The app saves one when a month closes."
+            action={{ label: "Save a snapshot now", onClick: () => run(saveSnapshot) }}
+          />
         </Card>
       ) : (
         <Exhibit
@@ -112,64 +115,62 @@ function History({
 
       <Card title="Snapshot table">
         <Alert message={error} />
-        <div className="actions">
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={() => run(() => api("POST", "/api/snapshots"))}
-          >
-            Save snapshot
-          </button>
-          <span className="sub-line">
-            Saves the analysis of {asOf.slice(0, 7)}, the last month with prices.
-          </span>
-        </div>
         {history.months.length > 0 ? (
-          <div className="table-scroll">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Source</th>
-                  {known.map((goal) => (
-                    <th key={goal.id} className="num">
-                      {goal.name}
-                    </th>
-                  ))}
-                  <th aria-label="Actions" />
-                </tr>
-              </thead>
-              <tbody>
-                {history.months
-                  .map((month, index) => ({ month, index }))
-                  .reverse()
-                  .map(({ month, index }) => (
-                    <tr key={month}>
-                      <td>{month}</td>
-                      <td>
-                        <SourceLabel recomputed={history.recomputed[index] ?? false} />
-                      </td>
-                      {history.lines.map((line) => (
-                        <td key={line.goalId} className="num">
-                          {percentText(line.values[index] ?? null)}
+          <>
+            <div className="actions">
+              <button className="btn btn-primary" type="button" onClick={() => run(saveSnapshot)}>
+                Save snapshot
+              </button>
+              <span className="sub-line">
+                Saves the analysis of {asOf.slice(0, 7)}, the last month with prices.
+              </span>
+            </div>
+            <div className="table-scroll">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Source</th>
+                    {known.map((goal) => (
+                      <th key={goal.id} className="num">
+                        {goal.name}
+                      </th>
+                    ))}
+                    <th aria-label="Actions" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.months
+                    .map((month, index) => ({ month, index }))
+                    .reverse()
+                    .map(({ month, index }) => (
+                      <tr key={month}>
+                        <td>{month}</td>
+                        <td>
+                          <SourceLabel recomputed={history.recomputed[index] ?? false} />
                         </td>
-                      ))}
-                      <td className="row-actions">
-                        {history.recomputed[index] ? null : (
-                          <ConfirmButton
-                            label="Delete"
-                            confirmLabel="Delete snapshot"
-                            onConfirm={() =>
-                              run(() => api("DELETE", "/api/snapshots", { query: { id: month } }))
-                            }
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
+                        {history.lines.map((line) => (
+                          <td key={line.goalId} className="num">
+                            {percentText(line.values[index] ?? null)}
+                          </td>
+                        ))}
+                        <td className="row-actions">
+                          {history.recomputed[index] ? null : (
+                            <ConfirmButton
+                              label="Delete"
+                              confirmLabel="Delete snapshot"
+                              onConfirm={() =>
+                                run(() => api("DELETE", "/api/snapshots", { query: { id: month } }))
+                              }
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : null}
         <p className="sub">
           Only saved snapshots can be deleted. The next monthly run stores a deleted month again,

@@ -1,14 +1,30 @@
 /* Jargon popovers and the Glossary & method screen. Tokens only. */
 .term {
   margin: 0 -2px;
-  padding: var(--s1) 2px;
+  padding: 0 2px;
   border: 0;
   border-bottom: 1px dotted var(--muted);
   border-radius: 0;
   background: none;
+  position: relative;
   font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   color: inherit;
   cursor: help;
+}
+/* A small term keeps its look; an invisible box around it gives it a 24 px hit area. */
+.term::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, var(--s4));
+  height: max(100%, var(--s4));
+  transform: translate(-50%, -50%);
+}
+th .term {
+  white-space: nowrap;
 }
 .term:hover {
   border-bottom-color: var(--ink);
@@ -45,13 +61,62 @@
 .term-explanation {
   color: var(--ink2);
 }
+/* The contents line: one wrapped row of links to the method notes. */
+.method-contents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s1) var(--s3);
+  max-width: var(--note-max);
+  margin-bottom: var(--s4);
+  font-size: var(--t-callout);
+  line-height: var(--lh-callout);
+}
+.method-contents ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.method-contents-label {
+  font: 500 var(--t-axis) / var(--lh-axis) var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* The section heading: one step above the card titles, which are 12 px labels. */
+.method-title {
+  margin: var(--s5) 0 var(--s3);
+  font: 600 var(--t-body) / var(--lh-body) var(--font-display);
+  letter-spacing: var(--ls-display);
+}
+/* A link lands on a term row or a method note; the mark shows on arrival, in both themes. */
+.glossary-term,
+.method-note {
+  scroll-margin-top: var(--s4);
+}
+.glossary-term:focus {
+  outline: 2px solid var(--blue);
+  outline-offset: calc(-1 * var(--s1));
+  background: var(--tint-blue-faint);
+}
+.method-note:focus {
+  outline: 2px solid var(--blue);
+  outline-offset: var(--s1);
+  border-radius: var(--s2);
+}
 .method {
   display: grid;
   gap: var(--s3);
 }
+.method-note > .card {
+  margin-bottom: 0;
+}
 .method p,
 .method ul {
-  max-width: 46em;
+  max-width: var(--note-max);
   margin: 0;
 }
 .method ul {

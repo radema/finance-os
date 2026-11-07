@@ -1,35 +1,37 @@
-import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import type { PensionThisYear, PensionView, PensionYearView } from "../../engine/pensionView.ts";
 import type { PensionFlow } from "../../engine/schemas.ts";
+import { GREY_SLOT } from "../../engine/slots.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { GoalChip } from "../goals/GoalChip.tsx";
+import { Kpi } from "../goals/Kpi.tsx";
 import { formatAmount, formatPercent } from "../money.ts";
-import { Alert, Card, NumberField, PriorityTag, Resource, SelectField } from "../setup/ui.tsx";
+import {
+  Alert,
+  Card,
+  DecimalInput,
+  NumberField,
+  PriorityTag,
+  RequiredLegend,
+  Resource,
+  SaveStatus,
+  SelectField,
+} from "../setup/ui.tsx";
 import { CapitalNote } from "./CapitalNote.tsx";
-import { flowKey, type PlanValues, planToValues, valuesToPlan } from "./planForm.ts";
+import { flowKey, isPlanDirty, type PlanValues, planToValues, valuesToPlan } from "./planForm.ts";
 import { ScheduleChart } from "./ScheduleChart.tsx";
 
-const PENSION_SLOT = 1;
 const FLOWS: readonly PensionFlow["flow"][] = ["Work", "Voluntary"];
 const MISSING = "–";
 
-function Kpi({ label, value, note }: { label: ReactNode; value: string; note?: string }) {
-  return (
-    <div className="kpi">
-      <div className="kpi-label">{label}</div>
-      <div className="kpi-value">{value}</div>
-      {note ? <p className="sub">{note}</p> : null}
-    </div>
-  );
-}
-
-function ThisYear({ year }: { year: PensionThisYear }) {
+/** This year's deduction room. Without a pension goal the KPIs have no goal dot. */
+export function ThisYear({ year, hasGoal }: { year: PensionThisYear; hasGoal: boolean }) {
   // `used` counts the voluntary so far; the non-deducted part is the schedule's figure for the year.
   const overLimit = year.used > year.cap + year.extra;
   return (
     <>
-      <div className="kpis">
+      <div className={hasGoal ? "kpis" : "kpis kpis-no-goal"}>
         <Kpi
           label={`Cap ${year.year}`}
           value={formatAmount(year.cap)}
@@ -71,39 +73,40 @@ function ThisYear({ year }: { year: PensionThisYear }) {
 
 function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void }) {
   const productIds = view.pensionProducts.map((product) => product.id);
+  const storedValues = () => (view.plan ? planToValues(view.plan, view.goals[0]?.id ?? "") : null);
   const [values, setValues] = useState<PlanValues>(() =>
     planToValues(view.plan, view.goals[0]?.id ?? ""),
   );
+  // What is saved, as the form's text: edits are compared with it.
+  const [savedValues, setSavedValues] = useState<PlanValues | null>(storedValues);
   const [error, setError] = useState<string>();
-  const [saved, setSaved] = useState(false);
   // A reload replaces the stored plan: show it.
   // biome-ignore lint/correctness/useExhaustiveDependencies: only a new stored plan resets the form
   useEffect(() => {
     setValues(planToValues(view.plan, view.goals[0]?.id ?? ""));
+    setSavedValues(storedValues());
   }, [view.plan]);
 
-  const set = (key: string) => (value: string) => {
+  const set = (key: string) => (value: string) =>
     setValues((current) => ({ ...current, [key]: value }));
-    setSaved(false);
-  };
-  const field = (key: string, label: string, hint?: string, step?: string) => (
+  const field = (key: string, label: string, unit?: string, hint?: string, required = true) => (
     <NumberField
       label={label}
       value={values[key] ?? ""}
       onChange={set(key)}
+      unit={unit}
       hint={hint}
-      step={step}
+      required={required}
     />
   );
   const save = async () => {
     try {
       await api("PUT", "/api/pension-plan", { body: valuesToPlan(values, productIds) });
       setError(undefined);
-      setSaved(true);
+      setSavedValues(values);
       onSaved();
     } catch (failure) {
       setError(messageOf(failure));
-      setSaved(false);
     }
   };
 
@@ -114,29 +117,31 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
         void save();
       }}
     >
-      <Card title="Inputs">
-        <div className="form-grid">
+      <Card title="Pension plan">
+        <h3 className="form-section">Inputs</h3>
+        <RequiredLegend />
+        <div className="form-grid form-grid-hints">
           <SelectField
             label="Pension goal"
             value={values.goalId ?? ""}
             onChange={set("goalId")}
             options={view.goals.map((goal) => ({ value: goal.id, label: goal.name }))}
           />
-          {field("firstYear", "First year of membership", undefined, "1")}
-          {field("ral", "RAL (EUR a year)", "Blank: no schedule.", "0.01")}
-          {field("ralGrowth", "RAL growth (% a year)")}
-          {field("tfrPct", "TFR (% of RAL)")}
-          {field("workerPct", "Worker (% of RAL)")}
-          {field("employerPct", "Employer (% of RAL)")}
-          {field("voluntary", "Voluntary (EUR a year)", "Blank: up to the cap.", "0.01")}
-          {field("marginalRate", "Marginal tax rate (%)")}
-          {field("extra", "Extra deduction (EUR a year)", undefined, "0.01")}
+          {field("firstYear", "First year of membership")}
+          {field("ral", "RAL a year", "€", "Blank: no schedule.", false)}
+          {field("ralGrowth", "RAL growth a year", "%")}
+          {field("tfrPct", "TFR share of RAL", "%")}
+          {field("workerPct", "Worker share of RAL", "%")}
+          {field("employerPct", "Employer share of RAL", "%")}
+          {field("voluntary", "Voluntary a year", "€", "Blank: up to the cap.", false)}
+          {field("marginalRate", "Marginal tax rate", "%")}
+          {field("extra", "Extra deduction a year", "€")}
         </div>
-      </Card>
-      <Card
-        title="Flows"
-        note="Each flow is split between your pension funds by these shares. Work is TFR, worker and employer; Voluntary is the rest."
-      >
+        <h3 className="form-section">Flows</h3>
+        <p className="note">
+          Each flow is split between your pension funds by these shares. Work is TFR, worker and
+          employer; Voluntary is the rest. A blank share is no flow.
+        </p>
         {view.pensionProducts.length === 0 ? (
           <p className="note">There is no pension fund yet. Add one in Setup, Products.</p>
         ) : (
@@ -158,13 +163,12 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
                     <td>{product.name}</td>
                     {FLOWS.map((flow) => (
                       <td className="num" key={flow}>
-                        <input
+                        <DecimalInput
                           className="flow-input"
-                          type="number"
-                          step="any"
+                          placeholder="0"
                           aria-label={`${product.name}, ${flow} flow (%)`}
                           value={values[flowKey(flow, product.id)] ?? ""}
-                          onChange={(event) => set(flowKey(flow, product.id))(event.target.value)}
+                          onChange={set(flowKey(flow, product.id))}
                         />
                       </td>
                     ))}
@@ -174,19 +178,19 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
             </table>
           </div>
         )}
+        <Alert message={error} />
+        <div className="actions">
+          <button className="btn btn-primary" type="submit">
+            Save pension plan
+          </button>
+          <SaveStatus unsaved={isPlanDirty(values, savedValues)} />
+        </div>
       </Card>
-      <div className="actions">
-        <button className="btn btn-primary" type="submit">
-          Save pension plan
-        </button>
-        {saved ? <span className="saved">Saved.</span> : null}
-      </div>
-      <Alert message={error} />
     </form>
   );
 }
 
-function Schedule({ rows }: { rows: PensionYearView[] }) {
+function Schedule({ rows, slot }: { rows: PensionYearView[]; slot: number }) {
   const first = rows[0];
   const last = rows.at(-1);
   if (!first || !last) return null;
@@ -211,6 +215,7 @@ function Schedule({ rows }: { rows: PensionYearView[] }) {
         </ul>
         <ScheduleChart
           rows={rows}
+          slot={slot}
           label={`Yearly pension contributions, Work and Voluntary, from ${first.year} to ${last.year}`}
         />
         <figcaption className="source">
@@ -258,29 +263,32 @@ function Schedule({ rows }: { rows: PensionYearView[] }) {
 
 function Pension({ view, onSaved }: { view: PensionView; onSaved: () => void }) {
   const goal = view.goals.find((candidate) => candidate.id === view.plan?.goalId);
-  const title = view.thisYear
-    ? `You can still deduct ${formatAmount(view.thisYear.available)} in ${view.thisYear.year}`
-    : view.plan
-      ? "Add your RAL to see the pension schedule"
-      : "No pension plan yet";
+  const slot = goal?.slot ?? GREY_SLOT;
   return (
-    <div style={{ "--slot": `var(--slot${PENSION_SLOT})` } as CSSProperties}>
+    <div style={{ "--slot": `var(--slot${slot})` } as CSSProperties}>
       <div className="tag">Pension</div>
-      <h1 className="title">{title}</h1>
+      <h1 className="title">Pension</h1>
       <p className="unit">
         {goal ? (
           <>
-            <GoalChip id={goal.id} name={goal.name} slot={PENSION_SLOT} />{" "}
+            <GoalChip id={goal.id} name={goal.name} slot={slot} />{" "}
             <PriorityTag priority={goal.priority} />{" "}
           </>
         ) : null}
         {view.plan
-          ? `Euros. Values at the end of ${view.asOf.slice(0, 7)}.`
-          : "Fill in the inputs below to plan your pension fund. Nothing is saved until you press Save."}
+          ? `Euros. Values at the end of ${view.asOf.slice(0, 7)}.${view.thisYear ? "" : " Add your RAL to see the pension schedule."}`
+          : "No pension plan yet. Fill in the inputs below to plan your pension fund. Nothing is saved until you press Save."}
       </p>
-      {view.thisYear ? <ThisYear year={view.thisYear} /> : null}
+      {view.thisYear ? (
+        <>
+          <h2 className="exhibit-title">
+            {`You can still deduct ${formatAmount(view.thisYear.available)} in ${view.thisYear.year}`}
+          </h2>
+          <ThisYear year={view.thisYear} hasGoal={goal !== undefined} />
+        </>
+      ) : null}
       <PlanForm view={view} onSaved={onSaved} />
-      <Schedule rows={view.schedule} />
+      <Schedule rows={view.schedule} slot={slot} />
       <CapitalNote />
     </div>
   );
