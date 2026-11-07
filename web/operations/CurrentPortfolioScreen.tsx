@@ -4,7 +4,7 @@ import type { Product, Settings, Transaction } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { DateInput } from "../DateInput.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatEuro, formatQuantity } from "../money.ts";
+import { formatEuro, formatPrice, formatQuantity } from "../money.ts";
 import { TRANSACTIONS_ROUTE } from "../nav.ts";
 import {
   Alert,
@@ -70,7 +70,7 @@ function Saved({
                 <td>{productName(t.productId)}</td>
                 <td>{goalName(t.goalId)}</td>
                 <td className="num">{formatQuantity(t.qty, 6)}</td>
-                <td className="num">{formatQuantity(t.price, 6)}</td>
+                <td className="num">{formatPrice(t.price)}</td>
                 <td className="num">{formatEuro(t.amountCents)}</td>
               </tr>
             ))}

@@ -143,7 +143,7 @@ export function levelLinesNote(expenseGrowth: number): string {
 }
 
 /** The FI settings that are multipliers of the monthly expenses. */
-export const MULTIPLIER_KEYS = ["baristaMult", "l2Mult", "l3Mult"] as const;
+const MULTIPLIER_KEYS = ["baristaMult", "l2Mult", "l3Mult"] as const;
 /** The numeric FI settings the screen edits. */
 export const SETTING_KEYS = [...MULTIPLIER_KEYS, "efMonths"] as const;
 type SettingKey = (typeof SETTING_KEYS)[number];
