@@ -178,6 +178,11 @@ describe("spreadMixes", () => {
     }
   });
 
+  it("keeps a failing stack just under the required chance on the failing side", () => {
+    const stack = Array.from({ length: 6 }, () => at(0.8999, 3000));
+    for (const point of spreadMixes(stack, 0.7, 1, 0.9)) expect(point.x).toBeLessThan(0.9);
+  });
+
   it("returns nothing for no mixes and does not divide by zero for one", () => {
     expect(spreadMixes([], 0.7, 1, 0)).toEqual([]);
     expect(spreadMixes([at(0.9, 100)], 0.7, 1, 0)[0].x).toBe(0.9);
