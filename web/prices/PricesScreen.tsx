@@ -98,10 +98,10 @@ export function PricesScreen() {
                         <td>
                           <PriceFreshnessPill age={row.age} />
                         </td>
-                        <td>
+                        <td className="row-actions">
                           {canRefetch(row) ? (
                             <button
-                              className="btn"
+                              className="btn btn-quiet"
                               type="button"
                               aria-label={`Re-fetch ${row.name}`}
                               onClick={() => void refetch(row.productId)}

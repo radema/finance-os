@@ -368,82 +368,87 @@ export function GoalsTab() {
             list.length === 0 ? (
               <p className="note">No goals yet. Add the first one above.</p>
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Priority</th>
-                    <th className="num">Target</th>
-                    <th className="num">Year</th>
-                    <th className="num">Monthly now</th>
-                    <th className="num">Growth</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((g) => (
-                    <tr key={g.id}>
-                      <td>
-                        {slotOf(g.id) === undefined ? (
-                          g.name
-                        ) : (
-                          <GoalChip id={g.id} name={g.name} slot={slotOf(g.id) as number} />
-                        )}
-                      </td>
-                      <td>
-                        <PriorityTag priority={g.priority} />
-                      </td>
-                      <td className="num">{formatEuro(g.targetCents)}</td>
-                      <td className="num">{g.targetYear}</td>
-                      <td className="num">
-                        {month === undefined ? "" : formatEuro(monthlyInForce(g.plan, month))}
-                      </td>
-                      <td className="num">{formatPercent(g.contributionGrowth)}</td>
-                      <td className="row-actions">
-                        <button
-                          className="btn btn-quiet"
-                          type="button"
-                          onClick={() => setSelected(g.id)}
-                        >
-                          Plan
-                        </button>
-                        <button
-                          className="btn btn-quiet"
-                          type="button"
-                          onClick={() => {
-                            setEditing(g.id);
-                            setCopying(false);
-                            setForm(toForm(g));
-                            clear();
-                            reveal();
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn btn-quiet"
-                          type="button"
-                          onClick={() => {
-                            setEditing(undefined);
-                            setCopying(true);
-                            setForm({ ...toForm(copyOfGoal(g)), monthly: monthlyText(g) });
-                            clear();
-                            reveal();
-                          }}
-                        >
-                          Duplicate
-                        </button>
-                        <ConfirmButton
-                          label="Delete"
-                          confirmLabel="Delete goal"
-                          apart
-                          onConfirm={() => void remove(g.id)}
-                        />
-                      </td>
+              <div className="table-scroll table-scroll-sticky">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Priority</th>
+                      <th className="num">Target</th>
+                      <th className="num">Year</th>
+                      <th className="num">Monthly now</th>
+                      <th className="num">Growth</th>
+                      <th />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {list.map((g) => {
+                      const slot = slotOf(g.id);
+                      return (
+                        <tr key={g.id}>
+                          <td>
+                            {slot === undefined ? (
+                              g.name
+                            ) : (
+                              <GoalChip id={g.id} name={g.name} slot={slot} />
+                            )}
+                          </td>
+                          <td>
+                            <PriorityTag priority={g.priority} />
+                          </td>
+                          <td className="num">{formatEuro(g.targetCents)}</td>
+                          <td className="num">{g.targetYear}</td>
+                          <td className="num">
+                            {month === undefined ? "" : formatEuro(monthlyInForce(g.plan, month))}
+                          </td>
+                          <td className="num">{formatPercent(g.contributionGrowth)}</td>
+                          <td className="row-actions">
+                            <button
+                              className="btn btn-quiet"
+                              type="button"
+                              onClick={() => setSelected(g.id)}
+                            >
+                              Plan
+                            </button>
+                            <button
+                              className="btn btn-quiet"
+                              type="button"
+                              onClick={() => {
+                                setEditing(g.id);
+                                setCopying(false);
+                                setForm(toForm(g));
+                                clear();
+                                reveal();
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn-quiet"
+                              type="button"
+                              onClick={() => {
+                                setEditing(undefined);
+                                setCopying(true);
+                                setForm({ ...toForm(copyOfGoal(g)), monthly: monthlyText(g) });
+                                clear();
+                                reveal();
+                              }}
+                            >
+                              Duplicate
+                            </button>
+                            <ConfirmButton
+                              label="Delete"
+                              confirmLabel="Delete goal"
+                              apart
+                              onConfirm={() => void remove(g.id)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )
           }
         </Resource>

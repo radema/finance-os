@@ -421,6 +421,11 @@ form > .actions {
 .table-scroll {
   overflow-x: auto;
 }
+/* A scroll wrapper with a height bound, so the sticky header sticks inside it. */
+.table-scroll-sticky {
+  max-height: 70vh;
+  overflow-y: auto;
+}
 .matrix th[scope="row"] {
   font-weight: 600;
   color: var(--ink2);

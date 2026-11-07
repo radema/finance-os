@@ -330,70 +330,72 @@ export function ProductsTab() {
             list.length === 0 ? (
               <p className="note">No products yet. Add the first one above.</p>
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Regime</th>
-                    <th>Asset class</th>
-                    <th className="num">Return</th>
-                    <th className="num">Volatility</th>
-                    <th className="num">TER</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        {p.name}
-                        {p.isin ? <span className="sub"> {p.isin}</span> : null}
-                      </td>
-                      <td>
-                        <ProductTag regime={p.regime} />
-                      </td>
-                      <td>{p.assetClass}</td>
-                      <td className="num">{formatPercent(p.expReturn)}</td>
-                      <td className="num">{formatPercent(p.volatility)}</td>
-                      <td className="num">{formatPercent(p.ter)}</td>
-                      <td className="row-actions">
-                        <button
-                          className="btn btn-quiet"
-                          type="button"
-                          onClick={() => {
-                            setEditing(p.id);
-                            setCopying(false);
-                            setForm(toForm(p));
-                            clear();
-                            reveal();
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn btn-quiet"
-                          type="button"
-                          onClick={() => {
-                            setEditing(undefined);
-                            setCopying(true);
-                            setForm(toForm(copyOfProduct(p)));
-                            clear();
-                            reveal();
-                          }}
-                        >
-                          Duplicate
-                        </button>
-                        <ConfirmButton
-                          label="Delete"
-                          confirmLabel="Delete product"
-                          apart
-                          onConfirm={() => void remove(p.id)}
-                        />
-                      </td>
+              <div className="table-scroll table-scroll-sticky">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Regime</th>
+                      <th>Asset class</th>
+                      <th className="num">Return</th>
+                      <th className="num">Volatility</th>
+                      <th className="num">TER</th>
+                      <th />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {list.map((p) => (
+                      <tr key={p.id}>
+                        <td>
+                          {p.name}
+                          {p.isin ? <span className="sub"> {p.isin}</span> : null}
+                        </td>
+                        <td>
+                          <ProductTag regime={p.regime} />
+                        </td>
+                        <td>{p.assetClass}</td>
+                        <td className="num">{formatPercent(p.expReturn)}</td>
+                        <td className="num">{formatPercent(p.volatility)}</td>
+                        <td className="num">{formatPercent(p.ter)}</td>
+                        <td className="row-actions">
+                          <button
+                            className="btn btn-quiet"
+                            type="button"
+                            onClick={() => {
+                              setEditing(p.id);
+                              setCopying(false);
+                              setForm(toForm(p));
+                              clear();
+                              reveal();
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn btn-quiet"
+                            type="button"
+                            onClick={() => {
+                              setEditing(undefined);
+                              setCopying(true);
+                              setForm(toForm(copyOfProduct(p)));
+                              clear();
+                              reveal();
+                            }}
+                          >
+                            Duplicate
+                          </button>
+                          <ConfirmButton
+                            label="Delete"
+                            confirmLabel="Delete product"
+                            apart
+                            onConfirm={() => void remove(p.id)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )
           }
         </Resource>

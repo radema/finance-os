@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { Goal } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { checkFields } from "../formErrors.ts";
@@ -28,6 +28,8 @@ interface PositionsTableProps {
  */
 export function PositionsTable({ products, holdings, goalName, onSaved }: PositionsTableProps) {
   const { accounts, buckets } = holdings;
+  const errorPrefix = useId();
+  const errorId = (productId: string) => `${errorPrefix}-${productId}`;
   const [edits, setEdits] = useState<BrokerEdits>({});
   const [problems, setProblems] = useState<Record<string, string>>({});
   const changed = changedBrokerRows(products, edits);
@@ -106,11 +108,17 @@ export function PositionsTable({ products, holdings, goalName, onSaved }: Positi
                     <DecimalInput
                       className="inline-input"
                       aria-label={`Units at the broker, ${row.name}`}
-                      {...(problem ? { "aria-invalid": true } : {})}
+                      {...(problem
+                        ? { "aria-invalid": true, "aria-describedby": errorId(row.productId) }
+                        : {})}
                       value={fields.units}
                       onChange={(text) => edit(row.productId, "units", text)}
                     />
-                    {problem ? <span className="field-hint field-error">{problem}</span> : null}
+                    {problem ? (
+                      <span className="field-hint field-error" id={errorId(row.productId)}>
+                        {problem}
+                      </span>
+                    ) : null}
                   </td>
                   <td>
                     <input

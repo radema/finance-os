@@ -410,7 +410,7 @@ export function TransactionsScreen() {
             rows.length === 0 ? (
               <p className="note">No transactions to show.</p>
             ) : (
-              <div className="table-scroll">
+              <div className="table-scroll table-scroll-sticky">
                 <table className="table table-transactions">
                   <thead>
                     <tr>
