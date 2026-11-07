@@ -106,6 +106,7 @@ the other screens keep the full width.
 Notes and callouts (`.note`, `.callout`: callouts under charts, the Next contribution note, the Pension
 capital note, the Optimizer callouts) share one width, `--note-max` (70ch, in `tokens.css`), so a line
 holds about 70 characters at any window width.
+The Optimizer hint lines, alerts and steps panel use it too. Its control grid is 2 columns, 4 from 1280 px.
 
 ## Components
 

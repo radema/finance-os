@@ -348,7 +348,8 @@ function UseWeights({
   );
 }
 
-function Result({
+/** Exported for the heading-order test. */
+export function Result({
   view,
   goal,
   names,
@@ -390,7 +391,8 @@ function Result({
   );
 }
 
-function Exhibits({
+/** Exported for the heading-order test. */
+export function Exhibits({
   view,
   goal,
   names,
