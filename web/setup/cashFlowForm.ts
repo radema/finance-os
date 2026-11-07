@@ -10,13 +10,21 @@ export type Values = {
   expenseGrowth: string;
 };
 
-export const toValues = (c: CashFlow): Values => ({
-  income: centsToEuros(c.income),
-  incomeGrowth: fractionToPercent(c.incomeGrowth),
-  essential: centsToEuros(c.essential),
-  optional: centsToEuros(c.optional),
-  expenseGrowth: fractionToPercent(c.expenseGrowth),
-});
+/** True when no cash flow is saved: the stored zeros are defaults, not values the user typed. */
+export const isUnset = (c: CashFlow): boolean =>
+  c.income === 0 && c.essential === 0 && c.optional === 0 && c.events.length === 0;
+
+/** The typed values of a stored document. With nothing saved the fields are empty, not "0". */
+export const toValues = (c: CashFlow): Values =>
+  isUnset(c)
+    ? { income: "", incomeGrowth: "", essential: "", optional: "", expenseGrowth: "" }
+    : {
+        income: centsToEuros(c.income),
+        incomeGrowth: fractionToPercent(c.incomeGrowth),
+        essential: centsToEuros(c.essential),
+        optional: centsToEuros(c.optional),
+        expenseGrowth: fractionToPercent(c.expenseGrowth),
+      };
 
 /** The document "Save cash flow" sends: the typed values with the stored events. */
 export const savedDocument = (v: Values, events: CashFlowEvent[]): CashFlow => ({
@@ -28,14 +36,18 @@ export const savedDocument = (v: Values, events: CashFlowEvent[]): CashFlow => (
   events,
 });
 
-/** True when the typed values differ from the stored ones. An empty or bad field counts as a change. */
+/**
+ * True when the typed values differ from the stored ones. A bad field counts as a change; an empty
+ * one only when the stored value is a number, so the empty form of an unset cash flow reads Saved.
+ */
 export function hasUnsavedValues(v: Values, stored: CashFlow): boolean {
   const typed = savedDocument(v, stored.events);
+  const shown = savedDocument(toValues(stored), stored.events);
   return (
-    typed.income !== stored.income ||
-    typed.incomeGrowth !== stored.incomeGrowth ||
-    typed.essential !== stored.essential ||
-    typed.optional !== stored.optional ||
-    typed.expenseGrowth !== stored.expenseGrowth
+    !Object.is(typed.income, shown.income) ||
+    !Object.is(typed.incomeGrowth, shown.incomeGrowth) ||
+    !Object.is(typed.essential, shown.essential) ||
+    !Object.is(typed.optional, shown.optional) ||
+    !Object.is(typed.expenseGrowth, shown.expenseGrowth)
   );
 }

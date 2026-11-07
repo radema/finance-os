@@ -278,6 +278,7 @@ export function NumberField({
   error,
   required,
   unit,
+  placeholder,
 }: {
   label: ReactNode;
   value: string;
@@ -285,6 +286,8 @@ export function NumberField({
   hint?: string;
   error?: string;
   required?: boolean;
+  /** An example shown while the field is empty. Not a default: it is never saved. */
+  placeholder?: string;
   /** The unit (€, %, years), shown inside the field after the value. Keep it out of the label. */
   unit?: string;
 }) {
@@ -298,6 +301,7 @@ export function NumberField({
             aria-labelledby={unit ? `${labelId} ${unitId}` : labelId}
             aria-required={required}
             {...invalid}
+            placeholder={placeholder}
             value={value}
             onChange={onChange}
           />
