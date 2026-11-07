@@ -8,7 +8,7 @@ import { api, messageOf, useLoad } from "../api.ts";
 import { checkFields, type FieldErrors } from "../formErrors.ts";
 import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatEuro, formatPercent, formatPrice } from "../money.ts";
+import { formatEuro, formatPercent, formatPrice, formatQuantity } from "../money.ts";
 import { DateInput } from "../setup/DateInput.tsx";
 import { copyOfTransaction } from "../setup/duplicate.ts";
 import { type RevealFormRef, useRevealForm } from "../setup/revealForm.ts";
@@ -51,8 +51,6 @@ const LABELS = {
 type FormKey = keyof typeof LABELS;
 // The API names these in cents; the form holds euros.
 const API_KEYS: Record<string, FormKey> = { amountCents: "amount", commissionCents: "fee" };
-
-const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
 
 interface LastPrice {
   price: number;
@@ -440,7 +438,7 @@ export function TransactionsScreen() {
                             {t.flow ? ` (${t.flow})` : ""}
                           </td>
                           <td className="num">
-                            {t.type === "coupon" ? "–" : quantity.format(t.qty)}
+                            {t.type === "coupon" ? "–" : formatQuantity(t.qty)}
                           </td>
                           <td className="num">
                             {t.type === "coupon" ? "–" : formatPrice(t.price)}

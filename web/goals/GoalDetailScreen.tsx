@@ -5,7 +5,7 @@ import type { Goal } from "../../engine/schemas.ts";
 import type { PerformanceView } from "../../engine/trackingViews.ts";
 import { useLoad } from "../api.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatAmount, formatPercent, formatUnitPrice } from "../money.ts";
+import { formatAmount, formatPercent, formatQuantity, formatUnitPrice } from "../money.ts";
 import { GOALS_LIST_ROUTE, goalDetailHref } from "../nav.ts";
 import { Card, PriorityTag, ProductTag, Resource } from "../setup/ui.tsx";
 import { historyMonths, scopeQuery, xirrTile } from "../tracking/model.ts";
@@ -17,7 +17,6 @@ import { RangeChart } from "./RangeChart.tsx";
 import { StatusChip } from "./StatusChip.tsx";
 import { ValueChart } from "./ValueChart.tsx";
 
-const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
 const NOT_FOUND = "goal not found";
 const MISSING = "–";
 
@@ -379,7 +378,7 @@ function Detail({ goal }: { goal: GoalDetailView }) {
                     <td>
                       {row.name} <ProductTag regime={row.regime} />
                     </td>
-                    <td className="num">{quantity.format(row.units)}</td>
+                    <td className="num">{formatQuantity(row.units)}</td>
                     <td className="num">
                       {row.price === null ? "No price" : formatUnitPrice(row.price)}
                     </td>

@@ -13,7 +13,7 @@ const webDir = new URL("./", import.meta.url);
 const sheets = readdirSync(webDir).filter((name) => name.endsWith(".css"));
 const css = (name: string) => stripComments(readFileSync(new URL(name, webDir), "utf8"));
 
-/** Selectors that may set `color: var(--hl)`: icons and marks, never text. */
+/** Selectors that may set a highlight colour (`--hl`, `--hl2`, `--hl3`) as `color`: icons and marks, never text. */
 const MARK_SELECTORS = new Set([
   ".field-error-mark",
   ".status-at_risk svg",
@@ -26,7 +26,7 @@ const highlightColourSelectors = (): string[] => {
   const found: string[] = [];
   for (const sheet of sheets) {
     for (const rule of css(sheet).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      if (!/(^|;|\s)color\s*:\s*var\(--hl\)/.test(rule[2] ?? "")) continue;
+      if (!/(^|;|\s)color\s*:[^;]*var\(--hl[23]?\)/.test(rule[2] ?? "")) continue;
       for (const selector of (rule[1] ?? "").split(",")) found.push(selector.trim());
     }
   }
@@ -34,7 +34,7 @@ const highlightColourSelectors = (): string[] => {
 };
 
 describe("text colour (issue 73, AC-91)", () => {
-  it("never sets --hl as a text colour outside the listed mark selectors", () => {
+  it("never sets --hl, --hl2 or --hl3 (alone or in color-mix) as a text colour outside the listed mark selectors", () => {
     expect(sheets.length).toBeGreaterThan(5);
     const text = highlightColourSelectors().filter((selector) => !MARK_SELECTORS.has(selector));
     expect(text).toEqual([]);

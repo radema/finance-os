@@ -4,6 +4,7 @@ import {
   formatEuro,
   formatPercent,
   formatPrice,
+  formatQuantity,
   formatSignedAmount,
   formatSignedPoints,
   formatUnitPrice,
@@ -70,5 +71,17 @@ describe("signed change formats", () => {
     expect(formatSignedPoints(-0.0033)).toBe(`-0,33${NBSP}pts`);
     expect(formatSignedPoints(0.05)).toBe(`+5${NBSP}pts`);
     expect(formatSignedPoints(0)).toBe(`0${NBSP}pts`);
+  });
+});
+
+describe("formatQuantity", () => {
+  it("keeps the thousands dot on 4-digit quantities", () => {
+    expect(formatQuantity(1234)).toBe("1.234");
+    expect(formatQuantity(12_345.5)).toBe("12.345,5");
+  });
+
+  it("keeps up to 4 decimals, or 6 on request", () => {
+    expect(formatQuantity(1.234_567_8)).toBe("1,2346");
+    expect(formatQuantity(1.234_567_8, 6)).toBe("1,234568");
   });
 });

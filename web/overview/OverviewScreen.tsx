@@ -55,7 +55,7 @@ function Dashboard({ view }: { view: OverviewView }) {
       </p>
 
       <h2 className="exhibit-title">{actionTitle(track, key.netWorth)}</h2>
-      <div className="kpis kpis-blue kpis-overview" data-cell="key-numbers">
+      <div className="kpis kpis-no-goal kpis-overview" data-cell="key-numbers">
         <Kpi
           label="Net worth"
           value={amountOrDash(key.netWorth)}

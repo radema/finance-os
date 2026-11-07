@@ -142,42 +142,37 @@ export function levelLinesNote(expenseGrowth: number): string {
   return `The level lines ${move} ${percent} a year because your expenses grow ${percent} a year ${side} inflation.`;
 }
 
-/** What the number fields hold while the user types. */
-export interface Draft {
-  baristaMult: string;
-  l2Mult: string;
-  l3Mult: string;
-  efMonths: string;
-  /** Euros a month. */
-  essential: string;
-  optional: string;
-}
+/** The FI settings that are multipliers of the monthly expenses. */
+export const MULTIPLIER_KEYS = ["baristaMult", "l2Mult", "l3Mult"] as const;
+/** The numeric FI settings the screen edits. */
+export const SETTING_KEYS = [...MULTIPLIER_KEYS, "efMonths"] as const;
+type SettingKey = (typeof SETTING_KEYS)[number];
 
-export interface ParsedDraft {
-  baristaMult: number;
-  l2Mult: number;
-  l3Mult: number;
-  efMonths: number;
+/** What the number fields hold while the user types. `essential` and `optional` are euros a month. */
+export type Draft = Record<SettingKey, string> & { essential: string; optional: string };
+
+export type ParsedDraft = Record<SettingKey, number> & {
   essentialCents: number;
   optionalCents: number;
-}
+};
+
+/** The draft's setting fields, from the stored settings. */
+export const settingsDraft = (fire: FireSettings): Record<SettingKey, string> =>
+  Object.fromEntries(SETTING_KEYS.map((key) => [key, String(fire[key])])) as Record<
+    SettingKey,
+    string
+  >;
 
 /** The draft as numbers, or null while a field is empty, not a number or negative. */
 export function parseDraft(draft: Draft): ParsedDraft | null {
-  const values = [
-    draft.baristaMult,
-    draft.l2Mult,
-    draft.l3Mult,
-    draft.efMonths,
-    draft.essential,
-    draft.optional,
-  ].map(num);
+  const settings = SETTING_KEYS.map((key) => num(draft[key]));
+  const values = [...settings, num(draft.essential), num(draft.optional)];
   if (values.some((value) => !Number.isFinite(value) || value < 0)) return null;
   return {
-    baristaMult: num(draft.baristaMult),
-    l2Mult: num(draft.l2Mult),
-    l3Mult: num(draft.l3Mult),
-    efMonths: num(draft.efMonths),
+    ...(Object.fromEntries(SETTING_KEYS.map((key, i) => [key, settings[i]])) as Record<
+      SettingKey,
+      number
+    >),
     essentialCents: eurosToCents(draft.essential),
     optionalCents: eurosToCents(draft.optional),
   };
@@ -190,9 +185,9 @@ export function parseDraft(draft: Draft): ParsedDraft | null {
 export function changedSettings(
   parsed: ParsedDraft,
   fire: FireSettings,
-): Partial<Pick<FireSettings, "baristaMult" | "l2Mult" | "l3Mult" | "efMonths">> | null {
-  const changes: Partial<Pick<FireSettings, "baristaMult" | "l2Mult" | "l3Mult" | "efMonths">> = {};
-  for (const key of ["baristaMult", "l2Mult", "l3Mult", "efMonths"] as const) {
+): Partial<Pick<FireSettings, SettingKey>> | null {
+  const changes: Partial<Pick<FireSettings, SettingKey>> = {};
+  for (const key of SETTING_KEYS) {
     if (parsed[key] !== fire[key]) changes[key] = parsed[key];
   }
   return Object.keys(changes).length === 0 ? null : changes;

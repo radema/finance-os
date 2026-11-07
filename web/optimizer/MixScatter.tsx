@@ -5,7 +5,7 @@ import { SVGRenderer } from "echarts/renderers";
 import { useCallback } from "react";
 import type { MixView, OptimizerRunView } from "../../engine/optimizerView.ts";
 import { formatAmount, formatPercent } from "../money.ts";
-import { readTokens, useEchart } from "../useEchart.ts";
+import { LABELS_INSIDE, readTokens, useEchart } from "../useEchart.ts";
 import { mixText, scatterAxisStart, spreadMixes } from "./model.ts";
 
 echarts.use([ScatterChart, GridComponent, MarkLineComponent, TooltipComponent, SVGRenderer]);
@@ -43,7 +43,7 @@ function buildOption(view: OptimizerRunView, slot: number, names: ReadonlyMap<st
   };
   return {
     animation: false,
-    grid: { left: 8, right: 48, top: 32, bottom: 36, containLabel: true },
+    grid: { left: 8, right: 48, top: 32, bottom: 36, ...LABELS_INSIDE },
     tooltip: {
       trigger: "item" as const,
       formatter: tip,

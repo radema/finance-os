@@ -3,13 +3,11 @@ import type { Goal } from "../../engine/schemas.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { checkFields } from "../formErrors.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatUnitPrice } from "../money.ts";
+import { formatQuantity, formatUnitPrice } from "../money.ts";
 import { DateInput } from "../setup/DateInput.tsx";
 import { Card, DecimalInput, ProductTag, Resource, SaveStatus } from "../setup/ui.tsx";
 import { type BrokerEdits, brokerBody, brokerFields, changedBrokerRows } from "./model.ts";
 import type { PriceOverviewRow } from "./types.ts";
-
-const quantity = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 4 });
 
 interface Holdings {
   buckets: { goalId: string; productId: string; units: number }[];
@@ -94,7 +92,7 @@ export function PositionsTable({ products, holdings, goalName, onSaved }: Positi
                   <td>
                     {row.name} <ProductTag regime={row.regime} />
                   </td>
-                  <td className="num">{account ? quantity.format(account.units) : "–"}</td>
+                  <td className="num">{account ? formatQuantity(account.units) : "–"}</td>
                   <td className="num">
                     {account?.pmc == null ? "–" : formatUnitPrice(account.pmc)}
                   </td>
@@ -102,7 +100,7 @@ export function PositionsTable({ products, holdings, goalName, onSaved }: Positi
                     {parts.length === 0
                       ? "–"
                       : parts
-                          .map((b) => `${goalName(b.goalId)}: ${quantity.format(b.units)}`)
+                          .map((b) => `${goalName(b.goalId)}: ${formatQuantity(b.units)}`)
                           .join(", ")}
                   </td>
                   <td className="num">

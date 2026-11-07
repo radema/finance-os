@@ -3,10 +3,12 @@ import * as echarts from "echarts/core";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { FiPoint, FiResult } from "../engine/financialIndependence.ts";
 import type { FanPoint, SeriesPoint } from "../engine/goalViews.ts";
+import type { PensionYearView } from "../engine/pensionView.ts";
 import { buildOption as buildFan } from "./goals/FanChart.tsx";
 import { buildOption as buildValue } from "./goals/ValueChart.tsx";
 import { fanOption } from "./independence/FiCharts.tsx";
 import { LEVEL_NAMES } from "./independence/model.ts";
+import { buildOption as buildSchedule } from "./pension/ScheduleChart.tsx";
 import { buildOption as buildTime, type ChartSeries } from "./tracking/TimeChart.tsx";
 import { PLOT_GRID } from "./useEchart.ts";
 
@@ -140,5 +142,51 @@ describe("the independence end labels", () => {
     for (const name of [...LEVEL_NAMES, "Typical case"]) {
       expect(right[name], name).toBeLessThanOrEqual(1000);
     }
+  });
+});
+
+describe("the axis labels of a chart with its own margins", () => {
+  const year = (n: number): PensionYearView => ({
+    year: 2026 + n,
+    ral: 40_000,
+    tfr: 3_000,
+    worker: 500,
+    employer: 500,
+    voluntary: 1_234_567,
+    deductible: 1,
+    refund: 1,
+    refundYear: 2027 + n,
+  });
+
+  it("stay inside the chart box, y labels at the left edge and x labels at the bottom", () => {
+    const chart = echarts.init(null as never, null as never, {
+      renderer: "svg",
+      ssr: true,
+      width: 1000,
+      height: 300,
+    });
+    chart.setOption(buildSchedule([year(0), year(1), year(2)], 2));
+    const texts = chart
+      .getZr()
+      .storage.getDisplayList(true)
+      .filter((el) => (el as { style?: { text?: string } }).style?.text);
+    expect(texts.length).toBeGreaterThan(3);
+    for (const el of texts) {
+      const box = el.getBoundingRect().clone();
+      const placed = el.getComputedTransform();
+      if (placed) box.applyTransform(placed);
+      const text = (el as { style?: { text?: string } }).style?.text;
+      expect(box.x, text).toBeGreaterThanOrEqual(0);
+      expect(box.y, text).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, text).toBeLessThanOrEqual(1000);
+      expect(box.y + box.height, text).toBeLessThanOrEqual(300);
+    }
+    chart.dispose();
+  });
+
+  it("are contained by `outerBoundsContain`, not by `containLabel`", () => {
+    const grid = buildSchedule([year(0)], 2).grid as Record<string, unknown>;
+    expect(grid.outerBoundsContain).toBe("axisLabel");
+    expect(grid.containLabel).toBeUndefined();
   });
 });

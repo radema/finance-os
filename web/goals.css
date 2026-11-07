@@ -121,13 +121,14 @@
   background: var(--slot);
 }
 /* KPIs that belong to no goal have no dot. */
-.kpis-blue .kpi-label::before,
+.kpis-no-goal .kpi-label::before,
 .level-tile .kpi-label::before {
   display: none;
 }
 .kpi-value {
   margin: var(--s1) 0;
   font: var(--w-display) var(--t-title) / var(--lh-title) var(--font-display);
+  font-variant-numeric: tabular-nums;
   letter-spacing: var(--ls-display);
 }
 .table tfoot th,
