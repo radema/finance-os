@@ -5,6 +5,7 @@ import { api, useLoad } from "../api.ts";
 import { checkFields } from "../formErrors.ts";
 import { centsToEuros, eurosToCents, fractionToPercent, num, percentToFraction } from "../forms.ts";
 import { formatEuro } from "../money.ts";
+import { CashFlowTable } from "./CashFlowTable.tsx";
 import { copyOfEvent } from "./duplicate.ts";
 import { useRevealForm } from "./revealForm.ts";
 import {
@@ -161,70 +162,72 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
         {listed.length === 0 ? (
           <p className="note">No events yet. Add one below.</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Year</th>
-                <th>Description</th>
-                <th className="num">Amount</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {listed.map((e) => (
-                <tr key={e.index}>
-                  <td>{e.year}</td>
-                  <td>{e.label}</td>
-                  <td className="num">{formatEuro(e.amount)}</td>
-                  <td className="row-actions">
-                    <button
-                      className="btn btn-quiet"
-                      type="button"
-                      onClick={() => {
-                        setEditing(e.index);
-                        setCopying(false);
-                        setEvent({
-                          year: String(e.year),
-                          label: e.label,
-                          amount: centsToEuros(e.amount),
-                        });
-                        clear();
-                        reveal();
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-quiet"
-                      type="button"
-                      onClick={() => {
-                        const copy = copyOfEvent(e);
-                        setEditing(undefined);
-                        setCopying(true);
-                        setEvent({
-                          year: String(copy.year),
-                          label: copy.label,
-                          amount: centsToEuros(copy.amount),
-                        });
-                        clear();
-                        reveal();
-                      }}
-                    >
-                      Duplicate
-                    </button>
-                    <ConfirmButton
-                      label="Delete"
-                      confirmLabel="Delete event"
-                      apart
-                      onConfirm={() =>
-                        void saveEvents(cashFlow.events.filter((_, i) => i !== e.index))
-                      }
-                    />
-                  </td>
+          <div className="table-scroll table-scroll-sticky">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Description</th>
+                  <th className="num">Amount</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {listed.map((e) => (
+                  <tr key={e.index}>
+                    <td>{e.year}</td>
+                    <td>{e.label}</td>
+                    <td className="num">{formatEuro(e.amount)}</td>
+                    <td className="row-actions">
+                      <button
+                        className="btn btn-quiet"
+                        type="button"
+                        onClick={() => {
+                          setEditing(e.index);
+                          setCopying(false);
+                          setEvent({
+                            year: String(e.year),
+                            label: e.label,
+                            amount: centsToEuros(e.amount),
+                          });
+                          clear();
+                          reveal();
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-quiet"
+                        type="button"
+                        onClick={() => {
+                          const copy = copyOfEvent(e);
+                          setEditing(undefined);
+                          setCopying(true);
+                          setEvent({
+                            year: String(copy.year),
+                            label: copy.label,
+                            amount: centsToEuros(copy.amount),
+                          });
+                          clear();
+                          reveal();
+                        }}
+                      >
+                        Duplicate
+                      </button>
+                      <ConfirmButton
+                        label="Delete"
+                        confirmLabel="Delete event"
+                        apart
+                        onConfirm={() =>
+                          void saveEvents(cashFlow.events.filter((_, i) => i !== e.index))
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <RequiredLegend />
         <form
@@ -288,41 +291,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
         {isUnset(cashFlow) ? (
           <p className="note">Enter your income and expenses above to see the table.</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Year</th>
-                <th className="num">Income</th>
-                <th className="num">Expenses</th>
-                <th className="num">Events</th>
-                <th className="num">Pension refund</th>
-                <th className="num">Capacity</th>
-                <th className="num">Planned from savings</th>
-                <th className="num">Gap</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.year}>
-                  <td>
-                    {row.year}
-                    {row.label === String(row.year) ? null : (
-                      <span className="sub"> {row.label}</span>
-                    )}
-                  </td>
-                  <td className="num">{formatEuro(row.income)}</td>
-                  <td className="num">{formatEuro(row.expenses)}</td>
-                  <td className="num">{formatEuro(row.events)}</td>
-                  <td className="num">{formatEuro(row.refund)}</td>
-                  <td className="num">
-                    <strong>{formatEuro(row.capacity)}</strong>
-                  </td>
-                  <td className="num">{formatEuro(row.planned)}</td>
-                  <td className="num">{formatEuro(row.gap)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <CashFlowTable rows={rows} />
         )}
       </Card>
     </>

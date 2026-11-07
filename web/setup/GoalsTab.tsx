@@ -126,41 +126,43 @@ function PlanHistory({
       {goal.plan.length === 0 ? (
         <p className="note">No plan yet: the monthly amount is 0. Add a version below.</p>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>From month</th>
-              <th className="num">Monthly</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {goal.plan.map((version) => (
-              <tr key={version.fromMonth}>
-                <td>
-                  {version.fromMonth}
-                  {version.fromMonth === inForce ? (
-                    <span className="sub"> in force now</span>
-                  ) : null}
-                </td>
-                <td className="num">{formatEuro(version.monthlyCents)}</td>
-                <td className="row-actions">
-                  <ConfirmButton
-                    label="Delete"
-                    confirmLabel="Delete version"
-                    onConfirm={() =>
-                      void run(() =>
-                        api("DELETE", "/api/goal-plan", {
-                          query: { goalId: goal.id, fromMonth: version.fromMonth },
-                        }),
-                      )
-                    }
-                  />
-                </td>
+        <div className="table-scroll table-scroll-sticky">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>From month</th>
+                <th className="num">Monthly</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {goal.plan.map((version) => (
+                <tr key={version.fromMonth}>
+                  <td>
+                    {version.fromMonth}
+                    {version.fromMonth === inForce ? (
+                      <span className="sub"> in force now</span>
+                    ) : null}
+                  </td>
+                  <td className="num">{formatEuro(version.monthlyCents)}</td>
+                  <td className="row-actions">
+                    <ConfirmButton
+                      label="Delete"
+                      confirmLabel="Delete version"
+                      onConfirm={() =>
+                        void run(() =>
+                          api("DELETE", "/api/goal-plan", {
+                            query: { goalId: goal.id, fromMonth: version.fromMonth },
+                          }),
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       <RequiredLegend />
       <form
