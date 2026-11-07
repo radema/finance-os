@@ -132,6 +132,9 @@ the other screens keep the full width.
   A table that must scroll sideways sits in `.table-scroll table-scroll-sticky`: a wrapper capped at 70vh,
   so the header sticks inside it. The Cash flow table also keeps its Year column sticky on the left (`.table-cash-flow`),
   one line per cell, in whole euros.
+- **Disabled button and file picker.** A disabled `.btn` has a `--wash` fill, an `--ink2` label (at least
+  4.5:1), a not-allowed cursor and no hover. The shared `FilePicker` is an outlined `.btn` label, then the
+  file name (or "No file chosen"); pasted text names no file.
 - **Sidebar.** Seven sections: Overview; Goals (List, Detail, History); Independence; Analysis
   (Optimizer, Performance, Plan vs actual); Pension; Operations (Transactions, Import, Prices); Setup
   (Products, Allocation, Cash flow, Assumptions, Glossary). The current page has a 2 px `--ink` bar and

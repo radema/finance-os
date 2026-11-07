@@ -1,6 +1,13 @@
 import type { ChangeEvent } from "react";
 import { useId } from "react";
 
+/** The file name the import screens give to text that was pasted, not uploaded. */
+export const PASTED_TEXT = "pasted text";
+
+/** The name the picker shows for the file name of the current read: none for pasted text. */
+export const shownFileName = (fileName: string | undefined): string | undefined =>
+  fileName === PASTED_TEXT ? undefined : fileName;
+
 /**
  * The one file picker: an outlined button that opens the file dialog, then the chosen file name.
  * The real file input stays in the tab order (visually hidden, not `hidden`), so Tab then Enter or Space opens the dialog.

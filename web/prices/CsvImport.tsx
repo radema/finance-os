@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api, messageOf } from "../api.ts";
 import { TemplateButton } from "../import/TemplateButton.tsx";
-import { FilePicker } from "../setup/FilePicker.tsx";
+import { FilePicker, PASTED_TEXT, shownFileName } from "../setup/FilePicker.tsx";
 import { Alert, Card, Field, SelectField } from "../setup/ui.tsx";
 import type { ImportResult } from "./types.ts";
 
@@ -31,8 +31,7 @@ const LAYOUTS = [
 /** Pasted or uploaded CSV prices: long or wide, with the parser settings. */
 export function CsvImport({ onImported }: { onImported: () => void }) {
   const [text, setText] = useState("");
-  const [fileName, setFileName] = useState("pasted text");
-  const [pickedName, setPickedName] = useState<string>();
+  const [fileName, setFileName] = useState<string>(PASTED_TEXT);
   const [delimiter, setDelimiter] = useState("auto");
   const [decimal, setDecimal] = useState("auto");
   const [dateFormat, setDateFormat] = useState("auto");
@@ -65,16 +64,15 @@ export function CsvImport({ onImported }: { onImported: () => void }) {
           value={text}
           onChange={(event) => {
             setText(event.target.value);
-            setFileName("pasted text");
+            setFileName(PASTED_TEXT);
           }}
         />
       </Field>
       <FilePicker
         label="Or upload a file"
         accept=".csv,.txt,text/csv,text/plain"
-        fileName={pickedName}
+        fileName={shownFileName(fileName)}
         onChange={async (file) => {
-          setPickedName(file.name);
           setText(await file.text());
           setFileName(file.name);
         }}

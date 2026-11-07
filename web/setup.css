@@ -392,7 +392,6 @@ form > .actions {
 }
 .date-iso {
   flex: none;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .confirm {
@@ -479,25 +478,6 @@ form > .actions {
   max-height: 70vh;
   overflow-y: auto;
 }
-/* Cash flow: one line per cell. Year stays on the left while the table scrolls sideways; the corner
-   cell sits above both the sticky header and the sticky column. */
-.table-cash-flow thead th,
-.table-cash-flow tbody td {
-  white-space: nowrap;
-}
-.table-cash-flow .num {
-  font-variant-numeric: tabular-nums;
-}
-.table-cash-flow thead th:first-child,
-.table-cash-flow tbody td:first-child {
-  position: sticky;
-  left: 0;
-  background: var(--raised);
-  box-shadow: 1px 0 0 var(--grid);
-}
-.table-cash-flow thead th:first-child {
-  z-index: 2;
-}
 .matrix th[scope="row"] {
   font-weight: 600;
   color: var(--ink2);
@@ -521,6 +501,22 @@ input.inline-date {
 }
 .price-grid th:first-child {
   width: 22%;
+}
+/* Cash flow: one line per cell. Year stays on the left while the table scrolls sideways; the corner
+   cell sits above both the sticky header and the sticky column. */
+.table-cash-flow thead th,
+.table-cash-flow tbody td {
+  white-space: nowrap;
+}
+.table-cash-flow thead th:first-child,
+.table-cash-flow tbody td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--raised);
+  box-shadow: 1px 0 0 var(--grid);
+}
+.table-cash-flow thead th:first-child {
+  z-index: 2;
 }
 
 /* Need / Want / Wish: a marker plus a tint, so the shape carries the meaning too. */
