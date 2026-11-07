@@ -7,6 +7,8 @@ import {
   onlyMixSentence,
   outcomeRows,
   scatterAxisStart,
+  shortMixText,
+  smallGainNote,
   spreadMixes,
   weightRows,
 } from "./model.ts";
@@ -54,10 +56,16 @@ describe("outcomeRows", () => {
   it("puts the bad, typical and good case of the current and the suggested mix side by side", () => {
     const rows = outcomeRows(mix([["etf", 1]], 0.5), mix([["etf", 1]], 0.8));
     expect(rows).toEqual([
-      { label: "Bad case", current: 250, suggested: 400 },
-      { label: "Typical case", current: 500, suggested: 800 },
-      { label: "Good case", current: 750, suggested: 1200 },
+      { label: "Bad case", current: 250, suggested: 400, change: 150 },
+      { label: "Typical case", current: 500, suggested: 800, change: 300 },
+      { label: "Good case", current: 750, suggested: 1200, change: 450 },
     ]);
+  });
+
+  it("signs each change as suggested minus current, negative when the suggestion is lower", () => {
+    const rows = outcomeRows(mix([["etf", 1]], 0.8), mix([["etf", 1]], 0.5));
+    for (const row of rows) expect(row.change).toBe(row.suggested - row.current);
+    expect(rows[0].change).toBeLessThan(0);
   });
 });
 
@@ -196,5 +204,97 @@ describe("onlyMixSentence", () => {
     expect(sentence).toBe(
       "Only one mix fits your limits: World ETF 100%. There is nothing to compare, so there is no chart.",
     );
+  });
+});
+
+describe("shortMixText", () => {
+  const sample = new Map([
+    ["a", "Sample Direct Share"],
+    ["b", "Sample Govt Bond 2029"],
+    ["c", "Sample World Equity ETF"],
+  ]);
+  const weights = (rows: [string, number][]) => mix(rows, 0.5).weights;
+
+  it("drops the words every product name starts with and keeps the weights", () => {
+    expect(
+      shortMixText(
+        weights([
+          ["a", 0.8],
+          ["b", 0.2],
+        ]),
+        sample,
+      ),
+    ).toBe("Direct Share 80%, Govt Bond 2029 20%");
+  });
+
+  it("shows the two biggest weights and counts the rest", () => {
+    expect(
+      shortMixText(
+        weights([
+          ["a", 0.8],
+          ["b", 0.1],
+          ["c", 0.1],
+        ]),
+        sample,
+      ),
+    ).toBe("Direct Share 80%, Govt Bond 2029 10% +1");
+  });
+
+  it("cuts a long name with an ellipsis", () => {
+    const long = new Map([
+      ["a", "Global Diversified Equity Index Fund"],
+      ["b", "Short"],
+    ]);
+    expect(shortMixText(weights([["a", 1]]), long)).toBe("Global Diversif… 100%");
+  });
+
+  it("keeps the whole name when the names share no first word", () => {
+    const names = new Map(products.map((p) => [p.id, p.name]));
+    expect(shortMixText(weights([["etf", 1]]), names)).toBe("World ETF 100%");
+  });
+
+  it("keeps the whole name when one product is all the prefix", () => {
+    const names = new Map([
+      ["a", "Sample"],
+      ["b", "Sample Bond"],
+    ]);
+    expect(shortMixText(weights([["a", 1]]), names)).toBe("Sample 100%");
+  });
+});
+
+describe("smallGainNote", () => {
+  const outcome = (p: number, p10: number, median: number): MixView => ({
+    ...mix([["etf", 1]], p),
+    p10,
+    median,
+  });
+
+  it("fires on the New car case: lower bad case, typical case +39,30 €, chance 99,67% against 100%", () => {
+    const current = outcome(1, 25_711.62, 30_000);
+    const suggested = outcome(0.9967, 24_749.88, 30_039.3);
+    expect(smallGainNote(current, suggested)).toMatch(/small/i);
+  });
+
+  it("does not fire on a clear gain in the typical case", () => {
+    expect(
+      smallGainNote(outcome(0.8, 20_000, 30_000), outcome(0.8, 21_000, 33_000)),
+    ).toBeUndefined();
+  });
+
+  it("does not fire on a clear gain in the chance of success", () => {
+    expect(
+      smallGainNote(outcome(0.7, 20_000, 30_000), outcome(0.8, 20_000, 30_100)),
+    ).toBeUndefined();
+  });
+
+  it("does not fire on a clear loss either", () => {
+    expect(
+      smallGainNote(outcome(0.8, 20_000, 30_000), outcome(0.8, 18_000, 27_000)),
+    ).toBeUndefined();
+  });
+
+  it("fires when the suggestion equals the current mix", () => {
+    const same = outcome(0.8, 20_000, 30_000);
+    expect(smallGainNote(same, same)).toMatch(/small/i);
   });
 });

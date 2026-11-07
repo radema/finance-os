@@ -78,3 +78,51 @@ describe("Optimizer scatter (AC-84, AC-89)", () => {
     expect(html).toContain("Only one mix fits your limits: World ETF 100%.");
   });
 });
+
+describe("Optimizer tables and headline (AC-84, AC-89)", () => {
+  const sample = new Map([
+    ["etf", "Sample World Equity ETF"],
+    ["btp", "Sample Govt Bond 2029"],
+  ]);
+  const two = (p: number): MixView => ({
+    ...mix(p),
+    weights: [
+      { productId: "etf", weight: 0.6 },
+      { productId: "btp", weight: 0.4 },
+    ],
+  });
+  const result = (candidate: OptimizerRunView) =>
+    renderToStaticMarkup(
+      createElement(Result, {
+        view: candidate,
+        goal,
+        names: sample,
+        isPension: false,
+        onApplied: () => {},
+      }),
+    );
+  const exhibits = (candidate: OptimizerRunView) =>
+    renderToStaticMarkup(
+      createElement(Exhibits, { view: candidate, goal, names: sample, isPension: false }),
+    );
+  const clear = { ...view, current: mix(0.5), chosen: two(0.9), top: [two(0.9)] };
+  const small = { ...clear, current: mix(0.9), chosen: two(0.9) };
+
+  it("adds a Change column with a sign to each row of the outcomes table", () => {
+    const html = result(clear);
+    expect(html).toContain('<th class="num">Change</th>');
+    expect(html).toContain("+400,00");
+    expect(html).toContain("+40\u00a0pts");
+  });
+
+  it("shows short names in the headline and the Top 10, and the full names in a tooltip", () => {
+    const html = result(clear) + exhibits(clear);
+    expect(html).toContain("World Equity ETF 60%, Govt Bond 2029 40%");
+    expect(html).toContain('title="Sample World Equity ETF 60%, Sample Govt Bond 2029 40%"');
+  });
+
+  it("puts the small-gain note above the button only when the gain is small", () => {
+    expect(result(small)).toContain("The gain is small");
+    expect(result(clear)).not.toContain("The gain is small");
+  });
+});

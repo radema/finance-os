@@ -11,6 +11,13 @@ const wholeEuro = new Intl.NumberFormat("it-IT", {
   maximumFractionDigits: 0,
 });
 const percent = new Intl.NumberFormat("it-IT", { ...base, maximumFractionDigits: 2 });
+const signed = { ...base, signDisplay: "exceptZero" } as const;
+const signedEuro = new Intl.NumberFormat("it-IT", {
+  ...signed,
+  style: "currency",
+  currency: "EUR",
+});
+const signedPoints = new Intl.NumberFormat("it-IT", { ...signed, maximumFractionDigits: 2 });
 const priceRule = { ...base, minimumFractionDigits: 2, maximumFractionDigits: 4 } as const;
 const price = new Intl.NumberFormat("it-IT", priceRule);
 const unitPrice = new Intl.NumberFormat("it-IT", {
@@ -24,6 +31,13 @@ export const formatEuro = (cents: number): string => euro.format(fromCents(cents
 
 /** Euros as a float, for the computed values of the Goals screens, in it-IT format. */
 export const formatAmount = (euros: number): string => euro.format(euros);
+
+/** A change in euros with its sign: "+39,30 €", "-961,74 €"; a change that rounds to zero has none. */
+export const formatSignedAmount = (euros: number): string => signedEuro.format(euros);
+
+/** A change of a probability in percentage points, with its sign: 0.05 is "+5 pts". */
+export const formatSignedPoints = (fraction: number): string =>
+  `${signedPoints.format(fraction * 100)}\u00a0pts`;
 
 /** Euros without cents, for plan tables. */
 export const formatWholeEuro = (euros: number): string => wholeEuro.format(euros);
