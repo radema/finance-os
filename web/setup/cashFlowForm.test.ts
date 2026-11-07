@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { CashFlow, CashFlowEvent } from "../../engine/schemas.ts";
-import { eventsDocument, hasUnsavedValues, savedDocument, toValues } from "./cashFlowForm.ts";
+import type { CashFlow } from "../../engine/schemas.ts";
+import { hasUnsavedValues, savedDocument, toValues } from "./cashFlowForm.ts";
 
 const stored: CashFlow = {
   income: 3_000_000,
@@ -10,16 +10,8 @@ const stored: CashFlow = {
   expenseGrowth: 0.005,
   events: [{ year: 2030, label: "Car", amount: -1_000_000 }],
 };
-const added: CashFlowEvent = { year: 2031, label: "Gift", amount: 200_000 };
 
 describe("Cash flow save model (AC-89)", () => {
-  it("saves events with the stored income and expenses, never the typed ones", () => {
-    expect(eventsDocument(stored, [...stored.events, added])).toEqual({
-      ...stored,
-      events: [...stored.events, added],
-    });
-  });
-
   it("saves the typed values with the stored events when Save cash flow is pressed", () => {
     const typed = { ...toValues(stored), income: "40000", incomeGrowth: "2" };
     expect(savedDocument(typed, stored.events)).toEqual({

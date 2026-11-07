@@ -13,6 +13,7 @@ import {
   PriorityTag,
   RequiredLegend,
   Resource,
+  SaveStatus,
 } from "./ui.tsx";
 
 interface GoalWeightsProps {
@@ -50,7 +51,14 @@ export function GoalWeights({ goal, products, rows, readOnly, onChange }: GoalWe
       body: { goalId: goal.id, productId: id, weight: value },
     });
   const remove = (id: string) =>
-    run(() => api("DELETE", "/api/allocation", { query: { goalId: goal.id, productId: id } }));
+    run(async () => {
+      const rows = await api<AllocationRow[]>("DELETE", "/api/allocation", {
+        query: { goalId: goal.id, productId: id },
+      });
+      setEdits(({ [id]: _, ...rest }) => rest);
+      setProblems(({ [id]: _, ...rest }) => rest);
+      return rows;
+    });
 
   const edit = (id: string, text: string) => {
     setEdits((current) => ({ ...current, [id]: text }));
@@ -159,9 +167,7 @@ export function GoalWeights({ goal, products, rows, readOnly, onChange }: GoalWe
           >
             Save
           </button>
-          <span className="saved" role="status">
-            {changed.length > 0 ? "Unsaved changes" : "Saved"}
-          </span>
+          <SaveStatus unsaved={changed.length > 0} />
         </div>
       )}
       {!readOnly && free.length > 0 ? (

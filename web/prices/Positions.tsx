@@ -5,7 +5,7 @@ import { checkFields } from "../formErrors.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
 import { formatUnitPrice } from "../money.ts";
 import { DateInput } from "../setup/DateInput.tsx";
-import { Card, DecimalInput, ProductTag, Resource } from "../setup/ui.tsx";
+import { Card, DecimalInput, ProductTag, Resource, SaveStatus } from "../setup/ui.tsx";
 import { type BrokerEdits, brokerBody, brokerFields, changedBrokerRows } from "./model.ts";
 import type { PriceOverviewRow } from "./types.ts";
 
@@ -144,9 +144,7 @@ export function PositionsTable({ products, holdings, goalName, onSaved }: Positi
         >
           Save
         </button>
-        <span className="saved" role="status">
-          {changed.length > 0 ? "Unsaved changes" : "Saved"}
-        </span>
+        <SaveStatus unsaved={changed.length > 0} />
       </div>
     </>
   );

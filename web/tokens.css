@@ -77,7 +77,7 @@
   --mark-key: 16px;
 
   --setup-max: 1200px;
-  --note-max: 70ch;
+  --note-max: 50ch;
   --control-h: calc(var(--lh-sub) + 2 * var(--s1) + 2px);
 }
 

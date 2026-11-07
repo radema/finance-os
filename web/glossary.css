@@ -97,16 +97,15 @@ th .term {
 .method-note {
   scroll-margin-top: var(--s4);
 }
-.glossary-term:focus,
-.method-note:focus {
+.glossary-term:focus {
   outline: 2px solid var(--blue);
   outline-offset: calc(-1 * var(--s1));
   background: var(--tint-blue-faint);
 }
 .method-note:focus {
+  outline: 2px solid var(--blue);
   outline-offset: var(--s1);
   border-radius: var(--s2);
-  background: none;
 }
 .method {
   display: grid;
