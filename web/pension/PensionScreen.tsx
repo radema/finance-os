@@ -14,6 +14,7 @@ import {
   PriorityTag,
   RequiredLegend,
   Resource,
+  SaveStatus,
   SelectField,
 } from "../setup/ui.tsx";
 import { CapitalNote } from "./CapitalNote.tsx";
@@ -190,9 +191,7 @@ function PlanForm({ view, onSaved }: { view: PensionView; onSaved: () => void })
           <button className="btn btn-primary" type="submit">
             Save pension plan
           </button>
-          <span className="saved" role="status">
-            {isPlanDirty(values, savedValues) ? "Unsaved changes" : "Saved"}
-          </span>
+          <SaveStatus unsaved={isPlanDirty(values, savedValues)} />
         </div>
       </Card>
     </form>

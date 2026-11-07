@@ -70,7 +70,7 @@
   border-radius: 50%;
 }
 .swatch-all {
-  background: var(--ctx);
+  background: var(--muted);
 }
 .swatch-current {
   border: 2px solid var(--ink2);
@@ -79,6 +79,7 @@
   border-radius: 0;
 }
 .swatch-suggested {
+  border: 2px solid var(--ink2);
   background: var(--slot);
 }
 .swatch-required {
@@ -87,11 +88,11 @@
   height: 0;
   border-top: 2px dashed var(--ink2);
 }
-/* Two columns, then four from 1280 px: "Max per product" always shares a row. */
+/* Two columns, then four from 1600 px: below that a column is too narrow for the longest criterion name. */
 .optimizer-controls {
   grid-template-columns: repeat(2, 1fr);
 }
-@media (min-width: 1280px) {
+@media (min-width: 1600px) {
   .optimizer-controls {
     grid-template-columns: repeat(4, 1fr);
   }

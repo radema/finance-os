@@ -28,12 +28,6 @@ export const savedDocument = (v: Values, events: CashFlowEvent[]): CashFlow => (
   events,
 });
 
-/** The document an event change sends: the stored income and expenses, never the typed ones. */
-export const eventsDocument = (stored: CashFlow, events: CashFlowEvent[]): CashFlow => ({
-  ...stored,
-  events,
-});
-
 /** True when the typed values differ from the stored ones. An empty or bad field counts as a change. */
 export function hasUnsavedValues(v: Values, stored: CashFlow): boolean {
   const typed = savedDocument(v, stored.events);

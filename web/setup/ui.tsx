@@ -108,6 +108,15 @@ export function RequiredLegend() {
   );
 }
 
+/** The save cue next to a Save button. */
+export function SaveStatus({ unsaved }: { unsaved: boolean }) {
+  return (
+    <span className="saved" role="status">
+      {unsaved ? "Unsaved changes" : "Saved"}
+    </span>
+  );
+}
+
 /** What a control with an error takes: spread it on the control. */
 export interface InvalidProps {
   "aria-invalid"?: true;

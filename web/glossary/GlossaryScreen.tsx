@@ -135,9 +135,6 @@ const noteId = (title: string): string =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")}`;
 
-/** The link to an element of this screen: the hash holds the route, so the target goes in `at`. */
-const anchorHref = (id: string): string => `#/${GLOSSARY_ROUTE}?at=${id}`;
-
 /** The terms A to Z by English term, ignoring case. */
 const TERMS = Object.entries(GLOSSARY).sort(([, a], [, b]) =>
   a.en.localeCompare(b.en, "en", { sensitivity: "base" }),
@@ -165,7 +162,8 @@ function MethodContents() {
       <ul>
         {METHOD_NOTES.map((note) => (
           <li key={note.title}>
-            <a href={anchorHref(noteId(note.title))}>{note.title}</a>
+            {/* The hash holds the route, so the target goes in `at`. */}
+            <a href={`#/${GLOSSARY_ROUTE}?at=${noteId(note.title)}`}>{note.title}</a>
           </li>
         ))}
       </ul>

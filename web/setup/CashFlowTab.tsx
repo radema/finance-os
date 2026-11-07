@@ -6,13 +6,7 @@ import { checkFields } from "../formErrors.ts";
 import { centsToEuros, eurosToCents, num } from "../forms.ts";
 import { formatEuro } from "../money.ts";
 import { CashFlowTable } from "./CashFlowTable.tsx";
-import {
-  eventsDocument,
-  hasUnsavedValues,
-  savedDocument,
-  toValues,
-  type Values,
-} from "./cashFlowForm.ts";
+import { hasUnsavedValues, savedDocument, toValues, type Values } from "./cashFlowForm.ts";
 import { copyOfEvent } from "./duplicate.ts";
 import { useRevealForm } from "./revealForm.ts";
 import {
@@ -22,6 +16,7 @@ import {
   NumberField,
   RequiredLegend,
   Resource,
+  SaveStatus,
   TextField,
 } from "./ui.tsx";
 import { useFormErrors } from "./useFormErrors.ts";
@@ -69,7 +64,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
   };
   // An event change keeps the stored income and expenses: the typed values wait for "Save cash flow".
   const saveEvents = async (events: CashFlowEvent[]) => {
-    if (await save(eventsDocument(cashFlow, events))) {
+    if (await save({ ...cashFlow, events })) {
       setEvent(emptyEvent());
       setEditing(undefined);
       setCopying(false);
@@ -137,9 +132,7 @@ function CashFlowScreen({ view, set }: { view: CashFlowView; set: (view: CashFlo
             <button className="btn btn-primary" type="submit">
               Save cash flow
             </button>
-            <span className="saved" role="status">
-              {hasUnsavedValues(values, cashFlow) ? "Unsaved changes" : "Saved"}
-            </span>
+            <SaveStatus unsaved={hasUnsavedValues(values, cashFlow)} />
           </div>
         </form>
       </Card>

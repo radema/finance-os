@@ -100,13 +100,14 @@ A page header (title, or title and unit line) sits `--s4` above the first block 
 equal columns; every field spans a label row, a control row and a hint row, and every single-line control
 is `--control-h` high. KPI cards wrap in equal columns chosen from the card count. Layout is fluid and desktop-first, usable from about 1024 to
 1920 px: sidebar 232 px (248 px from 1280 px), content padding `clamp(24px, 3vw, 56px)`. Mobile is v2.
-The Setup screens (all tabs and the Glossary) sit in `.setup-column`, capped at `--setup-max` (1200 px,
+The Setup screens (Products, Allocation, Cash flow, Assumptions and Glossary, all tabs of one page) sit in `.setup-column`, capped at `--setup-max` (1200 px,
 in `tokens.css`), so rows stay easy to scan at 1920 px and forms keep to about five columns. Charts and
 the other screens keep the full width.
 Notes and callouts (`.note`, `.callout`: callouts under charts, the Next contribution note, the Pension
-capital note, the Optimizer callouts) share one width, `--note-max` (70ch, in `tokens.css`), so a line
-holds about 70 characters at any window width.
-The Optimizer hint lines, alerts and steps panel use it too. Its control grid is 2 columns, 4 from 1280 px.
+capital note, the Optimizer `.sub` and `.alert` lines and `.steps` panel) share one width, `--note-max`
+(50ch, in `tokens.css`). `ch` is the width of "0", which is wider than an average letter in Geist, so 50ch
+holds about 70 characters of body text (70ch held 96 to 100). The Optimizer control grid is 2 columns, 4
+from 1600 px, so the longest Criterion name never clips.
 
 ## Components
 
@@ -144,6 +145,8 @@ The Optimizer hint lines, alerts and steps panel use it too. Its control grid is
   (Products, Allocation, Cash flow, Assumptions, Glossary). The current page has a 2 px `--ink` bar and
   weight 600. A page without a screen shows a "soon" tag and a placeholder page. Under 900 px of window
   height the spacing tightens (spacing tokens only) so every item shows without scrolling the sidebar.
+- **Setup tab bar.** `SetupTabs` (`web/setup/SetupTabs.tsx`) is the one tab bar of the Setup screens, shared
+  by Products, Allocation, Cash flow, Assumptions and Glossary; the current tab is marked as in the Sidebar.
 - **Glossary term.** A dotted-underline button that opens a popover: plain sentence first, the Italian
   term above it. No `title=` hints.
 

@@ -21,7 +21,7 @@ function buildOption(view: OptimizerRunView, slot: number, names: ReadonlyMap<st
   const lowest = Math.min(view.requiredP, view.current.p, ...view.mixes.map((mix) => mix.p));
   const axisMin = scatterAxisStart(lowest);
   // Dots are spread sideways so a stack reads as a group; the tooltip and the two key marks keep the true values.
-  const spread = spreadMixes(view.mixes, axisMin, 1).map(({ mix, x, y }) => ({
+  const spread = spreadMixes(view.mixes, axisMin, 1, view.requiredP).map(({ mix, x, y }) => ({
     value: [x, y],
     mix,
   }));
