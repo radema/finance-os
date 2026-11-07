@@ -53,7 +53,7 @@ describe("Optimizer run API (AC-84)", () => {
     expect(body.mixes).toHaveLength(66);
     expect(body.mode).toBe("new");
     expect(body.switchTax).toBe(0);
-    expect(body.ruleName).toBe("O1 Protect the bad case");
+    expect(body.ruleName).toBe("Protect the bad case");
     expect(body.ruleText).toContain("Highest bad case");
     expect(body.requiredP).toBeGreaterThan(0);
     expect(body.requiredP).toBeLessThanOrEqual(1);

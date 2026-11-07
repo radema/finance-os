@@ -113,22 +113,22 @@ export function defaultCriterion(priority: Goal["priority"]): "O1" | "O2" {
   return priority === "Need" ? "O1" : "O2";
 }
 
-/** The name and the plain-words text of the rule of each criterion. */
+/** The name and the plain-words text of the rule of each criterion. The ids O1 to O5 stay in code; the UI shows names only. */
 export const CRITERION_RULES: Record<OptimizerCriterion, { name: string; text: string }> = {
   O1: {
-    name: "O1 Protect the bad case",
+    name: "Protect the bad case",
     text: "Highest bad case (the result 1 simulated market in 10 falls below) among the mixes that reach the required probability; a tie goes to the higher chance of success.",
   },
   O2: {
-    name: "O2 Grow the typical outcome",
+    name: "Grow the typical outcome",
     text: "Highest median among the mixes that reach the required probability; a tie goes to the higher chance of success.",
   },
   O5: {
-    name: "O5 Spend least",
+    name: "Spend least",
     text: "Lowest monthly amount needed among the mixes that reach the required probability; a tie goes to the higher median.",
   },
   O4: {
-    name: "O4 Maximise the chance",
+    name: "Maximise the chance",
     text: "Highest chance of success, whatever the required probability; a tie goes to the higher median.",
   },
 };
