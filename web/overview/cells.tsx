@@ -1,6 +1,6 @@
-import { type CSSProperties, type ReactNode, useMemo } from "react";
+import type { ReactNode } from "react";
 import type { GoalListRow } from "../../engine/goalViews.ts";
-import { type OverviewView, rangeRows } from "../../engine/overviewView.ts";
+import type { OverviewView } from "../../engine/overviewView.ts";
 import type { Alert } from "../../engine/rules.ts";
 import { EmptyState } from "../EmptyState.tsx";
 import { TermPopover } from "../glossary/TermPopover.tsx";
@@ -8,130 +8,107 @@ import { GoalChip } from "../goals/GoalChip.tsx";
 import { pVsRequired } from "../goals/outlook.ts";
 import { SeverityChip } from "../goals/SeverityChip.tsx";
 import { StatusChip } from "../goals/StatusChip.tsx";
-import { ProgressChart } from "../independence/FiCharts.tsx";
-import { noLevelSet } from "../independence/model.ts";
-import { formatAmount, formatPercent } from "../money.ts";
+import { FanChart } from "../independence/FiCharts.tsx";
+import { formatAmount, formatEuro, formatPercent, formatSignedAmount } from "../money.ts";
 import { goalDetailHref } from "../nav.ts";
 import { PriceFreshnessPill } from "../prices/PriceFreshnessPill.tsx";
 import { Alert as ErrorNote } from "../setup/ui.tsx";
-import { Legend } from "../tracking/Exhibit.tsx";
-import {
-  historyOf,
-  historySeries,
-  knownGoals,
-  markColour,
-  percentText,
-} from "../tracking/model.ts";
-import { TimeChart } from "../tracking/TimeChart.tsx";
-import { alertRoute, hrefOf, type LevelRow, OVERVIEW_ROUTES } from "./model.ts";
+import { gapText, nextTicketText, percentText } from "../tracking/model.ts";
+import { alertRoute, hrefOf, levelRows, OVERVIEW_ROUTES } from "./model.ts";
 
-const euroAxis = (value: number) => formatAmount(value).replace(/,00/, "");
-const CENTS = 100;
-const PERCENT = 100;
-const AXIS_PRECISION = 12;
-const TREND_NOTE =
-  "A goal's probability falls steeply as its date nears: with less time left, there is less time to recover from a bad market.";
-const NOT_REACHED = "Not within 40 years";
-const SET_EXPENSES = {
-  message: "Set your expenses to see the levels and when you reach them.",
-  action: { label: "Set your expenses", href: hrefOf(OVERVIEW_ROUTES.fiLevels) },
-} as const;
-
-/** A grid cell: a title that links to the screen that explains it, an optional unit line and the content. */
 export function Cell({
   id,
   title,
   href,
-  unit,
   children,
 }: {
   id: string;
   title: string;
-  /** Omit when no one screen explains the cell: its rows link on their own. */
   href?: string;
-  unit?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <section className="card cell" data-cell={id}>
       <h2 className="card-head">{href ? <a href={href}>{title}</a> : title}</h2>
-      <div className="card-body">
-        {unit ? <p className="unit">{unit}</p> : null}
-        {children}
-      </div>
+      <div className="card-body">{children}</div>
     </section>
   );
 }
 
-/** P(success) of each goal as a bar with a tick at the probability it must reach. */
-export function ProbabilityCell({ goals }: { goals: readonly GoalListRow[] }) {
+export function GoalsCell({ goals }: { goals: readonly GoalListRow[] }) {
+  if (!goals.length) return <p className="note">There are no goals.</p>;
+  const rank = { off_track: 0, at_risk: 1, on_track: 2 } as const;
+  const ordered = [...goals].sort(
+    (a, b) => (a.outlook ? rank[a.outlook.status] : 3) - (b.outlook ? rank[b.outlook.status] : 3),
+  );
   return (
-    <ul className="pbars">
-      {goals.map((goal) => {
-        const outlook = goal.outlook;
-        const style = { "--slot": `var(--slot${goal.slot})` } as CSSProperties;
-        return (
-          <li key={goal.id} style={style}>
-            <GoalChip id={goal.id} name={goal.name} slot={goal.slot} />
-            {outlook ? (
-              <>
-                <span className="pbar" aria-hidden="true">
-                  <span className="pbar-fill" style={{ width: `${outlook.pSuccess * 100}%` }} />
-                  <span className="pbar-req" style={{ left: `${outlook.requiredP * 100}%` }} />
-                </span>
-                <a className="pbar-text" href={goalDetailHref(goal.id)}>
-                  {pVsRequired(outlook.pSuccess, outlook.requiredP)}
-                </a>
-              </>
-            ) : (
-              <span className="sub-line">No analysis: a price or the pension plan is missing.</span>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+    <div className="table-scroll">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Goal</th>
+            <th>Status</th>
+            <th>Probability vs required</th>
+            <th className="num">Value</th>
+            <th className="num">Of target</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ordered.map((goal) => (
+            <tr key={goal.id}>
+              <td>
+                <GoalChip id={goal.id} name={goal.name} slot={goal.slot} />
+              </td>
+              <td>{goal.outlook ? <StatusChip status={goal.outlook.status} /> : "No analysis"}</td>
+              <td>
+                {goal.outlook ? (
+                  <a href={goalDetailHref(goal.id)}>
+                    {pVsRequired(goal.outlook.pSuccess, goal.outlook.requiredP)}
+                  </a>
+                ) : (
+                  "–"
+                )}
+              </td>
+              <td className="num">{formatAmount(goal.value)}</td>
+              <td className="num">
+                {goal.target > 0 ? formatPercent(goal.value / goal.target) : "–"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
-/** Value of each goal stacked over time, and the money put in. */
-export function NetWorthCell({ view }: { view: OverviewView["netWorth"] }) {
-  const series = useMemo(
-    () => [
-      ...view.goals.map((goal) => ({
-        name: goal.name,
-        data: goal.values,
-        colour: markColour(goal.slot),
-        kind: "area" as const,
-        stack: "value",
-      })),
-      { name: "Money put in", data: view.moneyIn, colour: "--ctx", endLabel: true },
-    ],
-    [view],
-  );
-  if (view.months.length === 0) return <p className="note">There are no transactions yet.</p>;
+export function PlanCell({ plan }: { plan: OverviewView["plan"] }) {
+  const { latest, next } = plan;
   return (
     <>
-      <Legend
-        items={[
-          ...view.goals.map((goal) => ({
-            label: goal.name,
-            kind: "area" as const,
-            colour: markColour(goal.slot),
-          })),
-          { label: "Money put in", kind: "line", colour: "--ctx" },
-        ]}
-      />
-      <TimeChart
-        months={view.months}
-        series={series}
-        format={euroAxis}
-        label="Value of each goal over time, stacked, with the money put in"
-      />
+      <p className="unit">Since {plan.trackingStart}.</p>
+      {latest ? (
+        <p>
+          {formatSignedAmount(latest.gap / 100)} {gapText(latest.gap)}:{" "}
+          {formatEuro(latest.cumActual)} put in against {formatEuro(latest.cumPlanned)} planned.
+        </p>
+      ) : (
+        <p className="note">No tracking months yet.</p>
+      )}
+      {next ? (
+        <>
+          <p>
+            Next contribution: <GoalChip id={next.goalId} name={next.goalName} slot={next.slot} />{" "}
+            {formatEuro(next.amount)}
+          </p>
+          <p className="note">{nextTicketText(next)}</p>
+        </>
+      ) : (
+        <p className="note">No next contribution advised.</p>
+      )}
     </>
   );
 }
 
-/** The visible alerts, each with its name and severity, a link to the screen of the rule and a dismiss action. */
 export function AttentionCell({
   alerts,
   error,
@@ -141,7 +118,6 @@ export function AttentionCell({
   error: string | undefined;
   onDismiss: (alert: Alert) => void;
 }) {
-  if (alerts.length === 0 && !error) return <p className="note">Nothing needs attention.</p>;
   return (
     <>
       <ErrorNote message={error} />
@@ -163,255 +139,114 @@ export function AttentionCell({
   );
 }
 
-/** P(success) of each goal over the snapshots; a hollow marker is a recomputed one. */
-export function TrendCell({
-  snapshots,
-  goals,
+export function OperationalCell({
+  alerts,
+  loading,
+  loadError,
+  onRetry,
+  dismissError,
+  stalePrices,
+  onDismiss,
 }: {
-  snapshots: OverviewView["snapshots"];
-  goals: readonly GoalListRow[];
+  alerts: readonly Alert[] | undefined;
+  loading: boolean;
+  loadError: string | undefined;
+  onRetry: () => void;
+  dismissError: string | undefined;
+  stalePrices: OverviewView["stalePrices"];
+  onDismiss: (alert: Alert) => void;
 }) {
-  const history = useMemo(() => historyOf(snapshots, "prob"), [snapshots]);
-  const known = useMemo(() => knownGoals(history, goals), [history, goals]);
-  const series = useMemo(() => historySeries(history, known), [history, known]);
-  if (history.months.length === 0) {
+  return (
+    <>
+      {loadError ? (
+        <div className="alert state-box" role="alert">
+          <p>{loadError}</p>
+          <button className="btn" type="button" onClick={onRetry}>
+            Try again
+          </button>
+        </div>
+      ) : null}
+      {loading && !alerts ? <p className="note">Loading alerts…</p> : null}
+      {alerts ? (
+        <AttentionCell alerts={alerts} error={dismissError} onDismiss={onDismiss} />
+      ) : (
+        <ErrorNote message={dismissError} />
+      )}
+      {stalePrices.length ? (
+        <>
+          <p>
+            <a href={hrefOf(OVERVIEW_ROUTES.prices)}>Prices needing an update</a>
+          </p>
+          <ul className="prices">
+            {stalePrices.map((price) => (
+              <li key={price.productId}>
+                <a href={hrefOf(OVERVIEW_ROUTES.prices)}>{price.name}</a>
+                <PriceFreshnessPill age={price.age} />
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {!loading &&
+      !loadError &&
+      !dismissError &&
+      alerts &&
+      !alerts.length &&
+      !stalePrices.length ? (
+        <p className="note">
+          Nothing needs attention. <a href={hrefOf(OVERVIEW_ROUTES.prices)}>View prices</a>.
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+export function FiCell({ fi }: { fi: OverviewView["fi"] }) {
+  const levels = levelRows(fi);
+  if (!fi.result || !levels.length)
+    return <EmptyState message={fi.note ?? "There is no projection yet."} />;
+  const configured = levels.filter((level) => level.set);
+  if (!configured.length)
     return (
       <EmptyState
-        message="No snapshots yet."
-        action={{ label: "Save a snapshot", href: hrefOf(OVERVIEW_ROUTES.trend) }}
+        message="Set your expenses to see the levels and when you reach them."
+        action={{ label: "Set your expenses", href: hrefOf(OVERVIEW_ROUTES.fiLevels) }}
       />
     );
-  }
+  const reached = configured
+    .filter((level) => level.progress !== null && level.progress >= 1)
+    .at(-1);
+  const next = configured.find((level) => level.progress !== null && level.progress < 1);
   return (
     <>
-      <Legend
-        items={[
-          ...known.map((goal) => ({ label: goal.name, kind: "dot" as const, colour: goal.colour })),
-          { label: "Saved", kind: "dot", colour: "--ink2" },
-          { label: "Recomputed", kind: "ring", colour: "--ink2" },
-        ]}
-      />
-      <TimeChart
-        months={history.months}
-        series={series}
-        format={formatPercent}
-        label="Probability of success of each goal over the monthly snapshots"
-      />
-      <p className="note">{TREND_NOTE}</p>
-    </>
-  );
-}
-
-/** Each goal's range at its date as a dumbbell of its own target: bad to good case, the typical case a dot. */
-export function RangeCell({ ranges }: { ranges: OverviewView["ranges"] }) {
-  const view = rangeRows(ranges);
-  if (!view) return <p className="note">No goal has an analysis yet.</p>;
-  const { axis, rows } = view;
-  const share = (value: number) => formatPercent(Math.round(value * PERCENT) / PERCENT);
-  const left = (value: number) => `${((value - axis.min) / (axis.max - axis.min)) * PERCENT}%`;
-  const ticks = Array.from(
-    { length: Math.round((axis.max - axis.min) / axis.step) + 1 },
-    (_, index) => Number((axis.min + index * axis.step).toPrecision(AXIS_PRECISION)),
-  );
-  return (
-    <>
-      <Legend
-        items={[
-          { label: "Bad case to good case", kind: "area", colour: "--ink2" },
-          { label: "Typical case", kind: "dot", colour: "--ink2" },
-          { label: "Target = 100%", kind: "dash", colour: "--ink2" },
-        ]}
-      />
-      <ul className="rbars">
-        {rows.map((row) => (
-          <li key={row.goalId} style={{ "--slot": `var(--slot${row.slot})` } as CSSProperties}>
-            <GoalChip id={row.goalId} name={row.name} slot={row.slot} />
-            <span
-              className="rbar"
-              role="img"
-              aria-label={`${row.name}: bad case ${share(row.bad)}, typical ${share(row.typical)}, good ${share(row.good)} of the target`}
-            >
-              {ticks.map((tick) => (
-                <span key={tick} className="rbar-grid" style={{ left: left(tick) }} />
-              ))}
-              <span className="rbar-target" style={{ left: left(1) }} />
-              {row.flat ? null : (
-                <span
-                  className="rbar-band"
-                  style={{
-                    left: left(row.bad),
-                    width: `${((row.good - row.bad) / (axis.max - axis.min)) * PERCENT}%`,
-                  }}
-                />
-              )}
-              <span
-                className={row.flat ? "rbar-dot rbar-dot-flat" : "rbar-dot"}
-                style={{ left: left(row.typical) }}
-              />
-            </span>
-            <span className="rbar-text">
-              <strong>
-                {row.flat ? share(row.typical) : `${share(row.bad)} to ${share(row.good)}`}
-              </strong>
-              <span className="sub-line">
-                {row.flat ? "all three cases equal" : `typical ${share(row.typical)}`}
-              </span>
-            </span>
-          </li>
-        ))}
-        <li className="rbars-axis" aria-hidden="true">
-          <span className="rbar">
-            {ticks.map((tick, index) => (
-              <span key={tick} className="rbars-tick" style={{ left: left(tick) }}>
-                {index % 2 === 0 ? share(tick) : null}
-              </span>
-            ))}
-          </span>
+      <p>Highest level reached today: {reached ? reached.name : "None yet"}.</p>
+      {next ? (
+        <p>
+          Next: {next.name}, {percentText(next.progress)} reached today. Typical year:{" "}
+          {next.median ?? "Not within 40 years"}.
+        </p>
+      ) : (
+        <p>All configured levels reached.</p>
+      )}
+      <p className="unit">
+        Euros today, net of liquidation tax, to {fi.result.points.at(-1)?.year}.
+      </p>
+      <ul className="legend">
+        <li>
+          <span className="swatch swatch-fi-band" />
+          <TermPopover term="badcase">Bad case</TermPopover> to{" "}
+          <TermPopover term="goodcase">good case</TermPopover>
+        </li>
+        <li>
+          <span className="swatch swatch-solid" />
+          <TermPopover term="typical">Typical case</TermPopover>
+        </li>
+        <li>
+          <span className="swatch swatch-level" />
+          Level target
         </li>
       </ul>
+      <FanChart result={fi.result} label="FI wealth by year, with the level targets" />
     </>
-  );
-}
-
-/** What the household can save each year against what the goals take. Money in cents. */
-export function CashFlowCell({ rows }: { rows: OverviewView["cashFlow"] }) {
-  const years = useMemo(() => rows.map((row) => row.label), [rows]);
-  const series = useMemo(
-    () => [
-      {
-        name: "Savings capacity",
-        data: rows.map((row) => row.capacity / CENTS),
-        colour: "--blue",
-        kind: "bar" as const,
-      },
-      {
-        name: "Planned for goals",
-        data: rows.map((row) => row.planned / CENTS),
-        colour: "--hl",
-        endLabel: true,
-      },
-    ],
-    [rows],
-  );
-  return (
-    <>
-      <Legend
-        items={[
-          { label: "Savings capacity", kind: "bar", colour: "--blue" },
-          { label: "Planned for goals", kind: "line", colour: "--hl" },
-        ]}
-      />
-      <TimeChart
-        months={years}
-        series={series}
-        format={euroAxis}
-        label="Savings capacity against the plan, year by year"
-      />
-    </>
-  );
-}
-
-/** The goals with their status and value against target. */
-export function GoalsCell({ goals }: { goals: readonly GoalListRow[] }) {
-  if (goals.length === 0) return <p className="note">There are no goals.</p>;
-  return (
-    <div className="table-scroll">
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Goal</th>
-            <th>Status</th>
-            <th className="num">Value</th>
-            <th className="num">Of target</th>
-          </tr>
-        </thead>
-        <tbody>
-          {goals.map((goal) => (
-            <tr key={goal.id}>
-              <td>
-                <GoalChip id={goal.id} name={goal.name} slot={goal.slot} />
-              </td>
-              <td>{goal.outlook ? <StatusChip status={goal.outlook.status} /> : "–"}</td>
-              <td className="num">{formatAmount(goal.value)}</td>
-              <td className="num">
-                {goal.target > 0 ? formatPercent(goal.value / goal.target) : "–"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/** Median wealth as a share of each level's target, year by year. */
-export function FiProgressCell({ fi }: { fi: OverviewView["fi"] }) {
-  if (!fi.result) return <EmptyState message={fi.note ?? "There is no projection yet."} />;
-  if (noLevelSet(fi.result.levels)) return <EmptyState {...SET_EXPENSES} />;
-  return (
-    <ProgressChart
-      result={fi.result}
-      label="Median wealth as a percentage of each FI level target"
-    />
-  );
-}
-
-/** The price age of each product. An old price is still counted. */
-export function PricesCell({ prices }: { prices: OverviewView["prices"] }) {
-  if (prices.length === 0) return <p className="note">There are no products.</p>;
-  return (
-    <ul className="prices">
-      {prices.map((price) => (
-        <li key={price.productId}>
-          <span>{price.name}</span>
-          <PriceFreshnessPill age={price.age} />
-          <span className="sub-line">
-            {price.lastPrice ? `Close of ${price.lastPrice.priceDate}` : "No price"}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** Per FI level: today's share of the target, and the year it is reached. */
-export function LevelsCell({ levels, note }: { levels: readonly LevelRow[]; note: string | null }) {
-  if (levels.length === 0) return <EmptyState message={note ?? "There is no projection yet."} />;
-  if (levels.every((level) => !level.set)) return <EmptyState {...SET_EXPENSES} />;
-  const year = (value: number | null) => (value === null ? NOT_REACHED : String(value));
-  return (
-    <div className="table-scroll">
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Level</th>
-            <th className="num">Reached today</th>
-            <th className="num">
-              Year, <TermPopover term="typical">typical case</TermPopover>
-            </th>
-            <th className="num">Year, deterministic</th>
-          </tr>
-        </thead>
-        <tbody>
-          {levels.map((level) =>
-            level.set ? (
-              <tr key={level.name}>
-                <td>{level.name}</td>
-                <td className="num">{percentText(level.progress)}</td>
-                <td className="num">{year(level.median)}</td>
-                <td className="num">{year(level.deterministic)}</td>
-              </tr>
-            ) : (
-              <tr key={level.name}>
-                <td>{level.name}</td>
-                <td className="num" colSpan={3}>
-                  Set your expenses
-                </td>
-              </tr>
-            ),
-          )}
-        </tbody>
-      </table>
-    </div>
   );
 }

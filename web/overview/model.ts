@@ -30,6 +30,7 @@ export const OVERVIEW_ROUTES = {
   trend: GOALS_HISTORY_ROUTE,
   cashFlow: "setup/cash-flow",
   goals: GOALS_LIST_ROUTE,
+  plan: PLAN_VS_ACTUAL_ROUTE,
   fiProgress: INDEPENDENCE_ROUTE,
   prices: PRICES_ROUTE,
   fiLevels: INDEPENDENCE_ROUTE,

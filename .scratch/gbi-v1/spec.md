@@ -406,7 +406,7 @@ Screens (content; acceptance in the Definition of done):
 
 | Screen | Content |
 |---|---|
-| Overview | Key numbers, under an action title from the data (the `h2` of the key numbers; the `h1` is "Overview") (net worth, market change this month, YTD TWR, FI wealth, goals on track); grid: P(success) per goal vs required, net worth by goal over time with money put in, needs attention (alerts), P(success) trend from snapshots, range of outcomes as % of target per goal (bad / typical / good) (#117), 10-year savings capacity vs plan, goals, % of FI target per year, price freshness; per FI level today's % reached and year reached (median, det.) (t07). Every number links to the screen that explains it |
+| Overview | Key numbers under an action title (net worth, market change this month, YTD TWR, FI wealth, goals on track); four blocks: Goals (all goals ordered by status, with probability vs required and value against target), Plan vs actual (cumulative gap and next contribution), Operational (alerts and stale prices), Financial independence (highest reached and next configured level, with projected wealth and level targets). Each block links to its explaining screen. |
 | Goals list | One row per goal; its goal chip opens the goal's page: name + priority, status, P vs required, value vs target, plan gap (t11 replaces the 9-column table) |
 | Goal detail | A back link to the Goals list and a goal switch at the top (no sidebar item; `#/goals/detail` with no goal opens the Goals list). Value, P vs required, XIRR, fan, P history, range chart (the distribution of simulated outcomes at the goal date, with the median and bad / good case labelled; #117), "what it would take" (needed det./prob., horizon), holdings (units, price + age, PMC, gain, tax if sold), value vs money put in, cumulative plan vs actual, change the monthly plan from month X, 50% capital note on the pension goal |
 | Goal history | Metric switch (P, funded ratio, median/target); a line per goal over snapshots; snapshot table; Save snapshot; delete saved snapshots |
@@ -585,7 +585,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-74: Snapshots. Check: API test with `GBI_AS_OF` moved forward 3 months, then an assumption changed. Expected: previous month `saved`, older gaps `recomputed`; saved snapshots unchanged after the assumption change; manual save and delete of saved snapshots work.
 - AC-75: Monthly job. Check: API test with a stubbed provider. Expected: on the first start in a new month prices are fetched before the snapshot; the manual trigger runs at most once a day unless the last run failed.
 - AC-76: Performance, Goal history, Plan vs actual screens. Check: `agent-browser` on the sample data. Expected: contents as in the screens table; recomputed snapshots are labelled.
-- AC-77: Overview. Check: `agent-browser` on a fixture with 5 years of monthly data. Expected: all cells of the screens table render; every number links to its explaining screen; page ready in under 2 s.
+- AC-77: Overview. Check: `agent-browser` on a fixture with 5 years of monthly data. Expected: all four Overview blocks render; every number links to its explaining screen; page ready in under 2 s.
 - AC-78: S5 UI gate. Check: screenshots of Overview, Performance, Goal history, Plan vs actual. Expected: the user approves or skips.
 
 ### S6 — Optimizer and polish
