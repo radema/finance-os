@@ -113,7 +113,7 @@ export function performanceFor(
 }
 
 /** Plan vs actual since the tracking start, with the next contribution. Money in cents. */
-async function loadPlanVsActual(db: Kysely<DB>, today: string): Promise<PlanVsActualView> {
+export async function loadPlanVsActual(db: Kysely<DB>, today: string): Promise<PlanVsActualView> {
   const world = await loadWorld(db, today);
   const { settings, pension } = world;
   const plans = await db

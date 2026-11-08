@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import type { OverviewView } from "../engine/overviewView.ts";
 import { openDatabase } from "./db.ts";
 import { startServer } from "./index.ts";
-import { FIXTURE_MONTHS, monthlySample } from "./monthlyFixture.ts";
+import { monthlySample } from "./monthlyFixture.ts";
 import { loadSampleData } from "./sample.ts";
 import { ensureSnapshots } from "./snapshots.ts";
 
@@ -50,13 +50,12 @@ it(
 
     expect(overviewResponse.status).toBe(200);
     expect(alertsResponse.status).toBe(200);
-    expect(view.netWorth.months).toHaveLength(FIXTURE_MONTHS);
     expect(view.keyNumbers.netWorth).toBeGreaterThan(0);
     expect(view.keyNumbers.marketChange).not.toBeNull();
     expect(view.keyNumbers.ytdTwr).not.toBeNull();
     expect(view.keyNumbers.fiWealth).not.toBeNull();
     expect(view.goals.length).toBeGreaterThan(0);
-    expect(view.snapshots.length).toBeGreaterThan(0);
+    expect(view.plan.latest).not.toBeNull();
     expect(elapsed).toBeLessThan(READY_MS);
   },
   WARM_UP_TIMEOUT_MS,

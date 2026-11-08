@@ -2,12 +2,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { CashFlowView } from "../engine/cashFlow.ts";
-import type { GoalDetailView, GoalListView } from "../engine/goalViews.ts";
+import type { GoalListView } from "../engine/goalViews.ts";
 import type { IndependenceView } from "../engine/independenceView.ts";
 import type { OverviewView } from "../engine/overviewView.ts";
-import type { SnapshotView } from "../engine/snapshot.ts";
-import type { PerformanceView } from "../engine/trackingViews.ts";
+import type { PerformanceView, PlanVsActualView } from "../engine/trackingViews.ts";
 import { startServer } from "./index.ts";
 
 describe("GET /api/overview", () => {
@@ -39,8 +37,8 @@ describe("GET /api/overview", () => {
       ytdTwr: null,
       fiWealth: null,
     });
-    expect(view.netWorth.months).toEqual([]);
-    expect(view.ranges).toEqual([]);
+    expect(view.plan.latest).toBeNull();
+    expect(view.stalePrices).toEqual([]);
   });
 
   it("shows the number of the screen each one links to", async () => {
@@ -66,25 +64,22 @@ describe("GET /api/overview", () => {
     expect(view.fi).toEqual(independence);
     expect(view.keyNumbers.fiWealth).toBe(independence.result?.wealthToday.total);
 
-    const cashFlow = await get<CashFlowView>("/api/cash-flow");
-    expect(view.cashFlow).toEqual(cashFlow.rows);
-    expect(view.snapshots).toEqual(await get<SnapshotView[]>("/api/snapshots"));
-  });
-
-  it("draws the range of every goal like its detail page, and the series like its chart", async () => {
-    await fetch(`${url}/api/sample-data`, { method: "POST" });
-    const view = await get<OverviewView>("/api/overview");
-    expect(view.ranges.length).toBeGreaterThan(1);
-    for (const { goalId, range } of view.ranges) {
-      const goal = await get<GoalDetailView>(`/api/goal-detail?id=${goalId}`);
-      expect(range).toEqual(goal.analysis?.range);
-    }
-
-    const first = view.ranges[0];
-    const detail = await get<GoalDetailView>(`/api/goal-detail?id=${first?.goalId}`);
-    const line = view.netWorth.goals.find((goal) => goal.goalId === first?.goalId);
-    expect(line?.values.at(-1)).toBeCloseTo(detail.series.at(-1)?.value ?? Number.NaN, 6);
-    expect(view.netWorth.moneyIn).toHaveLength(view.netWorth.months.length);
-    expect(view.prices.map((price) => price.name)).toHaveLength(7);
+    const plan = await get<PlanVsActualView>("/api/plan-vs-actual");
+    expect(view.plan.trackingStart).toBe(plan.trackingStart);
+    expect(view.plan.latest).toEqual(plan.total.at(-1) ?? null);
+    expect(view.plan.next).toEqual(
+      plan.next &&
+        (({ goalId, goalName, slot, amount, wait, minTicket }) => ({
+          goalId,
+          goalName,
+          slot,
+          amount,
+          wait,
+          minTicket,
+        }))(plan.next),
+    );
+    expect(view.stalePrices.every((price) => price.age.old)).toBe(true);
+    for (const field of ["netWorth", "ranges", "cashFlow", "snapshots", "prices"])
+      expect(view).not.toHaveProperty(field);
   });
 });
