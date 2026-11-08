@@ -82,7 +82,7 @@ function targetFolder(rootDir: string, file: string, specifier: string): string 
 }
 
 /**
- * Checks the structural rules 1-3 of CLAUDE.md and the no-colour-literal and no-spacing-literal rules of DESIGN.md on every source file under `rootDir`.
+ * Checks the structural rules 1-3 of AGENTS.md and the no-colour-literal and no-spacing-literal rules of DESIGN.md on every source file under `rootDir`.
  *
  * @param rootDir Folder that holds `engine/`, `server/` and `web/`.
  * @returns The violations found; an empty array means the tree is clean.

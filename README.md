@@ -35,4 +35,4 @@ The server listens on `127.0.0.1:8716`.
 ## Develop
 
 `pnpm dev` runs the API on `127.0.0.1:8716` and the Vite dev page on `127.0.0.1:8717` (it proxies `/api`).
-See `CLAUDE.md` for the other commands, the gate and the architecture rules.
+See [AGENTS.md](AGENTS.md) for the other commands, the gate and the architecture rules. Claude Code v2.1.277+ supports this shared file.
