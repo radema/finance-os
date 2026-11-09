@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DataFolderBanner } from "./DataFolderBanner.tsx";
 import { GlossaryScreen } from "./glossary/GlossaryScreen.tsx";
 import { GoalDetailScreen } from "./goals/GoalDetailScreen.tsx";
@@ -30,14 +31,15 @@ import { OverviewScreen } from "./overview/OverviewScreen.tsx";
 import { PensionScreen } from "./pension/PensionScreen.tsx";
 import { PricesScreen } from "./prices/PricesScreen.tsx";
 import { SetupScreen } from "./setup/SetupScreen.tsx";
+import { readSidebarCollapsed, writeSidebarCollapsed } from "./sidebarState.ts";
 import { GoalHistoryScreen } from "./tracking/GoalHistoryScreen.tsx";
 import { PerformanceScreen } from "./tracking/PerformanceScreen.tsx";
 import { PlanVsActualScreen } from "./tracking/PlanVsActualScreen.tsx";
 
-function Sidebar({ route }: { route: string }) {
+function Sidebar({ route, collapsed }: { route: string; collapsed: boolean }) {
   const current = navKeyOf(route);
   return (
-    <aside className="side">
+    <aside className="side" id="main-sidebar" hidden={collapsed}>
       <a className="brand" href={`#/${DEFAULT_ROUTE}`}>
         GBI planner
       </a>
@@ -103,10 +105,30 @@ function SoonPage({ route }: { route: string }) {
 /** Sidebar plus content area. Every page shows the "soon" placeholder until it has a screen. */
 export function AppShell({ route }: { route: string }) {
   const goalId = goalIdOf(route);
+  const [collapsed, setCollapsed] = useState(readSidebarCollapsed);
+  function toggleSidebar() {
+    const next = !collapsed;
+    setCollapsed(next);
+    writeSidebarCollapsed(next);
+  }
   return (
-    <div className="shell">
-      <Sidebar route={route} />
+    <div className="shell" data-sidebar-collapsed={collapsed}>
+      <Sidebar route={route} collapsed={collapsed} />
       <main className="main">
+        <div className="sidebar-toolbar">
+          <button
+            type="button"
+            className="sidebar-toggle"
+            aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
+            aria-expanded={!collapsed}
+            aria-controls="main-sidebar"
+            onClick={toggleSidebar}
+          >
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </button>
+        </div>
         <DataFolderBanner />
         {route === DEFAULT_ROUTE ? (
           <FirstRunChecklist done={<OverviewScreen />} />

@@ -412,6 +412,9 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
 - Sidebar: Overview; Goals (List, History; a goal's page opens from a goal chip, with no sidebar item of its own); Independence; Analysis (Optimizer, Performance,
   Plan vs actual); Pension; Operations (Transactions, Import, Prices); Setup (Products, Allocation,
   Cash flow, Assumptions, Glossary). Unbuilt items show a "soon" placeholder.
+- A sticky hamburger button above the content collapses and restores the sidebar. When collapsed,
+  content uses the available width; the control remains available while scrolling. The choice persists
+  across reloads and defaults to expanded.
 - Colour: palette D (`reference/palette-substack-d.md`) with the OE Data Viz exhibit rules
   (`reference/oe-dataviz-README.md`, type scale one step up: body 16, tables 15, labels 13, axis 12).
   One fixed slot colour per goal in every chart (pension goal slot 1, emergency-fund goal slot 6,
@@ -638,6 +641,9 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-91: Contrast. Check: contrast measurement of text and chart marks on every screen, both themes. Expected: body text ≥ 4.5:1; every series below 3:1 has a direct label or legend entry.
 - AC-92: Open colour questions settled. Check: `DESIGN.md`. Expected: records the user's choice on the highlight vs pension goal colour and on goals beyond six (t11 open questions 1 and 4).
 - AC-93: S7 UI gate. Check: screenshots of every screen, both themes. Expected: the user approves.
+- AC-170: Collapsible sidebar. Check: toggle by mouse and keyboard at desktop widths, scroll and reload.
+  Expected: the sidebar hides and the content fills its space; the labelled control stays available,
+  exposes its state, restores the sidebar and remembers the choice across reloads. The default is expanded.
 
 ## Out of Scope
 

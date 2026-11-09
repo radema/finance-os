@@ -158,6 +158,9 @@ The gap between blocks (KPI row, card, exhibit, control grid) is `--s4`, everywh
   (Products, Allocation, Cash flow, Assumptions, Glossary). The current page has a 2 px `--ink` bar and
   weight 600. A page without a screen shows a "soon" tag and a placeholder page. Under 900 px of window
   height the spacing tightens (spacing tokens only) so every item shows without scrolling the sidebar.
+  A compact sticky toolbar above the main content holds a hamburger button to collapse or restore the
+  sidebar. Collapsing it gives the content the full width; the toolbar stays available while scrolling.
+  The toolbar uses the opaque page surface and table headers sit below it. The layout changes without animation.
 - **Setup tab bar.** `SetupTabs` (`web/setup/SetupTabs.tsx`) is the one tab bar of the Setup screens, shared
   by Products, Allocation, Cash flow, Assumptions and Glossary; the current tab is marked as in the Sidebar.
 - **Glossary term.** A dotted-underline button that opens a popover: plain sentence first, the Italian

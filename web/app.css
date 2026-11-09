@@ -70,6 +70,12 @@ a:hover {
     grid-template-columns: 248px minmax(0, 1fr);
   }
 }
+.shell[data-sidebar-collapsed="true"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.side[hidden] {
+  display: none;
+}
 .side {
   position: sticky;
   top: 0;
@@ -147,6 +153,38 @@ a.nav-head:hover,
 
 .main {
   padding: var(--s5) clamp(24px, 3vw, 56px) var(--s6);
+}
+.sidebar-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  height: var(--s6);
+  background: var(--surface);
+}
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--s5);
+  height: var(--s5);
+  padding: 0;
+  border: 1px solid var(--base);
+  background: var(--raised);
+  color: var(--ink);
+  cursor: pointer;
+}
+.sidebar-toggle:hover {
+  background: var(--wash);
+}
+.sidebar-toggle svg {
+  width: var(--s3);
+  height: var(--s3);
+}
+/* Page-scrolling headers sit below the toolbar; independently scrolling tables keep their own top. */
+.main .table:not(.table-scroll-sticky .table) thead th {
+  top: var(--s6);
 }
 .tag {
   margin-bottom: var(--s2);
