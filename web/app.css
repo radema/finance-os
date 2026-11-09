@@ -154,20 +154,27 @@ a.nav-head:hover,
 .main {
   padding: var(--s5) clamp(24px, 3vw, 56px) var(--s6);
 }
-.sidebar-toolbar {
-  position: sticky;
-  top: 0;
+.sidebar-edge {
+  position: fixed;
+  top: var(--s4);
+  left: 232px;
+  transform: translateX(-50%);
   z-index: 3;
-  display: flex;
-  align-items: center;
-  height: var(--s6);
-  background: var(--surface);
+}
+@media (min-width: 1280px) {
+  .sidebar-edge {
+    left: 248px;
+  }
+}
+.shell[data-sidebar-collapsed="true"] .sidebar-edge {
+  left: 0;
+  transform: none;
 }
 .sidebar-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--s5);
+  width: var(--s4);
   height: var(--s5);
   padding: 0;
   border: 1px solid var(--base);
@@ -181,10 +188,6 @@ a.nav-head:hover,
 .sidebar-toggle svg {
   width: var(--s3);
   height: var(--s3);
-}
-/* Page-scrolling headers sit below the toolbar; independently scrolling tables keep their own top. */
-.main .table:not(.table-scroll-sticky .table) thead th {
-  top: var(--s6);
 }
 .tag {
   margin-bottom: var(--s2);

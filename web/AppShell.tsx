@@ -115,7 +115,7 @@ export function AppShell({ route }: { route: string }) {
     <div className="shell" data-sidebar-collapsed={collapsed}>
       <Sidebar route={route} collapsed={collapsed} />
       <main className="main">
-        <div className="sidebar-toolbar">
+        <div className="sidebar-edge">
           <button
             type="button"
             className="sidebar-toggle"

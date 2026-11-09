@@ -412,8 +412,8 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
 - Sidebar: Overview; Goals (List, History; a goal's page opens from a goal chip, with no sidebar item of its own); Independence; Analysis (Optimizer, Performance,
   Plan vs actual); Pension; Operations (Transactions, Import, Prices); Setup (Products, Allocation,
   Cash flow, Assumptions, Glossary). Unbuilt items show a "soon" placeholder.
-- A sticky chevron button above the content points left to collapse and right to restore the sidebar. When collapsed,
-  content uses the available width; the control remains available while scrolling. The choice persists
+- A fixed chevron button on the sidebar divider points left to collapse and right to restore the sidebar. When collapsed,
+  content uses the available width and the control sits at the left viewport edge, available while scrolling. The choice persists
   across reloads and defaults to expanded.
 - Colour: palette D (`reference/palette-substack-d.md`) with the OE Data Viz exhibit rules
   (`reference/oe-dataviz-README.md`, type scale one step up: body 16, tables 15, labels 13, axis 12).
