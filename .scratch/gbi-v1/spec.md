@@ -99,20 +99,20 @@ Before the wipe the user creates and pushes the annotated tag `finance-os-legacy
 | Fonts in `src/financeos/web/static/fonts/` | delete; Geist, Geist Mono and Source Serif 4 are bundled instead |
 | `demo/`, `real/` | delete; data lives in `GBI_DATA_DIR`; sample data is the synthetic fixture below |
 | `.gitignore` | rewrite for Node (`node_modules/`, `dist/`, coverage, tool caches); keep `.claude/worktrees/`, OS/editor files, `*:Zone.Identifier`; add `*.sqlite`, `*.db`, `*.xlsx`, `*.csv` outside the fixtures folder `fixtures/` |
-| `CLAUDE.md` | replace (below) |
+| `AGENTS.md` | shared agent instructions (below) |
 | `.scratch/gbi-v1/` | keep as is: source of truth during the build |
 
 During the build, `.scratch/gbi-v1/spec.md` is the source of truth; ADRs go to
 `.scratch/gbi-v1/adr/NNNN-slug.md`, the domain glossary to `.scratch/gbi-v1/glossary.md`. They move
 to `docs/` only when the build is done. No RFCs, no numbered invariants.
 
-New `CLAUDE.md` (60–80 lines), text as in `research/06-claude-md-draft.md` with these sections:
+Shared `AGENTS.md` (60–80 lines), based on the historical `research/06-claude-md-draft.md`, has these sections:
 What this is; Source of truth; Commands (`pnpm install`, `pnpm dev`, `pnpm test`, `pnpm gate`,
 `pnpm build && gbi`); Gate; Architecture (six rules: pure engine; web only via REST; SQL only in
 server via Kysely, forward-only migrations; money in integer cents; network only for public prices,
 no CDN; few exact-pinned deps — rules 1–3 enforced by a test or Biome rule); Clean code; Data; Design
 (points to `DESIGN.md`); Language; Git (`main` trunk, `feat/...` branches, PR to `main`, the user
-merges, conventional commits citing the sub-issue or `AC-` id, Sonnet implements / Opus reviews).
+merges, conventional commits citing the sub-issue or `AC-` id, and session-specific model routing).
 Deltas to the draft: the Commands section names the pnpm pin (`pnpm@10.32.1`), and the Architecture
 section adds the Node type-stripping rules above.
 
@@ -523,7 +523,7 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-1: The legacy tag exists before the wipe. Check: `git ls-remote --tags origin finance-os-legacy`. Expected: one line pointing to `fb215e5…` (annotated tag peeled).
 - AC-2: The old app is gone. Check: `git ls-files src/financeos tests pyproject.toml uv.lock docs PRODUCT.md .impeccable demo real`. Expected: no output; `git ls-files .scratch/gbi-v1/spec.md` still lists the spec.
 - AC-3: `.gitignore` blocks personal data. Check: `git check-ignore -q x.sqlite x.db x.xlsx x.csv` and `git check-ignore fixtures/a.xlsx`. Expected: the first exits 0; the second exits 1.
-- AC-4: The new `CLAUDE.md` is in place. Check: read it against the "New CLAUDE.md" decision above. Expected: 60–80 lines, the listed sections, the pnpm pin and Node type-stripping rules.
+- AC-4: The shared `AGENTS.md` is in place. Check: read it against the shared instructions decision above. Expected: 60–80 lines, the listed sections, the pnpm pin and Node type-stripping rules.
 - AC-5: Supply-chain guards are set. Check: `package.json`, `pnpm-workspace.yaml`, `pnpm config get minimum-release-age`; `grep -E '"(plotly|better-sqlite3|xlsx)' package.json`. Expected: `packageManager` is `pnpm@10.32.1`, every version exact, lockfile committed, `minimumReleaseAge` 10080, `onlyBuiltDependencies: []`; grep prints nothing.
 - AC-6: The gate runs. Check: `pnpm gate`. Expected: runs Biome, `tsc --noEmit`, Vitest, `pnpm build`, `pnpm audit`; exit 0.
 - AC-7: Architecture rules 1–3 are enforced. Check: the architecture test (or Biome rule) with a planted violation in a scratch file: `engine/` importing `node:*`/`server/`/`web/`; `web/` importing `server/`; SQL outside `server/`. Expected: green on the clean tree, red on each planted violation.

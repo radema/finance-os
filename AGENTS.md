@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 ## What this is
 
@@ -75,4 +75,4 @@ Code, identifiers, commits and docs in English. UI in English, with an Italian g
 
 - `main` is the trunk. Story work on `feat/...` branches from `main`, PR to `main`. The user merges.
 - Conventional commits, lowercase, citing the sub-issue or the spec `AC-` id.
-- Sonnet implements, Opus reviews.
+- Follow the model-routing instructions supplied for the current session.
