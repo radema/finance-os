@@ -48,6 +48,7 @@ export function reconcileDismissals(
 /** The facts of the rules, read from the stored data. The valuation date is the month-end of the world's month. */
 async function loadRuleInput(db: Kysely<DB>, today: string): Promise<RuleInput> {
   const world = await loadWorld(db, today);
+  world.goals = world.goals.filter((goal) => !goal.archived);
   const asOf = monthEnd(world.month);
   const { settings } = world;
 
@@ -60,6 +61,7 @@ async function loadRuleInput(db: Kysely<DB>, today: string): Promise<RuleInput> 
       monthly: monthlyCents,
     })),
     transactions: world.ledger,
+    cashContributions: world.cash?.movements.filter((movement) => movement.type === "contribution"),
     trackingStart: settings.trackingStart,
     valuationMonth: world.month,
   });

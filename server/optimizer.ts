@@ -47,6 +47,7 @@ export function registerOptimizerRoutes(router: Router, db: Kysely<DB>, today: (
     const world = await loadWorld(db, today());
     const goal = world.goals.find((candidate) => candidate.id === input.goalId);
     if (!goal) throw new HttpError(404, "goal not found");
+    if (goal.archived) throw new HttpError(409, "Reopen the archived bucket before optimizing.");
     if (new Set(input.products).size !== input.products.length)
       throw new HttpError(400, "a product is listed twice");
     for (const id of input.products) {

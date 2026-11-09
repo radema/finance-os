@@ -114,6 +114,22 @@ const DOMAIN_TABLES = [
 
 // Forward-only: a migration has no `down`. Keys sort in application order.
 const migrations: Record<string, Migration> = {
+  "005-bucket-cash": {
+    async up(db) {
+      await sql`ALTER TABLE goal ADD COLUMN archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0,1))`.execute(
+        db,
+      );
+      await sql`CREATE TABLE legacy_transaction (id TEXT PRIMARY KEY) STRICT`.execute(db);
+      await sql`INSERT INTO legacy_transaction (id) SELECT id FROM "transaction"`.execute(db);
+      await sql`CREATE TABLE cash_movement (
+   entry_order INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, date TEXT NOT NULL, goal_id TEXT NOT NULL REFERENCES goal(id),
+   type TEXT NOT NULL CHECK(type IN ('opening','contribution','withdrawal','transfer','fee','tax','income')),
+   amount_cents INTEGER NOT NULL CHECK(amount_cents >= 0), to_goal_id TEXT REFERENCES goal(id),
+   note TEXT NOT NULL DEFAULT '', source_id TEXT UNIQUE, import_batch_id TEXT REFERENCES import_batch(id),
+   CHECK((type = 'transfer' AND to_goal_id IS NOT NULL AND to_goal_id != goal_id) OR (type != 'transfer' AND to_goal_id IS NULL))
+  ) STRICT`.execute(db);
+    },
+  },
   "001-baseline": {
     async up(db) {
       await sql`CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT`.execute(db);

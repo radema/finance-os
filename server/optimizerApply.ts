@@ -25,7 +25,9 @@ type Change = { weights: { productId: string; weight: number }[]; flows?: Pensio
 /** Applies the optimizer's chosen weights to a goal, only when the request confirms it. */
 export function registerOptimizerApplyRoutes(router: Router, db: Kysely<DB>): void {
   router.route("POST", "/api/optimizer/apply", applyInput, async (input) => {
-    await findOr404(db, "goal", input.goalId, "goal");
+    const goal = await findOr404(db, "goal", input.goalId, "goal");
+    if (goal.archived)
+      throw new HttpError(409, "Reopen the archived bucket before changing its allocation.");
     const regimes = new Map(
       (await db.selectFrom("product").select(["id", "regime"]).execute()).map((row) => [
         row.id,

@@ -1,6 +1,7 @@
 // Typed Kysely schema. Property names are camelCase; the CamelCasePlugin maps them to the
 // snake_case columns of the migrations. `*Cents` columns are integer cents, `*Scaled` columns are
 // integers scaled by 10^6 (see engine/units.ts). Booleans are 0 | 1.
+import type { Generated } from "kysely";
 import type { Regime, TransactionType } from "../engine/holdings.ts";
 import type { PensionFlow } from "../engine/schemas.ts";
 
@@ -43,6 +44,7 @@ export interface PricePointTable {
 }
 
 export interface GoalTable {
+  archived: Generated<Flag>;
   id: string;
   name: string;
   priority: "Need" | "Want" | "Wish";
@@ -143,6 +145,8 @@ export interface DocumentTable {
 }
 
 export interface DB {
+  cashMovement: import("../engine/cashLedger.ts").CashMovement & { entryOrder: Generated<number> };
+  legacyTransaction: { id: string };
   meta: { key: string; value: string };
   product: ProductTable;
   pricePoint: PricePointTable;

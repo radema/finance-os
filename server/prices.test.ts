@@ -7,7 +7,7 @@ import type { Product } from "../engine/schemas.ts";
 import type { DB } from "./db.ts";
 import { openDatabase } from "./db.ts";
 import { startServer } from "./index.ts";
-import { importPrices, storePrice } from "./prices.ts";
+import { importPrices, loadPriceOverview, storePrice } from "./prices.ts";
 import type { PricePointTable } from "./schema.ts";
 
 const point = (over: Partial<PricePointTable> = {}): PricePointTable => ({
@@ -61,6 +61,55 @@ describe("storePrice and importPrices", () => {
   });
 
   describe("storePrice", () => {
+    it("stops requesting current prices after a historical product is fully sold", async () => {
+      await db
+        .insertInto("goal")
+        .values({
+          id: "g",
+          name: "Bucket",
+          priority: "Need",
+          targetCents: 100,
+          targetYear: 2030,
+          contributionGrowth: 0,
+          minProb: null,
+          countsTowardFi: 0,
+        })
+        .execute();
+      for (const [id, date, qtyScaled, type] of [
+        ["opening", "2025-12-31", 1_000_000, "opening"],
+        ["redemption", "2026-01-14", -1_000_000, "sell"],
+      ] as const) {
+        await db
+          .insertInto("transaction")
+          .values({
+            id,
+            date,
+            qtyScaled,
+            type,
+            goalId: "g",
+            productId: "p1",
+            priceScaled: 100_000_000,
+            amountCents: 10000,
+            commissionCents: null,
+            note: "",
+            flow: null,
+            importBatchId: null,
+          })
+          .execute();
+      }
+      await storePrice(db, point({ month: "2025-12", priceDate: "2025-12-31" }), {
+        explicitRefetch: false,
+      });
+      expect(
+        (await loadPriceOverview(db, "2026-11-09")).find((p) => p.productId === "p1"),
+      ).toMatchObject({ age: { old: false }, lastPrice: { price: 100 } });
+      expect(
+        (await loadPriceOverview(db, "2026-01-10")).find((p) => p.productId === "p1")?.age.old,
+      ).toBe(false);
+      expect(
+        (await loadPriceOverview(db, "2026-11-09")).find((p) => p.productId === "p2")?.age.old,
+      ).toBe(true);
+    });
     it("stores a price with its source", async () => {
       const result = await storePrice(db, point({ source: "csv" }), { explicitRefetch: false });
       expect(result).toEqual({ outcome: "stored", prior: null });

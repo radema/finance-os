@@ -37,7 +37,9 @@ export async function loadCashFlowView(db: Kysely<DB>, today: string): Promise<C
   const asOf = monthEnd(month);
 
   const plans = await db.selectFrom("contributionPlan").selectAll().execute();
-  const goals: CashFlowGoal[] = (await db.selectFrom("goal").selectAll().execute()).map((goal) => ({
+  const goals: CashFlowGoal[] = (
+    await db.selectFrom("goal").selectAll().where("archived", "=", 0).execute()
+  ).map((goal) => ({
     id: goal.id,
     targetYear: goal.targetYear,
     contributionGrowth: goal.contributionGrowth,

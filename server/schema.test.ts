@@ -8,12 +8,14 @@ import { startServer } from "./index.ts";
 
 const DOMAIN_TABLES = [
   "allocation_weight",
+  "cash_movement",
   "contribution_plan",
   "dismissal",
   "document",
   "goal",
   "import_batch",
   "import_mapping",
+  "legacy_transaction",
   "meta",
   "price_point",
   "product",
@@ -84,6 +86,7 @@ describe("database schema on a fresh data folder", () => {
         .map((c) => ({ table: t.name, ...c })),
     );
     expect(money.map((c) => `${c.table}.${c.name}`)).toEqual([
+      "cash_movement.amount_cents",
       "contribution_plan.monthly_cents",
       "goal.target_cents",
       "transaction.commission_cents",
@@ -92,9 +95,9 @@ describe("database schema on a fresh data folder", () => {
     expect(money.filter((c) => c.type !== "INTEGER")).toEqual([]);
 
     inspect((db) => {
-      db.exec(`INSERT INTO goal VALUES ('g1', 'Home', 'Need', 1000, 2030, 0.02, NULL, 0)`);
+      db.exec(`INSERT INTO goal VALUES ('g1', 'Home', 'Need', 1000, 2030, 0.02, NULL, 0, 0)`);
       expect(() =>
-        db.exec(`INSERT INTO goal VALUES ('g2', 'Car', 'Want', 1000.5, 2030, 0.02, NULL, 0)`),
+        db.exec(`INSERT INTO goal VALUES ('g2', 'Car', 'Want', 1000.5, 2030, 0.02, NULL, 0, 0)`),
       ).toThrow(/INTEGER/);
       expect(() => db.exec(`INSERT INTO contribution_plan VALUES ('g1', '2026-01', 99.5)`)).toThrow(
         /INTEGER/,
@@ -122,6 +125,7 @@ describe("database schema on a fresh data folder", () => {
       "002-domain",
       "003-batch-created-ids",
       "004-transaction-flow",
+      "005-bucket-cash",
     ]);
 
     await startAndStop();
@@ -132,6 +136,10 @@ describe("database schema on a fresh data folder", () => {
     await startAndStop();
     // Go back to the state before 004: no flow column, and 004 not applied.
     inspect((db) => {
+      db.exec(`DROP TABLE cash_movement`);
+      db.exec(`DROP TABLE legacy_transaction`);
+      db.exec(`ALTER TABLE goal DROP COLUMN archived`);
+      db.exec(`DELETE FROM kysely_migration WHERE name = '005-bucket-cash'`);
       db.exec(`ALTER TABLE "transaction" DROP COLUMN flow`);
       db.exec(`DELETE FROM kysely_migration WHERE name = '004-transaction-flow'`);
       db.exec(`INSERT INTO goal VALUES ('g1', 'Pension', 'Need', 1000, 2046, 0.02, NULL, 0)`);

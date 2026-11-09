@@ -92,10 +92,11 @@ export async function loadSampleData(db: Kysely<DB>, sample: SampleData = bundle
     for (const { commission, qty, price, productId, ...row } of sample.ledger) {
       const regime = regimes.get(productId);
       if (!regime) throw new Error(`The fixture ledger names an unknown product ${productId}`);
+      const id = randomUUID();
       await trx
         .insertInto("transaction")
         .values({
-          id: randomUUID(),
+          id,
           ...row,
           productId,
           qtyScaled: toScaled(qty),
@@ -106,6 +107,7 @@ export async function loadSampleData(db: Kysely<DB>, sample: SampleData = bundle
           importBatchId: null,
         })
         .execute();
+      await trx.insertInto("legacyTransaction").values({ id }).execute();
     }
     await saveDocument(trx, "settings", sample.settings);
     await saveDocument(trx, "pensionPlan", sample.pensionPlan);

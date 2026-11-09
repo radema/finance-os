@@ -53,10 +53,17 @@ describe("Transactions API", () => {
     });
     return { status: response.status, body: (await response.json()) as T };
   };
-  const setup = async (product = PRODUCT) => ({
-    productId: (await call<Product>("POST", "/api/products", product)).body.id,
-    goalId: (await call<Goal>("POST", "/api/goals", GOAL)).body.id,
-  });
+  const setup = async (product = PRODUCT) => {
+    const productId = (await call<Product>("POST", "/api/products", product)).body.id;
+    const goalId = (await call<Goal>("POST", "/api/goals", GOAL)).body.id;
+    await call("POST", "/api/cash-movements", {
+      date: "2025-01-01",
+      goalId,
+      type: "contribution",
+      amountCents: 1_000_000,
+    });
+    return { productId, goalId };
+  };
   const holdings = async () => (await call<Holdings>("GET", "/api/holdings")).body;
 
   it("derives qty = amount / price for an ETF", async () => {
@@ -99,6 +106,12 @@ describe("Transactions API", () => {
 
   it("stores a sell with negative qty and a positive amount", async () => {
     const { productId, goalId } = await setup();
+    const funding = (await call<{ id: string }[]>("GET", "/api/cash-movements")).body;
+    for (const row of funding) await call("DELETE", `/api/cash-movements?id=${row.id}`);
+    await call("POST", "/api/opening-position", {
+      asOf: "2025-12-31",
+      positions: [{ productId, totalUnits: 5, pmc: 100, parts: [{ goalId, units: 5 }] }],
+    });
     const sell = await call<Transaction>("POST", "/api/transactions", {
       date: "2026-04-10",
       goalId,
@@ -173,6 +186,12 @@ describe("Transactions API", () => {
   it("lists by goal and by year, newest first", async () => {
     const { productId, goalId } = await setup();
     const other = (await call<Goal>("POST", "/api/goals", { ...GOAL, name: "Car" })).body.id;
+    await call("POST", "/api/cash-movements", {
+      date: "2025-01-01",
+      goalId: other,
+      type: "contribution",
+      amountCents: 100_000,
+    });
     const input = { productId, type: "buy", amountCents: 10_000, price: 100 };
     await call("POST", "/api/transactions", { ...input, goalId, date: "2025-12-31" });
     await call("POST", "/api/transactions", { ...input, goalId, date: "2026-01-01" });

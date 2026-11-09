@@ -1,6 +1,7 @@
 // Performance, derived from the ledger and the month-end prices; nothing is stored. Pure: no I/O.
 // Money is euros as floats here; the server converts stored cents before the call.
 
+import { type CashMovement, type CashTrade, replayCash } from "./cashLedger.ts";
 import type { LedgerRow, Regime } from "./holdings.ts";
 import { holdingsAt, unitPrice } from "./holdings.ts";
 import { addMonths, monthEnd } from "./months.ts";
@@ -19,6 +20,7 @@ export type PerformanceScope =
   | { kind: "bucket"; goalId: string };
 
 export type PerformanceInput = {
+  cashLedger?: { trades: readonly CashTrade[]; movements: readonly CashMovement[] };
   transactions: readonly PerformanceTransaction[];
   prices: readonly PerformancePrice[];
   products: readonly PerformanceProduct[];
@@ -60,8 +62,14 @@ const MONTHS_IN_YEAR = 12;
 /** The scopes to report: all, all except pension, then one per bucket (sorted by goal id). */
 export function performanceScopes(
   transactions: readonly Pick<PerformanceTransaction, "goalId">[],
+  movements: readonly Pick<CashMovement, "goalId" | "toGoalId">[] = [],
 ): PerformanceScope[] {
-  const goalIds = [...new Set(transactions.map((t) => t.goalId))].sort();
+  const goalIds = [
+    ...new Set([
+      ...transactions.map((t) => t.goalId),
+      ...movements.flatMap((m) => (m.toGoalId ? [m.goalId, m.toGoalId] : [m.goalId])),
+    ]),
+  ].sort();
   return [
     { kind: "all" },
     { kind: "allExceptPension" },
@@ -91,7 +99,18 @@ export function computePerformance(input: PerformanceInput): PerformanceResult {
   const rows = input.transactions.filter(
     (t) => t.date <= end && inScope(input.scope, t, regimeOf(t.productId)),
   );
-  const first = rows.map((t) => t.date.slice(0, 7)).sort()[0];
+  const pensionGoals = new Set(
+    input.cashLedger?.trades.filter((t) => t.regime === "pension").map((t) => t.goalId) ?? [],
+  );
+  const goalInScope = (goalId: string) =>
+    input.scope.kind === "bucket"
+      ? input.scope.goalId === goalId
+      : input.scope.kind === "all" || !pensionGoals.has(goalId);
+  const movements = input.cashLedger?.movements.filter((m) => m.date <= end) ?? [];
+  const scopedMovements = movements.filter(
+    (m) => goalInScope(m.goalId) || (m.toGoalId !== null && goalInScope(m.toGoalId)),
+  );
+  const first = [...rows, ...scopedMovements].map((t) => t.date.slice(0, 7)).sort()[0];
   if (first === undefined) {
     return {
       months: [],
@@ -119,9 +138,18 @@ export function computePerformance(input: PerformanceInput): PerformanceResult {
     for (const [productId, units] of holdingsAt(rows, monthEnd(month)).accountUnits) {
       if (units !== 0) value += units * unitPrice(regimeOf(productId), priceAt(productId, month));
     }
+    if (input.cashLedger) {
+      const state = replayCash(input.cashLedger.trades, movements, monthEnd(month));
+      for (const [goalId, cents] of state.balances) if (goalInScope(goalId)) value += cents / 100;
+    }
     return value;
   };
   const cash = (t: PerformanceTransaction): number => {
+    if (input.cashLedger && t.type !== "pensionContribution") {
+      return t.type === "opening"
+        ? t.qty * unitPrice(regimeOf(t.productId), priceAt(t.productId, t.date.slice(0, 7)))
+        : 0;
+    }
     if (t.type !== "coupon") {
       return t.qty * unitPrice(regimeOf(t.productId), t.price) + (t.commission ?? 0);
     }
@@ -130,15 +158,32 @@ export function computePerformance(input: PerformanceInput): PerformanceResult {
     return -t.amount;
   };
 
+  const cashFlows: { date: string; amount: number }[] = [];
+  if (input.cashLedger) {
+    const state = replayCash(input.cashLedger.trades, movements, end);
+    for (const flow of state.externalFlows) {
+      if (goalInScope(flow.goalId))
+        cashFlows.push({ date: flow.date, amount: flow.amountCents / 100 });
+    }
+    for (const m of scopedMovements) {
+      if (m.type === "opening") cashFlows.push({ date: m.date, amount: m.amountCents / 100 });
+      if (m.type === "transfer") {
+        const sign =
+          (m.toGoalId && goalInScope(m.toGoalId) ? 1 : 0) - (goalInScope(m.goalId) ? 1 : 0);
+        if (sign) cashFlows.push({ date: m.date, amount: (sign * m.amountCents) / 100 });
+      }
+    }
+  }
+
   const months: PerformanceMonth[] = [];
   let previousValue = 0;
   let index = INDEX_BASE;
   let peak = INDEX_BASE;
   for (let month = first; month <= valuationMonth; month = addMonths(month, 1)) {
     const value = valueAt(month);
-    const flow = rows
-      .filter((t) => t.date.slice(0, 7) === month)
-      .reduce((sum, t) => sum + cash(t), 0);
+    const flow =
+      rows.filter((t) => t.date.slice(0, 7) === month).reduce((sum, t) => sum + cash(t), 0) +
+      cashFlows.filter((f) => f.date.slice(0, 7) === month).reduce((sum, f) => sum + f.amount, 0);
     const twrMonthly = previousValue === 0 ? null : (value - flow) / previousValue - 1;
     if (twrMonthly !== null) index *= 1 + twrMonthly;
     peak = Math.max(peak, index);
@@ -163,6 +208,7 @@ export function computePerformance(input: PerformanceInput): PerformanceResult {
     },
     xirr: xirr([
       ...rows.map((t) => ({ date: t.date, amount: -cash(t) })),
+      ...cashFlows.map((f) => ({ date: f.date, amount: -f.amount })),
       { date: end, amount: finalValue },
     ]),
     maxDrawdown: Math.min(...months.map((m) => m.drawdown)),

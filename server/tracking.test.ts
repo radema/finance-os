@@ -27,6 +27,21 @@ const VOLUNTARY_YTD_CENTS = 65_000;
 /** The performance engine run on the fixture: the oracle. Prices and ledger prices stay as quoted. */
 function enginePerformance(scope: PerformanceScope) {
   return computePerformance({
+    cashLedger: {
+      movements: [],
+      trades: sample.ledger.map((row, index) => {
+        const regime = sample.products.find((p) => p.id === row.productId)?.regime ?? "etf";
+        return {
+          ...row,
+          id: String(index),
+          price: unitPrice(regime, row.price),
+          regime,
+          legacy: true,
+          amountCents: Math.round(Math.abs(row.qty) * unitPrice(regime, row.price) * 100),
+          commissionCents: row.commission === undefined ? null : Math.round(row.commission * 100),
+        };
+      }),
+    },
     transactions: sample.ledger.map((row) => ({
       ...row,
       amount: undefined,

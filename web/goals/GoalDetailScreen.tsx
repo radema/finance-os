@@ -60,8 +60,9 @@ function Exhibit({ goal }: { goal: GoalDetailView }) {
         label={`Value and money put in for ${goal.name}, month by month`}
       />
       <p className="callout">
-        Money put in is cash paid for buys and pension contributions, minus sells and coupons, with
-        commissions. It is {formatAmount(moneyIn)} at the end of {month}.
+        Money put in includes the opening capital, external cash flows and pension contributions,
+        with transfers attributed to this bucket. It is {formatAmount(moneyIn)} at the end of{" "}
+        {month}.
       </p>
       <figcaption className="source">
         Source: your transactions and the prices you saved, to {month}.
@@ -326,7 +327,9 @@ function Detail({ goal }: { goal: GoalDetailView }) {
           label="Value"
           value={formatAmount(goal.value)}
           note={
-            goal.missingPrices ? "A product has no price, so this value is partial." : undefined
+            goal.missingPrices
+              ? "A product has no price, so this value is partial."
+              : `Includes ${formatAmount(goal.bucketCash ?? 0)} Bucket Cash.`
           }
         />
         <Kpi

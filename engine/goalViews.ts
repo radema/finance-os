@@ -2,6 +2,7 @@
 // amounts are euros as floats, and rounding happens only in the view. A value that cannot be
 // computed (a missing price, a missing pension first year) is `null`, never a guess.
 
+import { type CashMovement, type CashTrade, replayCash } from "./cashLedger.ts";
 import type { GoalStatus } from "./goalStatus.ts";
 import { goalStatus, requiredProbability } from "./goalStatus.ts";
 import type { LedgerRow, Regime } from "./holdings.ts";
@@ -22,6 +23,7 @@ import { timeGrid } from "./timeGrid.ts";
 import { fromCents } from "./units.ts";
 
 export interface GoalSummary {
+  bucketCash?: number;
   id: string;
   name: string;
   priority: Goal["priority"];
@@ -160,6 +162,7 @@ export type GoalWorldProduct = Pick<
 
 /** What the builders read of a goal. `target` is in today's euros. */
 export interface GoalWorldGoal {
+  archived?: boolean;
   id: string;
   name: string;
   priority: Goal["priority"];
@@ -178,6 +181,7 @@ export type GoalWorldLedgerRow = LedgerRow & { amount: number };
  * `pension` are the engine's own documents, so their money stays in cents.
  */
 export interface GoalWorld {
+  cash?: { trades: readonly CashTrade[]; movements: readonly CashMovement[] };
   products: ReadonlyMap<string, GoalWorldProduct>;
   /** In creation order. */
   goals: readonly GoalWorldGoal[];
@@ -224,6 +228,11 @@ function monthsBetween(first: string, last: string): string[] {
 /** The unit price at or before a month: the latest one. Undefined when the product has none yet. */
 const priceAt = (world: GoalWorld, productId: string, at: string): number | undefined =>
   world.prices.get(productId)?.findLast((point) => point.month <= at)?.price;
+
+export const bucketCashAt = (world: GoalWorld, goalId: string, date: string): number =>
+  world.cash
+    ? (replayCash(world.cash.trades, world.cash.movements, date).balances.get(goalId) ?? 0) / 100
+    : 0;
 
 const hasNoFirstYear = (world: GoalWorld, regimes: Iterable<string>) =>
   world.pension?.firstYear === undefined && [...regimes].includes("pension");
@@ -278,6 +287,7 @@ function inputOf(world: GoalWorld, goal: GoalWorldGoal, positions: Position[]): 
     ]),
   );
   return {
+    bucketCash: bucketCashAt(world, goal.id, monthEnd(month)),
     asOf: monthEnd(month),
     goal: {
       id: goal.id,
@@ -322,7 +332,8 @@ function inputOf(world: GoalWorld, goal: GoalWorldGoal, positions: Position[]): 
 export function summaryOf(world: GoalWorld, goal: GoalWorldGoal): GoalSummary {
   const positions =
     holdingsAt(world.ledger, monthEnd(world.month)).units.get(goal.id) ?? new Map<string, number>();
-  let value = 0;
+  const bucketCash = bucketCashAt(world, goal.id, monthEnd(world.month));
+  let value = bucketCash;
   let missingPrices = false;
   for (const [productId, units] of positions) {
     if (units === 0) continue;
@@ -337,6 +348,7 @@ export function summaryOf(world: GoalWorld, goal: GoalWorldGoal): GoalSummary {
     slot: goalSlot(goal, world.goals),
     target: goal.target,
     value,
+    ...(world.cash ? { bucketCash } : {}),
     missingPrices,
   };
 }
@@ -440,7 +452,11 @@ export function detailOf(world: GoalWorld, goal: GoalWorldGoal): GoalDetail {
 export function seriesOf(world: GoalWorld, goalId: string): SeriesPoint[] {
   const asOf = monthEnd(world.month);
   const entries = world.ledger.filter((entry) => entry.goalId === goalId && entry.date <= asOf);
-  const first = entries[0]?.date.slice(0, 7);
+  const cashEntries =
+    world.cash?.movements.filter(
+      (entry) => (entry.goalId === goalId || entry.toGoalId === goalId) && entry.date <= asOf,
+    ) ?? [];
+  const first = [...entries, ...cashEntries].map((entry) => entry.date.slice(0, 7)).sort()[0];
   if (first === undefined) return [];
 
   // Cash put in: qty × unit price + commission (a sell is negative); a coupon is the cash received.
@@ -449,10 +465,30 @@ export function seriesOf(world: GoalWorld, goalId: string): SeriesPoint[] {
 
   return monthsBetween(first, world.month).map((month) => {
     const end = monthEnd(month);
-    const moneyIn = entries
+    let moneyIn = entries
       .filter((entry) => entry.date <= end)
       .reduce((sum, entry) => sum + cash(entry), 0);
-    let value: number | null = 0;
+    if (world.cash) {
+      const state = replayCash(world.cash.trades, world.cash.movements, end);
+      moneyIn = state.externalFlows
+        .filter((flow) => flow.goalId === goalId)
+        .reduce((sum, flow) => sum + flow.amountCents / 100, 0);
+      moneyIn += entries
+        .filter(
+          (entry) =>
+            entry.date <= end && (entry.type === "opening" || entry.type === "pensionContribution"),
+        )
+        .reduce((sum, entry) => sum + cash(entry), 0);
+      moneyIn += cashEntries
+        .filter((entry) => entry.date <= end)
+        .reduce((sum, entry) => {
+          if (entry.type === "opening") return sum + entry.amountCents / 100;
+          if (entry.type === "transfer")
+            return sum + ((entry.goalId === goalId ? -1 : 1) * entry.amountCents) / 100;
+          return sum;
+        }, 0);
+    }
+    let value: number | null = bucketCashAt(world, goalId, end);
     for (const [productId, units] of holdingsAt(world.ledger, end).units.get(goalId) ?? []) {
       if (units === 0) continue;
       const price = priceAt(world, productId, month);
@@ -502,7 +538,8 @@ export function listWithRangesOf(world: GoalWorld): {
   rows: GoalListRow[];
   ranges: ReadonlyMap<string, OutcomeRange>;
 } {
-  const inputs = world.goals.map((goal) => monteCarloInputOf(world, goal));
+  const activeGoals = world.goals.filter((goal) => !goal.archived);
+  const inputs = activeGoals.map((goal) => monteCarloInputOf(world, goal));
   const runnable = inputs.filter((input) => input !== null);
   const { goals: distributions } = runnable.length
     ? runMonteCarlo(
@@ -513,7 +550,7 @@ export function listWithRangesOf(world: GoalWorld): {
     : { goals: [] };
   const ranges = new Map<string, OutcomeRange>();
   let next = 0;
-  const rows = world.goals.map((goal, index) => {
+  const rows = activeGoals.map((goal, index) => {
     const input = inputs[index];
     const distribution = input ? distributions[next++] : undefined;
     if (input && distribution) {

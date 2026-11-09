@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { Kysely } from "kysely";
+import type { Kysely, Selectable } from "kysely";
 import { z } from "zod";
+import { holdingsAt } from "../engine/holdings.ts";
 import type { Goal, GoalInput } from "../engine/schemas.ts";
 import {
   goalInputSchema,
@@ -8,6 +9,7 @@ import {
   planVersionSchema,
   settingsSchema,
 } from "../engine/schemas.ts";
+import { loadCashState } from "./cashLedger.ts";
 import type { DB } from "./db.ts";
 import { loadDocument, saveDocument } from "./documents.ts";
 import type { Router } from "./router.ts";
@@ -15,6 +17,7 @@ import { HttpError } from "./router.ts";
 import { findOr404, idQuery } from "./rows.ts";
 import type { GoalTable } from "./schema.ts";
 import { toFlag } from "./schema.ts";
+import { loadLedger } from "./transactions.ts";
 
 const versionKey = z.object({ goalId: z.string().min(1), fromMonth: monthSchema });
 
@@ -23,7 +26,7 @@ export const toColumns = (input: GoalInput) => ({
   countsTowardFi: toFlag(input.countsTowardFi),
 });
 
-const toGoal = (row: GoalTable, plan: Goal["plan"]): Goal => ({
+const toGoal = (row: Selectable<GoalTable>, plan: Goal["plan"]): Goal => ({
   id: row.id,
   name: row.name,
   priority: row.priority,
@@ -32,6 +35,7 @@ const toGoal = (row: GoalTable, plan: Goal["plan"]): Goal => ({
   contributionGrowth: row.contributionGrowth,
   minProb: row.minProb,
   countsTowardFi: row.countsTowardFi === 1,
+  archived: row.archived === 1,
   plan,
 });
 
@@ -45,22 +49,58 @@ export function registerGoalRoutes(router: Router, db: Kysely<DB>): void {
       .orderBy("fromMonth")
       .execute();
 
-  router.route("GET", "/api/goals", z.object({}), async () => {
-    const goals = await db.selectFrom("goal").selectAll().orderBy("name").execute();
-    const plans = await db
-      .selectFrom("contributionPlan")
-      .selectAll()
-      .orderBy("fromMonth")
-      .execute();
-    return goals.map((goal) =>
-      toGoal(
-        goal,
-        plans
-          .filter((version) => version.goalId === goal.id)
-          .map(({ fromMonth, monthlyCents }) => ({ fromMonth, monthlyCents })),
-      ),
-    );
-  });
+  router.route(
+    "GET",
+    "/api/goals",
+    z.object({ includeArchived: z.enum(["true", "false"]).default("false") }),
+    async ({ includeArchived }) => {
+      const goals = await db.selectFrom("goal").selectAll().orderBy("name").execute();
+      const plans = await db
+        .selectFrom("contributionPlan")
+        .selectAll()
+        .orderBy("fromMonth")
+        .execute();
+      return goals
+        .filter((goal) => includeArchived === "true" || goal.archived !== 1)
+        .map((goal) =>
+          toGoal(
+            goal,
+            plans
+              .filter((version) => version.goalId === goal.id)
+              .map(({ fromMonth, monthlyCents }) => ({ fromMonth, monthlyCents })),
+          ),
+        );
+    },
+  );
+
+  router.route(
+    "POST",
+    "/api/goals/archive",
+    z.object({ id: z.string().min(1), archived: z.boolean() }),
+    ({ id, archived }) =>
+      db.transaction().execute(async (trx) => {
+        await findOr404(trx, "goal", id, "goal");
+        if (archived) {
+          const held = holdingsAt(await loadLedger(trx), "9999-12-31").units.get(id);
+          const cash = await loadCashState(trx);
+          if (
+            [...(held?.values() ?? [])].some((units) => Math.abs(units) > 0.0000005) ||
+            (cash.balances.get(id) ?? 0) !== 0
+          ) {
+            throw new HttpError(
+              409,
+              "Sell the holdings and withdraw or transfer all Bucket Cash before archiving.",
+            );
+          }
+        }
+        await trx
+          .updateTable("goal")
+          .set({ archived: toFlag(archived) })
+          .where("id", "=", id)
+          .execute();
+        return { id, archived };
+      }),
+  );
 
   router.route("POST", "/api/goals", goalInputSchema, async (input) => {
     const id = randomUUID();
@@ -78,11 +118,20 @@ export function registerGoalRoutes(router: Router, db: Kysely<DB>): void {
     async ({ id, ...input }) => {
       await findOr404(db, "goal", id, "goal");
       await db.updateTable("goal").set(toColumns(input)).where("id", "=", id).execute();
-      return { id, ...input, plan: await planOf(id) } satisfies Goal;
+      const row = await findOr404(db, "goal", id, "goal");
+      return { id, ...input, archived: row.archived === 1, plan: await planOf(id) } satisfies Goal;
     },
   );
 
   router.route("DELETE", "/api/goals", idQuery, async ({ id }) => {
+    const cashHistory = await db
+      .selectFrom("cashMovement")
+      .select("id")
+      .where((eb) => eb.or([eb("goalId", "=", id), eb("toGoalId", "=", id)]))
+      .limit(1)
+      .executeTakeFirst();
+    if (cashHistory)
+      throw new HttpError(409, "This bucket has cash history. Archive it after emptying it.");
     const { n } = await db
       .selectFrom("transaction")
       .select((eb) => eb.fn.countAll<number>().as("n"))

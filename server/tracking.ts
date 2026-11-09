@@ -24,11 +24,13 @@ import type {
 } from "../engine/trackingViews.ts";
 import { performanceOf, totalOf } from "../engine/trackingViews.ts";
 import { fromCents, fromScaled } from "../engine/units.ts";
+import { loadCashMovements } from "./cashLedger.ts";
 import type { DB } from "./db.ts";
 import { loadDocument } from "./documents.ts";
 import { loadWorld } from "./goalViews.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
+import { loadLedger } from "./transactions.ts";
 
 const NO_PRICE_NOTE = "A held product has no price, so the performance cannot be computed.";
 const NO_TRANSACTIONS_NOTE = "There are no transactions in this scope yet.";
@@ -82,6 +84,7 @@ export async function loadPerformanceInput(
     amount: fromCents(row.amountCents),
   }));
   return {
+    cashLedger: { trades: await loadLedger(db), movements: await loadCashMovements(db) },
     transactions,
     prices: prices.map(({ productId, month, priceScaled }) => ({
       productId,
@@ -133,7 +136,8 @@ export async function loadPlanVsActual(db: Kysely<DB>, today: string): Promise<P
         }
       : undefined;
   const goals = planVsActual({
-    goals: world.goals,
+    goals: world.goals.filter((goal) => !goal.archived),
+    cashContributions: world.cash?.movements.filter((movement) => movement.type === "contribution"),
     plans: plans.map(({ goalId, fromMonth, monthlyCents }) => ({
       goalId,
       fromMonth,
@@ -215,7 +219,10 @@ export function registerTrackingRoutes(router: Router, db: Kysely<DB>, today: ()
     async (): Promise<PerformanceScopesView> => {
       const world = await loadWorld(db, today());
       const input = await loadPerformanceInput(db, world);
-      const rows: PerformanceScopeRow[] = performanceScopes(input.transactions).map((scope) => {
+      const rows: PerformanceScopeRow[] = performanceScopes(
+        input.transactions,
+        input.cashLedger?.movements,
+      ).map((scope) => {
         const { summary, note } = performanceFor(input, scope);
         return { scope, label: labelOf(world, scope), summary, note };
       });

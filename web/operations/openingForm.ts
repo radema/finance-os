@@ -17,7 +17,8 @@ export function buildOpeningInput(
   asOf: string,
   products: readonly { id: string; name: string }[],
   rows: Readonly<Record<string, OpeningRow | undefined>>,
-): { input: OpeningPositionInput } | { error: string } {
+  allowEmpty = false,
+): { input: Omit<OpeningPositionInput, "cashBalances"> } | { error: string } {
   if (asOf === "") return { error: "Choose the as-of date." };
   const positions: OpeningPositionInput["positions"] = [];
   for (const { id, name } of products) {
@@ -35,6 +36,6 @@ export function buildOpeningInput(
       parts: row.split.parts.map(({ goalId, units }) => ({ goalId, units })),
     });
   }
-  if (positions.length === 0) return { error: "Fill in at least one product." };
+  if (positions.length === 0 && !allowEmpty) return { error: "Fill in at least one product." };
   return { input: { asOf, positions } };
 }

@@ -128,7 +128,9 @@ describe("Setup API", () => {
         countsTowardFi: true,
       });
       expect(edited.body).toMatchObject({ priority: "Wish", minProb: 0.6, countsTowardFi: true });
-      expect((await call<Goal[]>("GET", "/api/goals")).body).toEqual([edited.body]);
+      expect((await call<Goal[]>("GET", "/api/goals")).body).toEqual([
+        { ...edited.body, archived: false },
+      ]);
 
       expect((await call("DELETE", `/api/goals?id=${created.body.id}`)).status).toBe(200);
       expect((await call<Goal[]>("GET", "/api/goals")).body).toEqual([]);

@@ -121,6 +121,22 @@ describe("undoBatch", () => {
         })
         .execute();
     }
+    for (const goalId of ["g1", "g2"]) {
+      await db
+        .insertInto("cashMovement")
+        .values({
+          id: `fund-${goalId}`,
+          date: "2023-01-01",
+          goalId,
+          type: "opening",
+          amountCents: 100_000_000,
+          toGoalId: null,
+          note: "",
+          sourceId: null,
+          importBatchId: null,
+        })
+        .execute();
+    }
     for (const [id] of PRODUCTS) {
       await db
         .insertInto("allocationWeight")

@@ -39,15 +39,19 @@ export function SplitControl({
   buckets,
   commissionCents = 0,
   onConfirm,
+  initialSplit,
+  onClear,
 }: {
   product: { name: string; regime?: string };
   totalUnits: number;
   buckets: readonly Bucket[];
   commissionCents?: number;
   onConfirm: (split: ConfirmedSplit) => void;
+  onClear?: () => void;
+  initialSplit?: ConfirmedSplit;
 }) {
   const [choice, setChoice] = useState<Choice>({ oneGoalId: "", typed: {} });
-  const [confirmed, setConfirmed] = useState<ConfirmedSplit>();
+  const [confirmed, setConfirmed] = useState<ConfirmedSplit | undefined>(initialSplit);
   const proposal = propose(totalUnits, commissionCents, buckets, choice);
   const nameOf = (goalId: string) => buckets.find((b) => b.goalId === goalId);
   const hasWeights = buckets.some((b) => (b.weight ?? 0) > 0);
@@ -73,7 +77,14 @@ export function SplitControl({
           })}
         </ul>
         <div className="actions">
-          <button className="btn btn-quiet" type="button" onClick={() => setConfirmed(undefined)}>
+          <button
+            className="btn btn-quiet"
+            type="button"
+            onClick={() => {
+              setConfirmed(undefined);
+              onClear?.();
+            }}
+          >
             Change
           </button>
         </div>

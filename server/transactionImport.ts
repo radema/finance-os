@@ -10,8 +10,11 @@ import type {
 } from "../engine/transactionImport.ts";
 import { parseDecimal, previewTransactionImport } from "../engine/transactionImport.ts";
 import { toCents, toScaled } from "../engine/units.ts";
+import { validateLedgerHistory } from "./cashLedger.ts";
 import type { DB } from "./db.ts";
 import { loadOpeningAsOf } from "./openingPosition.ts";
+import { previewWrite } from "./previewWrite.ts";
+import { HttpError } from "./router.ts";
 import type { ImportBatchTable } from "./schema.ts";
 import { loadLedger } from "./transactions.ts";
 
@@ -57,7 +60,26 @@ export async function previewImport(
   rows: readonly ImportRow[],
   decisions: Readonly<Record<number, RowDecision>>,
 ): Promise<PreviewRow[]> {
-  return previewTransactionImport(rows, await loadImportState(db), decisions);
+  const previews = previewTransactionImport(rows, await loadImportState(db), decisions);
+  try {
+    await previewWrite(db, (trx) =>
+      writeTransactionImport(trx, rows, decisions, { sourceName: "Preview", fileName: "Preview" }),
+    );
+    return previews;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Invalid transaction history.";
+    return previews.map((row) =>
+      row.status === "ready"
+        ? {
+            ...row,
+            status: "needs fix",
+            reasons: [...row.reasons, reason],
+            split: null,
+            couponParts: [],
+          }
+        : row,
+    );
+  }
 }
 
 /**
@@ -73,74 +95,95 @@ export function commitTransactionImport(
   decisions: Readonly<Record<number, RowDecision>>,
   source: ImportSource,
 ): Promise<ImportBatch | null> {
-  return db.transaction().execute(async (trx) => {
-    const state = await loadImportState(trx);
-    const previews = previewTransactionImport(rows, state, decisions);
-    const ready = previews.flatMap((preview, index) => {
-      const row = rows[index];
-      return preview.status === "ready" && row ? [{ row, preview }] : [];
-    });
-    if (ready.length === 0) return null;
+  return db.transaction().execute((trx) => writeTransactionImport(trx, rows, decisions, source));
+}
 
-    const batch: ImportBatch = {
-      id: randomUUID(),
-      kind: "transactions",
-      ...source,
-      createdAt: new Date().toISOString(),
-      rowsRead: rows.length,
-      rowsImported: ready.length,
-      rowsSkipped: rows.length - ready.length,
-      undoneAt: null,
-      priorPrices: null,
-      createdIds: null,
-    };
-    await trx.insertInto("importBatch").values(batch).execute();
-
-    const regimes = new Map(state.products.map((product) => [product.id, product.regime]));
-    for (const { row, preview } of ready) {
-      const productId = preview.productId as string;
-      // A coupon: qty 0, price 0 (it never enters the PMC), the net cash as the amount.
-      for (const part of preview.couponParts) {
-        await trx
-          .insertInto("transaction")
-          .values({
-            id: randomUUID(),
-            date: row.date as string,
-            goalId: part.goalId,
-            productId,
-            type: "coupon",
-            qtyScaled: 0,
-            priceScaled: 0,
-            commissionCents: null,
-            amountCents: part.amountCents,
-            note: "",
-            flow: null,
-            importBatchId: batch.id,
-          })
-          .execute();
-      }
-      const regime = regimes.get(productId) as Regime;
-      const price = parseDecimal(row.price) as number;
-      for (const part of preview.split?.parts ?? []) {
-        await trx
-          .insertInto("transaction")
-          .values({
-            id: randomUUID(),
-            date: row.date as string,
-            goalId: part.goalId,
-            productId,
-            type: row.type === "sell" ? "sell" : "buy",
-            qtyScaled: toScaled(row.type === "sell" ? -part.units : part.units),
-            priceScaled: toScaled(price),
-            commissionCents: row.commission === null ? null : part.commissionCents,
-            amountCents: toCents(part.units * unitPrice(regime, price)),
-            note: row.note ?? "",
-            flow: null,
-            importBatchId: batch.id,
-          })
-          .execute();
-      }
-    }
-    return batch;
+async function writeTransactionImport(
+  trx: Kysely<DB>,
+  rows: readonly ImportRow[],
+  decisions: Readonly<Record<number, RowDecision>>,
+  source: ImportSource,
+): Promise<ImportBatch | null> {
+  const state = await loadImportState(trx);
+  const previews = previewTransactionImport(rows, state, decisions);
+  const ready = previews.flatMap((preview, index) => {
+    const row = rows[index];
+    return preview.status === "ready" && row ? [{ row, preview }] : [];
   });
+  if (ready.length === 0) return null;
+  const archived = new Set(
+    (await trx.selectFrom("goal").select("id").where("archived", "=", 1).execute()).map(
+      (goal) => goal.id,
+    ),
+  );
+  if (
+    ready.some(({ preview }) =>
+      [...preview.couponParts, ...(preview.split?.parts ?? [])].some((part) =>
+        archived.has(part.goalId),
+      ),
+    )
+  )
+    throw new HttpError(409, "Restore archived buckets before importing trades.");
+
+  const batch: ImportBatch = {
+    id: randomUUID(),
+    kind: "transactions",
+    ...source,
+    createdAt: new Date().toISOString(),
+    rowsRead: rows.length,
+    rowsImported: ready.length,
+    rowsSkipped: rows.length - ready.length,
+    undoneAt: null,
+    priorPrices: null,
+    createdIds: null,
+  };
+  await trx.insertInto("importBatch").values(batch).execute();
+
+  const regimes = new Map(state.products.map((product) => [product.id, product.regime]));
+  for (const { row, preview } of ready) {
+    const productId = preview.productId as string;
+    // A coupon: qty 0, price 0 (it never enters the PMC), the net cash as the amount.
+    for (const part of preview.couponParts) {
+      await trx
+        .insertInto("transaction")
+        .values({
+          id: randomUUID(),
+          date: row.date as string,
+          goalId: part.goalId,
+          productId,
+          type: "coupon",
+          qtyScaled: 0,
+          priceScaled: 0,
+          commissionCents: null,
+          amountCents: part.amountCents,
+          note: "",
+          flow: null,
+          importBatchId: batch.id,
+        })
+        .execute();
+    }
+    const regime = regimes.get(productId) as Regime;
+    const price = parseDecimal(row.price) as number;
+    for (const part of preview.split?.parts ?? []) {
+      await trx
+        .insertInto("transaction")
+        .values({
+          id: randomUUID(),
+          date: row.date as string,
+          goalId: part.goalId,
+          productId,
+          type: row.type === "sell" ? "sell" : "buy",
+          qtyScaled: toScaled(row.type === "sell" ? -part.units : part.units),
+          priceScaled: toScaled(price),
+          commissionCents: row.commission === null ? null : part.commissionCents,
+          amountCents: toCents(part.units * unitPrice(regime, price)),
+          note: row.note ?? "",
+          flow: null,
+          importBatchId: batch.id,
+        })
+        .execute();
+    }
+  }
+  await validateLedgerHistory(trx);
+  return batch;
 }

@@ -41,6 +41,9 @@ coverage/
 *-shm
 *.xlsx
 *.csv
+*.xml
+/portfolio_manager.xml
+/personal-import/
 !/fixtures/**/*.sqlite
 !/fixtures/**/*.db
 !/fixtures/**/*.xlsx
@@ -49,7 +52,7 @@ coverage/
 # Agent worktrees and local agent settings
 .claude/worktrees/
 .claude/settings.local.json
-
+.claude/handoff/
 # Editors / OS
 .DS_Store
 Thumbs.db

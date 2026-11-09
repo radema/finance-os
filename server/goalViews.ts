@@ -7,6 +7,7 @@ import { unitPrice } from "../engine/holdings.ts";
 import { monthEnd } from "../engine/months.ts";
 import { correlationsSchema, settingsSchema } from "../engine/schemas.ts";
 import { fromCents, fromScaled } from "../engine/units.ts";
+import { loadCashMovements } from "./cashLedger.ts";
 import type { DB } from "./db.ts";
 import { loadDocument } from "./documents.ts";
 import { loadPensionPlan, voluntaryYtdCents } from "./pensionPlan.ts";
@@ -28,6 +29,7 @@ export async function loadWorld(db: Kysely<DB>, today: string): Promise<GoalWorl
   const plans = await db.selectFrom("contributionPlan").selectAll().execute();
   const weights = await db.selectFrom("allocationWeight").selectAll().execute();
   const ledger = await loadLedger(db);
+  const movements = await loadCashMovements(db);
   const settings = await loadDocument(db, "settings", settingsSchema);
   const correlations = await loadDocument(db, "correlations", correlationsSchema);
   const pension = await loadPensionPlan(db);
@@ -49,6 +51,7 @@ export async function loadWorld(db: Kysely<DB>, today: string): Promise<GoalWorl
   return {
     products: new Map(products.map((product) => [product.id, product])),
     goals: goals.map((goal) => ({
+      archived: goal.archived === 1,
       id: goal.id,
       name: goal.name,
       priority: goal.priority,
@@ -64,6 +67,7 @@ export async function loadWorld(db: Kysely<DB>, today: string): Promise<GoalWorl
     })),
     weights,
     ledger: ledger.map((entry) => ({ ...entry, amount: fromCents(entry.amountCents) })),
+    cash: { trades: ledger, movements },
     settings,
     correlations: correlations.matrix,
     pension,
@@ -75,14 +79,21 @@ export async function loadWorld(db: Kysely<DB>, today: string): Promise<GoalWorl
 
 /** The Goals list and the Goal detail: read models computed from the ledger, the prices and the engine. */
 export function registerGoalViewRoutes(router: Router, db: Kysely<DB>, today: () => string): void {
-  router.route("GET", "/api/goal-list", z.object({}), async (): Promise<GoalListView> => {
-    const world = await loadWorld(db, today());
-    return {
-      asOf: monthEnd(world.month),
-      sampleAvailable: await isEmpty(db),
-      goals: listRowsOf(world),
-    };
-  });
+  router.route(
+    "GET",
+    "/api/goal-list",
+    z.object({ includeArchived: z.enum(["true", "false"]).default("false") }),
+    async ({ includeArchived }): Promise<GoalListView> => {
+      const world = await loadWorld(db, today());
+      if (includeArchived === "true")
+        world.goals = world.goals.map((goal) => ({ ...goal, archived: false }));
+      return {
+        asOf: monthEnd(world.month),
+        sampleAvailable: await isEmpty(db),
+        goals: listRowsOf(world),
+      };
+    },
+  );
 
   router.route("GET", "/api/goal-detail", idQuery, async ({ id }): Promise<GoalDetailView> => {
     const world = await loadWorld(db, today());
