@@ -11,6 +11,11 @@ GBI planner is a goal-based investing app for connecting your investments to the
 to achieve: a future purchase, retirement, or financial independence. Define your goals, track your portfolio, and explore how
 contributions, costs, taxes, and market assumptions affect your plan.
 
+This project is a first experiment in building a product from idea to working application. Its
+primary purpose is to learn by doing: exploring the different components of a product, from domain
+modelling and financial calculations to the interface, API, storage, testing, and delivery, and
+understanding how they fit together through agent-assisted development.
+
 It is a local, single-user application: a browser interface backed by a server on your own computer.
 Your financial records stay on your machine. The current planning model focuses on EUR investments
 and the Italian context, including Fineco imports and pension funds. It helps you plan; it does not
