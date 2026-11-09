@@ -125,7 +125,13 @@ export function AppShell({ route }: { route: string }) {
             onClick={toggleSidebar}
           >
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d={collapsed ? "M7 4l6 6-6 6" : "M13 4l-6 6 6 6"}
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
         </div>
