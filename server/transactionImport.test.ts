@@ -76,6 +76,22 @@ describe("transaction import", () => {
         })
         .execute();
     }
+    for (const goalId of ["g1", "g2"]) {
+      await db
+        .insertInto("cashMovement")
+        .values({
+          id: `fund-${goalId}`,
+          date: "2023-01-01",
+          goalId,
+          type: "opening",
+          amountCents: 100_000_000,
+          toGoalId: null,
+          note: "",
+          sourceId: null,
+          importBatchId: null,
+        })
+        .execute();
+    }
     // Every product weighs in g1 only, except the world ETF, which weighs in both goals.
     for (const [id] of PRODUCTS) {
       await db
@@ -107,6 +123,22 @@ describe("transaction import", () => {
     9: { goalId: "g1" },
     13: { goalId: "g1" },
   };
+
+  it("marks unfunded broker trades as needing a fix without persisting preview writes", async () => {
+    await db.deleteFrom("cashMovement").execute();
+    const rows = finecoRows(buildFinecoXlsx());
+    const preview = await previewImport(db, rows, splitRow8);
+    expect(
+      preview.some(
+        (row) =>
+          row.status === "needs fix" &&
+          row.reasons.some((reason) => reason.includes("cash") || reason.includes("Cash")),
+      ),
+    ).toBe(true);
+    expect(preview.some((row) => row.status === "ready")).toBe(false);
+    expect(await db.selectFrom("transaction").selectAll().execute()).toEqual([]);
+    expect(await db.selectFrom("importBatch").selectAll().execute()).toEqual([]);
+  });
 
   it("imports the synthetic file once and the second import adds 0 rows (AC-31)", async () => {
     const rows = finecoRows(buildFinecoXlsx());
@@ -164,8 +196,29 @@ describe("transaction import", () => {
     const [first] = finecoRows(buildFinecoXlsx());
     if (!first) throw new Error("no row");
     const sell = { ...first, type: "sell" as const, qty: "-8", bucket: "g1" };
+    await db
+      .insertInto("transaction")
+      .values({
+        id: "initial",
+        date: "2023-12-01",
+        goalId: "g1",
+        productId: "p-world",
+        type: "opening",
+        qtyScaled: 8_000_000,
+        priceScaled: 85_500_000,
+        commissionCents: null,
+        amountCents: 68400,
+        note: "",
+        importBatchId: null,
+        flow: null,
+      })
+      .execute();
     await commitTransactionImport(db, [sell], {}, SOURCE);
-    const [stored] = await db.selectFrom("transaction").selectAll().execute();
+    const [stored] = await db
+      .selectFrom("transaction")
+      .selectAll()
+      .where("type", "=", "sell")
+      .execute();
     expect([stored?.type, stored?.qtyScaled]).toEqual(["sell", -8_000_000]);
   });
 
@@ -175,8 +228,9 @@ describe("transaction import", () => {
       ...splitRow8,
       8: { split: { confirmed: false, units: [{ goalId: "g1", units: 10 }] } },
     };
-    const batch = await commitTransactionImport(db, rows, unconfirmed, SOURCE);
-    expect(batch?.rowsImported).toBe(6);
+    await expect(commitTransactionImport(db, rows, unconfirmed, SOURCE)).rejects.toThrow(
+      /Insufficient holdings/,
+    );
     const onDay = await db
       .selectFrom("transaction")
       .selectAll()
@@ -188,13 +242,10 @@ describe("transaction import", () => {
   it("never trusts the client: a row that is not ready is not written", async () => {
     const rows = finecoRows(buildFinecoXlsx());
     // no decision for row 8: the world ETF is in two buckets
-    const batch = await commitTransactionImport(
-      db,
-      rows,
-      { 9: { goalId: "g1" }, 13: { goalId: "g1" } },
-      SOURCE,
-    );
-    expect(batch?.rowsImported).toBe(6);
+    await expect(
+      commitTransactionImport(db, rows, { 9: { goalId: "g1" }, 13: { goalId: "g1" } }, SOURCE),
+    ).rejects.toThrow(/Insufficient holdings/);
+    expect(await db.selectFrom("transaction").selectAll().execute()).toEqual([]);
   });
 
   it("identical rows: needs fix, then after confirming they store and re-import adds 0 rows", async () => {

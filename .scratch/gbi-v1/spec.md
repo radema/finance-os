@@ -118,8 +118,38 @@ section adds the Node type-stripping rules above.
 
 ### Domain model
 
-Transactions and prices are the only sources of truth for holdings. Values, cost bases and
+Transactions and prices are the sources of truth for product holdings. Values, cost bases and
 performance are always derived.
+
+### Bucket Cash amendment (#167, accepted 2026-11-08)
+
+This amendment supersedes transaction-based contribution and cash-flow descriptions below for
+non-pension buckets. Each bucket has a separate nominal Bucket Cash balance (€1 per euro),
+derived from opening cash, explicit cash movements and trade settlement. It is system-owned,
+distinct from a user-configured deposit-account product, and participates in value, performance,
+projections and financial independence without market return or product tax assumptions.
+
+Buys debit gross amount plus commission; sells credit gross amount less commission. Coupons and
+income credit cash; fees and taxes debit it. Only external contributions count as actual planned
+contributions. External withdrawals leave the portfolio; internal transfers move cash between
+buckets and cancel at account scope. Pension contributions retain their dedicated workflow.
+Opening holdings and cash establish the baseline and are not contributions.
+
+Modern operations must keep every historical cash balance nonnegative. An unfunded manual buy
+requires explicit confirmation of an external contribution for the exact shortfall, committed
+atomically with the trade. Imports never infer funding. Transactions and cash after a baseline
+must be strictly later than its date; replacing a baseline revalidates all retained history.
+Pre-migration trades retain a legacy marker and derived compatibility funding without rewriting
+their original records. Accounting edits remove that marker; note-only edits preserve it.
+
+Buckets may be archived only after holdings and cash are empty. History is preserved, reopening
+is supported, and archived buckets are excluded from current planning and trading. Canonical
+CSV imports cover opening holdings/cash, trades and cash movements; source IDs enforce exactly-once
+retries and conflicting retries fail. Preview executes the same validations as commit in a
+rolled-back transaction. Cash ordering survives JSON export/restore through persistent entry order.
+Products retained solely for fully sold historical positions, with no allocation target, do not
+require current prices and do not generate current stale-price warnings (user clarification,
+2026-11-09). Their historical transactions and prices remain available.
 
 | Entity | Key fields | Notes |
 |---|---|---|

@@ -140,7 +140,17 @@ describe("Goals list and Goal detail API", () => {
     expect(home).toMatchObject({ priority: "Need", target: 40_000, missingPrices: false });
     expect(home?.value).toBeCloseTo(18_000, 6);
     expect(Object.keys(home ?? {}).sort()).toEqual(
-      ["id", "missingPrices", "name", "outlook", "priority", "slot", "target", "value"].sort(),
+      [
+        "bucketCash",
+        "id",
+        "missingPrices",
+        "name",
+        "outlook",
+        "priority",
+        "slot",
+        "target",
+        "value",
+      ].sort(),
     );
   });
 

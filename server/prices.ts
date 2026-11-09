@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import { z } from "zod";
 import { CsvError } from "../engine/csv.ts";
+import { holdingsAt } from "../engine/holdings.ts";
 import { addMonths, monthEnd, monthsEnding } from "../engine/months.ts";
 import { priceAge } from "../engine/priceAge.ts";
 import type { PriceCsvOptions, PriceRow } from "../engine/priceCsv.ts";
@@ -20,6 +21,7 @@ import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
 import { findOr404 } from "./rows.ts";
 import type { ImportBatchTable, PricePointTable } from "./schema.ts";
+import { loadLedger } from "./transactions.ts";
 
 /** How many months the month-end grid shows. */
 const GRID_MONTHS = 6;
@@ -197,9 +199,15 @@ export async function loadPriceOverview(db: Kysely<DB>, today: string) {
   const products = await db.selectFrom("product").selectAll().orderBy("name").execute();
   const points = await db.selectFrom("pricePoint").selectAll().orderBy("month", "desc").execute();
   const { thresholds } = await loadDocument(db, "settings", settingsSchema);
+  const holdings = holdingsAt(await loadLedger(db), today).accountUnits;
+  const weights = await db.selectFrom("allocationWeight").selectAll().execute();
   return products.map((product) => {
     const own = points.filter((p) => p.productId === product.id);
     const last = own[0];
+    const historicalOnly =
+      holdings.has(product.id) &&
+      (holdings.get(product.id) ?? 0) === 0 &&
+      !weights.some((weight) => weight.productId === product.id && weight.weight > 0);
     return {
       productId: product.id,
       name: product.name,
@@ -207,7 +215,9 @@ export async function loadPriceOverview(db: Kysely<DB>, today: string) {
       priceSource: product.priceSource,
       ticker: product.ticker,
       lastPrice: last ? { price: fromScaled(last.priceScaled), priceDate: last.priceDate } : null,
-      age: priceAge(product, own, today, thresholds.dailyPriceAgeDays),
+      age: historicalOnly
+        ? { old: false, reason: "Fully sold historical position; no current price is required." }
+        : priceAge(product, own, today, thresholds.dailyPriceAgeDays),
       brokerUnits:
         product.brokerUnitsScaled === null ? null : fromScaled(product.brokerUnitsScaled),
       brokerUnitsDate: product.brokerUnitsDate,

@@ -67,4 +67,10 @@ describe("buildOpeningInput", () => {
       error: "Choose the as-of date.",
     });
   });
+
+  it("allows no product when the caller supplies opening cash", () => {
+    expect(buildOpeningInput("2026-01-01", products, {}, true)).toEqual({
+      input: { asOf: "2026-01-01", positions: [] },
+    });
+  });
 });

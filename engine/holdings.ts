@@ -6,6 +6,8 @@ export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
 /** One ledger row. Money is in euros as floats; the server converts stored cents before the call. */
 export type LedgerRow = {
+  /** Existing records retain their original plan-versus-actual interpretation. */
+  legacy?: boolean;
   /** ISO date, YYYY-MM-DD. */
   date: string;
   goalId: string;

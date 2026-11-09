@@ -274,6 +274,15 @@ describe("scopes", () => {
     ]);
   });
 
+  it("includes cash-only source and destination buckets in scopes", () => {
+    expect(performanceScopes([], [{ goalId: "cash-source", toGoalId: "cash-target" }])).toEqual([
+      { kind: "all" },
+      { kind: "allExceptPension" },
+      { kind: "bucket", goalId: "cash-source" },
+      { kind: "bucket", goalId: "cash-target" },
+    ]);
+  });
+
   it("returns a series for each kind of scope", () => {
     expect(valuesOf(all)).toEqual([230, 304, 328]);
     expect(valuesOf({ kind: "allExceptPension" })).toEqual([150, 220, 240]);

@@ -56,8 +56,14 @@ describe("Alerts and dismissals", () => {
         importBatchId: null,
       })
       .execute();
-  const buy = (id: string, date: string, goalId: string, productId: string, commission: number) =>
-    db
+  const buy = async (
+    id: string,
+    date: string,
+    goalId: string,
+    productId: string,
+    commission: number,
+  ) => {
+    await db
       .insertInto("transaction")
       .values({
         id,
@@ -74,6 +80,8 @@ describe("Alerts and dismissals", () => {
         flow: null,
       })
       .execute();
+    await db.insertInto("legacyTransaction").values({ id }).execute();
+  };
   const setProduct = (id: string, values: Partial<DB["product"]>) =>
     db.updateTable("product").set(values).where("id", "=", id).execute();
   const dropPrice = (productId: string, month: string) =>

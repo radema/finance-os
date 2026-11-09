@@ -272,7 +272,7 @@ function sellHoldings(bucket: MonteCarloGoal): {
   zainetto: Zainetto | undefined;
 } {
   const { settings } = bucket;
-  const { gross, tax } = liquidateGoal(bucket, bucket.positions, bucket.asOf);
+  const { gross, tax } = liquidateGoal({ ...bucket, bucketCash: 0 }, bucket.positions, bucket.asOf);
   const { zainetto } = settings;
   if (!zainetto || settings.taxStd <= 0) return { tax, proceeds: gross - tax, zainetto };
   const withoutZainetto = liquidateGoal(

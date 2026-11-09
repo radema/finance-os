@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { loadCashState } from "./cashLedger.ts";
 import type { DB } from "./db.ts";
 import { openDatabase } from "./db.ts";
 import { exportAll, importAll } from "./exchange.ts";
@@ -119,6 +120,43 @@ describe("export and import", () => {
     }
   });
 
+  it("preserves same-day chained transfer order through export and restore", async () => {
+    await db
+      .insertInto("goal")
+      .values([GOAL, { ...GOAL, id: "g2" }, { ...GOAL, id: "g3" }])
+      .execute();
+    const common = {
+      date: "2026-01-01",
+      amountCents: 100,
+      note: "",
+      sourceId: null,
+      importBatchId: null,
+    };
+    await db
+      .insertInto("cashMovement")
+      .values([
+        { ...common, id: "z", goalId: "g1", type: "contribution", toGoalId: null },
+        { ...common, id: "y", goalId: "g1", type: "transfer", toGoalId: "g2" },
+        { ...common, id: "x", goalId: "g2", type: "transfer", toGoalId: "g3" },
+      ])
+      .execute();
+    const document = await exportAll(db);
+    const otherDir = mkdtempSync(join(tmpdir(), "gbi-exchange-"));
+    dirs.push(otherDir);
+    const other = await openDatabase(otherDir);
+    try {
+      await importAll(other, otherDir, "2026-05-01", document);
+      expect((await loadCashState(other)).balances.get("g3")).toBe(100);
+      expect((await exportAll(other)).tables.cash_movement?.map((row) => row.id)).toEqual([
+        "z",
+        "y",
+        "x",
+      ]);
+    } finally {
+      await other.destroy();
+    }
+  });
+
   it("gives equal bytes for equal data, whatever the insert order", async () => {
     await seed(db);
     const otherDir = mkdtempSync(join(tmpdir(), "gbi-exchange-"));
@@ -157,7 +195,7 @@ describe("export and import", () => {
   it("carries the migration version and no timestamp", async () => {
     const document = await exportAll(db);
     expect(Object.keys(document)).toEqual(["schemaVersion", "tables"]);
-    expect(document.schemaVersion).toBe("004-transaction-flow");
+    expect(document.schemaVersion).toBe("005-bucket-cash");
   });
 
   it("covers every table in the database, a new one included (AC-40)", async () => {
@@ -197,7 +235,7 @@ describe("export and import", () => {
     const document = { ...(await exportAll(db)), schemaVersion: "005-future" };
 
     await expect(importAll(db, dataDir, "2026-05-01", document)).rejects.toThrow(
-      /migration version 005-future.*004-transaction-flow/,
+      /migration version 005-future.*005-bucket-cash/,
     );
     expect(JSON.stringify(await exportAll(db))).toBe(before);
   });

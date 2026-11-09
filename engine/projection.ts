@@ -55,6 +55,8 @@ export type ProjectionSettings = {
 };
 
 export type ProjectionInput = {
+  /** Technical Bucket Cash stays nominal, without yield, tax or stamp duty. */
+  bucketCash?: number;
   /** ISO date, YYYY-MM-DD. */
   asOf: string;
   goal: {
@@ -258,7 +260,7 @@ export function liquidateGoal(
   goalDate: string = `${input.goal.targetYear}-12-31`,
 ): Liquidation {
   const { goal, products, settings } = input;
-  return liquidate(
+  const result = liquidate(
     positions.map(({ productId, value, basis }) => {
       const params = products.get(productId);
       return {
@@ -277,6 +279,8 @@ export function liquidateGoal(
       firstYear: input.firstYear,
     },
   );
+  const cash = input.bucketCash ?? 0;
+  return { ...result, gross: result.gross + cash, net: result.net + cash };
 }
 
 /**

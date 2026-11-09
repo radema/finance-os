@@ -3,6 +3,7 @@ import { useLoad } from "../api.ts";
 import { hashParams } from "../hashQuery.ts";
 import { CurrentPortfolioScreen } from "../operations/CurrentPortfolioScreen.tsx";
 import { CsvImport } from "../prices/CsvImport.tsx";
+import { CashImport } from "./CashImport.tsx";
 import { PastImports } from "./PastImports.tsx";
 import { RecordImport } from "./RecordImport.tsx";
 import { TransactionsImport } from "./TransactionsImport.tsx";
@@ -14,6 +15,9 @@ const TABS = [
   { key: "products", label: "Products" },
   { key: "goals", label: "Goals" },
   { key: "portfolio", label: "Current portfolio" },
+  { key: "opening-csv", label: "Opening CSV" },
+  { key: "cash-csv", label: "Cash movements CSV" },
+  { key: "ledger-csv", label: "Trades and cash CSV" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -58,6 +62,13 @@ export function ImportScreen() {
         <RecordImport key={tab} kind={tab} onImported={batches.reload} />
       ) : null}
       {tab === "portfolio" ? <CurrentPortfolioScreen /> : null}
+      {tab === "opening-csv" || tab === "cash-csv" || tab === "ledger-csv" ? (
+        <CashImport
+          key={tab}
+          kind={tab === "opening-csv" ? "openings" : tab === "ledger-csv" ? "ledger" : "cash"}
+          onImported={batches.reload}
+        />
+      ) : null}
 
       <PastImports batches={batches} />
     </>

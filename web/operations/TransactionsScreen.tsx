@@ -4,7 +4,7 @@ import type { TransactionType } from "../../engine/holdings.ts";
 import { flowsTaken } from "../../engine/pension.ts";
 import type { Commission, Goal, PensionPlan, Product, Transaction } from "../../engine/schemas.ts";
 import { PENSION_FLOWS } from "../../engine/schemas.ts";
-import { api, messageOf, useLoad } from "../api.ts";
+import { ApiError, api, messageOf, useLoad } from "../api.ts";
 import { DateInput } from "../DateInput.tsx";
 import { copyOfTransaction } from "../duplicate.ts";
 import { checkFields, type FieldErrors } from "../formErrors.ts";
@@ -25,6 +25,7 @@ import {
   TextField,
 } from "../setup/ui.tsx";
 import { useFormErrors } from "../useFormErrors.ts";
+import { CashMovements } from "./CashMovements.tsx";
 import { cashMovement, fieldsFromTransaction, transactionBody } from "./transactionForm.ts";
 
 // `opening` is written by the Current portfolio form in S2, so the form does not offer it.
@@ -159,9 +160,29 @@ function AddForm({
         takesBothFlows,
       );
       // The form has no note field: an edit sends the stored note back so it is kept.
-      await api(editing ? "PUT" : "POST", "/api/transactions", {
-        body: editing ? { ...body, id: editing.id, note: editing.note } : body,
-      });
+      const requestBody = editing ? { ...body, id: editing.id, note: editing.note } : body;
+      try {
+        await api(editing ? "PUT" : "POST", "/api/transactions", { body: requestBody });
+      } catch (failure) {
+        if (
+          !(
+            failure instanceof ApiError &&
+            failure.status === 409 &&
+            !editing &&
+            type === "buy" &&
+            failure.message.startsWith(`Bucket ${goalId} needs `) &&
+            failure.message.includes(` additional funding on ${date}.`)
+          )
+        )
+          throw failure;
+        if (
+          !window.confirm(`${messageOf(failure)}
+
+Add the missing funding and continue?`)
+        )
+          return;
+        await api("POST", "/api/transactions", { body: { ...requestBody, confirmFunding: true } });
+      }
       clear();
       setAmount("");
       setFee("");
@@ -378,6 +399,11 @@ export function TransactionsScreen() {
         )}
       </Resource>
 
+      <p className="note">
+        Opening positions are managed in{" "}
+        <a href="#/operations/import?tab=portfolio">Current portfolio</a>.
+      </p>
+      <CashMovements />
       <Card title="Transactions">
         <div className="inline-form">
           <SelectField
@@ -441,13 +467,18 @@ export function TransactionsScreen() {
                           <td className="num">
                             {t.commissionCents === null ? "–" : formatEuro(t.commissionCents)}
                           </td>
-                          <RowActions
-                            row={t}
-                            editor={editor}
-                            noun="transaction"
-                            editable={t.type !== "opening"}
-                            onDelete={() => void remove(t.id)}
-                          />
+                          {t.type === "opening" ? (
+                            <td>
+                              <a href="#/operations/import?tab=portfolio">Current portfolio</a>
+                            </td>
+                          ) : (
+                            <RowActions
+                              row={t}
+                              editor={editor}
+                              noun="transaction"
+                              onDelete={() => void remove(t.id)}
+                            />
+                          )}
                         </tr>
                       );
                     })}

@@ -199,7 +199,7 @@ function PlanHistory({
 }
 
 export function GoalsTab() {
-  const goals = useLoad<Goal[]>("/api/goals");
+  const goals = useLoad<Goal[]>("/api/goals?includeArchived=true");
   const valuation = useLoad<GoalListView>("/api/goal-list");
   const [form, setForm] = useState<Form>(emptyForm);
   const [selected, setSelected] = useState<string>();
@@ -254,6 +254,16 @@ export function GoalsTab() {
       if (editing?.id === id) reset();
       if (selected === id) setSelected(undefined);
       goals.reload();
+    } catch (failure) {
+      fail(failure);
+    }
+  };
+  const archive = async (goal: Goal) => {
+    try {
+      await api("POST", "/api/goals/archive", { body: { id: goal.id, archived: !goal.archived } });
+      clear();
+      goals.reload();
+      valuation.reload();
     } catch (failure) {
       fail(failure);
     }
@@ -412,13 +422,22 @@ export function GoalsTab() {
                             noun="goal"
                             onDelete={() => void remove(g.id)}
                             before={
-                              <button
-                                className="btn btn-quiet"
-                                type="button"
-                                onClick={() => setSelected(g.id)}
-                              >
-                                Plan
-                              </button>
+                              <>
+                                <button
+                                  className="btn btn-quiet"
+                                  type="button"
+                                  onClick={() => void archive(g)}
+                                >
+                                  {g.archived ? "Reopen" : "Archive"}
+                                </button>
+                                <button
+                                  className="btn btn-quiet"
+                                  type="button"
+                                  onClick={() => setSelected(g.id)}
+                                >
+                                  Plan
+                                </button>
+                              </>
                             }
                           />
                         </tr>

@@ -49,7 +49,9 @@ export async function loadIndependence(db: Kysely<DB>, today: string): Promise<I
   /** A bucket counts when its goal is ticked and, for the pension goal, the pension is included. */
   const counts = (id: string) => ticked.has(id) && (id !== pensionGoalId || fire.includePension);
 
-  const built = world.goals.map((row) => ({ row, ...monteCarloGoalOf(world, row) }));
+  const built = world.goals
+    .filter((row) => !row.archived)
+    .map((row) => ({ row, ...monteCarloGoalOf(world, row) }));
   const view: IndependenceView = {
     asOf,
     fire,

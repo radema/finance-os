@@ -77,6 +77,20 @@ describe("import API", () => {
           countsTowardFi: 0,
         })
         .execute();
+      await db
+        .insertInto("cashMovement")
+        .values({
+          id: `fund-${id}`,
+          date: "2020-01-01",
+          goalId: id,
+          type: "contribution",
+          amountCents: 1_000_000_000,
+          toGoalId: null,
+          note: "Synthetic import funding",
+          sourceId: null,
+          importBatchId: null,
+        })
+        .execute();
     }
     for (const id of ["p-world", "p-bond", "p-btp", "p-gold"]) {
       await db

@@ -1,4 +1,5 @@
 import type { Kysely } from "kysely";
+import { validateLedgerHistory } from "./cashLedger.ts";
 import type { DB } from "./db.ts";
 import { undoCreatedRows } from "./recordImport.ts";
 import { HttpError } from "./router.ts";
@@ -34,6 +35,8 @@ export function undoBatch(
     let kept: string[] = [];
     if (batch.kind === "transactions") {
       await trx.deleteFrom("transaction").where("importBatchId", "=", batchId).execute();
+      await trx.deleteFrom("cashMovement").where("importBatchId", "=", batchId).execute();
+      await validateLedgerHistory(trx);
     } else if (batch.kind === "prices") {
       // A later active batch that overwrote one of these prices holds it as its prior state:
       // restoring over it would bring back a price of this undone batch. Undo that batch first.

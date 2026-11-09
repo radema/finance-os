@@ -57,7 +57,7 @@ export type GoalInput = z.infer<typeof goalInputSchema>;
 /** One version of a goal's monthly plan, in force from `fromMonth`. */
 export const planVersionSchema = z.object({ fromMonth: monthSchema, monthlyCents: cents });
 export type PlanVersionRecord = z.infer<typeof planVersionSchema>;
-export type Goal = GoalInput & { id: string; plan: PlanVersionRecord[] };
+export type Goal = GoalInput & { id: string; plan: PlanVersionRecord[]; archived?: boolean };
 
 // --- Allocation ------------------------------------------------------------------------------
 
@@ -135,15 +135,41 @@ const openingRowSchema = z
   });
 
 /** The Current portfolio form: one asOf date, and per product the total, the PMC and the split. */
-export const openingPositionInputSchema = z.object({
-  asOf: isoDate,
-  positions: z
-    .array(openingRowSchema)
-    .min(1, "add at least one product")
-    .refine((rows) => new Set(rows.map((row) => row.productId)).size === rows.length, {
-      message: "a product appears once",
-    }),
-});
+export const openingPositionInputSchema = z
+  .object({
+    asOf: isoDate,
+    cashBalances: z.array(z.object({ goalId: z.string().min(1), amountCents: cents })).default([]),
+    positions: z
+      .array(openingRowSchema)
+      .refine((rows) => new Set(rows.map((row) => row.productId)).size === rows.length, {
+        message: "a product appears once",
+      }),
+  })
+  .refine((input) => input.positions.length > 0 || input.cashBalances.length > 0, {
+    message: "add holdings or Bucket Cash",
+  })
+  .refine(
+    (input) =>
+      new Set(input.cashBalances.map((row) => row.goalId)).size === input.cashBalances.length,
+    { message: "a cash bucket appears once" },
+  );
+export const cashMovementInputSchema = z
+  .object({
+    date: isoDate,
+    goalId: z.string().min(1),
+    type: z.enum(["contribution", "withdrawal", "transfer", "fee", "tax", "income"]),
+    amountCents: z.number().int().positive(),
+    toGoalId: z.string().min(1).nullable().default(null),
+    note: text.default(""),
+  })
+  .refine(
+    (row) =>
+      row.type === "transfer"
+        ? row.toGoalId !== null && row.toGoalId !== row.goalId
+        : row.toGoalId === null,
+    { message: "a transfer needs a different destination bucket" },
+  );
+export type CashMovementInput = z.infer<typeof cashMovementInputSchema>;
 export type OpeningPositionInput = z.infer<typeof openingPositionInputSchema>;
 
 /** The stored OpeningPosition document: the date of the account's opening position. */

@@ -2,13 +2,16 @@ import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { z } from "zod";
+import { CashLedgerError } from "../engine/cashLedger.ts";
 import type { LedgerRow } from "../engine/holdings.ts";
 import { holdingsAt, unitPrice } from "../engine/holdings.ts";
 import { flowsTaken } from "../engine/pension.ts";
 import type { PensionFlow, Transaction, TransactionInput } from "../engine/schemas.ts";
 import { transactionInputSchema } from "../engine/schemas.ts";
 import { fromCents, fromScaled, toScaled } from "../engine/units.ts";
+import { cashBalances, loadCashState, validateLedgerHistory } from "./cashLedger.ts";
 import type { DB } from "./db.ts";
+import { loadOpeningAsOf } from "./openingPosition.ts";
 import { loadPensionPlan } from "./pensionPlan.ts";
 import type { Router } from "./router.ts";
 import { HttpError } from "./router.ts";
@@ -40,6 +43,10 @@ export const fromRow = (row: TransactionTable): Transaction => ({
 
 /** A ledger row with the stored amount, which a coupon needs: its qty is 0. */
 export type LedgerEntry = LedgerRow & {
+  id: string;
+  legacy: boolean;
+  regime: string;
+  commissionCents: number | null;
   amountCents: number;
   /** A `pensionContribution`'s flow. Null counts as Work. */
   flow: PensionFlow["flow"] | null;
@@ -51,6 +58,7 @@ export async function loadLedger(db: Kysely<DB>): Promise<LedgerEntry[]> {
     .selectFrom("transaction")
     .innerJoin("product", "product.id", "transaction.productId")
     .select([
+      "transaction.id",
       "transaction.date",
       "transaction.goalId",
       "transaction.productId",
@@ -65,7 +73,14 @@ export async function loadLedger(db: Kysely<DB>): Promise<LedgerEntry[]> {
     .orderBy("transaction.date")
     .orderBy(sql`"transaction".rowid`)
     .execute();
+  const legacyIds = new Set(
+    (await db.selectFrom("legacyTransaction").select("id").execute()).map((row) => row.id),
+  );
   return rows.map((row) => ({
+    id: row.id,
+    legacy: legacyIds.has(row.id),
+    regime: row.regime,
+    commissionCents: row.commissionCents,
     date: row.date,
     goalId: row.goalId,
     productId: row.productId,
@@ -109,7 +124,8 @@ export function registerTransactionRoutes(
   const toColumns = async (input: TransactionInput) => {
     const { type, amountCents, price } = input;
     if (type !== "coupon" && price <= 0) throw new HttpError(400, "price: must be above 0");
-    await findOr404(db, "goal", input.goalId, "goal");
+    const goal = await findOr404(db, "goal", input.goalId, "goal");
+    if (goal.archived) throw new HttpError(409, "Restore the archived bucket before trading.");
     const { regime } = await findOr404(db, "product", input.productId, "product");
     const units = type === "coupon" ? 0 : fromCents(amountCents) / unitPrice(regime, price);
     return {
@@ -132,6 +148,48 @@ export function registerTransactionRoutes(
     price: fromScaled(columns.priceScaled),
     flow: columns.flow ?? undefined,
   });
+  const settle = async (
+    trx: Kysely<DB>,
+    input: TransactionInput,
+    id: string,
+    confirmFunding: boolean,
+  ) => {
+    try {
+      await loadCashState(trx);
+    } catch (error) {
+      if (!(error instanceof CashLedgerError)) throw error;
+      if (
+        !confirmFunding ||
+        input.type !== "buy" ||
+        error.goalId !== input.goalId ||
+        error.date !== input.date
+      )
+        throw new HttpError(409, error.message);
+      await trx
+        .insertInto("cashMovement")
+        .values({
+          id: randomUUID(),
+          date: input.date,
+          goalId: input.goalId,
+          type: "contribution",
+          amountCents: error.shortfallCents,
+          toGoalId: null,
+          note: "Confirmed trade funding",
+          sourceId: `funding:${id}:${randomUUID()}`,
+          importBatchId: null,
+        })
+        .execute();
+    }
+    await validateLedgerHistory(trx);
+  };
+  const assertAfterOpening = async (trx: Kysely<DB>, input: TransactionInput) => {
+    const asOf = await loadOpeningAsOf(trx);
+    if (asOf && input.date <= asOf && input.type !== "pensionContribution")
+      throw new HttpError(
+        409,
+        "Ordinary transactions must be after the opening date. Correct the baseline in Current portfolio.",
+      );
+  };
 
   router.route("GET", "/api/transactions", listQuery, async ({ goalId, year }) => {
     let query = db.selectFrom("transaction").selectAll();
@@ -142,42 +200,79 @@ export function registerTransactionRoutes(
     return rows.map(fromRow);
   });
 
-  router.route("POST", "/api/transactions", transactionInputSchema, async (input) => {
-    const id = randomUUID();
-    const columns = await toColumns(input);
-    await db
-      .insertInto("transaction")
-      .values({ id, ...columns })
-      .execute();
-    return { id, ...input, ...stored(columns) } satisfies Transaction;
-  });
-
+  router.route(
+    "POST",
+    "/api/transactions",
+    transactionInputSchema.extend({ confirmFunding: z.boolean().default(false) }),
+    async ({ confirmFunding, ...input }) => {
+      if (input.type === "opening")
+        throw new HttpError(400, "Manage opening positions in Current portfolio.");
+      const id = randomUUID();
+      const columns = await toColumns(input);
+      return db.transaction().execute(async (trx) => {
+        await assertAfterOpening(trx, input);
+        await trx
+          .insertInto("transaction")
+          .values({ id, ...columns })
+          .execute();
+        await settle(trx, input, id, confirmFunding);
+        return { id, ...input, ...stored(columns) } satisfies Transaction;
+      });
+    },
+  );
   router.route(
     "PUT",
     "/api/transactions",
-    transactionInputSchema.extend({ id: z.string().min(1) }),
-    async ({ id, ...input }) => {
-      await findOr404(db, "transaction", id, "transaction");
+    transactionInputSchema.extend({
+      id: z.string().min(1),
+      confirmFunding: z.boolean().default(false),
+    }),
+    async ({ id, confirmFunding, ...input }) => {
+      const prior = await findOr404(db, "transaction", id, "transaction");
+      if (prior.type === "opening" || input.type === "opening")
+        throw new HttpError(409, "Manage opening positions in Current portfolio.");
       const columns = await toColumns(input);
-      await db.updateTable("transaction").set(columns).where("id", "=", id).execute();
-      return { id, ...input, ...stored(columns) } satisfies Transaction;
+      return db.transaction().execute(async (trx) => {
+        const changed = (
+          [
+            "date",
+            "goalId",
+            "productId",
+            "type",
+            "qtyScaled",
+            "priceScaled",
+            "commissionCents",
+            "amountCents",
+            "flow",
+          ] as const
+        ).some((key) => prior[key] !== columns[key]);
+        if (changed) {
+          await assertAfterOpening(trx, input);
+          await trx.deleteFrom("legacyTransaction").where("id", "=", id).execute();
+        }
+        await trx.updateTable("transaction").set(columns).where("id", "=", id).execute();
+        await settle(trx, input, id, confirmFunding);
+        return { id, ...input, ...stored(columns) } satisfies Transaction;
+      });
     },
   );
-
-  router.route("DELETE", "/api/transactions", idQuery, async ({ id }) => {
-    const { numDeletedRows } = await db
-      .deleteFrom("transaction")
-      .where("id", "=", id)
-      .executeTakeFirstOrThrow();
-    if (numDeletedRows === 0n) throw new HttpError(404, "transaction not found");
-    return { id };
-  });
+  router.route("DELETE", "/api/transactions", idQuery, ({ id }) =>
+    db.transaction().execute(async (trx) => {
+      const row = await findOr404(trx, "transaction", id, "transaction");
+      if (row.type === "opening")
+        throw new HttpError(409, "Manage opening positions in Current portfolio.");
+      await trx.deleteFrom("transaction").where("id", "=", id).execute();
+      await validateLedgerHistory(trx);
+      return { id };
+    }),
+  );
 
   // Holdings are derived from the ledger on every call; nothing about them is stored.
   router.route("GET", "/api/holdings", z.object({}), async () => {
     const ledger = await loadLedger(db);
     const { units, accountUnits, pmc } = holdingsAt(ledger, "9999-12-31");
     return {
+      cashBalances: await cashBalances(db),
       buckets: [...units].flatMap(([goalId, products]) =>
         [...products].map(([productId, count]) => ({ goalId, productId, units: count })),
       ),

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import type { GoalListView } from "../../engine/goalViews.ts";
-import type { Product, Settings, Transaction } from "../../engine/schemas.ts";
+import type { Product, Settings } from "../../engine/schemas.ts";
+import type { ConfirmedSplit } from "../../engine/split.ts";
 import { api, messageOf, useLoad } from "../api.ts";
 import { DateInput } from "../DateInput.tsx";
+import { eurosToCents } from "../forms.ts";
 import { TermPopover } from "../glossary/TermPopover.tsx";
-import { formatEuro, formatPrice, formatQuantity } from "../money.ts";
-import { TRANSACTIONS_ROUTE } from "../nav.ts";
+
 import {
   Alert,
   Card,
@@ -34,51 +35,15 @@ const pmcHint = (regime: string): string | undefined =>
       ? undefined
       : "The fiscal cost basis (carico fiscale) Fineco shows.";
 
-function Saved({
-  asOf,
-  rows,
-  goalName,
-  productName,
-}: {
-  asOf: string;
-  rows: Transaction[];
-  goalName: (id: string) => string;
-  productName: (id: string) => string;
-}) {
-  return (
-    <Card title="Current portfolio saved">
-      <p className="saved" role="status">
-        The <TermPopover term="opening">opening position</TermPopover> is saved, as of {asOf}. Edit
-        or delete its rows in <a href={`#/${TRANSACTIONS_ROUTE}`}>Transactions</a>.
-      </p>
-      {rows.length === 0 ? null : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Bucket</th>
-              <th className="num">Units</th>
-              <th className="num">
-                <TermPopover term="pmc">PMC</TermPopover>
-              </th>
-              <th className="num">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((t) => (
-              <tr key={t.id}>
-                <td>{productName(t.productId)}</td>
-                <td>{goalName(t.goalId)}</td>
-                <td className="num">{formatQuantity(t.qty, 6)}</td>
-                <td className="num">{formatPrice(t.price)}</td>
-                <td className="num">{formatEuro(t.amountCents)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </Card>
-  );
+interface Opening {
+  asOf: string | null;
+  positions: {
+    productId: string;
+    totalUnits: number;
+    pmc: number;
+    parts: { goalId: string; units: number }[];
+  }[];
+  cashBalances: { goalId: string; amountCents: number }[];
 }
 
 function ProductRow({
@@ -119,6 +84,8 @@ function ProductRow({
           product={product}
           totalUnits={units}
           buckets={buckets}
+          initialSplit={row.split}
+          onClear={() => onChange({ ...row, split: undefined })}
           onConfirm={(split) => onChange({ ...row, split })}
         />
       ) : null}
@@ -131,16 +98,34 @@ function Form({
   products,
   weights,
   trackingStart,
+  opening,
   onSaved,
 }: {
   goals: GoalListView["goals"];
   products: Product[];
   weights: Weight[];
   trackingStart: string;
-  onSaved: (rows: Transaction[], asOf: string) => void;
+  opening: Opening;
+  onSaved: () => void;
 }) {
-  const [asOf, setAsOf] = useState(defaultAsOf(trackingStart));
-  const [rows, setRows] = useState<Record<string, OpeningRow>>({});
+  const [asOf, setAsOf] = useState(opening.asOf ?? defaultAsOf(trackingStart));
+  const [rows, setRows] = useState<Record<string, OpeningRow>>(() =>
+    Object.fromEntries(
+      opening.positions.map((p) => [
+        p.productId,
+        {
+          units: String(p.totalUnits),
+          pmc: String(p.pmc),
+          split: {
+            parts: p.parts.map((part) => ({ ...part, commissionCents: 0 })),
+          } as unknown as ConfirmedSplit,
+        },
+      ]),
+    ),
+  );
+  const [cash, setCash] = useState<Record<string, string>>(() =>
+    Object.fromEntries(opening.cashBalances.map((b) => [b.goalId, String(b.amountCents / 100)])),
+  );
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
@@ -153,17 +138,29 @@ function Form({
     }));
 
   const save = async () => {
-    const built = buildOpeningInput(asOf, products, rows);
+    const built = buildOpeningInput(asOf, products, rows, true);
     if ("error" in built) {
       setError(built.error);
       return;
     }
+    const cashBalances = goals.map((g) => ({
+      goalId: g.id,
+      amountCents: eurosToCents(cash[g.id] || "0"),
+    }));
+    if (cashBalances.some((b) => !Number.isFinite(b.amountCents) || b.amountCents < 0)) {
+      setError("Cash balances must be zero or greater.");
+      return;
+    }
+    if (built.input.positions.length === 0 && cashBalances.every((b) => b.amountCents === 0)) {
+      setError("Add a product or an opening cash balance.");
+      return;
+    }
     setSaving(true);
     try {
-      const saved = await api<Transaction[]>("POST", "/api/opening-position", {
-        body: built.input,
+      await api(opening.asOf === null ? "POST" : "PUT", "/api/opening-position", {
+        body: { ...built.input, cashBalances },
       });
-      onSaved(saved, asOf);
+      onSaved();
     } catch (failure) {
       setError(messageOf(failure));
       setSaving(false);
@@ -198,6 +195,21 @@ function Form({
           onChange={(row) => setRows({ ...rows, [product.id]: row })}
         />
       ))}
+      <Card
+        title="Opening cash by bucket"
+        note="Optional cash held on the as-of date. Empty means zero."
+      >
+        <div className="form-grid">
+          {goals.map((goal) => (
+            <NumberField
+              key={goal.id}
+              label={`${goal.name} (€)`}
+              value={cash[goal.id] ?? ""}
+              onChange={(value) => setCash({ ...cash, [goal.id]: value })}
+            />
+          ))}
+        </div>
+      </Card>
       <Alert message={error} />
       <div className="actions">
         <button
@@ -215,12 +227,11 @@ function Form({
 
 /** Operations > Import > Current portfolio: units and PMC per product, split over the buckets. */
 export function CurrentPortfolioScreen() {
-  const goals = useLoad<GoalListView>("/api/goal-list");
+  const goals = useLoad<GoalListView>("/api/goal-list?includeArchived=true");
   const products = useLoad<Product[]>("/api/products");
   const weights = useLoad<Weight[]>("/api/allocation");
   const settings = useLoad<Settings>("/api/settings");
-  const opening = useLoad<{ asOf: string | null }>("/api/opening-position");
-  const [saved, setSaved] = useState<{ asOf: string; rows: Transaction[] }>();
+  const opening = useLoad<Opening>("/api/opening-position");
 
   return (
     <>
@@ -239,35 +250,23 @@ export function CurrentPortfolioScreen() {
                   <Resource loaded={settings}>
                     {({ trackingStart }) => (
                       <Resource loaded={opening}>
-                        {({ asOf }) => {
-                          const goalName = (id: string) =>
-                            goalList.find((g) => g.id === id)?.name ?? "?";
-                          const productName = (id: string) =>
-                            productList.find((p) => p.id === id)?.name ?? "?";
-                          if (saved || asOf !== null) {
-                            return (
-                              <Saved
-                                asOf={saved?.asOf ?? asOf ?? ""}
-                                rows={saved?.rows ?? []}
-                                goalName={goalName}
-                                productName={productName}
-                              />
-                            );
-                          }
-                          if (goalList.length === 0 || productList.length === 0) {
+                        {(value) => {
+                          if (goalList.length === 0) {
                             return (
                               <Card title="Current portfolio">
-                                <p className="note">Add a product and a goal in Setup first.</p>
+                                <p className="note">Add a goal in Setup first.</p>
                               </Card>
                             );
                           }
                           return (
                             <Form
+                              key={value.asOf ?? "new"}
                               goals={goalList}
                               products={productList}
                               weights={weightList}
                               trackingStart={trackingStart}
-                              onSaved={(rows, savedAsOf) => setSaved({ asOf: savedAsOf, rows })}
+                              opening={value}
+                              onSaved={opening.reload}
                             />
                           );
                         }}

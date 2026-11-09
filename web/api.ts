@@ -2,7 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { plainMessage } from "./formErrors.ts";
 
 /** A failed API call; `message` is fit to show the user. */
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  readonly status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
 interface Failure {
   error?: string;
@@ -33,7 +39,7 @@ export async function api<T>(
     throw new ApiError("The server did not answer. Is gbi still running?");
   }
   const payload = (await response.json().catch(() => ({}))) as Failure;
-  if (!response.ok) throw new ApiError(describe(payload));
+  if (!response.ok) throw new ApiError(describe(payload), response.status);
   return payload as T;
 }
 

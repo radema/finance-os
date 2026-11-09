@@ -212,11 +212,19 @@ describe("Current portfolio API", () => {
 
   it("reports the saved asOf, or null before any save", async () => {
     const { productId, home } = await make();
-    expect((await call("GET", "/api/opening-position")).body).toEqual({ asOf: null });
+    expect((await call("GET", "/api/opening-position")).body).toEqual({
+      asOf: null,
+      positions: [],
+      cashBalances: [],
+    });
     await save({
       asOf: "2026-02-01",
       positions: [{ productId, totalUnits: 10, pmc: 5, parts: [{ goalId: home, units: 10 }] }],
     });
-    expect((await call("GET", "/api/opening-position")).body).toEqual({ asOf: "2026-02-01" });
+    expect((await call("GET", "/api/opening-position")).body).toMatchObject({
+      asOf: "2026-02-01",
+      cashBalances: [],
+      positions: [{ productId, totalUnits: 10, pmc: 5, parts: [{ goalId: home, units: 10 }] }],
+    });
   });
 });

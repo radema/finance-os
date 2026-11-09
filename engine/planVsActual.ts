@@ -25,6 +25,8 @@ export type PlanVsActualMonth = {
 export type PlanVsActualGoal = { goalId: string; months: PlanVsActualMonth[] };
 
 export type PlanVsActualInput = {
+  /** When supplied, ordinary purchases count only for legacy records. */
+  cashContributions?: readonly { date: string; goalId: string; amountCents: number }[];
   /** In the order the result follows. */
   goals: readonly { id: string; targetYear: number }[];
   /** Plan versions of all goals; `monthly` in cents. */
@@ -71,8 +73,14 @@ export function planVsActual(input: PlanVsActualInput): PlanVsActualGoal[] {
     const put = new Map<string, number>();
     for (const row of input.transactions) {
       if (row.goalId !== goal.id || !CONTRIBUTIONS.includes(row.type)) continue;
+      if (input.cashContributions && row.type === "buy" && !row.legacy) continue;
       const cash = (row.qty * row.price + (row.commission ?? 0)) * CENTS_PER_EURO;
       put.set(row.date.slice(0, 7), (put.get(row.date.slice(0, 7)) ?? 0) + cash);
+    }
+    for (const row of input.cashContributions ?? []) {
+      if (row.goalId !== goal.id) continue;
+      const month = row.date.slice(0, 7);
+      put.set(month, (put.get(month) ?? 0) + row.amountCents);
     }
 
     let cumPlanned = 0;
