@@ -50,6 +50,14 @@ Node type stripping: the server runs the TypeScript sources directly. Use `.ts` 
 no enums, no parameter properties, `import type` for types. `tsconfig.json` sets
 `erasableSyntaxOnly` and `verbatimModuleSyntax`.
 
+### Architecture evolution
+
+- Architecture-review records live in `.scratch/gbi-v1/architecture/`; they are planning evidence,
+  not rules. When changing a reviewed cluster, read its record, improve the cluster when the change
+  demonstrates real friction, and refresh the record when its evidence changes.
+- Reorganize one coherent, actively changing cluster at a time. Keep paired tests with the
+  implementation.
+
 ## Clean code
 
 - Start with the simplest thing that works. Add complexity only where a real need shows up.
