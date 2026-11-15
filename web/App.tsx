@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "./AppShell.tsx";
 import { DEFAULT_ROUTE, resolveRoute } from "./nav.ts";
+import { BauhausPrototype } from "./overview/BauhausPrototype.tsx";
 
 const routeFromHash = (): string =>
   window.location.hash.replace(/^#\/?/, "").split("?")[0] || DEFAULT_ROUTE;
@@ -18,5 +19,10 @@ export function App() {
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
   }, []);
-  return <AppShell route={route} />;
+  return (
+    <>
+      <AppShell route={route} />
+      {import.meta.env.DEV ? <BauhausPrototype /> : null}
+    </>
+  );
 }

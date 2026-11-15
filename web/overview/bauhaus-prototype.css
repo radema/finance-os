@@ -1,0 +1,559 @@
+/* THROWAWAY. Palette and chart marks remain governed by production tokens. */
+body[data-bauhaus] .main {
+  padding-bottom: var(--s6);
+}
+body[data-bauhaus] .main::after {
+  content: "";
+  display: block;
+  height: calc(var(--s6) * 3);
+}
+body[data-bauhaus] .brand {
+  font-family: var(--font-text);
+  font-weight: 700;
+  border-bottom: 2px solid var(--ink);
+}
+body[data-bauhaus] .side {
+  border-right-color: var(--ink);
+}
+body[data-bauhaus] .title {
+  font-size: clamp(40px, 4vw, 72px);
+  line-height: 1.05;
+  margin-bottom: var(--s3);
+}
+body[data-bauhaus] .kpi,
+body[data-bauhaus] .card,
+body[data-bauhaus] .btn,
+body[data-bauhaus] .card-head {
+  border-radius: 0;
+}
+body[data-bauhaus] .card-head {
+  background: none;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--grid);
+  font-family: var(--font-text);
+  font-weight: 600;
+}
+body[data-bauhaus="A"] .card-head {
+  padding: var(--s3);
+  background: var(--tint-blue-faint);
+  border-top-color: var(--ink);
+  color: var(--ink);
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: var(--t-sub);
+  line-height: var(--lh-sub);
+}
+
+body[data-bauhaus="A"] .card-body {
+  padding: var(--s4);
+}
+
+body[data-bauhaus] .overview-grid > [data-cell="fi"] {
+  background: none;
+  border: 0;
+}
+body[data-bauhaus] .overview-grid > [data-cell="fi"] .card-body {
+  padding-inline: 0;
+}
+body[data-bauhaus] .kpi-value {
+  font-size: clamp(26px, 2.4vw, 40px);
+  line-height: 1.2;
+}
+body[data-bauhaus="B"] .kpi-value {
+  font-size: clamp(22px, 1.8vw, 32px);
+}
+body[data-bauhaus="A"] .kpis:not(.kpis-overview) .kpi-value {
+  font-size: clamp(26px, 2.2vw, 36px);
+  overflow-wrap: anywhere;
+}
+
+/* A: a dominant first metric, asymmetric modules, generous editorial rhythm. */
+body[data-bauhaus="A"] .kpis-overview {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 2px solid var(--ink);
+  padding-top: var(--s4);
+}
+body[data-bauhaus="A"] .kpis-overview .kpi {
+  border: 0;
+  background: none;
+  border-left: 1px solid var(--base);
+}
+body[data-bauhaus="A"] .kpis-overview .kpi:first-child {
+  grid-column: 1 / -1;
+  border: 0;
+  padding: var(--s4) 0;
+}
+body[data-bauhaus="A"] .kpis-overview .kpi:first-child .kpi-value {
+  font-size: clamp(56px, 6vw, 88px);
+}
+body[data-bauhaus="A"] .overview-grid {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--s6) var(--s5);
+  margin-top: var(--s6);
+}
+/* B: a continuous construction grid with equal modules and numbered sections. */
+body[data-bauhaus="B"] {
+  --font-display: var(--font-text);
+  --w-display: 650;
+}
+body[data-bauhaus="B"] .kpis-overview {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid var(--ink);
+}
+body[data-bauhaus="B"] .kpis-overview .kpi {
+  border: 0;
+  border-right: 1px solid var(--base);
+  padding: var(--s4) var(--s3);
+}
+body[data-bauhaus="B"] .kpis-overview .kpi:last-child {
+  border-right: 0;
+}
+body[data-bauhaus="B"] .overview-grid {
+  counter-reset: module;
+  gap: var(--s4);
+}
+body[data-bauhaus="B"] .overview-grid .card-head::before {
+  counter-increment: module;
+  content: "0" counter(module) " / ";
+  font-family: var(--font-mono);
+}
+body[data-bauhaus="B"] .overview-grid > [data-cell="fi"] {
+  grid-column: 1 / -1;
+}
+/* C: key numbers form a left rail; the reading column holds every view in sequence. */
+body[data-bauhaus="C"] {
+  --font-display: var(--font-text);
+  --w-display: 600;
+}
+body[data-bauhaus="C"] .main:has(.kpis-overview) {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(0, 3fr);
+  column-gap: var(--s5);
+  align-content: start;
+}
+body[data-bauhaus="C"] .main > :not(.kpis-overview, .overview-grid) {
+  grid-column: 1 / -1;
+}
+body[data-bauhaus="C"] .kpis-overview {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 0;
+  margin-top: var(--s4);
+}
+body[data-bauhaus="C"] .kpis-overview .kpi {
+  background: none;
+  border: 0;
+  border-top: 2px solid var(--ink);
+  padding: var(--s4) 0;
+}
+body[data-bauhaus="C"] .overview-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.prototype-switcher {
+  position: fixed;
+  bottom: var(--s3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--ink);
+  color: var(--raised);
+  border: 1px solid var(--base);
+  box-shadow: var(--shadow);
+  max-width: calc(100vw - var(--s5));
+}
+.prototype-switcher div {
+  display: grid;
+  min-width: 0;
+}
+.prototype-switcher small {
+  font-size: var(--t-axis);
+  line-height: var(--lh-axis);
+}
+.prototype-switcher strong {
+  font-size: var(--t-label);
+}
+.prototype-switcher button {
+  background: var(--raised);
+  color: var(--ink);
+  border: 0;
+  min-width: var(--s5);
+  min-height: var(--s5);
+  cursor: pointer;
+}
+.prototype-switcher a {
+  color: inherit;
+  font-size: var(--t-label);
+}
+.prototype-switcher :focus-visible {
+  outline-color: var(--raised);
+}
+@media (max-width: 1100px) {
+  body[data-bauhaus="B"] .kpis-overview {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  body[data-bauhaus="C"] .main:has(.kpis-overview) {
+    display: block;
+  }
+}
+
+/* A, second pass: the studio's graphic language surrounds the data, never the plot. */
+body[data-bauhaus="A"] .brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding-bottom: var(--s4);
+}
+body[data-bauhaus="A"] .brand::before {
+  content: "";
+  flex: 0 0 var(--s5);
+  height: var(--s5);
+  background:
+    radial-gradient(circle at 75% 25%, var(--slot4) 0 24%, transparent 25%),
+    conic-gradient(from 0deg at 50% 50%, transparent 0 25%, var(--slot5) 25% 50%, transparent 50%),
+    linear-gradient(90deg, var(--ink) 50%, transparent 50%);
+}
+body[data-bauhaus="A"] .nav-head {
+  justify-content: flex-start;
+  gap: var(--s2);
+}
+body[data-bauhaus="A"] .nav-head::before {
+  content: "";
+  display: block;
+  flex: 0 0 var(--s3);
+  height: var(--s3);
+  border: 2px solid var(--ink);
+}
+body[data-bauhaus="A"] .nav-section:nth-child(1) .nav-head::before {
+  background: conic-gradient(var(--ink) 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0);
+}
+body[data-bauhaus="A"] .nav-section:nth-child(2) .nav-head::before {
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--ink) 25%, transparent 28%);
+}
+body[data-bauhaus="A"] .nav-section:nth-child(3) .nav-head::before {
+  border-radius: 50% 50% 0 0;
+  border-bottom-width: 4px;
+}
+body[data-bauhaus="A"] .nav-section:nth-child(4) .nav-head::before {
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    var(--ink) 22%,
+    transparent 22% 39%,
+    var(--ink) 39% 61%,
+    transparent 61% 78%,
+    var(--ink) 78%
+  );
+  clip-path: polygon(0 65%, 22% 65%, 22% 35%, 61% 35%, 61% 0, 100% 0, 100% 100%, 0 100%);
+}
+body[data-bauhaus="A"] .nav-section:nth-child(5) .nav-head::before {
+  border-radius: 50%;
+  background: linear-gradient(0deg, var(--ink) 50%, transparent 50%);
+}
+body[data-bauhaus="A"] .nav-section:nth-child(6) .nav-head::before {
+  border: 0;
+  background: var(--ink);
+  clip-path: polygon(
+    0 20%,
+    65% 20%,
+    65% 0,
+    100% 35%,
+    65% 70%,
+    65% 50%,
+    0 50%,
+    0 80%,
+    35% 80%,
+    35% 100%,
+    0 100%
+  );
+}
+body[data-bauhaus="A"] .nav-section:nth-child(7) .nav-head::before {
+  border-radius: 50%;
+  border-style: dotted;
+}
+body[data-bauhaus="A"] .nav [aria-current="page"] {
+  background: var(--tint5);
+}
+body[data-bauhaus="A"] .main > .tag {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+body[data-bauhaus="A"] .main > .tag::before {
+  content: "";
+  width: var(--s3);
+  height: var(--s3);
+  border-radius: 50%;
+  background: var(--slot5);
+}
+body[data-bauhaus="A"] .kpis-overview .kpi:first-child {
+  position: relative;
+  min-height: 220px;
+  padding: var(--s5);
+  background: var(--tint5);
+}
+/* Restrained four-part composition, kept only on the Overview lead card. */
+body[data-bauhaus="A"] .kpis-overview .kpi:first-child::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 30%;
+  background:
+    radial-gradient(circle at 50% 50%, var(--slot4) 0 34%, transparent 35%) 0 0 / 50% 50% no-repeat,
+    conic-gradient(from 180deg at 100% 100%, var(--slot5) 0 25%, transparent 0) 100% 0 / 50% 50%
+    no-repeat,
+    linear-gradient(var(--ink), var(--ink)) 0 100% / 50% 50% no-repeat,
+    radial-gradient(circle at 0 0, var(--slot2) 0 70%, transparent 71%) 100% 100% / 50% 50%
+    no-repeat;
+  border-left: 1px solid var(--ink);
+  pointer-events: none;
+}
+body[data-bauhaus="A"] .kpis-overview .kpi:first-child .kpi-value {
+  font-size: clamp(40px, 4.5vw, 72px);
+  overflow-wrap: anywhere;
+}
+body[data-bauhaus="A"] .overview-grid .card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3);
+  background: var(--tint-blue-faint);
+}
+body[data-bauhaus="A"] .overview-grid .card-head::before {
+  content: "";
+  flex: 0 0 var(--s4);
+  height: var(--s4);
+  border: 2px solid var(--ink);
+}
+body[data-bauhaus="A"] [data-cell="goals"] .card-head::before {
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--ink) 22%, transparent 25%);
+}
+body[data-bauhaus="A"] [data-cell="plan"] .card-head::before {
+  background: linear-gradient(135deg, transparent 45%, var(--ink) 46% 54%, transparent 55%);
+}
+body[data-bauhaus="A"] [data-cell="operational"] .card-head::before {
+  transform: rotate(45deg) scale(0.7);
+}
+body[data-bauhaus="A"] [data-cell="fi"] .card-head::before {
+  border-radius: 50% 50% 0 0;
+  background: linear-gradient(0deg, var(--ink) 40%, transparent 40%);
+}
+body[data-bauhaus="A"] .overview-grid > [data-cell="fi"] .card-head {
+  background: none;
+  padding-inline: 0;
+}
+@media (max-width: 1100px) {
+  body[data-bauhaus="A"] .kpis-overview .kpi:first-child {
+    padding: var(--s4);
+  }
+  body[data-bauhaus="A"] .kpis-overview .kpi:first-child::before {
+    width: 24%;
+  }
+}
+
+body[data-bauhaus="A"] .kpis-overview .kpi:first-child .kpi-main,
+body[data-bauhaus="A"] .kpis-overview .kpi:first-child .kpi-label {
+  max-width: 64%;
+}
+
+/* A across the planner: shared cards, metric modules, controls and exhibit headings. */
+body[data-bauhaus="A"] .card {
+  border: 1px solid var(--base);
+}
+body[data-bauhaus="A"] .card-head-row {
+  border-top: 2px solid var(--ink);
+}
+body[data-bauhaus="A"] .card-toggle {
+  align-items: center;
+  gap: var(--s2);
+  text-align: left;
+}
+body[data-bauhaus="A"] .card-toggle > svg {
+  box-sizing: content-box;
+  padding: var(--s1);
+  background: var(--raised);
+  border: 1px solid var(--base);
+}
+body[data-bauhaus="A"] .kpis:not(.kpis-overview) {
+  gap: var(--s3);
+}
+body[data-bauhaus="A"] .kpis:not(.kpis-overview) > .kpi {
+  position: relative;
+  padding: var(--s4);
+  background: var(--raised);
+  border: 1px solid var(--base);
+  border-top: 2px solid var(--ink);
+}
+/* A corner construction mark adds character without implying a second data series. */
+body[data-bauhaus="A"] .kpis:not(.kpis-overview) > .kpi::after {
+  content: "";
+  position: absolute;
+  top: var(--s2);
+  right: var(--s2);
+  width: var(--s2);
+  height: var(--s2);
+  border-top: 1px solid var(--ink2);
+  border-right: 1px solid var(--ink2);
+  pointer-events: none;
+}
+body[data-bauhaus="A"] .kpis:not(.kpis-overview) > .kpi:first-child {
+  background: var(--tint-blue-faint);
+}
+body[data-bauhaus="A"] .tabs {
+  gap: 0;
+  border-bottom: 2px solid var(--ink);
+  flex-wrap: wrap;
+}
+body[data-bauhaus="A"] .tab {
+  padding: var(--s2) var(--s3);
+  border: 1px solid transparent;
+  margin-bottom: 0;
+}
+body[data-bauhaus="A"] .tab[aria-current="page"] {
+  background: var(--tint5);
+  border-color: var(--ink);
+  border-bottom-color: transparent;
+}
+body[data-bauhaus="A"] .table thead th {
+  background: var(--wash);
+  border-bottom: 1px solid var(--ink);
+}
+body[data-bauhaus="A"] .table tbody tr:hover {
+  background: var(--tint-blue-faint);
+}
+body[data-bauhaus="A"] .table tfoot {
+  background: var(--wash);
+  border-top: 2px solid var(--ink);
+}
+body[data-bauhaus="A"] .field-label {
+  font-weight: 600;
+}
+body[data-bauhaus="A"] .field input:not([type="checkbox"], [type="radio"]),
+body[data-bauhaus="A"] .field select,
+body[data-bauhaus="A"] .field textarea {
+  border-radius: 0;
+  border-color: var(--base);
+  border-bottom-color: var(--ink2);
+}
+body[data-bauhaus="A"] .btn {
+  border-color: var(--ink2);
+  font-weight: 600;
+}
+body[data-bauhaus="A"] .btn:disabled {
+  border-color: var(--base);
+}
+/* Only the exhibit's heading gets a geometric motif; plot, legend and source remain quiet. */
+body[data-bauhaus="A"] .exhibit > .tag {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding-top: var(--s3);
+  border-top: 2px solid var(--ink);
+}
+body[data-bauhaus="A"] .exhibit > .tag::before {
+  content: "";
+  flex: 0 0 var(--s3);
+  height: var(--s3);
+  border: 2px solid var(--ink);
+  border-radius: 50% 50% 0 0;
+  background: linear-gradient(0deg, var(--ink) 45%, transparent 45%);
+}
+body[data-bauhaus="A"] .exhibit > .exhibit-title {
+  margin-top: var(--s2);
+  font-size: var(--t-title);
+  line-height: var(--lh-title);
+}
+body[data-bauhaus="A"] .block-title {
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--base);
+}
+
+/* Compact labels share geometry; their existing colours and semantic marks remain. */
+body[data-bauhaus="A"] :is(.chip, .status, .severity, .fresh, .prio, .ptag) {
+  border-radius: 2px;
+  min-height: var(--s4);
+  padding: var(--s1) var(--s2);
+  gap: var(--s2);
+  font-size: var(--t-label);
+  line-height: var(--lh-label);
+  font-weight: 500;
+  vertical-align: middle;
+}
+body[data-bauhaus="A"]
+  :is(.status-off_track, .status-at_risk, .severity-Medium, .severity-High, .fresh-old) {
+  font-weight: 600;
+}
+body[data-bauhaus="A"] .ptag {
+  font-size: var(--t-axis);
+  border-color: var(--base);
+}
+body[data-bauhaus="A"] .fresh-current {
+  border: 1px solid var(--grid);
+}
+body[data-bauhaus="A"] :is(.chip-dot, .prio::before, .fresh::before) {
+  flex-shrink: 0;
+}
+body[data-bauhaus="A"] .check {
+  min-height: var(--s5);
+  cursor: pointer;
+}
+body[data-bauhaus="A"] input[type="checkbox"] {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ink2);
+  border-radius: 2px;
+  background: var(--raised);
+  color: var(--raised);
+  vertical-align: middle;
+  cursor: pointer;
+}
+body[data-bauhaus="A"] input[type="checkbox"]::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  clip-path: polygon(10% 45%, 36% 70%, 90% 14%, 100% 27%, 36% 95%, 0 58%);
+  visibility: hidden;
+}
+body[data-bauhaus="A"] input[type="checkbox"]:checked,
+body[data-bauhaus="A"] input[type="checkbox"]:indeterminate {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+body[data-bauhaus="A"] input[type="checkbox"]:checked::before,
+body[data-bauhaus="A"] input[type="checkbox"]:indeterminate::before {
+  visibility: visible;
+}
+body[data-bauhaus="A"] input[type="checkbox"]:indeterminate::before {
+  clip-path: inset(42% 0);
+}
+body[data-bauhaus="A"] input[type="checkbox"]:disabled {
+  background: var(--wash);
+  border-color: var(--base);
+  color: var(--ink2);
+  cursor: not-allowed;
+}
+body[data-bauhaus="A"] .check:has(input:disabled) {
+  cursor: not-allowed;
+}
+@media (forced-colors: active) {
+  body[data-bauhaus="A"] input[type="checkbox"] {
+    appearance: auto;
+  }
+  body[data-bauhaus="A"] input[type="checkbox"]::before,
+  body[data-bauhaus="A"] .kpis-overview .kpi:first-child::before {
+    display: none;
+  }
+}

@@ -405,8 +405,11 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
 
 ### UI (t11, t13, t16)
 
-- Approved direction: `prototypes/11-ui/` and its `NOTES.md`; briefs may cite `prototypes/16-app/`
-  as a UI reference. No prototype code is carried into the build.
+- Approved direction: **Asymmetric studio (A)**, as recorded in `DESIGN.md`, section
+  "Selected layout and semantic motifs". The previous `prototypes/11-ui/` and `prototypes/16-app/`
+  remain historical references. The selected prototype is a visual reference: rewrite its
+  validated design in production components and styles; remove the variant switcher and
+  rejected variants during integration. Do not promote the prototype override cascade.
 - English UI, Italian glossary; EUR and numbers in it-IT format. Light and dark themes. Desktop-first
   fluid layout, usable from ~1024 to 1920 px (mobile from 360 px is v2).
 - Sidebar: Overview; Goals (List, History; a goal's page opens from a goal chip, with no sidebar item of its own); Independence; Analysis (Optimizer, Performance,
@@ -421,14 +424,65 @@ change; recomputed ones are labelled wherever they show (trend chart, Goal histo
   others from slot 2 in order; colours repeat past six goals — to revisit in S7); soft tints (light
   12%, dark 18%) for chips, tags, KPI accents and card header strips; text stays in the text greys;
   blue for general/information; the highlight family for attention. No red/green status.
-- Components: goal chips, Need/Want/Wish tags (shape + tint), status chips (icon + word), product
-  tags, price-freshness pills, KPI cards with a 1 px outline (a goal-colour dot before the label where the KPI belongs to a goal), section cards with a blue header strip and no outline. Sticky
-  header on every table. A compact legend on every multi-series chart; direct labels where they help;
-  exhibit anatomy (tag, action title with a number, unit line, chart, callout, source).
+- Preserve the approved GBI planner brand mark and Overview Net worth artwork, including
+  their existing shapes, colours and the Net worth card's teal field. Additional motifs
+  combine two existing geometric primitives or repeat one primitive; they do not require
+  all four shapes. Use only Palette D and the fixed semantic assignments in DESIGN.md.
+  The approved two-shape PNG studies are the reference for these additional motifs.
+- Assign motifs by the section's purpose, never randomly, by sibling order or by financial
+  values: a circle within a teal square means a target; two joined ochre/teal quarter-discs
+  mean parts of an allocation; two equal peach/teal circles mean comparison; a peach square
+  inside an ink square means coverage against a reference; three ink/ochre/teal squares
+  mean an ordered collection of records; overlapping teal/ochre squares mean a record and
+  its copy. Keep their approved relative geometry and colour assignments stable.
+- Motifs supplement explicit section headings, not goal identity, status or financial
+  values. Omit them when the purpose is ambiguous. Use at most one motif per relevant
+  section, in dedicated space, never inside chart plots, legends, table rows, chips or
+  error/loading states. No extra page-title ornaments or animation. Hide artwork in
+  forced-colour mode. Small monochrome navigation/section icons and neutral KPI corner
+  rules remain. Text stays in text greys; slot 1 / burnt-orange highlight stays reserved
+  for attention. Chart encodings and approved goal-slot assignments are unchanged.
+- Components: square KPI and section cards, square form controls and buttons, with a
+  consistent ink-rule hierarchy. Section cards have a 1 px neutral outline, a 2 px ink
+  top rule and a faint blue header strip; collapsible headers retain their behaviour.
+  KPI cards normally have a 1 px neutral outline and a 2 px ink top rule; a goal-colour dot
+  precedes the label where the KPI belongs to a goal. Overview is the explicit exception:
+  its lead Net worth card uses a teal field and artwork; four secondary metrics use an
+  open layout with neutral dividing rules. Exhibits remain unboxed and full width.
+- Chips and tags: goal, status, severity, freshness, priority and product labels use 2 px
+  corners, at least 24 px height, consistent spacing, and existing semantic tints. Keep
+  goal identity dots, priority fill/half-fill/ring marks, status icons and words, and the
+  old-price indicator. Label text is 13 px; product tags remain 12 px uppercase. Attention
+  labels use weight 600, other chip labels 500. Goal labels keep their links and glossary
+  terms remain accessible popovers.
+- Checkboxes: 20 px square control with 2 px corners; ink fill and a contrasting check
+  when checked, a dash for indeterminate, and a distinct disabled appearance. Preserve
+  native checkbox semantics, label activation, Space-key operation and visible keyboard
+  focus. Checkbox label rows have at least a 32 px target height. Use native rendering
+  in forced-colour mode. Treat checked, unchecked, indeterminate and disabled as states
+  of the existing control; do not invent new business uses for them.
+- Keep sticky headers on every table and strengthen header/total rules with neutral
+  colours. Setup tabs keep their current routes and use a teal tint for the active tab.
+  The sidebar keeps its current groups, labels, order, collapse behaviour and ink active
+  indicator, with geometric icons and a teal-tinted active background.
+- Preserve compact legends on multi-series charts, direct labels, exhibit anatomy
+  (tag, action title with a number, unit, chart, callout, source), goal encodings, end-label
+  room, chart marks and all other existing chart rules.
 - Page titles: the `h1` of every screen is the name of the screen (on a goal's page, the goal's name).
   A finding with a number is never the `h1`: it is the action title (`h2`) of the first exhibit, or
   of the key numbers where a screen opens with them.
-- Fonts: Source Serif 4 for titles and KPI values (`--font-display`), Geist for text, Geist Mono for the small mono labels, all bundled (OFL). The kicker above a title is Geist 13 px, sentence case. Charts are drawn after fonts load and resize with their box.
+- Fonts: Source Serif 4 for page titles, exhibit action titles and KPI values; Geist for
+  body text, navigation, brand name and card header labels; Geist Mono for KPI labels and
+  other existing small mono labels. All fonts remain bundled (OFL). Display serif weight
+  stays 500 with existing letter-spacing. Card header labels use Geist 15 px, weight 600,
+  sentence case without added tracking. The brand uses Geist weight 700.
+- Use a separate responsive display scale for page titles (40–72 px), Overview Net worth
+  (40–72 px), secondary Overview KPI values (26–40 px), and other KPI values (26–36 px).
+  These display sizes do not enlarge chart axes or table text. Retain the existing 16 px
+  body, 15 px table, 13 px label, 12 px axis scale and spacing tokens. Exhibit action
+  titles use 26/32 px; kickers stay Geist 13 px, sentence case. Charts render after fonts
+  load and resize with their boxes. Long labels and amounts must remain readable across
+  the supported desktop widths without overlapping decorations or controls.
 - Jargon terms are popover buttons that open on click, tap, Enter or Space, never on focus (plain
   sentence first, Italian term above it); touch friendly, no `title=`
   hints (t16 finding 26). Raw "P10–P90" is never shown: bad / typical / good case.
@@ -439,7 +493,7 @@ Screens (content; acceptance in the Definition of done):
 
 | Screen | Content |
 |---|---|
-| Overview | Key numbers under an action title (net worth, market change this month, YTD TWR, FI wealth, goals on track); four blocks: Goals (all goals ordered by status, with probability vs required and value against target), Plan vs actual (cumulative gap and next contribution), Operational (alerts and stale prices), Financial independence (highest reached and next configured level, with projected wealth and level targets). Each block links to its explaining screen. |
+| Overview | Key numbers under an action title: a dominant Net worth card, then market change this month, YTD TWR, FI wealth and goals on track as four secondary metrics. Preserve all links and financial meanings. Below, retain four blocks: Goals (all goals ordered by status, with probability vs required and value against target), Plan vs actual (cumulative gap and next contribution), Operational (alerts and stale prices), and Financial independence (highest reached and next configured level, with projected wealth and level targets). Goals and FI span the content width; Plan and Operational use an asymmetric 3:2 layout when it remains readable, with a single-column fallback as needed. Keep the FI chart as an unboxed exhibit. Each block links to its explaining screen. The empty Overview retains the existing first-run checklist. |
 | Goals list | One row per goal; its goal chip opens the goal's page: name + priority, status, P vs required, value vs target, plan gap (t11 replaces the 9-column table) |
 | Goal detail | A back link to the Goals list and a goal switch at the top (no sidebar item; `#/goals/detail` with no goal opens the Goals list). Value, P vs required, XIRR, fan, P history, range chart (the distribution of simulated outcomes at the goal date, with the median and bad / good case labelled; #117), "what it would take" (needed det./prob., horizon), holdings (units, price + age, PMC, gain, tax if sold), value vs money put in, cumulative plan vs actual, change the monthly plan from month X, 50% capital note on the pension goal |
 | Goal history | Metric switch (P, funded ratio, median/target); a line per goal over snapshots; snapshot table; Save snapshot; delete saved snapshots |
@@ -532,8 +586,8 @@ Each AC names a check and its expected result. Ids are global; headings are the 
 - AC-7: Architecture rules 1–3 are enforced. Check: the architecture test (or Biome rule) with a planted violation in a scratch file: `engine/` importing `node:*`/`server/`/`web/`; `web/` importing `server/`; SQL outside `server/`. Expected: green on the clean tree, red on each planted violation.
 - AC-8: CI runs the gate. Check: `.github/workflows/gate.yml` and the S0 PR checks. Expected: the workflow runs `pnpm gate` on PRs to `main`; the S0 PR shows it green.
 - AC-9: `gbi` starts the app locally. Check: install as documented in `README.md`, then `GBI_DATA_DIR=$(mktemp -d) gbi`, `curl -s 127.0.0.1:<port>/api/health`, `lsof -iTCP -sTCP:LISTEN -P | grep node`. Expected: health returns 200; the listener is bound to 127.0.0.1 only; the SQLite file exists in that folder with all migrations applied; the browser opens.
-- AC-10: Empty app shell. Check: `agent-browser` on the running app at 1440 px, light and dark. Expected: sidebar with the seven sections, "soon" placeholders, palette D tokens, Geist text font and Source Serif 4 titles; zero console errors; no network request to a host other than 127.0.0.1.
-- AC-11: `DESIGN.md` exists. Check: read it. Expected: palette D tokens (light/dark, slots, tints), type scale, components and chart rules from the UI decisions above.
+- AC-10: Empty app shell. Check: `agent-browser` on the running app at 1440 px, light and dark. Expected: sidebar with the seven sections, "soon" placeholders, palette D tokens, Geist text font and Source Serif 4 titles; zero console errors; no network request to a host other than 127.0.0.1. The shell follows Asymmetric studio: approved brand mark, geometric sidebar icons, ink divider and teal-tinted active page, preserving existing navigation and collapse behaviour in both themes.
+- AC-11: `DESIGN.md` exists. Check: read it. Expected: palette D tokens (light/dark, slots, tints), type scale, components and chart rules from the UI decisions above. The production design contract covers the selected display scale, ruled square cards, retained artworks, semantic two-shape motifs, checkbox states and square-cornered chips/tags, without contradictory legacy or rejected-variant rules.
 
 ### S1 — Goals and deterministic projection
 

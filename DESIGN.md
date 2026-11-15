@@ -1,7 +1,8 @@
 # DESIGN.md
 
-Design rules for the GBI planner UI. Built from the approved prototype `.scratch/gbi-v1/prototypes/11-ui/`
-(its `NOTES.md`, `tokens.css`) and the spec's UI decisions. The prototype is a reference for decisions,
+Design contract for the GBI planner UI. The selected direction is Asymmetric studio (A),
+including the approved semantic two-shape motifs. It supersedes the visual treatment of
+the historical `.scratch/gbi-v1/prototypes/11-ui/` reference. The prototype is a reference for decisions,
 not code: copy token values and fonts, never its HTML, CSS or JS.
 
 Where the code is: tokens in `web/tokens.css`, fonts in `web/fonts.css` and `web/fonts/`, shell in
@@ -76,11 +77,16 @@ Colour lives in dots, bars, fills and 1 px borders (the slot colour at 35-42%).
 
 ## Type
 
-Source Serif 4 for titles and KPI values only (`--font-display`: page title, exhibit title, KPI value,
-card and section headings; weight 500, letter-spacing -0.02em). Geist for text (`--font-text`). Geist
-Mono for the small mono labels (KPI label, card header label, "soon" tag). All three are bundled from
-`web/fonts/` (latin subset, variable weight, SIL OFL 1.1, licence next to each file). No CDN: the app
-loads fonts from its own files. Numbers in tables and charts use Geist tabular figures.
+Source Serif 4 for page titles, exhibit action titles and KPI values (`--font-display`,
+weight 500, letter-spacing -0.02em). Geist for body text, navigation, brand and card header
+labels. Card header labels are sentence case, 15 px / 22 px, weight 600, without tracking;
+the brand is weight 700. Geist Mono remains for KPI labels and other small mono labels.
+All fonts are bundled in `web/fonts/` under OFL; no CDN. Tables/charts use tabular figures.
+
+Responsive display ranges: page titles 40–72 px, Overview Net worth 40–72 px, secondary
+Overview values 26–40 px, other KPI values 26–36 px. Exhibit action titles use 26/32 px.
+These display ranges do not enlarge chart axes or table text. Long labels and amounts
+must fit at supported desktop widths without obscuring artwork or controls.
 
 The OE type scale, one step up:
 
@@ -123,27 +129,29 @@ The gap between blocks (KPI row, card, exhibit, control grid) is `--s4`, everywh
   width cap, so its chart ends where the card above or below it ends; the title, unit line and callout keep
   their own caps. Blocks sit `--s4` apart (the block gap). Where one exhibit follows another, a 1 px `--grid`
   hairline closes the first, with `--s4` above and below it.
-- **Goal chip.** Pill. 9 px dot in the goal's slot colour, goal name, background the goal's tint, 1 px
+- **Goal chip.** 2 px corners, at least 24 px high. 9 px dot in the goal's slot colour, goal name, background the goal's tint, 1 px
   border in the slot colour at 42%. Label 13 px, weight 500.
-- **Need / Want / Wish tag.** 4 px radius, label 12 px weight 600. A marker plus a tint, so shape carries
+- **Need / Want / Wish tag.** 2 px radius, at least 24 px high, label 13 px weight 500. A marker plus a tint, so shape carries
   the meaning too: Need filled dot on `--tint-blue-strong`, Want half dot on `--tint-blue`, Wish ring on
   `--tint-blue-faint`. Border blue at 35%.
-- **Status chip.** Pill, icon plus word. On track: check in a circle on `--wash`. At risk: outline
+- **Status chip.** 2 px corners, at least 24 px high, icon plus word. On track: check in a circle on `--wash`. At risk: outline
   triangle on `--tint1`, weight 600, border highlight at 35%. Off track: filled triangle on
   `--tint1-strong`, border `--hl`.
-- **Alert severity chip.** Same pill as the status chip, icon plus word, after the alert name. Info:
+- **Alert severity chip.** Same geometry as the status chip, icon plus word, after the alert name. Info:
   neutral ring on `--wash`. Medium: outline triangle on `--tint1`, weight 600, border highlight at 35%.
   High: filled triangle on `--tint1-strong`, border `--hl`. Colour marks only; the word stays in the text
   grey. The rule id (R2, R7) is never shown.
-- **Product tag.** 4 px radius, 12 px uppercase, weight 600, 1 px `--grid` border. ETF `--tint-blue`,
+- **Product tag.** 2 px radius, at least 24 px high, 12 px uppercase, weight 500, 1 px `--base` border. ETF `--tint-blue`,
   BTP `--tint-sand`, Pension `--tint-pink`.
-- **Price-freshness pill.** Pill, 13 px. Fresh: grey ring (`--ctx`) on `--wash`. Old: filled `--hl` dot,
+- **Price-freshness label.** 2 px corners, at least 24 px high, 13 px. Fresh: grey ring (`--ctx`) on `--wash`. Old: filled `--hl` dot,
   weight 600, `--tint1`, border highlight at 35%. An old price is flagged and still counted.
-- **KPI card.** `--raised`, 8 px radius, 1 px `--grid` outline, no accent bar. Where a KPI belongs to a goal
+- **KPI card.** `--raised`, square corners, 1 px `--base` outline and 2 px ink top rule.
+  Overview uses the lead-card/open-secondary layout defined below. Where a KPI belongs to a goal
   (the Goal detail and Pension screens), an 8 px dot in the goal's slot colour comes before the label.
   KPIs that belong to no goal (Overview, Performance, Independence levels) have no dot.
-- **Section card.** Same surface, no outline and no accent bar. A header strip in `--tint-blue-faint` holds
-  an icon and a mono label (12 px, uppercase, `--ink2`) or a 17 px display heading.
+- **Section card.** `--raised`, square corners, 1 px `--base` outline and 2 px ink top rule.
+  A `--tint-blue-faint` header holds the collapse control and Geist label (15 px, weight 600,
+  sentence case, `--ink`). Body padding is `--s4`. Charts remain unboxed exhibits.
 - **Sticky table header.** Every table header row is `position: sticky`, at the top of the scrolling
   page (below a top bar if there is one), with the surface colour behind it (`--raised` inside a card) and
   a hairline bottom border. Cards use `overflow: clip`, not `hidden`, so they are not a scroll container.
@@ -155,14 +163,15 @@ The gap between blocks (KPI row, card, exhibit, control grid) is `--s4`, everywh
   file name (or "No file chosen"); pasted text names no file.
 - **Sidebar.** Seven sections: Overview; Goals (List, Detail, History); Independence; Analysis
   (Optimizer, Performance, Plan vs actual); Pension; Operations (Transactions, Import, Prices); Setup
-  (Products, Allocation, Cash flow, Assumptions, Glossary). The current page has a 2 px `--ink` bar and
-  weight 600. A page without a screen shows a "soon" tag and a placeholder page. Under 900 px of window
+  (Products, Allocation, Cash flow, Assumptions, Glossary). The current page has a 2 px `--ink` bar,
+  weight 600 and a `--tint5` background. Section icons are geometric and monochrome;
+  the sidebar divider uses ink. A page without a screen shows a "soon" tag and a placeholder page. Under 900 px of window
   height the spacing tightens (spacing tokens only) so every item shows without scrolling the sidebar.
   A fixed chevron button straddles the sidebar divider near the top (left to collapse, right to restore).
   When collapsed, it sits at the left viewport edge and content uses the full width. It remains available
   while scrolling without adding a toolbar row. The layout changes without animation.
 - **Setup tab bar.** `SetupTabs` (`web/setup/SetupTabs.tsx`) is the one tab bar of the Setup screens, shared
-  by Products, Allocation, Cash flow, Assumptions and Glossary; the current tab is marked as in the Sidebar.
+  by Products, Allocation, Cash flow, Assumptions and Glossary; the current tab uses an ink rule and `--tint5` fill.
 - **Glossary term.** A dotted-underline button that opens a popover: plain sentence first, the Italian
   term above it. No `title=` hints.
 
@@ -199,3 +208,73 @@ The gap between blocks (KPI row, card, exhibit, control grid) is `--s4`, everywh
   would stack are set side by side; the tooltip keeps the true values. One mix: a sentence, no chart.
 - **Fans.** The series colour at 22% fill (30% in dark) with a 60% line; the median is solid.
 - **Sizes.** Axis text 12 px, labels 13 px. Draw charts after the fonts load. Every chart resizes with its box.
+
+## Selected layout and semantic motifs
+
+The user approved Asymmetric studio and the simpler two-shape PNG studies.
+The authoritative spec records the accepted contract; production implementation is pending.
+
+Overview keeps its action title and five linked metrics: Net worth is a dominant teal
+lead card with the retained artwork; four secondary metrics sit below in an open layout
+with neutral dividers. Goals and FI span the width; Plan and Operational use a 3:2 split
+where readable, falling back to one column. FI remains an unboxed exhibit. Overview's
+larger section rhythm uses `--s6` vertically and `--s5` horizontally; other block gaps
+retain `--s4`. Keep all financial content, page h1 names, routes and first-run behaviour.
+
+### Retained artwork
+
+Preserve the GBI planner brand mark and Overview Net worth artwork exactly as selected.
+The brand uses ink, ochre and teal; Net worth uses ink, ochre, teal and peach on `--tint5`.
+They do not encode goal identity or financial values. No derived four-part motif family.
+
+### Additional motifs: fixed meanings
+
+The visual references are the approved [light PNG](.scratch/gbi-ui-refinement/assets/motif-previews/two-shapes-light.png)
+and [dark PNG](.scratch/gbi-ui-refinement/assets/motif-previews/two-shapes-dark.png).
+Use the same relative geometry and fixed colour assignments at every occurrence.
+
+| Meaning | Composition | Placement examples |
+| --- | --- | --- |
+| Target | Ochre circle inside a teal square outline (Plan / 1) | Goal target definitions |
+| Allocation | Joined ochre and teal quarter-discs (Plan / 2) | Allocation weights or planned split |
+| Comparison | Two equal peach and teal circles (Measurement / 1) | Performance or plan-vs-actual summary |
+| Coverage | Peach square inside an ink square outline (Measurement / 2) | Funded-ratio or level coverage summary |
+| Entries | Three ink, ochre and teal squares in a row (Records / 1) | Transaction/import record collections |
+| Copy | Overlapping teal and ochre squares (Records / 2) | An explicit copy/duplicate context only |
+
+Choose by the purpose of the section, never its sibling position, screen index, random
+seed or numeric data. These motifs supplement explicit headings; users do not need to
+learn a pictographic code to operate the app. Omit a motif where the meaning is ambiguous.
+Not every motif needs an application if its meaning is absent from the current UI.
+
+At most one motif per relevant section, in dedicated header or lead-card space. No motifs
+inside chart plots/legends, table rows, chips, or loading/error states. No new page-title
+ornaments, animation or tilted containers. Hide decorative artwork in forced-colour mode.
+Keep small functional navigation/section icons and neutral KPI corner rules. Slot 1 / burnt
+orange stays reserved for attention; palette, chart encodings and goal identity stay fixed.
+
+### Controls
+
+Checkboxes are 20 px square with 2 px corners, an ink fill and contrasting check when
+checked, a dash when indeterminate, and a distinct disabled state. Keep native semantics,
+label activation, Space-key operation and visible keyboard focus. Checkbox label rows
+are at least 32 px high. Forced-colour mode uses native checkbox rendering.
+
+Chips/tags use `--s1` / `--s2` padding, `--s2` mark gaps, 2 px corners and at least 24 px
+height. Labels use 13/18 px, weight 500; product tags remain 12 px uppercase. At-risk,
+off-track, medium/high severity and old-price labels retain weight 600. Preserve all
+semantic dots, priority marks, status icons, tints, links and glossary popovers.
+Form controls/buttons use square corners; table headers and totals use neutral rules.
+
+### Integration status and evidence
+
+The selected prototype remains in `web/overview/BauhausPrototype.tsx` and
+`web/overview/bauhaus-prototype.css`; motif PNGs are approval studies, not app screenshots.
+Rewrite the validated treatment into existing production components/styles and tokens,
+then remove the variant switcher and rejected variants. These are approved design rules,
+not a claim that the production build already implements them.
+
+Follow [Adopt the selected Bauhaus UI](.scratch/gbi-ui-refinement/map.md). Visual acceptance
+and rollout decisions remain open. Required integration checks: `pnpm gate`, agent-browser
+review across screens and both themes, supported desktop widths, keyboard/checkbox states,
+forced colours and human visual review. No Playwright. Browser verification is outstanding.
