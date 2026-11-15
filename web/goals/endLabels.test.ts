@@ -2,6 +2,7 @@ import { type EChartsCoreOption, init } from "echarts/core";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { FanPoint, SeriesPoint } from "../../engine/goalViews.ts";
 import { buildOption as buildFan } from "./FanChart.tsx";
+import { buildOption as buildRange } from "./RangeChart.tsx";
 import { buildOption as buildValue } from "./ValueChart.tsx";
 
 /** Font size of the end labels: two labels closer than this overprint. */
@@ -46,6 +47,57 @@ function fanLabelGaps(fan: FanPoint[]) {
 }
 
 describe("end labels of the goal charts", () => {
+  it("keeps extreme-value outcome labels inside their charts without overlap", () => {
+    const fan = [
+      { year: 2026, bad: 19_000, typical: 19_000, good: 19_000 },
+      { year: 2046, bad: 217_614, typical: 309_045, good: 444_439 },
+    ];
+    const target = 1_490_859_775;
+    const range = { bad: 217_614, typical: 309_045, good: 444_439, target };
+    const options = [
+      buildFan(fan, target, 2),
+      buildRange(range, { min: 100_000, max: 1_491_000_000, counts: [1, 0] }, 2),
+    ];
+    for (const option of options) {
+      const chart = init(null as never, undefined, {
+        renderer: "svg",
+        ssr: true,
+        width: 731,
+        height: 320,
+      });
+      chart.setOption(option);
+      const labels = chart
+        .getZr()
+        .storage.getDisplayList(true)
+        .flatMap((el) => {
+          const text = (el as { style?: { text?: string } }).style?.text;
+          if (!text || !/^(Good case|Bad case|Typical case|Target)/.test(text)) return [];
+          const box = el.getBoundingRect().clone();
+          const transform = el.getComputedTransform();
+          if (transform) box.applyTransform(transform);
+          return [{ text, box }];
+        });
+      expect(labels).toHaveLength(4);
+      for (const { text, box } of labels) {
+        expect(box.x, text).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width, text).toBeLessThanOrEqual(731);
+        expect(box.y + box.height, text).toBeLessThanOrEqual(320);
+      }
+      for (let i = 0; i < labels.length; i++)
+        for (let j = i + 1; j < labels.length; j++) {
+          const a = labels[i].box;
+          const b = labels[j].box;
+          expect(
+            a.x < b.x + b.width &&
+              a.x + a.width > b.x &&
+              a.y < b.y + b.height &&
+              a.y + a.height > b.y,
+            `${labels[i].text} / ${labels[j].text}`,
+          ).toBe(false);
+        }
+      chart.dispose();
+    }
+  });
   it("fan chart: good 16,343, typical 15,929 and bad 15,517 do not overlap", () => {
     const gaps = fanLabelGaps([
       { year: 2026, bad: 12_000, typical: 12_000, good: 12_000 },

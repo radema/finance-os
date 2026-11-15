@@ -212,7 +212,7 @@ The gap between blocks (KPI row, card, exhibit, control grid) is `--s4`, everywh
 ## Selected layout and semantic motifs
 
 The user approved Asymmetric studio and the simpler two-shape PNG studies.
-The authoritative spec records the accepted contract; production implementation is pending.
+The authoritative spec records the accepted contract; production components implement it.
 
 Overview keeps its action title and five linked metrics: Net worth is a dominant teal
 lead card with the retained artwork; four secondary metrics sit below in an open layout
@@ -268,13 +268,16 @@ Form controls/buttons use square corners; table headers and totals use neutral r
 
 ### Integration status and evidence
 
-The selected prototype remains in `web/overview/BauhausPrototype.tsx` and
-`web/overview/bauhaus-prototype.css`; motif PNGs are approval studies, not app screenshots.
-Rewrite the validated treatment into existing production components/styles and tokens,
-then remove the variant switcher and rejected variants. These are approved design rules,
-not a claim that the production build already implements them.
+Production entrypoints use the selected design directly, without a variant query or switcher.
+The shell and shared controls live in `web/app.css`, `web/setup.css` and `web/goals.css`;
+Overview composition lives in `web/overview.css` and `web/overview/OverviewScreen.tsx`.
+Explicit semantic artwork lives in `web/Motif.tsx`. Approved motif PNGs remain decision
+studies, not app screenshots. The throwaway variants and their override stylesheet are removed;
+[iteration notes](web/overview/BAUHAUS-PROTOTYPE-NOTES.md) retain the historical decisions.
 
-Follow [Adopt the selected Bauhaus UI](.scratch/gbi-ui-refinement/map.md). Visual acceptance
-and rollout decisions remain open. Required integration checks: `pnpm gate`, agent-browser
-review across screens and both themes, supported desktop widths, keyboard/checkbox states,
-forced colours and human visual review. No Playwright. Browser verification is outstanding.
+The [rollout](.scratch/gbi-ui-refinement/assets/production-rollout.md) and
+[visual acceptance scope](.scratch/gbi-ui-refinement/assets/visual-acceptance.md) are approved.
+Required integration checks are `pnpm gate` and agent-browser across all screens, both themes,
+supported desktop widths, keyboard/checkbox states and forced colours, followed by human
+visual review. Execution evidence is recorded separately; approval of the design does not
+constitute visual acceptance. No Playwright.

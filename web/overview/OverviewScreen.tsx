@@ -44,6 +44,7 @@ export function Dashboard({ view }: { view: OverviewView }) {
       <h2 className="exhibit-title">{actionTitle(track, key.netWorth)}</h2>
       <div className="kpis kpis-no-goal kpis-overview" data-cell="key-numbers">
         <Kpi
+          id="overview-net-worth"
           label="Net worth"
           value={amountOrDash(key.netWorth)}
           note="An old price is still counted."
@@ -79,10 +80,10 @@ export function Dashboard({ view }: { view: OverviewView }) {
       </div>
 
       <div className="overview-grid">
-        <Cell id="goals" title="Goals" href={hrefOf(ROUTES.goals)}>
+        <Cell id="goals" title="Goals" motif="coverage" href={hrefOf(ROUTES.goals)}>
           <GoalsCell goals={goals} />
         </Cell>
-        <Cell id="plan" title="Plan vs actual" href={hrefOf(ROUTES.plan)}>
+        <Cell id="plan" title="Plan vs actual" motif="comparison" href={hrefOf(ROUTES.plan)}>
           <PlanCell plan={view.plan} />
         </Cell>
         <Cell id="operational" title="Operational">

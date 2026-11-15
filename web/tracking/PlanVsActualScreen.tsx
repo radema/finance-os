@@ -17,14 +17,14 @@ const gapLine = (gap: number) =>
 function NextCard({ next }: { next: NextContributionView | null }) {
   if (!next) {
     return (
-      <Card title="Next contribution">
+      <Card title="Next contribution" motif="allocation">
         <p className="note">No goal is behind its plan, so there is nothing to catch up.</p>
       </Card>
     );
   }
   const commission = next.split.reduce((sum, row) => sum + row.commission, 0);
   return (
-    <Card title="Next contribution">
+    <Card title="Next contribution" motif="allocation">
       <p>
         Put <strong>{formatEuro(next.amount)}</strong> into{" "}
         <GoalChip id={next.goalId} name={next.goalName} slot={next.slot} />, the goal furthest
@@ -174,7 +174,7 @@ function PlanVsActual({ view }: { view: PlanVsActualView }) {
     return (
       <>
         <h1 className="title">Plan vs actual</h1>
-        <Card title="Plan vs actual">
+        <Card title="Plan vs actual" motif="comparison">
           <p className="note">There are no goals. Add one in Setup.</p>
         </Card>
       </>
@@ -226,7 +226,7 @@ function PlanVsActual({ view }: { view: PlanVsActualView }) {
           </Card>
         </>
       ) : (
-        <Card title="Plan vs actual">
+        <Card title="Plan vs actual" motif="comparison">
           <p className="note">
             Tracking starts in {view.trackingStart}, after the last month with prices. There is
             nothing to compare yet.

@@ -1,6 +1,8 @@
 # Selected Bauhaus design — proposed spec amendment
 
 Status: approved, including the two-shape extension, and applied to the authoritative spec.
+This is the design-phase decision record; references to prototype behaviour below describe
+the starting point. Production execution evidence is recorded in `visual-review/`.
 
 Applies to `.scratch/gbi-v1/spec.md`, its UI section, Overview screen description,
 and design acceptance criteria AC-10 and AC-11. This is the concrete text proposed for
@@ -126,4 +128,5 @@ The user approved the core amendment and subsequently approved the simpler two-s
 PNG studies: [light](motif-previews/two-shapes-light.png) and
 [dark](motif-previews/two-shapes-dark.png). The original brand and Net worth artwork stay.
 This final amendment is applied to the spec. Earlier four-part derivatives and permutation
-proposals are superseded. Production implementation and visual acceptance are still pending.
+proposals are superseded. At approval, production implementation and visual acceptance were
+still pending; current execution evidence belongs to `visual-review/`.

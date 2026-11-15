@@ -3,7 +3,7 @@
 Label: wayfinder:grilling
 Type: grilling
 Mode: HITL
-Status: claimed
+Status: resolved
 Assignee: Codex
 Parent: [Adopt the selected Bauhaus UI](../map.md)
 Blocked by: 01, 02
@@ -28,3 +28,11 @@ Prepared [Production rollout — proposed implementation handoff](../assets/prod
 Recommends one coherent all-screen change/PR, with prototype removal in the same change,
 explicit completion criteria, preserved PNG evidence and the approved browser/full-gate
 review. Awaiting agreement to this final rollout boundary; implementation has not started.
+
+
+## Answer
+
+The user approved [Production rollout — implementation handoff](../assets/production-rollout.md)
+with "yes", including one coherent all-screen UI PR, prototype removal in the same change,
+the agreed verification scope and user-owned merge. The planning map is complete;
+implementation is explicitly authorized. No browser or final visual approval is implied.

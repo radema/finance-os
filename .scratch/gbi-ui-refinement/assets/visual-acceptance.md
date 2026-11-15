@@ -10,10 +10,9 @@ empty data directory for first-run checks. Review the production implementation,
 no `variant` query parameter, no switcher, and no development-only activation requirement.
 
 Use agent-browser for browser inspection and screenshot capture, then obtain the user's
-visual review. Do not use Playwright. The CLI is absent in the current environment, and
-cached Chromium cannot start because `libnspr4.so` is missing. During implementation,
-provision agent-browser and a compatible Chromium runtime as environment tools, not app
-dependencies. If that environment cannot support it, perform the required pass in a
+visual review. Do not use Playwright. At planning time, the CLI and Chromium runtime libraries were missing. Implementation
+provisioned agent-browser and compatible Chromium libraries as environment tools, not app
+dependencies; execution results are indexed in `visual-review/`. If that environment cannot support it, perform the required pass in a
 supported environment, such as the user's Mac. Record the unperformed checks as pending;
 PNG proposal exports, static HTML and unit checks do not replace browser evidence.
 

@@ -279,7 +279,7 @@ export function GoalsTab() {
   };
   return (
     <>
-      <Card title={editing ? "Edit goal" : "Add goal"}>
+      <Card title={editing ? "Edit goal" : "Add goal"} motif="target">
         <RequiredLegend />
         <form
           ref={editor.formRef}

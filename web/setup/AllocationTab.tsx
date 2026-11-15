@@ -88,7 +88,7 @@ export function GoalWeights({ goal, products, rows, readOnly, onChange }: GoalWe
   };
 
   return (
-    <Card title={goal.name}>
+    <Card title={goal.name} motif="allocation">
       <p className="sub-line">
         <PriorityTag priority={goal.priority} />
       </p>

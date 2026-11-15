@@ -19,6 +19,9 @@ const TYPICAL_HEIGHT = 0.8;
 /** Pixels between a bad or good point and its label, lifting it clear of the axis line. */
 const LABEL_LIFT = 14;
 const LABEL_GAP = 8;
+/** Labels near an axis edge face inward; nearby point labels use separate rows. */
+const EDGE_SHARE = 0.2;
+const LABEL_ROW = 20;
 const amount = (value: number) => formatAmount(value).replace(/,00/, "");
 
 /** The outline of the bins as a closed area, clipped to `[from, to]`: bin `i` is a step of its count. */
@@ -39,7 +42,7 @@ function outline({ min, max, counts }: OutcomeBins, from: number, to: number): [
   return first && last ? [[first[0], 0], ...steps, [last[0], 0]] : [];
 }
 
-function buildOption(range: GoalAnalysis["range"], bins: OutcomeBins, slot: number) {
+export function buildOption(range: GoalAnalysis["range"], bins: OutcomeBins, slot: number) {
   const colour = readTokens(slot);
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const opacity = (pair: typeof FILL_OPACITY) => (dark ? pair.dark : pair.light);
@@ -55,15 +58,25 @@ function buildOption(range: GoalAnalysis["range"], bins: OutcomeBins, slot: numb
   });
   const peak = Math.max(...bins.counts, 1);
   const top = peak * HEADROOM;
+  const fraction = (value: number) => (value - bins.min) / (bins.max - bins.min || 1);
   const guide = (name: string, value: number, height: number, style: object) => [
     {
       coord: [value, 0],
-      label: { ...label(name, value), position: "end" as const },
+      label: {
+        ...label(name, value),
+        position: "end" as const,
+        align:
+          fraction(value) < EDGE_SHARE
+            ? ("left" as const)
+            : fraction(value) > 1 - EDGE_SHARE
+              ? ("right" as const)
+              : ("center" as const),
+      },
       lineStyle: style,
     },
     { coord: [value, height] },
   ];
-  const point = (name: string, value: number, position: "left" | "right") => ({
+  const point = (name: string, value: number, position: "left" | "right", lift = LABEL_LIFT) => ({
     name,
     type: "scatter" as const,
     data: [[value, 0]],
@@ -73,7 +86,7 @@ function buildOption(range: GoalAnalysis["range"], bins: OutcomeBins, slot: numb
     label: {
       ...label(name, value),
       position,
-      offset: [position === "left" ? -LABEL_GAP : LABEL_GAP, -LABEL_LIFT],
+      offset: [position === "left" ? -LABEL_GAP : LABEL_GAP, -lift],
     },
     z: 10,
   });
@@ -127,8 +140,18 @@ function buildOption(range: GoalAnalysis["range"], bins: OutcomeBins, slot: numb
           ],
         },
       },
-      point("Bad case", range.bad, "left"),
-      point("Good case", range.good, "right"),
+      point(
+        "Bad case",
+        range.bad,
+        fraction(range.bad) < EDGE_SHARE ? "right" : "left",
+        fraction(range.bad) < EDGE_SHARE ? LABEL_LIFT + LABEL_ROW : LABEL_LIFT,
+      ),
+      point(
+        "Good case",
+        range.good,
+        fraction(range.good) > 1 - EDGE_SHARE ? "left" : "right",
+        fraction(range.good) > 1 - EDGE_SHARE ? LABEL_LIFT + LABEL_ROW : LABEL_LIFT,
+      ),
     ],
   };
 }

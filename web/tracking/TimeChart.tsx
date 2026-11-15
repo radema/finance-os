@@ -3,12 +3,17 @@ import { GridComponent } from "echarts/components";
 import * as echarts from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
 import { useCallback } from "react";
+import { SPREAD_END_LABELS } from "../goals/valueAxis.ts";
 import { PLOT_GRID, readColour, useEchart } from "../useEchart.ts";
 
 echarts.use([LineChart, BarChart, GridComponent, SVGRenderer]);
 
 const AREA_OPACITY = { light: 0.3, dark: 0.4 };
 const MARKER_SIZE = 8;
+/** Browser text bounds exceed ECharts' estimated height; retain space between adjacent labels. */
+const LABEL_MARGIN = 10;
+/** ECharts places the label eight pixels beyond the line endpoint. */
+const END_LABEL_GAP = 8;
 
 export interface ChartSeries {
   name: string;
@@ -91,8 +96,12 @@ export function buildOption(
               color: readColour("--ink2"),
               fontFamily: font,
               fontSize: 13,
+              minMargin: LABEL_MARGIN,
+              width: PLOT_GRID.right - END_LABEL_GAP,
+              overflow: "break" as const,
             }
           : undefined,
+        labelLayout: s.endLabel ? SPREAD_END_LABELS : undefined,
       };
     }),
   };

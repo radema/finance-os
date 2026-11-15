@@ -32,7 +32,7 @@ The plan must cover spec alignment, verification and removal of the throwaway pr
 ## Assets
 
 `.scratch/gbi-ui-refinement/assets/`, written in English, confirmed by the user.
-Keep the existing prototype alongside Overview until production integration replaces it.
+Production integration replaces the throwaway prototype; retain the approved assets and iteration history.
 New findings, spec amendment drafts and review checklists belong in this assets directory.
 
 ## Decisions so far
@@ -41,11 +41,12 @@ New findings, spec amendment drafts and review checklists belong in this assets 
 
 - [Define the visual acceptance evidence](issues/02-define-visual-acceptance.md) — user approved the all-screen, both-theme browser/state checklist and final gate; checks remain to be performed.
 
+- [Choose the production rollout boundary](issues/03-choose-rollout-boundary.md) — user approved one coherent UI change/PR, prototype removal and the implementation handoff.
+
 ## Not yet specified
 
-Any screen-specific exceptions exposed by reviewing the selected shared treatment at
-1024–1920 px, in both themes, with dense tables, long labels and real checkbox states.
-Do not invent exceptions before inspecting those screens.
+None blocking implementation. The map is complete; any concrete visual defects found
+during the approved implementation review are handled within the rollout scope.
 
 ## Out of scope
 

@@ -1,14 +1,14 @@
-# Bauhaus UI prototype — awaiting human comparison
+# Bauhaus UI prototype — historical iteration record
 
 Question: how can the planner adopt Bauhaus geometry and hierarchy while preserving
 Palette D, colour semantics, and the OE exhibit philosophy?
 
-Run `pnpm dev` (Node 24); open `http://127.0.0.1:8717/?variant=A#/overview`.
-The existing app, data fetching, navigation, charts, and controls remain in use.
-Use the floating arrows or keyboard left/right to cycle; the selection survives reloads
-and navigation. Exit removes the experiment. Without a variant parameter the app is
-unchanged. The switcher and activation component are disabled in production builds.
-This is throwaway CSS and a switcher, not an implementation to promote directly.
+This is historical iteration evidence. The user selected Asymmetric studio (A), approved
+its production contract and simpler semantic two-shape motifs, and authorized integration.
+The throwaway activation, switcher and variants have been removed. Run `pnpm dev` on Node 24
+and open the ordinary Overview route to inspect production components. The current contract
+is [DESIGN.md](../../DESIGN.md); earlier pending verdicts and rejected studies below describe
+their respective iteration only. Verification claims below apply to those historical revisions.
 
 | Variant | Structure | Decision it tests |
 | --- | --- | --- |

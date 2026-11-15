@@ -6,12 +6,14 @@
   gap: var(--s2);
   padding: var(--s1) var(--s2);
   border: 1px solid color-mix(in srgb, var(--slot) 42%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-label);
   background: var(--tint);
   font-size: var(--t-label);
   line-height: var(--lh-label);
   font-weight: 500;
   text-decoration: none;
+  min-height: var(--s4);
+  vertical-align: middle;
 }
 .chip:hover {
   border-color: var(--slot);
@@ -76,32 +78,39 @@
   gap: var(--s3);
   margin: var(--s4) 0;
 }
-/* The column count follows the card count, so every row has equal columns and no card is left alone. */
-.kpis:has(> :nth-child(4):last-child) {
+/* Column counts follow the card count; narrow desktops reserve more room for large amounts. */
+.kpis:not(.kpis-overview):has(> :nth-child(4):last-child) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.kpis:has(> :nth-child(5):last-child),
-.kpis:has(> :nth-child(6):last-child) {
+.kpis:not(.kpis-overview):has(> :nth-child(5):last-child),
+.kpis:not(.kpis-overview):has(> :nth-child(6):last-child) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-.kpis:has(> :nth-child(7):last-child) {
+.kpis:not(.kpis-overview):has(> :nth-child(7):last-child) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
+@media (max-width: 1279px) {
+  .kpis:not(.kpis-overview):has(> :nth-child(n + 2):last-child) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 @media (min-width: 1280px) {
-  .kpis:has(> :nth-child(4):last-child) {
+  .kpis:not(.kpis-overview):has(> :nth-child(4):last-child) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 @media (min-width: 1600px) {
-  .kpis:has(> :nth-child(5):last-child) {
+  .kpis:not(.kpis-overview):has(> :nth-child(5):last-child) {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 .kpi {
-  padding: var(--s3);
-  border: 1px solid var(--grid);
-  border-radius: 8px;
+  padding: var(--s4);
+  border: 1px solid var(--base);
+  border-radius: 0;
   background: var(--raised);
+  border-top: 2px solid var(--ink);
+  position: relative;
 }
 .kpi-label {
   font: 500 var(--t-axis) / var(--lh-axis) var(--font-mono);
@@ -127,13 +136,16 @@
 }
 .kpi-value {
   margin: var(--s1) 0;
-  font: var(--w-display) var(--t-title) / var(--lh-title) var(--font-display);
+  font: var(--w-display) var(--t-kpi) / 1.2 var(--font-display);
   font-variant-numeric: tabular-nums;
   letter-spacing: var(--ls-display);
+  overflow-wrap: anywhere;
 }
 .table tfoot th,
 .table tfoot td {
   font-weight: 600;
+  background: var(--wash);
+  border-top: 2px solid var(--base);
 }
 .table tfoot th {
   text-align: left;
@@ -151,7 +163,7 @@
 .exhibit-title {
   margin: 0;
   max-width: 34em;
-  font: var(--w-display) 20px / 28px var(--font-display);
+  font: var(--w-display) var(--t-title) / var(--lh-title) var(--font-display);
   letter-spacing: var(--ls-display);
   text-wrap: balance;
 }
@@ -208,11 +220,14 @@
   gap: var(--s2);
   padding: var(--s1) var(--s2);
   border: 1px solid var(--grid);
-  border-radius: 999px;
+  border-radius: var(--radius-label);
   background: var(--wash);
   font-size: var(--t-label);
   line-height: var(--lh-label);
   white-space: nowrap;
+  min-height: var(--s4);
+  font-weight: 500;
+  vertical-align: middle;
 }
 .status svg,
 .severity svg {
@@ -327,4 +342,16 @@
 .goal-nav select {
   width: auto;
   min-width: 14em;
+}
+
+.kpi::after {
+  content: "";
+  position: absolute;
+  top: var(--s2);
+  right: var(--s2);
+  width: var(--s2);
+  height: var(--s2);
+  border-top: 1px solid var(--ink2);
+  border-right: 1px solid var(--ink2);
+  pointer-events: none;
 }

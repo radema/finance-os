@@ -53,6 +53,14 @@
   --w-display: 500;
   --ls-display: -0.02em;
 
+  --t-page: clamp(40px, 4vw, 72px);
+  --t-kpi: clamp(26px, 2.2vw, 36px);
+  --t-overview-kpi: clamp(26px, 2.4vw, 40px);
+  --t-lead: clamp(40px, 4.5vw, 72px);
+  --radius-label: 2px;
+  --checkbox-size: 20px;
+  --motif-size: 48px;
+
   --t-title: 26px;
   --lh-title: 32px;
   --t-body: 16px;

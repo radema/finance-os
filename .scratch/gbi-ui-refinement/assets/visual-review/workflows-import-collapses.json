@@ -1,0 +1,115 @@
+[
+  {
+    "checks": [
+      {
+        "after": "false",
+        "before": "true",
+        "label": "Import prices from CSV",
+        "restored": "true"
+      },
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Past imports",
+        "restored": "false"
+      }
+    ],
+    "name": "Prices"
+  },
+  {
+    "checks": [
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Choose a file of products",
+        "restored": "false"
+      },
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Past imports",
+        "restored": "false"
+      }
+    ],
+    "name": "Products"
+  },
+  {
+    "checks": [
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Choose a file of goals",
+        "restored": "false"
+      },
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Past imports",
+        "restored": "false"
+      }
+    ],
+    "name": "Goals"
+  },
+  {
+    "checks": [
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Past imports",
+        "restored": "false"
+      }
+    ],
+    "name": "Current portfolio"
+  },
+  {
+    "checks": [
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Import opening portfolio",
+        "restored": "false"
+      },
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Past imports",
+        "restored": "false"
+      }
+    ],
+    "name": "Opening CSV"
+  },
+  {
+    "checks": [
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Import cash movements",
+        "restored": "false"
+      },
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Past imports",
+        "restored": "false"
+      }
+    ],
+    "name": "Cash movements CSV"
+  },
+  {
+    "checks": [
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Import trades and cash",
+        "restored": "false"
+      },
+      {
+        "after": "true",
+        "before": "false",
+        "label": "Past imports",
+        "restored": "false"
+      }
+    ],
+    "name": "Trades and cash CSV"
+  }
+]

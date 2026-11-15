@@ -1,6 +1,6 @@
 # Production rollout — proposed implementation handoff
 
-Status: proposed; final rollout decision awaits the human.
+Status: approved by the user; implementation authorized.
 
 ## Boundary
 
@@ -63,9 +63,10 @@ leaving it on the prototype styling path.
   limitations are resolved or explicitly leave the change pending, not ready to merge.
 - `pnpm gate` passes; the user explicitly approves the integrated UI and merges the PR.
 
-## Status at handoff
+## Implementation status
 
-Design and review scope are approved. The app still uses the throwaway development-only
-prototype for this treatment; additional approved two-shape motifs are PNG studies, not
-production features. No full gate or integrated browser review has been performed.
-This document is a plan, not an execution report.
+The authorized integration uses production components and shared styles directly. The
+throwaway switcher, activation component and variant stylesheet are removed. Approved PNG
+studies and historical iteration notes remain. Automated and browser execution evidence
+is recorded in `visual-review/`; integrated human visual approval remains required.
+This rollout document defines scope and completion criteria, not a verification result.

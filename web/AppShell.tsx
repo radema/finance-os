@@ -45,7 +45,7 @@ function Sidebar({ route, collapsed }: { route: string; collapsed: boolean }) {
       </a>
       <nav className="nav" aria-label="Main">
         {NAV.map((section) => (
-          <div className="nav-section" key={section.key}>
+          <div className="nav-section" data-section={section.key} key={section.key}>
             {section.items.length === 0 ? (
               <a
                 className="nav-head"

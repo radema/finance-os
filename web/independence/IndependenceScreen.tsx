@@ -346,7 +346,7 @@ export function Screen({
       </p>
       {view.note ? <p className="alert">{view.note}</p> : null}
       {tiles?.every((tile) => !tile.set) ? (
-        <Card title="Levels">
+        <Card title="Levels" motif="coverage">
           <EmptyState
             message="Set your expenses to see the levels and when you reach them."
             action={{ label: "Set your expenses", onClick: focusExpenses }}

@@ -5,11 +5,13 @@ import type { ReactNode } from "react";
  * `href` the whole card is a link to the screen that explains the number.
  */
 export function Kpi({
+  id,
   label,
   value,
   note,
   href,
 }: {
+  id?: string;
   label: ReactNode;
   value: string;
   note?: ReactNode;
@@ -23,14 +25,14 @@ export function Kpi({
   );
   // The link wraps value and note only: a term button in the label cannot sit inside an <a>.
   return href ? (
-    <div className="kpi kpi-link">
+    <div className="kpi kpi-link" id={id}>
       <div className="kpi-label">{label}</div>
       <a className="kpi-main" href={href}>
         {text}
       </a>
     </div>
   ) : (
-    <div className="kpi">
+    <div className="kpi" id={id}>
       <div className="kpi-label">{label}</div>
       {text}
     </div>

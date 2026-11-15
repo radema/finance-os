@@ -17,8 +17,9 @@ describe("pointer targets (AC-89)", () => {
     expect(lightTokens()["--s4"]).toBe("24px");
   });
 
-  it("gives a checkbox row at least 24 px", () => {
-    expect(declarations(app, ".check")["min-height"]).toBe("var(--s4)");
+  it("gives a checkbox row the approved 32 px target", () => {
+    expect(lightTokens()["--s5"]).toBe("32px");
+    expect(declarations(app, ".check")["min-height"]).toBe("var(--s5)");
   });
 
   it.each([".card-head a", ".pbar-text", ".alert-rule a", ".goal-nav a"])(

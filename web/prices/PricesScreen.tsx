@@ -55,14 +55,14 @@ export function PricesScreen() {
       <div className="tag">Operations</div>
       <h1 className="title">Prices</h1>
 
-      <Card title="Price source per product">
+      <Card title="Price source per product" motif="entries">
         <Resource loaded={overview}>
           {(rows) =>
             rows.length === 0 ? (
               <p className="note">No products yet. Add a product in Setup first.</p>
             ) : (
               <div className="table-scroll">
-                <table className="table">
+                <table className="table price-sources">
                   <thead>
                     <tr>
                       <th>Product</th>
