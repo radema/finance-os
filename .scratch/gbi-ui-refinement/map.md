@@ -39,6 +39,8 @@ New findings, spec amendment drafts and review checklists belong in this assets 
 
 - [Align the selected design with the authoritative spec](issues/01-align-design-contract.md) — approved A, preserved both main artworks and fixed meanings for the simpler two-shape motifs; spec and DESIGN.md aligned.
 
+- [Define the visual acceptance evidence](issues/02-define-visual-acceptance.md) — user approved the all-screen, both-theme browser/state checklist and final gate; checks remain to be performed.
+
 ## Not yet specified
 
 Any screen-specific exceptions exposed by reviewing the selected shared treatment at

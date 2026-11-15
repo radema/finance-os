@@ -3,8 +3,8 @@
 Label: wayfinder:grilling
 Type: grilling
 Mode: HITL
-Status: open
-Assignee: unassigned
+Status: claimed
+Assignee: Codex
 Parent: [Adopt the selected Bauhaus UI](../map.md)
 Blocked by: 01, 02
 
@@ -21,3 +21,10 @@ verification evidence and removal of variants, switcher and obsolete prototype r
 
 Resolve the rollout strategy and completion criteria, not implementation tasks. Link the
 agreed handoff asset. The user remains responsible for merging a reviewed PR to main.
+
+## Comments
+
+Prepared [Production rollout — proposed implementation handoff](../assets/production-rollout.md).
+Recommends one coherent all-screen change/PR, with prototype removal in the same change,
+explicit completion criteria, preserved PNG evidence and the approved browser/full-gate
+review. Awaiting agreement to this final rollout boundary; implementation has not started.
