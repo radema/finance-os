@@ -28,16 +28,17 @@
 .overview-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--s4);
-  margin-top: var(--s4);
+  gap: var(--s6) var(--s5);
+  margin-top: var(--s6);
 }
 @media (min-width: 1280px) {
   .overview-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   }
 }
 .overview-grid .cell {
   min-width: 0;
+  margin-bottom: 0;
 }
 /* An empty cell is as tall as its content, not as its neighbour. */
 .overview-grid .cell:has(.empty-state),
@@ -74,7 +75,7 @@
   font-weight: 600;
 }
 .alert-rule .severity-Info {
-  font-weight: 400;
+  font-weight: 500;
 }
 .prices li {
   display: flex;
@@ -83,5 +84,86 @@
   gap: var(--s1) var(--s3);
 }
 .kpis-overview {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 2px solid var(--ink);
+  padding-top: var(--s4);
+}
+.kpis-overview > .kpi {
+  background: none;
+  border: 0;
+  border-left: 1px solid var(--base);
+}
+.kpis-overview .kpi-value {
+  font-size: var(--t-overview-kpi);
+}
+.kpis-overview > .kpi::after {
+  display: none;
+}
+#overview-net-worth {
+  position: relative;
+  grid-column: 1 / -1;
+  min-height: 220px;
+  padding: var(--s5);
+  border: 0;
+  background: var(--tint5);
+}
+#overview-net-worth .kpi-value {
+  font-size: var(--t-lead);
+}
+#overview-net-worth .kpi-main,
+#overview-net-worth .kpi-label {
+  max-width: 64%;
+}
+#overview-net-worth::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 30%;
+  border-left: 1px solid var(--ink);
+  background:
+    radial-gradient(circle at 50% 50%, var(--slot4) 0 34%, transparent 35%) 0 0 / 50% 50% no-repeat,
+    conic-gradient(from 180deg at 100% 100%, var(--slot5) 0 25%, transparent 0) 100% 0 / 50% 50%
+    no-repeat,
+    linear-gradient(var(--ink), var(--ink)) 0 100% / 50% 50% no-repeat,
+    radial-gradient(circle at 0 0, var(--slot2) 0 70%, transparent 71%) 100% 100% / 50% 50%
+    no-repeat;
+  pointer-events: none;
+}
+.overview-grid .card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.overview-grid > [data-cell="fi"] {
+  background: none;
+  border: 0;
+}
+.overview-grid > [data-cell="fi"] .card-head {
+  background: none;
+  padding-inline: 0;
+}
+.overview-grid > [data-cell="fi"] .card-body {
+  padding-inline: 0;
+}
+@media (max-width: 1279px) {
+  .kpis-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1100px) {
+  #overview-net-worth {
+    padding: var(--s4);
+  }
+  #overview-net-worth::before {
+    width: 24%;
+  }
+}
+@media (forced-colors: active) {
+  #overview-net-worth::before {
+    display: none;
+  }
+  #overview-net-worth .kpi-main,
+  #overview-net-worth .kpi-label {
+    max-width: none;
+  }
 }

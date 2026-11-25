@@ -15,6 +15,9 @@ const BAND_OPACITY = { light: 0.22, dark: 0.3 };
 const EDGE_OPACITY = 0.6;
 /** Pixels kept clear between two end labels. */
 const LABEL_MARGIN = 2;
+/** Near the baseline, reserve one row per end label above the axis. */
+const BASELINE_SHARE = 0.1;
+const LABEL_ROW = 20;
 const amount = (value: number) => formatAmount(value).replace(/,00/, "");
 
 export function buildOption(fan: readonly FanPoint[], target: number, slot: number) {
@@ -31,6 +34,14 @@ export function buildOption(fan: readonly FanPoint[], target: number, slot: numb
     minMargin: LABEL_MARGIN,
   });
   const last = fan.at(-1) as FanPoint;
+  const axis = fitAxis(
+    Math.min(...fan.map((point) => point.bad)),
+    Math.max(...fan.map((point) => point.good)),
+    target,
+  );
+  const crowded = (last.good - axis.min) / (axis.max - axis.min) < BASELINE_SHARE;
+  const labelLayout = (row: number) =>
+    crowded ? { ...SPREAD_END_LABELS, dy: -LABEL_ROW * row } : SPREAD_END_LABELS;
   const edge = (name: string, data: number[], endLabel: ReturnType<typeof label>) => ({
     name,
     type: "line" as const,
@@ -39,7 +50,7 @@ export function buildOption(fan: readonly FanPoint[], target: number, slot: numb
     lineStyle: { width: 1, color: line, opacity: EDGE_OPACITY },
     itemStyle: { color: line },
     endLabel,
-    labelLayout: SPREAD_END_LABELS,
+    labelLayout: labelLayout(name === "Good case" ? 3 : 1),
     z: 2,
   });
   return {
@@ -55,11 +66,7 @@ export function buildOption(fan: readonly FanPoint[], target: number, slot: numb
     },
     yAxis: {
       type: "value" as const,
-      ...fitAxis(
-        Math.min(...fan.map((point) => point.bad)),
-        Math.max(...fan.map((point) => point.good)),
-        target,
-      ),
+      ...axis,
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: colour.grid } },
@@ -104,7 +111,7 @@ export function buildOption(fan: readonly FanPoint[], target: number, slot: numb
         lineStyle: { width: 2.25, color: line },
         itemStyle: { color: line },
         endLabel: label("Typical case", last.typical),
-        labelLayout: SPREAD_END_LABELS,
+        labelLayout: labelLayout(2),
         z: 4,
         markLine: {
           silent: true,

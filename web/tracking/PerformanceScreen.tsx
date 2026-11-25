@@ -112,7 +112,9 @@ function Charts({
           endLabel: true,
         },
       ],
-      index: [{ name: "Growth of 100", data: months.map((p) => p.index), colour: line }],
+      index: [
+        { name: "Growth of 100", data: months.map((p) => p.index), colour: line, endLabel: true },
+      ],
       drawdown: [
         {
           name: "Drawdown",
@@ -210,7 +212,7 @@ function Charts({
 
 function ScopesTable({ scopes }: { scopes: PerformanceScopesView }) {
   return (
-    <Card title="All scopes">
+    <Card title="All scopes" motif="comparison">
       <div className="table-scroll">
         <table className="table">
           <thead>

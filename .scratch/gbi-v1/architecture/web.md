@@ -97,3 +97,22 @@ folder merely for symmetry.
 - `web/import/RecordImport.tsx` imports shared file-format values and
   `toBase64` from `web/import/TransactionsImport.tsx`, demonstrating the
   specific Import coupling above.
+
+## Production design integration (2026-11-15)
+
+The shell mounts production screens directly; the experimental variant mount and stylesheet
+are removed. Shared section cards accept an optional explicit `MotifKind`, rendered by
+`web/Motif.tsx`; Overview cells reuse the same decorative primitive. Call sites choose a
+fixed semantic purpose, with no route/index-derived artwork or financial encoding.
+Tokens and original stylesheets own the production treatment. `setup/ui.tsx` keeps its
+existing interaction interface: this change adds decoration without a control reorganization.
+The retained brand and Net worth compositions remain in shell/Overview CSS. Browser and
+human acceptance evidence belongs to the UI refinement effort, not this architecture record.
+Large-value browser checks also exercise Goal detail's existing chart-option seams; label
+placement stays local to the fan/range charts, preserving numeric data and plot conventions.
+
+Populated Goal history checks exposed colliding endpoint labels. The existing tracking
+`TimeChart` option builder now reuses the established overlap layout and wraps names within
+`PLOT_GRID`'s reserved right-hand room. Rendered regressions and ordinary browser bounds
+cover identical endpoints and long names; this keeps the correction at the existing
+presentation seam without a new chart abstraction.

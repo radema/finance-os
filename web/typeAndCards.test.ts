@@ -51,10 +51,10 @@ describe("card accents (issue 164, AC-89)", () => {
   const goals = css("./goals.css");
   const setup = css("./setup.css");
 
-  it("gives a KPI card a 1 px --grid outline and no accent bar", () => {
+  it("gives a KPI card a 1 px --base outline and 2 px ink top rule", () => {
     const kpi = declarations(goals, ".kpi");
-    expect(kpi.border).toBe("1px solid var(--grid)");
-    expect(kpi["border-top"]).toBeUndefined();
+    expect(kpi.border).toBe("1px solid var(--base)");
+    expect(kpi["border-top"]).toBe("2px solid var(--ink)");
   });
 
   it("puts an 8 px goal-colour dot before the KPI label, except where no goal owns the KPI", () => {
@@ -73,9 +73,10 @@ describe("card accents (issue 164, AC-89)", () => {
     );
   });
 
-  it("keeps the blue header strip on a section card and drops its bar", () => {
+  it("keeps the blue section header with its 2 px ink top rule", () => {
     const card = declarations(setup, ".card");
-    expect(card["border-top"]).toBeUndefined();
+    expect(card.border).toBe("1px solid var(--base)");
+    expect(declarations(setup, ".card-head")["border-top"]).toBe("2px solid var(--ink)");
     expect(declarations(setup, ".card-head").background).toBe("var(--tint-blue-faint)");
   });
 });

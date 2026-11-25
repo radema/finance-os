@@ -373,7 +373,7 @@ export function TransactionsImport({ onImported }: { onImported: () => void }) {
       ) : null}
 
       {read && mapping && file ? (
-        <Card title="Row check">
+        <Card title="Row check" motif="entries">
           {!ready ? (
             <p className="note">Map the {unmapped.join(", ")} column to see the row check.</p>
           ) : null}

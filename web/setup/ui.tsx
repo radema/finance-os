@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import type { Loaded } from "../api.ts";
 import { num, showDecimal } from "../forms.ts";
 import { Loading } from "../Loading.tsx";
+import { Motif, type MotifKind } from "../Motif.tsx";
 import { browserStorage, cardKey, readOpen, screenHash, writeOpen } from "./cardState.ts";
 
 /**
@@ -15,12 +16,14 @@ export function Card({
   children,
   note,
   memoryKey,
+  motif,
   level = 2,
 }: {
   title: ReactNode;
   children: ReactNode;
   note?: ReactNode;
   memoryKey?: string;
+  motif?: MotifKind;
   /** The heading level of the title: 3 inside a section that already has an h2. */
   level?: 2 | 3;
 }) {
@@ -60,6 +63,7 @@ export function Card({
           </svg>
         </button>
         <span id={titleId}>{title}</span>
+        {motif ? <Motif kind={motif} /> : null}
       </Heading>
       <div className="card-body" id={bodyId} hidden={!open}>
         {note ? <p className="note">{note}</p> : null}

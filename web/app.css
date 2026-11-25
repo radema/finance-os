@@ -26,7 +26,7 @@ a:hover {
 /* Pointer targets are at least 24 px (--s4; WCAG 2.5.8). A checkbox row is one label: the box and the text.
    A link that stands on its own gets a 24 px box without moving its neighbours. Links inside a sentence stay inline. */
 .check {
-  min-height: var(--s4);
+  min-height: var(--s5);
 }
 .card-head a,
 .pbar-text,
@@ -81,16 +81,19 @@ a:hover {
   top: 0;
   height: 100vh;
   overflow-y: auto;
-  border-right: 1px solid var(--grid);
+  border-right: 1px solid var(--ink);
   padding: var(--s4) var(--s2) var(--s3);
   scrollbar-width: thin;
 }
 .brand {
-  display: block;
-  padding: 0 var(--s2) var(--s3);
-  font: var(--w-display) 17px / 1.2 var(--font-display);
+  display: flex;
+  padding: 0 var(--s2) var(--s4);
+  font: 700 17px / 1.2 var(--font-text);
   letter-spacing: var(--ls-display);
   text-decoration: none;
+  gap: var(--s2);
+  align-items: center;
+  border-bottom: 2px solid var(--ink);
 }
 .nav-section {
   padding: var(--s2) 0;
@@ -105,6 +108,7 @@ a:hover {
   border-left: 2px solid transparent;
 }
 .nav-head {
+  justify-content: flex-start;
   padding: var(--s2);
   font-size: var(--t-sub);
   font-weight: 600;
@@ -125,6 +129,7 @@ a.nav-head:hover,
   color: var(--ink);
   font-weight: 600;
   border-left-color: var(--ink);
+  background: var(--tint5);
 }
 .nav :focus-visible {
   outline-offset: -2px;
@@ -196,9 +201,11 @@ a.nav-head:hover,
 }
 .title {
   max-width: 34em;
-  font: var(--w-display) var(--t-title) / var(--lh-title) var(--font-display);
+  font: var(--w-display) var(--t-page) / 1.05 var(--font-display);
   letter-spacing: var(--ls-display);
   text-wrap: balance;
+  margin-bottom: var(--s3);
+  overflow-wrap: anywhere;
 }
 /* The first block under a page header (the title, or the title and its unit line) is one token gap away. */
 h1.title + :not(.unit),
@@ -210,4 +217,82 @@ h1.title + .unit + * {
   margin-top: var(--s2);
   font: 300 var(--t-sub) / var(--lh-sub) var(--font-text);
   color: var(--ink2);
+}
+
+.brand::before {
+  content: "";
+  flex: 0 0 var(--s5);
+  height: var(--s5);
+  background:
+    radial-gradient(circle at 75% 25%, var(--slot4) 0 24%, transparent 25%),
+    conic-gradient(from 0deg at 50% 50%, transparent 0 25%, var(--slot5) 25% 50%, transparent 50%),
+    linear-gradient(90deg, var(--ink) 50%, transparent 50%);
+}
+.nav-head::before {
+  content: "";
+  flex: 0 0 var(--s3);
+  height: var(--s3);
+  border: 2px solid var(--ink);
+}
+[data-section="overview"] .nav-head::before {
+  background: conic-gradient(var(--ink) 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0);
+}
+[data-section="goals"] .nav-head::before {
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--ink) 25%, transparent 28%);
+}
+[data-section="independence"] .nav-head::before {
+  border-radius: 50% 50% 0 0;
+  border-bottom-width: 4px;
+}
+[data-section="analysis"] .nav-head::before {
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    var(--ink) 22%,
+    transparent 22% 39%,
+    var(--ink) 39% 61%,
+    transparent 61% 78%,
+    var(--ink) 78%
+  );
+  clip-path: polygon(0 65%, 22% 65%, 22% 35%, 61% 35%, 61% 0, 100% 0, 100% 100%, 0 100%);
+}
+[data-section="pension"] .nav-head::before {
+  border-radius: 50%;
+  background: linear-gradient(0deg, var(--ink) 50%, transparent 50%);
+}
+[data-section="operations"] .nav-head::before {
+  border: 0;
+  background: var(--ink);
+  clip-path: polygon(
+    0 20%,
+    65% 20%,
+    65% 0,
+    100% 35%,
+    65% 70%,
+    65% 50%,
+    0 50%,
+    0 80%,
+    35% 80%,
+    35% 100%,
+    0 100%
+  );
+}
+[data-section="setup"] .nav-head::before {
+  border-radius: 50%;
+  border-style: dotted;
+}
+.motif {
+  display: block;
+  width: var(--motif-size);
+  height: var(--motif-size);
+  flex: 0 0 var(--motif-size);
+  margin-left: auto;
+  pointer-events: none;
+}
+@media (forced-colors: active) {
+  .brand::before,
+  .motif {
+    display: none;
+  }
 }

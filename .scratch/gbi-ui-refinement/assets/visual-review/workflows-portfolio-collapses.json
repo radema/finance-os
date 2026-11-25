@@ -1,0 +1,92 @@
+[
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "As of",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Sample Deposit Account",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Split Sample Deposit Account",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Sample Direct Share",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Sample Govt Bond 2029",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Sample Mixed ETF",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Split Sample Mixed ETF",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Sample Pension Fund Balanced",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Split Sample Pension Fund Balanced",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Sample Pension Fund Equity",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Split Sample Pension Fund Equity",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Sample World Equity ETF",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Split Sample World Equity ETF",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Opening cash by bucket",
+    "restored": "false"
+  },
+  {
+    "before": "false",
+    "changed": "true",
+    "name": "Past imports",
+    "restored": "false"
+  }
+]

@@ -9,6 +9,7 @@ import { pVsRequired } from "../goals/outlook.ts";
 import { SeverityChip } from "../goals/SeverityChip.tsx";
 import { StatusChip } from "../goals/StatusChip.tsx";
 import { FanChart } from "../independence/FiCharts.tsx";
+import { Motif, type MotifKind } from "../Motif.tsx";
 import { formatAmount, formatEuro, formatPercent, formatSignedAmount } from "../money.ts";
 import { goalDetailHref } from "../nav.ts";
 import { PriceFreshnessPill } from "../prices/PriceFreshnessPill.tsx";
@@ -20,16 +21,21 @@ export function Cell({
   id,
   title,
   href,
+  motif,
   children,
 }: {
   id: string;
   title: string;
   href?: string;
+  motif?: MotifKind;
   children: ReactNode;
 }) {
   return (
     <section className="card cell" data-cell={id}>
-      <h2 className="card-head">{href ? <a href={href}>{title}</a> : title}</h2>
+      <h2 className="card-head">
+        {href ? <a href={href}>{title}</a> : title}
+        {motif ? <Motif kind={motif} /> : null}
+      </h2>
       <div className="card-body">{children}</div>
     </section>
   );

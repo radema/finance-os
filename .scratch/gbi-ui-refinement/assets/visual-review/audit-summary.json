@@ -1,0 +1,136 @@
+{
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 1,
+      "moderate": 6,
+      "high": 0,
+      "critical": 0
+    },
+    "dependencies": 215,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 215
+  },
+  "advisories": [
+    {
+      "findings": [
+        {
+          "version": "2.1.5",
+          "paths": [
+            ".>yahoo-finance2>@modelcontextprotocol/sdk>@hono/node-server"
+          ]
+        }
+      ],
+      "title": "@hono/node-server: Unhandled `ECONNRESET` on the socket during an asynchronous WebSocket upgrade crashes the process",
+      "severity": "moderate",
+      "module_name": "@hono/node-server",
+      "vulnerable_versions": ">=2.0.0 <2.1.6",
+      "github_advisory_id": "GHSA-qv5m-9pm6-hqp3",
+      "patched_versions": ">=2.1.6",
+      "url": "https://github.com/advisories/GHSA-qv5m-9pm6-hqp3"
+    },
+    {
+      "findings": [
+        {
+          "version": "2.1.5",
+          "paths": [
+            ".>yahoo-finance2>@modelcontextprotocol/sdk>@hono/node-server"
+          ]
+        }
+      ],
+      "title": "@hono/node-server: Backslash in the request path is parsed as a path separator, bypassing path-based access control at a reverse proxy",
+      "severity": "moderate",
+      "module_name": "@hono/node-server",
+      "vulnerable_versions": ">=2.0.0 <2.1.6",
+      "github_advisory_id": "GHSA-jpvv-r467-5p4w",
+      "patched_versions": ">=2.1.6",
+      "url": "https://github.com/advisories/GHSA-jpvv-r467-5p4w"
+    },
+    {
+      "findings": [
+        {
+          "version": "4.13.13",
+          "paths": [
+            ".>yahoo-finance2>@modelcontextprotocol/sdk>hono"
+          ]
+        }
+      ],
+      "title": "Hono: `mount()` and `app.mount()` can forward a path that bypasses middleware scoped inside the mount prefix",
+      "severity": "moderate",
+      "module_name": "hono",
+      "vulnerable_versions": "<4.13.16",
+      "github_advisory_id": "GHSA-4m76-xfj5-7975",
+      "patched_versions": ">=4.13.16",
+      "url": "https://github.com/advisories/GHSA-4m76-xfj5-7975"
+    },
+    {
+      "findings": [
+        {
+          "version": "4.13.13",
+          "paths": [
+            ".>yahoo-finance2>@modelcontextprotocol/sdk>hono"
+          ]
+        }
+      ],
+      "title": "Hono: RegExpRouter skips wildcard middleware for some route sets and for paths with an encoded line terminator",
+      "severity": "moderate",
+      "module_name": "hono",
+      "vulnerable_versions": ">=4.1.4 <=4.13.15",
+      "github_advisory_id": "GHSA-h7mg-cq63-vhpq",
+      "patched_versions": ">=4.13.16",
+      "url": "https://github.com/advisories/GHSA-h7mg-cq63-vhpq"
+    },
+    {
+      "findings": [
+        {
+          "version": "4.13.13",
+          "paths": [
+            ".>yahoo-finance2>@modelcontextprotocol/sdk>hono"
+          ]
+        }
+      ],
+      "title": "Hono: `css` helper does not escape a closing tag split between the template and an interpolated value, allowing HTML injection",
+      "severity": "low",
+      "module_name": "hono",
+      "vulnerable_versions": ">=3.12.0 <=4.13.15",
+      "github_advisory_id": "GHSA-3gg2-335m-rxc6",
+      "patched_versions": ">=4.13.16",
+      "url": "https://github.com/advisories/GHSA-3gg2-335m-rxc6"
+    },
+    {
+      "findings": [
+        {
+          "version": "4.13.13",
+          "paths": [
+            ".>yahoo-finance2>@modelcontextprotocol/sdk>hono"
+          ]
+        }
+      ],
+      "title": "Hono: `csrf()` does not check requests sent by hyperlink auditing (`text/ping`)",
+      "severity": "moderate",
+      "module_name": "hono",
+      "vulnerable_versions": "<4.13.16",
+      "github_advisory_id": "GHSA-46wx-v44x-9hh2",
+      "patched_versions": ">=4.13.16",
+      "url": "https://github.com/advisories/GHSA-46wx-v44x-9hh2"
+    },
+    {
+      "findings": [
+        {
+          "version": "4.13.13",
+          "paths": [
+            ".>yahoo-finance2>@modelcontextprotocol/sdk>hono"
+          ]
+        }
+      ],
+      "title": "Hono: `validator('form')` skips validation for `multipart/form-data` requests with extra parameters",
+      "severity": "moderate",
+      "module_name": "hono",
+      "vulnerable_versions": ">=4.5.1 <=4.13.15",
+      "github_advisory_id": "GHSA-4h7h-rv7c-7m2v",
+      "patched_versions": ">=4.13.16",
+      "url": "https://github.com/advisories/GHSA-4h7h-rv7c-7m2v"
+    }
+  ]
+}

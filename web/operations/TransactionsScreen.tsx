@@ -404,7 +404,7 @@ export function TransactionsScreen() {
         <a href="#/operations/import?tab=portfolio">Current portfolio</a>.
       </p>
       <CashMovements />
-      <Card title="Transactions">
+      <Card title="Transactions" motif="entries">
         <div className="inline-form">
           <SelectField
             label="Bucket"
